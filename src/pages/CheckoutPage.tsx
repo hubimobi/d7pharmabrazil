@@ -8,6 +8,7 @@ import { useCart } from "@/hooks/useCart";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -20,6 +21,7 @@ const CheckoutPage = () => {
   const [showDoctorResults, setShowDoctorResults] = useState(false);
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
   const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
     cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "",
@@ -44,7 +46,7 @@ const CheckoutPage = () => {
   );
 
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-  const shipping = subtotal >= 199 ? 0 : 19.90;
+  const shipping = selectedShipping?.price ?? (subtotal >= 199 ? 0 : 19.90);
   const finalTotal = total + shipping;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,6 +144,15 @@ const CheckoutPage = () => {
                   </Button>
                 </div>
 
+                {/* Shipping Calculator */}
+                <ShippingCalculator
+                  cep={form.cep}
+                  onCepChange={(cep) => setForm({ ...form, cep })}
+                  items={items.map((i) => ({ price: i.product.price, quantity: i.quantity }))}
+                  selectedOption={selectedShipping}
+                  onSelectOption={setSelectedShipping}
+                />
+
                 <Button className="w-full" size="lg" onClick={() => setStep(2)}>Continuar para Dados</Button>
               </div>
             )}
@@ -216,14 +227,14 @@ const CheckoutPage = () => {
                 <div className="flex gap-3">
                   <button
                     type="button"
-                    className={`flex-1 rounded-lg border-2 p-4 text-center text-sm font-medium transition ${form.paymentMethod === "pix" ? "border-primary bg-trust-light" : "border-border"}`}
+                    className={`flex-1 rounded-lg border-2 p-4 text-center text-sm font-medium transition ${form.paymentMethod === "pix" ? "border-primary bg-primary/5" : "border-border"}`}
                     onClick={() => setForm({ ...form, paymentMethod: "pix" })}
                   >
                     💰 Pix<br /><span className="text-xs text-success">5% de desconto</span>
                   </button>
                   <button
                     type="button"
-                    className={`flex-1 rounded-lg border-2 p-4 text-center text-sm font-medium transition ${form.paymentMethod === "card" ? "border-primary bg-trust-light" : "border-border"}`}
+                    className={`flex-1 rounded-lg border-2 p-4 text-center text-sm font-medium transition ${form.paymentMethod === "card" ? "border-primary bg-primary/5" : "border-border"}`}
                     onClick={() => setForm({ ...form, paymentMethod: "card" })}
                   >
                     <CreditCard className="mx-auto mb-1 h-5 w-5" />Cartão<br /><span className="text-xs text-muted-foreground">até 3x sem juros</span>
@@ -256,8 +267,15 @@ const CheckoutPage = () => {
                 )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Frete</span>
-                  <span className={shipping === 0 ? "font-semibold text-success" : ""}>{shipping === 0 ? "Grátis" : `R$ ${shipping.toFixed(2).replace(".", ",")}`}</span>
+                  <span className={shipping === 0 ? "font-semibold text-success" : ""}>
+                    {shipping === 0 ? "Grátis" : `R$ ${shipping.toFixed(2).replace(".", ",")}`}
+                  </span>
                 </div>
+                {selectedShipping && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedShipping.company} — {selectedShipping.name} ({selectedShipping.delivery_time} dias)
+                  </p>
+                )}
               </div>
               <div className="border-t border-border pt-2">
                 <div className="flex justify-between text-lg font-bold">
@@ -271,7 +289,7 @@ const CheckoutPage = () => {
             </div>
             <div className="mt-4 space-y-1 text-[10px] text-muted-foreground">
               <p>🔒 Pagamento 100% seguro</p>
-              <p>🚚 Frete grátis acima de R$199</p>
+              <p>🚚 Frete calculado via Melhor Envio</p>
               <p>✅ Garantia de 30 dias</p>
             </div>
           </div>
