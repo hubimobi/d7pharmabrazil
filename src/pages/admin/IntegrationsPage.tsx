@@ -1,15 +1,17 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { CheckCircle, XCircle, ExternalLink, RefreshCw } from "lucide-react";
-import { toast } from "sonner";
-
-const BLING_AUTHORIZE_URL = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${import.meta.env.VITE_BLING_CLIENT_ID || ""}&state=bling`;
 
 export default function IntegrationsPage() {
-  const { data: blingStatus, isLoading, refetch } = useQuery({
+  const [blingInviteUrl, setBlingInviteUrl] = useState("");
+
+  const { data: blingStatus, refetch } = useQuery({
     queryKey: ["bling-status"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -30,10 +32,6 @@ export default function IntegrationsPage() {
       };
     },
   });
-
-  const handleSyncTest = async () => {
-    toast.info("Para sincronizar, um pedido precisa ser criado pelo checkout.");
-  };
 
   return (
     <div className="space-y-6">
@@ -57,7 +55,7 @@ export default function IntegrationsPage() {
               Sincronização automática de pedidos com o ERP Bling V3 (SKU, NCM, GTIN, Unidade).
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             {blingStatus?.connected && !blingStatus.expired && (
               <div className="flex items-center gap-2 text-sm text-primary">
                 <CheckCircle className="h-4 w-4" />
@@ -72,20 +70,34 @@ export default function IntegrationsPage() {
               </div>
             )}
 
-            <div className="flex gap-2">
-              <Button asChild>
-                <a href={BLING_AUTHORIZE_URL} target="_blank" rel="noopener noreferrer">
+            {!blingStatus?.connected || blingStatus?.expired ? (
+              <div className="space-y-2">
+                <Label htmlFor="bling-url">Link de convite do Bling (cole da tela do app)</Label>
+                <Input
+                  id="bling-url"
+                  placeholder="https://www.bling.com.br/Api/v3/oauth/authorize?..."
+                  value={blingInviteUrl}
+                  onChange={(e) => setBlingInviteUrl(e.target.value)}
+                />
+                <Button
+                  disabled={!blingInviteUrl}
+                  onClick={() => window.open(blingInviteUrl, "_blank")}
+                >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  {blingStatus?.connected ? "Reconectar Bling" : "Conectar Bling"}
-                </a>
-              </Button>
-              <Button variant="outline" size="icon" onClick={() => refetch()}>
-                <RefreshCw className="h-4 w-4" />
+                  Autorizar no Bling
+                </Button>
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Verificar status
               </Button>
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Callback URL:{" "}
+              Configure a URL de callback no app Bling:{" "}
               <code className="bg-muted px-1 rounded text-xs">
                 https://xufiemrhlmirkrdrcxox.supabase.co/functions/v1/bling-callback
               </code>
