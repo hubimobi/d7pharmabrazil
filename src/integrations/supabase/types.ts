@@ -292,6 +292,69 @@ export type Database = {
         }
         Relationships: []
       }
+      store_settings: {
+        Row: {
+          address_cep: string | null
+          address_city: string | null
+          address_complement: string | null
+          address_neighborhood: string | null
+          address_number: string | null
+          address_state: string | null
+          address_street: string | null
+          cnpj: string | null
+          created_at: string
+          email: string | null
+          facebook: string | null
+          id: string
+          instagram: string | null
+          store_name: string
+          tiktok: string | null
+          updated_at: string
+          whatsapp: string | null
+          youtube: string | null
+        }
+        Insert: {
+          address_cep?: string | null
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          facebook?: string | null
+          id?: string
+          instagram?: string | null
+          store_name?: string
+          tiktok?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+          youtube?: string | null
+        }
+        Update: {
+          address_cep?: string | null
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          facebook?: string | null
+          id?: string
+          instagram?: string | null
+          store_name?: string
+          tiktok?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+          youtube?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
