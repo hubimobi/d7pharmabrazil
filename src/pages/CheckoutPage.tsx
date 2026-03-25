@@ -25,7 +25,7 @@ interface PaymentResult {
 }
 
 const CheckoutPage = () => {
-  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart } = useCart();
+  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping } = useCart();
   const [step, setStep] = useState(1);
   const [couponInput, setCouponInput] = useState("");
   const [doctorSearch, setDoctorSearch] = useState("");
@@ -95,7 +95,7 @@ const CheckoutPage = () => {
   );
 
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-  const shipping = selectedShipping?.price ?? (subtotal >= 199 ? 0 : 19.90);
+  const shipping = freeShipping ? 0 : (selectedShipping?.price ?? (subtotal >= 199 ? 0 : 19.90));
   const finalTotal = total + shipping;
   const pixTotal = finalTotal * 0.95;
 
