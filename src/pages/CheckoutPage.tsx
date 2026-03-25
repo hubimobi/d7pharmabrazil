@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,39 @@ const CheckoutPage = () => {
     cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "",
     doctor: "", paymentMethod: "pix" as "pix" | "card",
   });
+  const abandonmentSaved = useRef(false);
+
+  // Track cart abandonment: save when user has items + filled some data but leaves
+  useEffect(() => {
+    const saveAbandonment = () => {
+      if (abandonmentSaved.current || items.length === 0) return;
+      if (!form.name && !form.phone && !form.email) return;
+
+      abandonmentSaved.current = true;
+      const payload = {
+        customer_name: form.name,
+        customer_email: form.email || null,
+        customer_phone: form.phone || null,
+        items: items.map((i) => ({ name: i.product.name, quantity: i.quantity, price: i.product.price })),
+        cart_total: total,
+      };
+      // Use sendBeacon for reliability on page unload
+      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/abandoned_carts`;
+      const headers = new Headers({
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      });
+      // sendBeacon doesn't support custom headers, use fetch with keepalive
+      fetch(url, { method: "POST", headers, body: JSON.stringify(payload), keepalive: true }).catch(() => {});
+    };
+
+    window.addEventListener("beforeunload", saveAbandonment);
+    return () => {
+      window.removeEventListener("beforeunload", saveAbandonment);
+    };
+  }, [form.name, form.phone, form.email, items, total]);
 
   const { data: doctors } = useQuery({
     queryKey: ["active-doctors"],

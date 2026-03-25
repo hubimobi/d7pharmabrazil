@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      abandoned_carts: {
+        Row: {
+          cart_total: number
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          ghl_synced: boolean
+          id: string
+          items: Json
+          recovered_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cart_total?: number
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          ghl_synced?: boolean
+          id?: string
+          items?: Json
+          recovered_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cart_total?: number
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          ghl_synced?: boolean
+          id?: string
+          items?: Json
+          recovered_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bling_tokens: {
         Row: {
           access_token: string
