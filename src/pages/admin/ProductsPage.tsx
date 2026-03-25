@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Pencil, Upload, Trash2, Star, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import RichTextEditor from "@/components/admin/RichTextEditor";
+import CreatableSelect from "@/components/admin/CreatableSelect";
 
 interface ProdForm {
   name: string; slug: string; short_description: string; description: string;
@@ -225,8 +226,14 @@ export default function ProductsPage() {
                     <div className="space-y-2"><Label>Slug *</Label><Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label>Grupo</Label><Input value={form.group_name} onChange={(e) => setForm({ ...form, group_name: e.target.value })} placeholder="ex: Suplementos" /></div>
-                    <div className="space-y-2"><Label>Fabricante</Label><Input value={form.manufacturer} onChange={(e) => setForm({ ...form, manufacturer: e.target.value })} placeholder="ex: D7 Pharma" /></div>
+                    <div className="space-y-2">
+                      <Label>Grupo</Label>
+                      <CreatableSelect table="product_groups" value={form.group_name} onChange={(v) => setForm({ ...form, group_name: v })} placeholder="Selecionar grupo..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Fabricante</Label>
+                      <CreatableSelect table="manufacturers" value={form.manufacturer} onChange={(v) => setForm({ ...form, manufacturer: v })} placeholder="Selecionar fabricante..." />
+                    </div>
                   </div>
                   <div className="space-y-2"><Label>Descrição Curta</Label><Input value={form.short_description} onChange={(e) => setForm({ ...form, short_description: e.target.value })} /></div>
                   <div className="space-y-2">

@@ -149,6 +149,24 @@ export type Database = {
           },
         ]
       }
+      manufacturers: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           created_at: string
@@ -195,6 +213,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      product_groups: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       product_testimonials: {
         Row: {
