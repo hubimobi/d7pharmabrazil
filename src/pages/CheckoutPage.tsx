@@ -118,6 +118,20 @@ const CheckoutPage = () => {
 
       setPaymentResult(data);
 
+      // Sync to GoHighLevel (non-blocking)
+      const ghlPayload = {
+        customer_name: form.name,
+        customer_email: form.email,
+        customer_phone: form.phone,
+        order_id: data.order_id,
+        order_total: form.paymentMethod === "pix" ? pixTotal : finalTotal,
+        items: items.map((i) => ({ name: i.product.name, quantity: i.quantity, price: i.product.price })),
+        tags: form.paymentMethod === "pix" ? ["pagou-pix"] : ["pagou-cartao"],
+      };
+      supabase.functions.invoke("ghl-sync", { body: ghlPayload }).catch((err) =>
+        console.error("GHL sync error (non-fatal):", err)
+      );
+
       if (form.paymentMethod === "card" && (data.status === "CONFIRMED" || data.status === "RECEIVED")) {
         toast.success("Pagamento aprovado! 🎉");
         clearCart();

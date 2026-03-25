@@ -177,6 +177,33 @@ export default function IntegrationsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* GoHighLevel */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              GoHighLevel (GHL)
+              <Badge>Conectado</Badge>
+            </CardTitle>
+            <CardDescription>
+              Sincronização automática de contatos, oportunidades e tags após cada compra.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-primary">
+              <CheckCircle className="h-4 w-4" />
+              API configurada
+            </div>
+            <div className="rounded-md bg-muted p-3">
+              <p className="text-xs font-medium mb-1">O que é sincronizado automaticamente:</p>
+              <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+                <li>Contato criado/atualizado com nome, email e telefone</li>
+                <li>Tags automáticas: <code className="bg-background px-1 rounded">cliente-loja-online</code>, <code className="bg-background px-1 rounded">pagou-pix</code>, <code className="bg-background px-1 rounded">comprou-[produto]</code></li>
+                <li>Oportunidade criada no primeiro pipeline com valor do pedido</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
