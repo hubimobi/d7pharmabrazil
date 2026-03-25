@@ -82,7 +82,7 @@ const ProductCard = ({ product }: { product: Product }) => {
           </div>
         </div>
       </div>
-      <UpsellDialog open={showUpsell} onOpenChange={setShowUpsell} product={product} />
+      <UpsellDialog open={showUpsell} onOpenChange={setShowUpsell} product={product} onAddMore={(extra) => addItem(product, extra)} />
     </div>
   );
 };

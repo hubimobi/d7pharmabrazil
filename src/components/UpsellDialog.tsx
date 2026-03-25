@@ -1,5 +1,4 @@
 import { Product } from "@/hooks/useProducts";
-import { useCart } from "@/hooks/useCart";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +14,8 @@ interface UpsellDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: Product;
+  currentQty?: number;
+  onAddMore: (extraQty: number) => void;
 }
 
 const OFFERS = [
@@ -22,15 +23,12 @@ const OFFERS = [
   { qty: 3, discount: 10, label: "Leve 3", icon: Gift },
 ];
 
-const UpsellDialog = ({ open, onOpenChange, product }: UpsellDialogProps) => {
-  const { addItem, items } = useCart();
+const UpsellDialog = ({ open, onOpenChange, product, currentQty = 1, onAddMore }: UpsellDialogProps) => {
 
-  const currentQty = items.find((i) => i.product.id === product.id)?.quantity ?? 1;
-
-  const handleSelect = (totalQty: number, discount: number) => {
+  const handleSelect = (totalQty: number) => {
     const extra = totalQty - currentQty;
     if (extra > 0) {
-      addItem(product, extra);
+      onAddMore(extra);
     }
     onOpenChange(false);
   };
@@ -62,7 +60,7 @@ const UpsellDialog = ({ open, onOpenChange, product }: UpsellDialogProps) => {
             return (
               <button
                 key={offer.qty}
-                onClick={() => handleSelect(offer.qty, offer.discount)}
+                onClick={() => handleSelect(offer.qty)}
                 className="flex w-full items-center gap-4 rounded-lg border border-border p-4 text-left transition hover:border-primary hover:bg-primary/5"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">

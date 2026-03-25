@@ -226,7 +226,7 @@ const ProductDetail = () => {
       </main>
       <Footer />
       <WhatsAppButton />
-      {product && <UpsellDialog open={showUpsell} onOpenChange={setShowUpsell} product={product} />}
+      {product && <UpsellDialog open={showUpsell} onOpenChange={setShowUpsell} product={product} currentQty={qty} onAddMore={(extra) => addItem(product, extra)} />}
     </div>
   );
 };
