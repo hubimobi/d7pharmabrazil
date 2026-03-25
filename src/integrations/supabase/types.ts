@@ -144,6 +144,68 @@ export type Database = {
           },
         ]
       }
+      coupons: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          description: string
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          free_shipping: boolean
+          id: string
+          max_uses: number | null
+          min_order_value: number | null
+          product_id: string | null
+          starts_at: string | null
+          updated_at: string
+          used_count: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          description?: string
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          free_shipping?: boolean
+          id?: string
+          max_uses?: number | null
+          min_order_value?: number | null
+          product_id?: string | null
+          starts_at?: string | null
+          updated_at?: string
+          used_count?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          description?: string
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          free_shipping?: boolean
+          id?: string
+          max_uses?: number | null
+          min_order_value?: number | null
+          product_id?: string | null
+          starts_at?: string | null
+          updated_at?: string
+          used_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctors: {
         Row: {
           active: boolean
