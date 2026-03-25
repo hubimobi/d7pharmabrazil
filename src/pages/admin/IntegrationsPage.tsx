@@ -379,12 +379,16 @@ function WebchatWhatsAppSettings() {
   const [webchatEnabled, setWebchatEnabled] = useState(false);
   const [webchatScript, setWebchatScript] = useState("");
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
+  const [whatsappName, setWhatsappName] = useState("Fale com um Especialista");
+  const [whatsappMessage, setWhatsappMessage] = useState("Olá! Gostaria de falar com um especialista.");
 
   useEffect(() => {
     if (settings) {
       setWebchatEnabled(settings.webchat_enabled ?? false);
       setWebchatScript(settings.webchat_script ?? "");
       setWhatsappEnabled(settings.whatsapp_button_enabled ?? true);
+      setWhatsappName(settings.whatsapp_button_name || "Fale com um Especialista");
+      setWhatsappMessage(settings.whatsapp_button_message || "Olá! Gostaria de falar com um especialista.");
     }
   }, [settings]);
 
@@ -408,9 +412,12 @@ function WebchatWhatsAppSettings() {
     mutation.mutate({ webchat_enabled: webchatEnabled, webchat_script: webchatScript });
   };
 
-  const toggleWhatsapp = (checked: boolean) => {
-    setWhatsappEnabled(checked);
-    mutation.mutate({ whatsapp_button_enabled: checked });
+  const saveWhatsapp = () => {
+    mutation.mutate({
+      whatsapp_button_enabled: whatsappEnabled,
+      whatsapp_button_name: whatsappName,
+      whatsapp_button_message: whatsappMessage,
+    });
   };
 
   if (isLoading) return null;

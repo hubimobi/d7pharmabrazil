@@ -21,6 +21,8 @@ export interface StoreSettings {
   webchat_enabled: boolean;
   webchat_script: string;
   whatsapp_button_enabled: boolean;
+  whatsapp_button_name: string;
+  whatsapp_button_message: string;
 }
 
 export function useStoreSettings() {
