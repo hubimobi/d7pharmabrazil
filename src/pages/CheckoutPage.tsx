@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard } from "lucide-react";
+import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,9 +9,19 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
+import CreditCardForm, { CreditCardData } from "@/components/checkout/CreditCardForm";
+import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+
+interface PaymentResult {
+  payment_id: string;
+  status: string;
+  invoice_url: string;
+  pix?: { encodedImage: string; payload: string; expirationDate?: string } | null;
+  order_id?: string;
+}
 
 const CheckoutPage = () => {
   const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart } = useCart();
@@ -22,6 +32,11 @@ const CheckoutPage = () => {
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
+  const [cardData, setCardData] = useState<CreditCardData>({
+    holderName: "", number: "", expiryMonth: "", expiryYear: "", ccv: "",
+  });
+  const [installments, setInstallments] = useState(1);
   const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
     cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "",
@@ -48,6 +63,7 @@ const CheckoutPage = () => {
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
   const shipping = selectedShipping?.price ?? (subtotal >= 199 ? 0 : 19.90);
   const finalTotal = total + shipping;
+  const pixTotal = finalTotal * 0.95;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,28 +81,97 @@ const CheckoutPage = () => {
         quantity: i.quantity,
       }));
 
-      const { error } = await supabase.from("orders").insert({
+      const paymentValue = form.paymentMethod === "pix" ? pixTotal : finalTotal;
+
+      const payload: any = {
         customer_name: form.name,
         customer_email: form.email,
+        customer_cpf: form.cpf,
         customer_phone: form.phone,
-        doctor_id: selectedDoctorId,
+        billing_type: form.paymentMethod === "pix" ? "PIX" : "CREDIT_CARD",
+        value: paymentValue,
         items: orderItems,
-        total: finalTotal,
-        status: "pending",
+        doctor_id: selectedDoctorId,
+      };
+
+      if (form.paymentMethod === "card") {
+        payload.credit_card = cardData;
+        payload.credit_card_holder_info = {
+          name: cardData.holderName || form.name,
+          email: form.email,
+          cpfCnpj: form.cpf,
+          postalCode: form.cep,
+          addressNumber: form.number,
+          phone: form.phone,
+        };
+        if (installments > 1) {
+          payload.installment_count = installments;
+        }
+      }
+
+      const { data, error } = await supabase.functions.invoke("create-payment", {
+        body: payload,
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      toast.success("Pedido realizado com sucesso! 🎉");
-      clearCart();
-    } catch {
-      toast.error("Erro ao salvar pedido. Tente novamente.");
+      setPaymentResult(data);
+
+      if (form.paymentMethod === "card" && (data.status === "CONFIRMED" || data.status === "RECEIVED")) {
+        toast.success("Pagamento aprovado! 🎉");
+        clearCart();
+        setStep(3);
+      } else if (form.paymentMethod === "pix") {
+        toast.success("Cobrança Pix gerada! Escaneie o QR Code.");
+        setStep(3);
+      } else {
+        toast.error("Pagamento não aprovado. Verifique os dados do cartão.");
+      }
+    } catch (err: any) {
+      console.error("Payment error:", err);
+      toast.error(err?.message || "Erro ao processar pagamento. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (items.length === 0) {
+  // Step 3: Payment result
+  if (step === 3 && paymentResult) {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <main className="container max-w-lg py-12">
+          {paymentResult.pix ? (
+            <PixPaymentResult
+              encodedImage={paymentResult.pix.encodedImage}
+              payload={paymentResult.pix.payload}
+              expirationDate={paymentResult.pix.expirationDate}
+              total={pixTotal}
+            />
+          ) : (
+            <div className="flex flex-col items-center space-y-4 rounded-lg border border-border bg-card p-6 text-center">
+              <CheckCircle className="h-12 w-12 text-success" />
+              <h2 className="text-xl font-bold">Pagamento Aprovado!</h2>
+              <p className="text-muted-foreground">
+                Seu pedido foi confirmado. Você receberá um email com os detalhes.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Pedido: <span className="font-mono">{paymentResult.order_id?.slice(0, 8)}</span>
+              </p>
+              <Link to="/produtos">
+                <Button>Continuar Comprando</Button>
+              </Link>
+            </div>
+          )}
+        </main>
+        <Footer />
+        <WhatsAppButton />
+      </div>
+    );
+  }
+
+  if (items.length === 0 && step !== 3) {
     return (
       <div className="min-h-screen">
         <Header />
@@ -111,9 +196,9 @@ const CheckoutPage = () => {
         <h1 className="text-2xl font-bold text-foreground">Checkout</h1>
 
         <div className="mt-6 flex gap-4">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${step >= 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>1</div>
-          <div className={`h-0.5 flex-1 self-center ${step >= 2 ? "bg-primary" : "bg-border"}`} />
-          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${step >= 2 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>2</div>
+          {[1, 2].map((s) => (
+            <div key={s} className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${step >= s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{s}</div>
+          ))}
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-3">
@@ -144,7 +229,6 @@ const CheckoutPage = () => {
                   </Button>
                 </div>
 
-                {/* Shipping Calculator */}
                 <ShippingCalculator
                   cep={form.cep}
                   onCepChange={(cep) => setForm({ ...form, cep })}
@@ -162,9 +246,9 @@ const CheckoutPage = () => {
                 <h2 className="text-lg font-semibold">Dados Pessoais</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div><Label>Nome Completo *</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-                  <div><Label>CPF *</Label><Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: e.target.value })} /></div>
+                  <div><Label>CPF *</Label><Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: e.target.value })} placeholder="000.000.000-00" /></div>
                   <div><Label>Email *</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-                  <div><Label>Telefone *</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+                  <div><Label>Telefone *</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(00) 00000-0000" /></div>
                 </div>
 
                 <h2 className="text-lg font-semibold">Endereço</h2>
@@ -241,58 +325,70 @@ const CheckoutPage = () => {
                   </button>
                 </div>
 
+                {form.paymentMethod === "card" && (
+                  <CreditCardForm
+                    card={cardData}
+                    onChange={setCardData}
+                    installments={installments}
+                    onInstallmentsChange={setInstallments}
+                    total={finalTotal}
+                  />
+                )}
+
                 <div className="flex gap-3">
                   <Button type="button" variant="outline" onClick={() => setStep(1)}>Voltar</Button>
                   <Button type="submit" className="flex-1" size="lg" disabled={isSubmitting}>
-                    {isSubmitting ? "Processando..." : "Finalizar Pedido"}
+                    {isSubmitting ? "Processando pagamento..." : form.paymentMethod === "pix" ? `Gerar Pix — R$ ${pixTotal.toFixed(2).replace(".", ",")}` : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
                   </Button>
                 </div>
               </form>
             )}
           </div>
 
-          <div className="rounded-lg border border-border bg-card p-6">
-            <h3 className="text-base font-semibold">Resumo do Pedido</h3>
-            <div className="mt-4 space-y-2 text-sm">
-              {items.map((item) => (
-                <div key={item.product.id} className="flex justify-between">
-                  <span className="text-muted-foreground">{item.product.name} x{item.quantity}</span>
-                  <span>R$ {(item.product.price * item.quantity).toFixed(2).replace(".", ",")}</span>
+          {step <= 2 && (
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h3 className="text-base font-semibold">Resumo do Pedido</h3>
+              <div className="mt-4 space-y-2 text-sm">
+                {items.map((item) => (
+                  <div key={item.product.id} className="flex justify-between">
+                    <span className="text-muted-foreground">{item.product.name} x{item.quantity}</span>
+                    <span>R$ {(item.product.price * item.quantity).toFixed(2).replace(".", ",")}</span>
+                  </div>
+                ))}
+                <div className="border-t border-border pt-2">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>R$ {subtotal.toFixed(2).replace(".", ",")}</span></div>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-success"><span>Desconto ({coupon})</span><span>-R$ {discount.toFixed(2).replace(".", ",")}</span></div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Frete</span>
+                    <span className={shipping === 0 ? "font-semibold text-success" : ""}>
+                      {shipping === 0 ? "Grátis" : `R$ ${shipping.toFixed(2).replace(".", ",")}`}
+                    </span>
+                  </div>
+                  {selectedShipping && (
+                    <p className="text-xs text-muted-foreground">
+                      {selectedShipping.company} — {selectedShipping.name} ({selectedShipping.delivery_time} dias)
+                    </p>
+                  )}
                 </div>
-              ))}
-              <div className="border-t border-border pt-2">
-                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>R$ {subtotal.toFixed(2).replace(".", ",")}</span></div>
-                {discount > 0 && (
-                  <div className="flex justify-between text-success"><span>Desconto ({coupon})</span><span>-R$ {discount.toFixed(2).replace(".", ",")}</span></div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Frete</span>
-                  <span className={shipping === 0 ? "font-semibold text-success" : ""}>
-                    {shipping === 0 ? "Grátis" : `R$ ${shipping.toFixed(2).replace(".", ",")}`}
-                  </span>
+                <div className="border-t border-border pt-2">
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total</span>
+                    <span className="text-primary">R$ {finalTotal.toFixed(2).replace(".", ",")}</span>
+                  </div>
+                  {form.paymentMethod === "pix" && (
+                    <p className="text-xs text-success">No Pix: R$ {pixTotal.toFixed(2).replace(".", ",")}</p>
+                  )}
                 </div>
-                {selectedShipping && (
-                  <p className="text-xs text-muted-foreground">
-                    {selectedShipping.company} — {selectedShipping.name} ({selectedShipping.delivery_time} dias)
-                  </p>
-                )}
               </div>
-              <div className="border-t border-border pt-2">
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total</span>
-                  <span className="text-primary">R$ {finalTotal.toFixed(2).replace(".", ",")}</span>
-                </div>
-                {form.paymentMethod === "pix" && (
-                  <p className="text-xs text-success">No Pix: R$ {(finalTotal * 0.95).toFixed(2).replace(".", ",")}</p>
-                )}
+              <div className="mt-4 space-y-1 text-[10px] text-muted-foreground">
+                <p>🔒 Pagamento 100% seguro via Asaas</p>
+                <p>🚚 Frete calculado via Melhor Envio</p>
+                <p>✅ Garantia de 30 dias</p>
               </div>
             </div>
-            <div className="mt-4 space-y-1 text-[10px] text-muted-foreground">
-              <p>🔒 Pagamento 100% seguro</p>
-              <p>🚚 Frete calculado via Melhor Envio</p>
-              <p>✅ Garantia de 30 dias</p>
-            </div>
-          </div>
+          )}
         </div>
       </main>
       <Footer />
