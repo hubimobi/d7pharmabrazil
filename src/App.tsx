@@ -24,6 +24,7 @@ import StoreSettingsPage from "./pages/admin/StoreSettingsPage";
 import IntegrationsPage from "./pages/admin/IntegrationsPage";
 import RecoveryPage from "./pages/admin/RecoveryPage";
 import CouponsPage from "./pages/admin/CouponsPage";
+import BannerPage from "./pages/admin/BannerPage";
 import RecentPurchasePopup from "./components/RecentPurchasePopup";
 import WebchatWidget from "./components/WebchatWidget";
 
@@ -70,6 +71,7 @@ const App = () => (
               <Route path="/admin/integracoes" element={<AdminLayout><IntegrationsPage /></AdminLayout>} />
               <Route path="/admin/recuperacao" element={<AdminLayout><RecoveryPage /></AdminLayout>} />
               <Route path="/admin/cupons" element={<AdminLayout><CouponsPage /></AdminLayout>} />
+              <Route path="/admin/banner" element={<AdminLayout><BannerPage /></AdminLayout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
