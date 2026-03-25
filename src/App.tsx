@@ -11,6 +11,8 @@ import ProductDetail from "./pages/ProductDetail";
 import CheckoutPage from "./pages/CheckoutPage";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { AdminLayout } from "./components/admin/AdminLayout";
 import DashboardPage from "./pages/admin/DashboardPage";
 import RepresentativesPage from "./pages/admin/RepresentativesPage";
@@ -33,6 +35,8 @@ const App = () => (
               <Route path="/produto/:slug" element={<ProductDetail />} />
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/admin" element={<AdminLayout><DashboardPage /></AdminLayout>} />
               <Route path="/admin/representantes" element={<AdminLayout><RepresentativesPage /></AdminLayout>} />
               <Route path="/admin/doutores" element={<AdminLayout><DoctorsPage /></AdminLayout>} />
