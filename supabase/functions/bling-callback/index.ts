@@ -74,13 +74,11 @@ serve(async (req) => {
     }
 
     // Redirect back to admin integrations page
-    return new Response(
-      `<html><head><meta charset="utf-8"><script>window.location.href = window.location.origin.replace('.supabase.co/functions/v1/bling-callback', '.lovable.app/admin/integracoes') || '/admin/integracoes';</script></head><body><p>Bling conectado com sucesso! Redirecionando...</p></body></html>`,
-      {
-        status: 200,
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      }
-    );
+    const siteUrl = "https://d7pharmabrazil.lovable.app/admin/integracoes";
+    return new Response(null, {
+      status: 302,
+      headers: { Location: siteUrl },
+    });
   } catch (err) {
     console.error("Bling callback error:", err);
     return new Response("Erro interno.", {
