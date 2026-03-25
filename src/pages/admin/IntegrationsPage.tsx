@@ -59,7 +59,7 @@ export default function IntegrationsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {blingStatus?.connected && !blingStatus.expired && (
-              <div className="flex items-center gap-2 text-sm text-green-600">
+              <div className="flex items-center gap-2 text-sm text-primary">
                 <CheckCircle className="h-4 w-4" />
                 Conectado — token válido até{" "}
                 {new Date(blingStatus.expiresAt!).toLocaleString("pt-BR")}
@@ -105,7 +105,7 @@ export default function IntegrationsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 text-sm text-green-600">
+            <div className="flex items-center gap-2 text-sm text-primary">
               <CheckCircle className="h-4 w-4" />
               API configurada (Produção)
             </div>
@@ -124,7 +124,7 @@ export default function IntegrationsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 text-sm text-green-600">
+            <div className="flex items-center gap-2 text-sm text-primary">
               <CheckCircle className="h-4 w-4" />
               API configurada
             </div>
