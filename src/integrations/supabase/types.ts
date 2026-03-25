@@ -14,6 +14,67 @@ export type Database = {
   }
   public: {
     Tables: {
+      commissions: {
+        Row: {
+          commission_rate: number
+          commission_value: number
+          created_at: string
+          doctor_id: string | null
+          id: string
+          order_id: string
+          order_total: number
+          representative_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          commission_rate?: number
+          commission_value?: number
+          created_at?: string
+          doctor_id?: string | null
+          id?: string
+          order_id: string
+          order_total?: number
+          representative_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          commission_rate?: number
+          commission_value?: number
+          created_at?: string
+          doctor_id?: string | null
+          id?: string
+          order_id?: string
+          order_total?: number
+          representative_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_representative_id_fkey"
+            columns: ["representative_id"]
+            isOneToOne: false
+            referencedRelation: "representatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctors: {
         Row: {
           active: boolean
@@ -107,6 +168,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      products: {
+        Row: {
+          active: boolean
+          badge: string | null
+          benefits: Json
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          name: string
+          original_price: number
+          price: number
+          rating: number
+          reviews_count: number
+          short_description: string
+          slug: string
+          stock: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          badge?: string | null
+          benefits?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          name: string
+          original_price?: number
+          price?: number
+          rating?: number
+          reviews_count?: number
+          short_description?: string
+          slug: string
+          stock?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          badge?: string | null
+          benefits?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          original_price?: number
+          price?: number
+          rating?: number
+          reviews_count?: number
+          short_description?: string
+          slug?: string
+          stock?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
