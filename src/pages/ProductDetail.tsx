@@ -12,6 +12,7 @@ import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import SEOHead from "@/components/SEOHead";
 import { useState } from "react";
+import UpsellDialog from "@/components/UpsellDialog";
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -19,6 +20,7 @@ const ProductDetail = () => {
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showUpsell, setShowUpsell] = useState(false);
 
   const { data: testimonials } = useQuery({
     queryKey: ["product-testimonials", product?.id],
@@ -148,7 +150,10 @@ const ProductDetail = () => {
                 <span className="min-w-[2rem] text-center text-sm font-semibold">{qty}</span>
                 <button onClick={() => setQty(qty + 1)} className="px-3 py-2 text-lg font-medium text-muted-foreground hover:text-foreground">+</button>
               </div>
-              <Button size="lg" className="flex-1 gap-2" onClick={() => addItem(product, qty)}>
+              <Button size="lg" className="flex-1 gap-2" onClick={() => {
+                addItem(product, qty);
+                setShowUpsell(true);
+              }}>
                 <ShoppingCart className="h-5 w-5" /> Adicionar ao Carrinho
               </Button>
             </div>
@@ -214,6 +219,7 @@ const ProductDetail = () => {
       </main>
       <Footer />
       <WhatsAppButton />
+      {product && <UpsellDialog open={showUpsell} onOpenChange={setShowUpsell} product={product} />}
     </div>
   );
 };
