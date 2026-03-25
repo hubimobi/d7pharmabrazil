@@ -12,6 +12,7 @@ import ShippingCalculator, { ShippingOption } from "@/components/checkout/Shippi
 import CreditCardForm, { CreditCardData } from "@/components/checkout/CreditCardForm";
 import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
+import CartRecommendations from "@/components/checkout/CartRecommendations";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -250,6 +251,8 @@ const CheckoutPage = () => {
                   selectedOption={selectedShipping}
                   onSelectOption={setSelectedShipping}
                 />
+
+                <CartRecommendations cartItems={items} />
 
                 <Button className="w-full" size="lg" onClick={() => setStep(2)}>Continuar para Dados</Button>
               </div>
