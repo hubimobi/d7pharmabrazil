@@ -13,6 +13,7 @@ import CreditCardForm, { CreditCardData } from "@/components/checkout/CreditCard
 import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
 import CartRecommendations from "@/components/checkout/CartRecommendations";
+import CheckoutUrgency from "@/components/checkout/CheckoutUrgency";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -465,10 +466,8 @@ const CheckoutPage = () => {
                   )}
                 </div>
               </div>
-              <div className="mt-4 space-y-1 text-[10px] text-muted-foreground">
-                <p>🔒 Pagamento 100% seguro via Asaas</p>
-                <p>🚚 Frete calculado via Melhor Envio</p>
-                <p>✅ Garantia de 30 dias</p>
+              <div className="mt-4">
+                <CheckoutUrgency />
               </div>
             </div>
           )}
