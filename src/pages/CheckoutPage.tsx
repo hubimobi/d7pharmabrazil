@@ -25,7 +25,7 @@ interface PaymentResult {
 }
 
 const CheckoutPage = () => {
-  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart } = useCart();
+  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping } = useCart();
   const [step, setStep] = useState(1);
   const [couponInput, setCouponInput] = useState("");
   const [doctorSearch, setDoctorSearch] = useState("");
