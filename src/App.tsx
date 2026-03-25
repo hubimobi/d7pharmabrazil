@@ -22,6 +22,7 @@ import AdminProductsPage from "./pages/admin/ProductsPage";
 import CommissionsPage from "./pages/admin/CommissionsPage";
 import StoreSettingsPage from "./pages/admin/StoreSettingsPage";
 import IntegrationsPage from "./pages/admin/IntegrationsPage";
+import RecoveryPage from "./pages/admin/RecoveryPage";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="/admin/relatorios" element={<AdminLayout><ReportsPage /></AdminLayout>} />
               <Route path="/admin/configuracoes" element={<AdminLayout><StoreSettingsPage /></AdminLayout>} />
               <Route path="/admin/integracoes" element={<AdminLayout><IntegrationsPage /></AdminLayout>} />
+              <Route path="/admin/recuperacao" element={<AdminLayout><RecoveryPage /></AdminLayout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
