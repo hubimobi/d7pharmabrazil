@@ -66,7 +66,7 @@ const ProductCard = ({ product }: { product: Product }) => {
               }}
             >
               <ShoppingCart className="h-4 w-4" />
-              Carrinho
+              Adicionar ao Carrinho
             </Button>
             <Button
               className="flex-1 gap-1 bg-success hover:bg-success/90 text-success-foreground"
@@ -77,7 +77,7 @@ const ProductCard = ({ product }: { product: Product }) => {
               }}
             >
               <Zap className="h-4 w-4" />
-              Comprar
+              Comprar Agora
             </Button>
           </div>
         </div>
