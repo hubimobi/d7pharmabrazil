@@ -1,5 +1,6 @@
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
+import SEOHead from "@/components/SEOHead";
 import BenefitsSection from "@/components/BenefitsSection";
 import FeaturedProducts from "@/components/FeaturedProducts";
 import TestimonialsSection from "@/components/TestimonialsSection";
@@ -10,6 +11,7 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 
 const Index = () => (
   <div className="min-h-screen">
+    <SEOHead title="Suplementos de Alta Performance" description="D7 Pharma Brazil — suplementos com qualidade farmacêutica para resultados reais. Frete grátis acima de R$199." />
     <Header />
     <main>
       <HeroSection />

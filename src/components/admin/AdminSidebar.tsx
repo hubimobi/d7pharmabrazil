@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Stethoscope, BarChart3, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Stethoscope, BarChart3, LogOut, Package, DollarSign } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,14 +18,17 @@ import { Button } from "@/components/ui/button";
 
 const adminItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
+  { title: "Produtos", url: "/admin/produtos", icon: Package },
   { title: "Representantes", url: "/admin/representantes", icon: Users },
   { title: "Doutores", url: "/admin/doutores", icon: Stethoscope },
+  { title: "Comissões", url: "/admin/comissoes", icon: DollarSign },
   { title: "Relatórios", url: "/admin/relatorios", icon: BarChart3 },
 ];
 
 const repItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Meus Doutores", url: "/admin/doutores", icon: Stethoscope },
+  { title: "Comissões", url: "/admin/comissoes", icon: DollarSign },
   { title: "Relatórios", url: "/admin/relatorios", icon: BarChart3 },
 ];
 

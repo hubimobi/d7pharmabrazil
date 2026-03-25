@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Star, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Product } from "@/data/products";
+import { Product } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
 
 const ProductCard = ({ product }: { product: Product }) => {
