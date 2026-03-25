@@ -1,9 +1,12 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle } from "lucide-react";
+import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { useProduct } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
+import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
@@ -15,6 +18,20 @@ const ProductDetail = () => {
   const { data: product, isLoading } = useProduct(slug);
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
+
+  const { data: testimonials } = useQuery({
+    queryKey: ["product-testimonials", product?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_testimonials")
+        .select("*")
+        .eq("product_id", product!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!product?.id,
+  });
 
   if (isLoading) {
     return (
@@ -116,6 +133,49 @@ const ProductDetail = () => {
             </div>
           </div>
         </div>
+
+        {/* Depoimentos */}
+        {testimonials && testimonials.length > 0 && (
+          <section className="mt-16">
+            <div className="mb-8 text-center">
+              <h2 className="text-2xl font-bold text-foreground">O que nossos clientes dizem</h2>
+              <p className="mt-2 text-muted-foreground">Depoimentos reais de quem já experimentou</p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {testimonials.map((t) => (
+                <Card key={t.id} className="relative overflow-hidden border-border/50">
+                  <CardContent className="p-6">
+                    <Quote className="absolute top-4 right-4 h-8 w-8 text-primary/10" />
+
+                    <div className="flex gap-0.5 mb-3">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${i < t.rating ? "fill-warning text-warning" : "text-border"}`}
+                        />
+                      ))}
+                    </div>
+
+                    <p className="text-sm text-foreground leading-relaxed mb-4">
+                      "{t.content}"
+                    </p>
+
+                    <div className="flex items-center gap-3 pt-3 border-t border-border/50">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                        {t.author_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{t.author_name}</p>
+                        <p className="text-xs text-muted-foreground">Cliente verificado ✓</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
       <Footer />
       <WhatsAppButton />
