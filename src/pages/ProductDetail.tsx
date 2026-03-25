@@ -1,5 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap } from "lucide-react";
+import CountdownTimer from "@/components/CountdownTimer";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -145,7 +146,9 @@ const ProductDetail = () => {
               <p className="mt-3 animate-pulse-soft text-sm font-semibold text-destructive">⚠️ Apenas {product.stock} unidades em estoque!</p>
             )}
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <CountdownTimer label="🔥 Preço promocional expira em" className="mt-4" />
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="flex items-center rounded-md border border-border">
                 <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-3 py-2 text-lg font-medium text-muted-foreground hover:text-foreground">−</button>
                 <span className="min-w-[2rem] text-center text-sm font-semibold">{qty}</span>

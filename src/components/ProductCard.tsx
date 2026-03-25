@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Star, ShoppingCart, Zap } from "lucide-react";
+import CountdownTimer from "@/components/CountdownTimer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/hooks/useProducts";
@@ -56,7 +57,8 @@ const ProductCard = ({ product }: { product: Product }) => {
           <p className="text-[10px] text-muted-foreground">
             ou 3x de R$ {(product.price / 3).toFixed(2).replace(".", ",")} sem juros
           </p>
-          <div className="mt-3 flex gap-2">
+          <CountdownTimer label="Oferta expira em" className="mt-2" />
+          <div className="mt-2 flex gap-2">
             <Button
               className="flex-1 gap-1"
               size="sm"
