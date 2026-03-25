@@ -2,18 +2,29 @@ import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { products } from "@/data/products";
+import { useProduct } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import SEOHead from "@/components/SEOHead";
 import { useState } from "react";
 
 const ProductDetail = () => {
   const { slug } = useParams();
-  const product = products.find((p) => p.slug === slug);
+  const { data: product, isLoading } = useProduct(slug);
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <div className="container py-20 text-center"><p className="text-muted-foreground">Carregando...</p></div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -21,9 +32,7 @@ const ProductDetail = () => {
         <Header />
         <div className="container py-20 text-center">
           <h1 className="text-2xl font-bold">Produto não encontrado</h1>
-          <Link to="/produtos">
-            <Button className="mt-4">Ver todos os produtos</Button>
-          </Link>
+          <Link to="/produtos"><Button className="mt-4">Ver todos os produtos</Button></Link>
         </div>
         <Footer />
       </div>
@@ -34,6 +43,7 @@ const ProductDetail = () => {
 
   return (
     <div className="min-h-screen">
+      <SEOHead title={product.name} description={product.shortDescription} />
       <Header />
       <main className="container py-8 md:py-16">
         <Link to="/produtos" className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
@@ -67,18 +77,12 @@ const ProductDetail = () => {
                 <span className="text-lg text-muted-foreground line-through">R$ {product.originalPrice.toFixed(2).replace(".", ",")}</span>
                 <Badge variant="secondary" className="bg-success/10 text-success">-{discountPercent}%</Badge>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                ou 3x de R$ {(product.price / 3).toFixed(2).replace(".", ",")} sem juros
-              </p>
-              <p className="mt-1 text-sm font-medium text-success">
-                💰 R$ {(product.price * 0.95).toFixed(2).replace(".", ",")} no Pix (5% off)
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">ou 3x de R$ {(product.price / 3).toFixed(2).replace(".", ",")} sem juros</p>
+              <p className="mt-1 text-sm font-medium text-success">💰 R$ {(product.price * 0.95).toFixed(2).replace(".", ",")} no Pix (5% off)</p>
             </div>
 
             {product.stock <= 10 && (
-              <p className="mt-3 animate-pulse-soft text-sm font-semibold text-destructive">
-                ⚠️ Apenas {product.stock} unidades em estoque!
-              </p>
+              <p className="mt-3 animate-pulse-soft text-sm font-semibold text-destructive">⚠️ Apenas {product.stock} unidades em estoque!</p>
             )}
 
             <div className="mt-6 flex items-center gap-3">
@@ -95,8 +99,7 @@ const ProductDetail = () => {
             <div className="mt-6 space-y-2">
               {product.benefits.map((b) => (
                 <div key={b} className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="h-4 w-4 text-success" />
-                  <span>{b}</span>
+                  <CheckCircle className="h-4 w-4 text-success" /><span>{b}</span>
                 </div>
               ))}
             </div>

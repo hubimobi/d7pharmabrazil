@@ -18,6 +18,8 @@ import DashboardPage from "./pages/admin/DashboardPage";
 import RepresentativesPage from "./pages/admin/RepresentativesPage";
 import DoctorsPage from "./pages/admin/DoctorsPage";
 import ReportsPage from "./pages/admin/ReportsPage";
+import AdminProductsPage from "./pages/admin/ProductsPage";
+import CommissionsPage from "./pages/admin/CommissionsPage";
 
 const queryClient = new QueryClient();
 
@@ -39,7 +41,9 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/admin" element={<AdminLayout><DashboardPage /></AdminLayout>} />
               <Route path="/admin/representantes" element={<AdminLayout><RepresentativesPage /></AdminLayout>} />
+              <Route path="/admin/produtos" element={<AdminLayout><AdminProductsPage /></AdminLayout>} />
               <Route path="/admin/doutores" element={<AdminLayout><DoctorsPage /></AdminLayout>} />
+              <Route path="/admin/comissoes" element={<AdminLayout><CommissionsPage /></AdminLayout>} />
               <Route path="/admin/relatorios" element={<AdminLayout><ReportsPage /></AdminLayout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
