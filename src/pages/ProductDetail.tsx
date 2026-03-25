@@ -227,6 +227,33 @@ const ProductDetail = () => {
           </section>
         )}
       </main>
+
+      {/* Fixed mobile bottom bar */}
+      <div className="fixed bottom-0 inset-x-0 z-40 flex gap-2 border-t border-border bg-card p-3 shadow-lg md:hidden">
+        <Button
+          size="lg"
+          className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground text-sm"
+          onClick={() => {
+            addItem(product, qty);
+            navigate("/checkout");
+          }}
+        >
+          💰 Comprar via PIX
+        </Button>
+        <Button
+          size="lg"
+          className="flex-1 gap-2 text-sm"
+          onClick={() => {
+            addItem(product, qty);
+            setShowUpsell(true);
+          }}
+        >
+          <ShoppingCart className="h-4 w-4" /> Adicionar
+        </Button>
+      </div>
+      {/* Spacer for fixed bar */}
+      <div className="h-20 md:hidden" />
+
       <Footer />
       <WhatsAppButton />
       {product && <UpsellDialog open={showUpsell} onOpenChange={setShowUpsell} product={product} currentQty={qty} onAddMore={(extra) => addItem(product, extra)} />}
