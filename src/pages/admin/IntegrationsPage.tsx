@@ -379,12 +379,16 @@ function WebchatWhatsAppSettings() {
   const [webchatEnabled, setWebchatEnabled] = useState(false);
   const [webchatScript, setWebchatScript] = useState("");
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
+  const [whatsappName, setWhatsappName] = useState("Fale com um Especialista");
+  const [whatsappMessage, setWhatsappMessage] = useState("Olá! Gostaria de falar com um especialista.");
 
   useEffect(() => {
     if (settings) {
       setWebchatEnabled(settings.webchat_enabled ?? false);
       setWebchatScript(settings.webchat_script ?? "");
       setWhatsappEnabled(settings.whatsapp_button_enabled ?? true);
+      setWhatsappName(settings.whatsapp_button_name || "Fale com um Especialista");
+      setWhatsappMessage(settings.whatsapp_button_message || "Olá! Gostaria de falar com um especialista.");
     }
   }, [settings]);
 
@@ -408,9 +412,12 @@ function WebchatWhatsAppSettings() {
     mutation.mutate({ webchat_enabled: webchatEnabled, webchat_script: webchatScript });
   };
 
-  const toggleWhatsapp = (checked: boolean) => {
-    setWhatsappEnabled(checked);
-    mutation.mutate({ whatsapp_button_enabled: checked });
+  const saveWhatsapp = () => {
+    mutation.mutate({
+      whatsapp_button_enabled: whatsappEnabled,
+      whatsapp_button_name: whatsappName,
+      whatsapp_button_message: whatsappMessage,
+    });
   };
 
   if (isLoading) return null;
@@ -473,8 +480,28 @@ function WebchatWhatsAppSettings() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
-              <Switch checked={whatsappEnabled} onCheckedChange={toggleWhatsapp} id="whatsapp-toggle" />
+              <Switch checked={whatsappEnabled} onCheckedChange={setWhatsappEnabled} id="whatsapp-toggle" />
               <Label htmlFor="whatsapp-toggle">{whatsappEnabled ? "Botão ativado" : "Botão desativado"}</Label>
+            </div>
+            <div>
+              <Label>Nome do Botão</Label>
+              <Input
+                value={whatsappName}
+                onChange={(e) => setWhatsappName(e.target.value)}
+                placeholder="Fale com um Especialista"
+                maxLength={50}
+              />
+            </div>
+            <div>
+              <Label>Mensagem Padrão</Label>
+              <Textarea
+                rows={3}
+                value={whatsappMessage}
+                onChange={(e) => setWhatsappMessage(e.target.value)}
+                placeholder="Olá! Gostaria de falar com um especialista."
+                maxLength={500}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">Mensagem pré-preenchida ao abrir o WhatsApp.</p>
             </div>
             <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
               <p>O número de WhatsApp é configurado em <strong>Configurações da Loja → WhatsApp</strong>.</p>
@@ -482,6 +509,9 @@ function WebchatWhatsAppSettings() {
                 <p className="mt-1">Número atual: <code className="bg-background px-1 rounded">{settings.whatsapp}</code></p>
               )}
             </div>
+            <Button onClick={saveWhatsapp} disabled={mutation.isPending} size="sm">
+              {mutation.isPending ? "Salvando..." : "Salvar WhatsApp"}
+            </Button>
           </CardContent>
         </Card>
       </div>
