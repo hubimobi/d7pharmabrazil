@@ -6,12 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, XCircle, ExternalLink, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug } from "lucide-react";
+import { toast } from "sonner";
 
 export default function IntegrationsPage() {
   const [blingInviteUrl, setBlingInviteUrl] = useState("");
+  const [showReconnect, setShowReconnect] = useState(false);
 
-  const { data: blingStatus, refetch } = useQuery({
+  const { data: blingStatus, refetch, isLoading } = useQuery({
     queryKey: ["bling-status"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -20,7 +22,11 @@ export default function IntegrationsPage() {
         .order("created_at", { ascending: false })
         .limit(1);
 
-      if (error || !data || data.length === 0) return { connected: false };
+      if (error) {
+        console.error("Erro ao buscar status do Bling:", error);
+        return { connected: false };
+      }
+      if (!data || data.length === 0) return { connected: false };
 
       const token = data[0];
       const expired = new Date(token.expires_at) < new Date();
@@ -33,6 +39,13 @@ export default function IntegrationsPage() {
     },
   });
 
+  const handleRefresh = async () => {
+    await refetch();
+    toast.success("Status atualizado!");
+  };
+
+  const needsConnect = !blingStatus?.connected || blingStatus?.expired || showReconnect;
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Integrações</h1>
@@ -43,7 +56,9 @@ export default function IntegrationsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Bling ERP
-              {blingStatus?.connected ? (
+              {isLoading ? (
+                <Badge variant="outline">Verificando...</Badge>
+              ) : blingStatus?.connected ? (
                 <Badge variant={blingStatus.expired ? "destructive" : "default"}>
                   {blingStatus.expired ? "Token expirado" : "Conectado"}
                 </Badge>
@@ -56,7 +71,7 @@ export default function IntegrationsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {blingStatus?.connected && !blingStatus.expired && (
+            {blingStatus?.connected && !blingStatus.expired && !showReconnect && (
               <div className="flex items-center gap-2 text-sm text-primary">
                 <CheckCircle className="h-4 w-4" />
                 Conectado — token válido até{" "}
@@ -70,7 +85,7 @@ export default function IntegrationsPage() {
               </div>
             )}
 
-            {!blingStatus?.connected || blingStatus?.expired ? (
+            {needsConnect && (
               <div className="space-y-2">
                 <Label htmlFor="bling-url">Link de convite do Bling (cole da tela do app)</Label>
                 <Input
@@ -87,21 +102,41 @@ export default function IntegrationsPage() {
                   Autorizar no Bling
                 </Button>
               </div>
-            ) : null}
+            )}
 
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
-                <RefreshCw className="h-4 w-4 mr-2" />
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
                 Verificar status
               </Button>
+              {blingStatus?.connected && !blingStatus.expired && !showReconnect && (
+                <Button variant="outline" size="sm" onClick={() => setShowReconnect(true)}>
+                  <Unplug className="h-4 w-4 mr-2" />
+                  Reconectar
+                </Button>
+              )}
+              {showReconnect && (
+                <Button variant="ghost" size="sm" onClick={() => setShowReconnect(false)}>
+                  Cancelar
+                </Button>
+              )}
             </div>
 
-            <p className="text-xs text-muted-foreground">
-              Configure a URL de callback no app Bling:{" "}
-              <code className="bg-muted px-1 rounded text-xs">
-                https://xufiemrhlmirkrdrcxox.supabase.co/functions/v1/bling-callback
-              </code>
-            </p>
+            <div className="rounded-md bg-muted p-3 space-y-1">
+              <p className="text-xs font-medium">Escopos necessários no app Bling:</p>
+              <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+                <li><strong>Pedidos de Venda</strong> — Leitura e Escrita</li>
+                <li><strong>Contatos</strong> — Leitura e Escrita</li>
+                <li><strong>Produtos</strong> — Leitura (opcional, para sync futuro)</li>
+                <li><strong>Notas Fiscais</strong> — Leitura e Escrita (opcional)</li>
+              </ul>
+              <p className="text-xs text-muted-foreground mt-2">
+                URL de callback:{" "}
+                <code className="bg-background px-1 rounded text-xs break-all">
+                  {`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/bling-callback`}
+                </code>
+              </p>
+            </div>
           </CardContent>
         </Card>
 
