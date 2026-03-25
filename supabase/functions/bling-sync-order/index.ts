@@ -82,7 +82,8 @@ async function findOrCreateContact(
   // Create new contact
   const contactPayload = {
     nome: name || "Cliente Loja Online",
-    tipo: "F", // Pessoa Física
+    tipo: "F",
+    situacao: "A",
     ...(email && { email }),
     ...(phone && { celular: phone }),
   };
