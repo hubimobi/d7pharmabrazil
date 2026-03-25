@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Star, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
+import UpsellDialog from "@/components/UpsellDialog";
 
 const ProductCard = ({ product }: { product: Product }) => {
   const { addItem } = useCart();
+  const [showUpsell, setShowUpsell] = useState(false);
   const discountPercent = Math.round((1 - product.price / product.originalPrice) * 100);
 
   return (
@@ -55,13 +58,17 @@ const ProductCard = ({ product }: { product: Product }) => {
           <Button
             className="mt-3 w-full gap-2"
             size="sm"
-            onClick={() => addItem(product)}
+            onClick={() => {
+              addItem(product);
+              setShowUpsell(true);
+            }}
           >
             <ShoppingCart className="h-4 w-4" />
             Adicionar ao Carrinho
           </Button>
         </div>
       </div>
+      <UpsellDialog open={showUpsell} onOpenChange={setShowUpsell} product={product} />
     </div>
   );
 };
