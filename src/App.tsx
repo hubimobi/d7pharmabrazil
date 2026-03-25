@@ -25,6 +25,19 @@ import IntegrationsPage from "./pages/admin/IntegrationsPage";
 
 const queryClient = new QueryClient();
 
+// Detect Bling OAuth callback and redirect to edge function
+const BlingRedirect = () => {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+  const state = params.get("state");
+  if (code && state) {
+    const edgeUrl = `https://xufiemrhlmirkrdrcxox.supabase.co/functions/v1/bling-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
+    window.location.href = edgeUrl;
+    return <div className="flex items-center justify-center min-h-screen"><p>Conectando ao Bling...</p></div>;
+  }
+  return <Index />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -34,7 +47,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<BlingRedirect />} />
               <Route path="/produtos" element={<ProductsPage />} />
               <Route path="/produto/:slug" element={<ProductDetail />} />
               <Route path="/checkout" element={<CheckoutPage />} />
