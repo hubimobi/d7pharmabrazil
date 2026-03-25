@@ -10,6 +10,7 @@ export interface Product {
   price: number;
   originalPrice: number;
   image: string;
+  extraImages: string[];
   benefits: string[];
   rating: number;
   reviews: number;
@@ -33,6 +34,8 @@ const fallbackImages: Record<string, string> = {
 };
 
 function mapDbProduct(p: any): Product {
+  const mainImage = p.image_url || fallbackImages[p.slug] || "/placeholder.svg";
+  const extras = Array.isArray(p.extra_images) ? p.extra_images.filter(Boolean) : [];
   return {
     id: p.id,
     name: p.name,
@@ -41,7 +44,8 @@ function mapDbProduct(p: any): Product {
     description: p.description,
     price: Number(p.price),
     originalPrice: Number(p.original_price),
-    image: p.image_url || fallbackImages[p.slug] || "/placeholder.svg",
+    image: mainImage,
+    extraImages: extras,
     benefits: Array.isArray(p.benefits) ? p.benefits : [],
     rating: Number(p.rating),
     reviews: p.reviews_count,
