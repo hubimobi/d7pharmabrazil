@@ -9,39 +9,79 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { toast } from "sonner";
-
-const DOCTORS = [
-  "Dr. Ricardo Mendes",
-  "Dra. Mariana Costa",
-  "Dr. Felipe Santos",
-  "Dra. Camila Oliveira",
-  "Dr. André Souza",
-];
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const CheckoutPage = () => {
-  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon } = useCart();
+  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart } = useCart();
   const [step, setStep] = useState(1);
   const [couponInput, setCouponInput] = useState("");
   const [doctorSearch, setDoctorSearch] = useState("");
   const [showDoctorResults, setShowDoctorResults] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
     cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "",
     doctor: "", paymentMethod: "pix" as "pix" | "card",
   });
 
-  const filteredDoctors = DOCTORS.filter((d) => d.toLowerCase().includes(doctorSearch.toLowerCase()));
+  const { data: doctors } = useQuery({
+    queryKey: ["active-doctors"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("doctors")
+        .select("id, name, specialty, city, state")
+        .eq("active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const filteredDoctors = (doctors ?? []).filter((d) =>
+    d.name.toLowerCase().includes(doctorSearch.toLowerCase())
+  );
+
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
   const shipping = subtotal >= 199 ? 0 : 19.90;
   const finalTotal = total + shipping;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.doctor) {
       toast.error("O nome do Doutor é obrigatório!");
       return;
     }
-    toast.success("Pedido realizado com sucesso! 🎉");
+
+    setIsSubmitting(true);
+    try {
+      const orderItems = items.map((i) => ({
+        product_id: i.product.id,
+        name: i.product.name,
+        price: i.product.price,
+        quantity: i.quantity,
+      }));
+
+      const { error } = await supabase.from("orders").insert({
+        customer_name: form.name,
+        customer_email: form.email,
+        customer_phone: form.phone,
+        doctor_id: selectedDoctorId,
+        items: orderItems,
+        total: finalTotal,
+        status: "pending",
+      });
+
+      if (error) throw error;
+
+      toast.success("Pedido realizado com sucesso! 🎉");
+      clearCart();
+    } catch {
+      toast.error("Erro ao salvar pedido. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (items.length === 0) {
@@ -136,29 +176,37 @@ const CheckoutPage = () => {
                     onChange={(e) => {
                       setDoctorSearch(e.target.value);
                       setForm({ ...form, doctor: "" });
+                      setSelectedDoctorId(null);
                       setShowDoctorResults(true);
                     }}
                   />
                   {showDoctorResults && doctorSearch && (
-                    <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-card shadow-lg">
+                    <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
                       {filteredDoctors.map((d) => (
                         <button
-                          key={d}
+                          key={d.id}
                           type="button"
                           className="w-full px-4 py-2 text-left text-sm hover:bg-muted"
-                          onClick={() => { setForm({ ...form, doctor: d }); setDoctorSearch(""); setShowDoctorResults(false); }}
+                          onClick={() => {
+                            setForm({ ...form, doctor: d.name });
+                            setSelectedDoctorId(d.id);
+                            setDoctorSearch("");
+                            setShowDoctorResults(false);
+                          }}
                         >
-                          {d}
+                          <span className="font-medium">{d.name}</span>
+                          {d.specialty && <span className="text-muted-foreground"> — {d.specialty}</span>}
+                          {(d.city || d.state) && (
+                            <span className="text-muted-foreground text-xs ml-2">
+                              ({[d.city, d.state].filter(Boolean).join("/")})
+                            </span>
+                          )}
                         </button>
                       ))}
                       {filteredDoctors.length === 0 && (
-                        <button
-                          type="button"
-                          className="w-full px-4 py-2 text-left text-sm text-secondary hover:bg-muted"
-                          onClick={() => { setForm({ ...form, doctor: doctorSearch }); setShowDoctorResults(false); toast.info("Novo doutor cadastrado!"); }}
-                        >
-                          + Cadastrar "{doctorSearch}" como novo Doutor
-                        </button>
+                        <p className="px-4 py-3 text-sm text-muted-foreground">
+                          Nenhum doutor encontrado. Consulte seu representante.
+                        </p>
                       )}
                     </div>
                   )}
@@ -184,7 +232,9 @@ const CheckoutPage = () => {
 
                 <div className="flex gap-3">
                   <Button type="button" variant="outline" onClick={() => setStep(1)}>Voltar</Button>
-                  <Button type="submit" className="flex-1" size="lg">Finalizar Pedido</Button>
+                  <Button type="submit" className="flex-1" size="lg" disabled={isSubmitting}>
+                    {isSubmitting ? "Processando..." : "Finalizar Pedido"}
+                  </Button>
                 </div>
               </form>
             )}
