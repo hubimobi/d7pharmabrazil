@@ -56,17 +56,30 @@ const ProductCard = ({ product }: { product: Product }) => {
           <p className="text-[10px] text-muted-foreground">
             ou 3x de R$ {(product.price / 3).toFixed(2).replace(".", ",")} sem juros
           </p>
-          <Button
-            className="mt-3 w-full gap-2"
-            size="sm"
-            onClick={() => {
-              addItem(product);
-              setShowUpsell(true);
-            }}
-          >
-            <ShoppingCart className="h-4 w-4" />
-            Adicionar ao Carrinho
-          </Button>
+          <div className="mt-3 flex gap-2">
+            <Button
+              className="flex-1 gap-1"
+              size="sm"
+              onClick={() => {
+                addItem(product);
+                setShowUpsell(true);
+              }}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              Carrinho
+            </Button>
+            <Button
+              className="flex-1 gap-1 bg-success hover:bg-success/90 text-success-foreground"
+              size="sm"
+              onClick={() => {
+                addItem(product);
+                navigate("/checkout");
+              }}
+            >
+              <Zap className="h-4 w-4" />
+              Comprar
+            </Button>
+          </div>
         </div>
       </div>
       <UpsellDialog open={showUpsell} onOpenChange={setShowUpsell} product={product} />
