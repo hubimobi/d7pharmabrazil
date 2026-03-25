@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Star, ShoppingCart } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Star, ShoppingCart, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/hooks/useProducts";
@@ -9,6 +9,7 @@ import UpsellDialog from "@/components/UpsellDialog";
 
 const ProductCard = ({ product }: { product: Product }) => {
   const { addItem } = useCart();
+  const navigate = useNavigate();
   const [showUpsell, setShowUpsell] = useState(false);
   const discountPercent = Math.round((1 - product.price / product.originalPrice) * 100);
 
