@@ -23,6 +23,13 @@ export interface StoreSettings {
   whatsapp_button_enabled: boolean;
   whatsapp_button_name: string;
   whatsapp_button_message: string;
+  hero_title: string;
+  hero_subtitle: string;
+  hero_button_text: string;
+  hero_button_link: string;
+  hero_button2_text: string;
+  hero_button2_link: string;
+  hero_image_url: string;
 }
 
 export function useStoreSettings() {

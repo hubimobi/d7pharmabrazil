@@ -540,6 +540,13 @@ export type Database = {
           created_at: string
           email: string | null
           facebook: string | null
+          hero_button_link: string | null
+          hero_button_text: string | null
+          hero_button2_link: string | null
+          hero_button2_text: string | null
+          hero_image_url: string | null
+          hero_subtitle: string | null
+          hero_title: string | null
           id: string
           instagram: string | null
           store_name: string
@@ -565,6 +572,13 @@ export type Database = {
           created_at?: string
           email?: string | null
           facebook?: string | null
+          hero_button_link?: string | null
+          hero_button_text?: string | null
+          hero_button2_link?: string | null
+          hero_button2_text?: string | null
+          hero_image_url?: string | null
+          hero_subtitle?: string | null
+          hero_title?: string | null
           id?: string
           instagram?: string | null
           store_name?: string
@@ -590,6 +604,13 @@ export type Database = {
           created_at?: string
           email?: string | null
           facebook?: string | null
+          hero_button_link?: string | null
+          hero_button_text?: string | null
+          hero_button2_link?: string | null
+          hero_button2_text?: string | null
+          hero_image_url?: string | null
+          hero_subtitle?: string | null
+          hero_title?: string | null
           id?: string
           instagram?: string | null
           store_name?: string
