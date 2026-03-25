@@ -25,6 +25,7 @@ import IntegrationsPage from "./pages/admin/IntegrationsPage";
 import RecoveryPage from "./pages/admin/RecoveryPage";
 import CouponsPage from "./pages/admin/CouponsPage";
 import RecentPurchasePopup from "./components/RecentPurchasePopup";
+import WebchatWidget from "./components/WebchatWidget";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <RecentPurchasePopup />
+            <WebchatWidget />
             <Routes>
               <Route path="/" element={<BlingRedirect />} />
               <Route path="/produtos" element={<ProductsPage />} />
