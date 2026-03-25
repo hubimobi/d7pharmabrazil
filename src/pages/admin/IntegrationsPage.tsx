@@ -1,17 +1,44 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug, Power, PowerOff, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+
+interface IntegrationState {
+  asaas: boolean;
+  melhor_envio: boolean;
+  ghl: boolean;
+}
 
 export default function IntegrationsPage() {
   const [blingInviteUrl, setBlingInviteUrl] = useState("");
   const [showReconnect, setShowReconnect] = useState(false);
+  const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
+  const qc = useQueryClient();
+
+  // Integration enabled states (persisted in localStorage for simplicity)
+  const [integrations, setIntegrations] = useState<IntegrationState>(() => {
+    try {
+      const saved = localStorage.getItem("d7-integrations");
+      return saved ? JSON.parse(saved) : { asaas: true, melhor_envio: true, ghl: true };
+    } catch {
+      return { asaas: true, melhor_envio: true, ghl: true };
+    }
+  });
+
+  const toggleIntegration = (key: keyof IntegrationState) => {
+    const newState = { ...integrations, [key]: !integrations[key] };
+    setIntegrations(newState);
+    localStorage.setItem("d7-integrations", JSON.stringify(newState));
+    toast.success(newState[key] ? "Integração ativada!" : "Integração desativada.");
+    setDisconnectTarget(null);
+  };
 
   const { data: blingStatus, refetch, isLoading } = useQuery({
     queryKey: ["bling-status"],
@@ -35,6 +62,7 @@ export default function IntegrationsPage() {
         expired,
         expiresAt: token.expires_at,
         updatedAt: token.updated_at,
+        tokenId: token.id,
       };
     },
   });
@@ -44,15 +72,64 @@ export default function IntegrationsPage() {
     toast.success("Status atualizado!");
   };
 
+  const handleDisconnectBling = async () => {
+    if (!blingStatus?.connected) return;
+    const { error } = await supabase.from("bling_tokens").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    if (error) {
+      toast.error("Erro ao desconectar Bling.");
+    } else {
+      toast.success("Bling desconectado.");
+      refetch();
+    }
+    setDisconnectTarget(null);
+  };
+
   const needsConnect = !blingStatus?.connected || blingStatus?.expired || showReconnect;
+
+  const integrationLabels: Record<string, string> = {
+    bling: "Bling ERP",
+    asaas: "Asaas Pagamentos",
+    melhor_envio: "Melhor Envio",
+    ghl: "GoHighLevel (GHL)",
+  };
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Integrações</h1>
 
+      {/* Disconnect confirmation dialog */}
+      <Dialog open={!!disconnectTarget} onOpenChange={() => setDisconnectTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Desconectar {integrationLabels[disconnectTarget || ""] || disconnectTarget}?
+            </DialogTitle>
+            <DialogDescription>
+              {disconnectTarget === "bling"
+                ? "Os tokens de acesso serão removidos. Você precisará autorizar novamente para reconectar."
+                : "A integração será desativada e os dados não serão mais sincronizados automaticamente. Você pode reconectar a qualquer momento."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDisconnectTarget(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (disconnectTarget === "bling") handleDisconnectBling();
+                else if (disconnectTarget) toggleIntegration(disconnectTarget as keyof IntegrationState);
+              }}
+            >
+              <PowerOff className="h-4 w-4 mr-2" />
+              Desconectar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* Bling */}
-        <Card>
+        <Card className={!blingStatus?.connected ? "opacity-75" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Bling ERP
@@ -110,9 +187,21 @@ export default function IntegrationsPage() {
                 Verificar status
               </Button>
               {blingStatus?.connected && !blingStatus.expired && !showReconnect && (
-                <Button variant="outline" size="sm" onClick={() => setShowReconnect(true)}>
-                  <Unplug className="h-4 w-4 mr-2" />
-                  Reconectar
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setShowReconnect(true)}>
+                    <Unplug className="h-4 w-4 mr-2" />
+                    Reconectar
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDisconnectTarget("bling")}>
+                    <PowerOff className="h-4 w-4 mr-2" />
+                    Desconectar
+                  </Button>
+                </>
+              )}
+              {!blingStatus?.connected && (
+                <Button variant="default" size="sm" onClick={() => setShowReconnect(true)}>
+                  <Power className="h-4 w-4 mr-2" />
+                  Conectar
                 </Button>
               )}
               {showReconnect && (
@@ -141,66 +230,134 @@ export default function IntegrationsPage() {
         </Card>
 
         {/* Asaas */}
-        <Card>
+        <Card className={!integrations.asaas ? "opacity-60" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Asaas Pagamentos
-              <Badge>Conectado</Badge>
+              <Badge variant={integrations.asaas ? "default" : "outline"}>
+                {integrations.asaas ? "Conectado" : "Desconectado"}
+              </Badge>
             </CardTitle>
             <CardDescription>
               Pagamentos via Pix e Cartão de Crédito integrados ao checkout.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-sm text-primary">
-              <CheckCircle className="h-4 w-4" />
-              API configurada (Produção)
+          <CardContent className="space-y-3">
+            {integrations.asaas ? (
+              <div className="flex items-center gap-2 text-sm text-primary">
+                <CheckCircle className="h-4 w-4" />
+                API configurada (Produção)
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <XCircle className="h-4 w-4" />
+                Integração desativada
+              </div>
+            )}
+            <div className="flex gap-2">
+              {integrations.asaas ? (
+                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDisconnectTarget("asaas")}>
+                  <PowerOff className="h-4 w-4 mr-2" />
+                  Desconectar
+                </Button>
+              ) : (
+                <Button variant="default" size="sm" onClick={() => toggleIntegration("asaas")}>
+                  <Power className="h-4 w-4 mr-2" />
+                  Conectar
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Melhor Envio */}
-        <Card>
+        <Card className={!integrations.melhor_envio ? "opacity-60" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Melhor Envio
-              <Badge>Conectado</Badge>
+              <Badge variant={integrations.melhor_envio ? "default" : "outline"}>
+                {integrations.melhor_envio ? "Conectado" : "Desconectado"}
+              </Badge>
             </CardTitle>
             <CardDescription>
               Cálculo de frete automático por CEP com peso e dimensões dos produtos.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-sm text-primary">
-              <CheckCircle className="h-4 w-4" />
-              API configurada
+          <CardContent className="space-y-3">
+            {integrations.melhor_envio ? (
+              <div className="flex items-center gap-2 text-sm text-primary">
+                <CheckCircle className="h-4 w-4" />
+                API configurada
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <XCircle className="h-4 w-4" />
+                Integração desativada
+              </div>
+            )}
+            <div className="flex gap-2">
+              {integrations.melhor_envio ? (
+                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDisconnectTarget("melhor_envio")}>
+                  <PowerOff className="h-4 w-4 mr-2" />
+                  Desconectar
+                </Button>
+              ) : (
+                <Button variant="default" size="sm" onClick={() => toggleIntegration("melhor_envio")}>
+                  <Power className="h-4 w-4 mr-2" />
+                  Conectar
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* GoHighLevel */}
-        <Card>
+        <Card className={!integrations.ghl ? "opacity-60" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               GoHighLevel (GHL)
-              <Badge>Conectado</Badge>
+              <Badge variant={integrations.ghl ? "default" : "outline"}>
+                {integrations.ghl ? "Conectado" : "Desconectado"}
+              </Badge>
             </CardTitle>
             <CardDescription>
               Sincronização automática de contatos, oportunidades e tags após cada compra.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-center gap-2 text-sm text-primary">
-              <CheckCircle className="h-4 w-4" />
-              API configurada
-            </div>
-            <div className="rounded-md bg-muted p-3">
-              <p className="text-xs font-medium mb-1">O que é sincronizado automaticamente:</p>
-              <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
-                <li>Contato criado/atualizado com nome, email e telefone</li>
-                <li>Tags automáticas: <code className="bg-background px-1 rounded">cliente-loja-online</code>, <code className="bg-background px-1 rounded">pagou-pix</code>, <code className="bg-background px-1 rounded">comprou-[produto]</code></li>
-                <li>Oportunidade criada no primeiro pipeline com valor do pedido</li>
-              </ul>
+            {integrations.ghl ? (
+              <>
+                <div className="flex items-center gap-2 text-sm text-primary">
+                  <CheckCircle className="h-4 w-4" />
+                  API configurada
+                </div>
+                <div className="rounded-md bg-muted p-3">
+                  <p className="text-xs font-medium mb-1">O que é sincronizado automaticamente:</p>
+                  <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+                    <li>Contato criado/atualizado com nome, email e telefone</li>
+                    <li>Tags automáticas: <code className="bg-background px-1 rounded">cliente-loja-online</code>, <code className="bg-background px-1 rounded">pagou-pix</code>, <code className="bg-background px-1 rounded">comprou-[produto]</code></li>
+                    <li>Oportunidade criada no primeiro pipeline com valor do pedido</li>
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <XCircle className="h-4 w-4" />
+                Integração desativada
+              </div>
+            )}
+            <div className="flex gap-2">
+              {integrations.ghl ? (
+                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDisconnectTarget("ghl")}>
+                  <PowerOff className="h-4 w-4 mr-2" />
+                  Desconectar
+                </Button>
+              ) : (
+                <Button variant="default" size="sm" onClick={() => toggleIntegration("ghl")}>
+                  <Power className="h-4 w-4 mr-2" />
+                  Conectar
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
