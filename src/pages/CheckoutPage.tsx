@@ -45,30 +45,63 @@ const CheckoutPage = () => {
   });
   const abandonmentSaved = useRef(false);
 
-  // Track cart abandonment: save when user has items + filled some data but leaves
+  // Track cart abandonment: save to DB + sync to GHL when user leaves without completing
   useEffect(() => {
     const saveAbandonment = () => {
       if (abandonmentSaved.current || items.length === 0) return;
       if (!form.name && !form.phone && !form.email) return;
 
       abandonmentSaved.current = true;
-      const payload = {
+
+      const cartItems = items.map((i) => ({
+        product_id: i.product.id,
+        name: i.product.name,
+        quantity: i.quantity,
+        price: i.product.price,
+      }));
+
+      const dbPayload = {
         customer_name: form.name,
         customer_email: form.email || null,
         customer_phone: form.phone || null,
-        items: items.map((i) => ({ name: i.product.name, quantity: i.quantity, price: i.product.price })),
+        items: cartItems,
         cart_total: total,
       };
-      // Use sendBeacon for reliability on page unload
-      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/abandoned_carts`;
-      const headers = new Headers({
+
+      // Save to abandoned_carts table
+      const dbUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/abandoned_carts`;
+      const dbHeaders = {
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         "Content-Type": "application/json",
         Prefer: "return=minimal",
-      });
-      // sendBeacon doesn't support custom headers, use fetch with keepalive
-      fetch(url, { method: "POST", headers, body: JSON.stringify(payload), keepalive: true }).catch(() => {});
+      };
+      fetch(dbUrl, { method: "POST", headers: dbHeaders, body: JSON.stringify(dbPayload), keepalive: true }).catch(() => {});
+
+      // Sync to GHL with abandonment tags (non-blocking)
+      if (form.email || form.phone) {
+        const ghlPayload = {
+          customer_name: form.name || "Visitante",
+          customer_email: form.email || "",
+          customer_phone: form.phone,
+          order_total: total,
+          items: cartItems,
+          tags: [
+            "carrinho-abandonado",
+            "checkout-incompleto",
+            ...cartItems.map((i) => `abandonou-${i.name.toLowerCase().replace(/\s+/g, "-").slice(0, 30)}`),
+          ],
+        };
+        const ghlUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ghl-sync`;
+        fetch(ghlUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify(ghlPayload),
+          keepalive: true,
+        }).catch(() => {});
+      }
     };
 
     window.addEventListener("beforeunload", saveAbandonment);
