@@ -1,14 +1,17 @@
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug, Power, PowerOff, AlertTriangle } from "lucide-react";
+import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug, Power, PowerOff, AlertTriangle, MessageSquare, Phone } from "lucide-react";
 import { toast } from "sonner";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
 
 interface IntegrationState {
   asaas: boolean;
@@ -357,6 +360,126 @@ export default function IntegrationsPage() {
                   <Power className="h-4 w-4 mr-2" />
                   Conectar
                 </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Webchat & WhatsApp Section */}
+      <WebchatWhatsAppSettings />
+    </div>
+  );
+}
+
+function WebchatWhatsAppSettings() {
+  const { data: settings, isLoading } = useStoreSettings();
+  const qc = useQueryClient();
+
+  const [webchatEnabled, setWebchatEnabled] = useState(false);
+  const [webchatScript, setWebchatScript] = useState("");
+  const [whatsappEnabled, setWhatsappEnabled] = useState(true);
+
+  useEffect(() => {
+    if (settings) {
+      setWebchatEnabled(settings.webchat_enabled ?? false);
+      setWebchatScript(settings.webchat_script ?? "");
+      setWhatsappEnabled(settings.whatsapp_button_enabled ?? true);
+    }
+  }, [settings]);
+
+  const mutation = useMutation({
+    mutationFn: async (values: Record<string, any>) => {
+      if (!settings?.id) throw new Error("Settings not found");
+      const { error } = await (supabase.from("store_settings" as any) as any)
+        .update(values)
+        .eq("id", settings.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["store-settings"] });
+      qc.invalidateQueries({ queryKey: ["store-settings-admin"] });
+      toast.success("Configuração salva!");
+    },
+    onError: () => toast.error("Erro ao salvar."),
+  });
+
+  const saveWebchat = () => {
+    mutation.mutate({ webchat_enabled: webchatEnabled, webchat_script: webchatScript });
+  };
+
+  const toggleWhatsapp = (checked: boolean) => {
+    setWhatsappEnabled(checked);
+    mutation.mutate({ whatsapp_button_enabled: checked });
+  };
+
+  if (isLoading) return null;
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold">Widgets do Site</h2>
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Webchat */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Webchat
+              <Badge variant={webchatEnabled ? "default" : "outline"}>
+                {webchatEnabled ? "Ativo" : "Inativo"}
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Instale o webchat do GoHighLevel ou qualquer outro widget de chat colando o código embed abaixo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Switch checked={webchatEnabled} onCheckedChange={setWebchatEnabled} id="webchat-toggle" />
+              <Label htmlFor="webchat-toggle">{webchatEnabled ? "Webchat ativado" : "Webchat desativado"}</Label>
+            </div>
+            <div>
+              <Label>Código Embed (HTML/Script)</Label>
+              <Textarea
+                rows={6}
+                placeholder={'<script src="https://widgets.leadconnectorhq.com/loader.js" ...></script>'}
+                value={webchatScript}
+                onChange={(e) => setWebchatScript(e.target.value)}
+                className="font-mono text-xs"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Cole aqui o código completo do widget (ex: GoHighLevel, Tidio, Crisp, etc.)
+              </p>
+            </div>
+            <Button onClick={saveWebchat} disabled={mutation.isPending} size="sm">
+              {mutation.isPending ? "Salvando..." : "Salvar Webchat"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* WhatsApp Button */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Phone className="h-5 w-5" />
+              Botão Fale com o Especialista
+              <Badge variant={whatsappEnabled ? "default" : "outline"}>
+                {whatsappEnabled ? "Ativo" : "Inativo"}
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Botão flutuante no site que direciona para o WhatsApp cadastrado nas configurações da loja.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Switch checked={whatsappEnabled} onCheckedChange={toggleWhatsapp} id="whatsapp-toggle" />
+              <Label htmlFor="whatsapp-toggle">{whatsappEnabled ? "Botão ativado" : "Botão desativado"}</Label>
+            </div>
+            <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+              <p>O número de WhatsApp é configurado em <strong>Configurações da Loja → WhatsApp</strong>.</p>
+              {settings?.whatsapp && (
+                <p className="mt-1">Número atual: <code className="bg-background px-1 rounded">{settings.whatsapp}</code></p>
               )}
             </div>
           </CardContent>
