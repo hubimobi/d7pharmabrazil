@@ -21,12 +21,10 @@ async function getValidToken(supabase: any): Promise<string> {
   const now = new Date();
   const expiresAt = new Date(tokens.expires_at);
 
-  // If token still valid, return it
   if (expiresAt > now) {
     return tokens.access_token;
   }
 
-  // Refresh token
   const clientId = Deno.env.get("BLING_CLIENT_ID")!;
   const clientSecret = Deno.env.get("BLING_CLIENT_SECRET")!;
   const credentials = btoa(`${clientId}:${clientSecret}`);
@@ -63,6 +61,51 @@ async function getValidToken(supabase: any): Promise<string> {
   return data.access_token;
 }
 
+async function findOrCreateContact(
+  accessToken: string,
+  name: string,
+  email: string,
+  phone: string
+): Promise<number> {
+  // Search by email first
+  if (email) {
+    const searchRes = await fetch(
+      `${BLING_API}/contatos?pesquisa=${encodeURIComponent(email)}&limite=1`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const searchData = await searchRes.json();
+    if (searchRes.ok && searchData.data && searchData.data.length > 0) {
+      return searchData.data[0].id;
+    }
+  }
+
+  // Create new contact
+  const contactPayload = {
+    nome: name || "Cliente Loja Online",
+    tipo: "F", // Pessoa Física
+    ...(email && { email }),
+    ...(phone && { celular: phone }),
+  };
+
+  const createRes = await fetch(`${BLING_API}/contatos`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(contactPayload),
+  });
+
+  const createData = await createRes.json();
+
+  if (!createRes.ok || !createData.data?.id) {
+    console.error("Bling create contact error:", createData);
+    throw new Error("Não foi possível criar contato no Bling: " + JSON.stringify(createData));
+  }
+
+  return createData.data.id;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -82,7 +125,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch order
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select("*")
@@ -96,10 +138,17 @@ serve(async (req) => {
       });
     }
 
-    // Get valid Bling token
     const accessToken = await getValidToken(supabase);
 
-    // Fetch product details for SKU/NCM/GTIN
+    // Find or create contact in Bling
+    const contactId = await findOrCreateContact(
+      accessToken,
+      order.customer_name,
+      order.customer_email || "",
+      order.customer_phone || ""
+    );
+
+    // Fetch product details
     const items = order.items as any[];
     const productIds = items.map((i: any) => i.id).filter(Boolean);
 
@@ -110,7 +159,6 @@ serve(async (req) => {
 
     const productMap = new Map((products || []).map((p: any) => [p.id, p]));
 
-    // Build Bling order payload (V3 format)
     const blingItems = items.map((item: any) => {
       const prod = productMap.get(item.id);
       return {
@@ -119,24 +167,21 @@ serve(async (req) => {
         valor: item.price || prod?.price || 0,
         codigo: prod?.sku || "",
         unidade: prod?.unit || "UN",
-        gtin: prod?.gtin || "",
-        ncm: prod?.ncm || "",
       };
     });
 
     const blingPayload = {
-      numero: 0, // Bling auto-generates
+      numero: 0,
       data: new Date(order.created_at).toISOString().split("T")[0],
       contato: {
-        nome: order.customer_name,
-        email: order.customer_email || "",
-        telefone: order.customer_phone || "",
+        id: contactId,
       },
       itens: blingItems,
       observacoes: `Pedido loja online #${order.id.slice(0, 8)}`,
     };
 
-    // Send to Bling V3
+    console.log("Sending to Bling:", JSON.stringify(blingPayload));
+
     const blingRes = await fetch(`${BLING_API}/pedidos/vendas`, {
       method: "POST",
       headers: {
