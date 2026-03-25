@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Pencil, Upload, Trash2, Star, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import RichTextEditor from "@/components/admin/RichTextEditor";
 
 interface ProdForm {
   name: string; slug: string; short_description: string; description: string;
@@ -228,10 +229,25 @@ export default function ProductsPage() {
                     <div className="space-y-2"><Label>Fabricante</Label><Input value={form.manufacturer} onChange={(e) => setForm({ ...form, manufacturer: e.target.value })} placeholder="ex: D7 Pharma" /></div>
                   </div>
                   <div className="space-y-2"><Label>Descrição Curta</Label><Input value={form.short_description} onChange={(e) => setForm({ ...form, short_description: e.target.value })} /></div>
-                  <div className="space-y-2"><Label>Descrição Completa</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
+                  <div className="space-y-2">
+                    <Label>Descrição Completa (HTML)</Label>
+                    <RichTextEditor value={form.description} onChange={(val) => setForm({ ...form, description: val })} placeholder="Escreva a descrição do produto com formatação rica..." />
+                  </div>
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2"><Label>Preço *</Label><Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required /></div>
-                    <div className="space-y-2"><Label>Preço Original</Label><Input type="number" step="0.01" value={form.original_price} onChange={(e) => setForm({ ...form, original_price: e.target.value })} /></div>
+                    <div className="space-y-2">
+                      <Label>Preço (R$) *</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                        <Input className="pl-10" type="number" step="0.01" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required placeholder="0,00" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Preço Original (R$)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                        <Input className="pl-10" type="number" step="0.01" min="0" value={form.original_price} onChange={(e) => setForm({ ...form, original_price: e.target.value })} placeholder="0,00" />
+                      </div>
+                    </div>
                     <div className="space-y-2"><Label>Estoque</Label><Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
                   </div>
                   <div className="space-y-2"><Label>Badge</Label><Input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="ex: Mais Vendido" /></div>
