@@ -18,6 +18,7 @@ const ProductDetail = () => {
   const { data: product, isLoading } = useProduct(slug);
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const { data: testimonials } = useQuery({
     queryKey: ["product-testimonials", product?.id],
@@ -68,8 +69,42 @@ const ProductDetail = () => {
         </Link>
 
         <div className="grid gap-8 md:grid-cols-2">
-          <div className="flex items-center justify-center rounded-lg bg-muted p-8">
-            <img src={product.image} alt={product.name} className="max-h-80 w-auto object-contain" width={320} height={320} />
+          {/* Image Gallery */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-center rounded-lg bg-muted p-8 min-h-[320px]">
+              <img
+                src={selectedImage || product.image}
+                alt={product.name}
+                className="max-h-80 w-auto object-contain transition-opacity duration-200"
+                width={320}
+                height={320}
+              />
+            </div>
+            {product.extraImages.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {/* Main image thumbnail */}
+                <button
+                  onClick={() => setSelectedImage(null)}
+                  className={`flex-shrink-0 rounded-md border-2 overflow-hidden transition ${
+                    !selectedImage ? "border-primary ring-1 ring-primary/30" : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <img src={product.image} alt={product.name} className="h-16 w-16 object-cover" />
+                </button>
+                {/* Extra images thumbnails */}
+                {product.extraImages.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedImage(img)}
+                    className={`flex-shrink-0 rounded-md border-2 overflow-hidden transition ${
+                      selectedImage === img ? "border-primary ring-1 ring-primary/30" : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <img src={img} alt={`${product.name} ${i + 2}`} className="h-16 w-16 object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
