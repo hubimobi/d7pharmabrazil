@@ -169,6 +169,41 @@ export type Database = {
           },
         ]
       }
+      product_testimonials: {
+        Row: {
+          author_name: string
+          content: string
+          created_at: string
+          id: string
+          product_id: string
+          rating: number
+        }
+        Insert: {
+          author_name: string
+          content: string
+          created_at?: string
+          id?: string
+          product_id: string
+          rating?: number
+        }
+        Update: {
+          author_name?: string
+          content?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          rating?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_testimonials_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           active: boolean
@@ -176,17 +211,28 @@ export type Database = {
           benefits: Json
           created_at: string
           description: string
+          extra_images: Json
+          group_name: string | null
+          gtin: string | null
+          height: number
           id: string
           image_url: string | null
+          length: number
+          manufacturer: string | null
           name: string
+          ncm: string | null
           original_price: number
           price: number
           rating: number
           reviews_count: number
           short_description: string
+          sku: string | null
           slug: string
           stock: number
+          unit: string
           updated_at: string
+          weight: number
+          width: number
         }
         Insert: {
           active?: boolean
@@ -194,17 +240,28 @@ export type Database = {
           benefits?: Json
           created_at?: string
           description?: string
+          extra_images?: Json
+          group_name?: string | null
+          gtin?: string | null
+          height?: number
           id?: string
           image_url?: string | null
+          length?: number
+          manufacturer?: string | null
           name: string
+          ncm?: string | null
           original_price?: number
           price?: number
           rating?: number
           reviews_count?: number
           short_description?: string
+          sku?: string | null
           slug: string
           stock?: number
+          unit?: string
           updated_at?: string
+          weight?: number
+          width?: number
         }
         Update: {
           active?: boolean
@@ -212,17 +269,28 @@ export type Database = {
           benefits?: Json
           created_at?: string
           description?: string
+          extra_images?: Json
+          group_name?: string | null
+          gtin?: string | null
+          height?: number
           id?: string
           image_url?: string | null
+          length?: number
+          manufacturer?: string | null
           name?: string
+          ncm?: string | null
           original_price?: number
           price?: number
           rating?: number
           reviews_count?: number
           short_description?: string
+          sku?: string | null
           slug?: string
           stock?: number
+          unit?: string
           updated_at?: string
+          weight?: number
+          width?: number
         }
         Relationships: []
       }
