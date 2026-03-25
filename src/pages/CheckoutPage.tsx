@@ -474,6 +474,36 @@ const CheckoutPage = () => {
           )}
         </div>
       </main>
+
+      {/* Fixed mobile bottom bar */}
+      {step <= 2 && (
+        <div className="fixed bottom-0 inset-x-0 z-40 flex gap-2 border-t border-border bg-card p-3 shadow-lg md:hidden">
+          {step === 1 ? (
+            <Button className="flex-1 text-sm" size="lg" onClick={() => setStep(2)}>
+              Finalizar Pedido →
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" size="lg" onClick={() => setStep(1)} className="text-sm">
+                Voltar
+              </Button>
+              <Button
+                className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground text-sm"
+                size="lg"
+                disabled={isSubmitting}
+                onClick={() => {
+                  const formEl = document.querySelector("form");
+                  if (formEl) formEl.requestSubmit();
+                }}
+              >
+                {form.paymentMethod === "pix" ? `💰 Pagar via PIX` : `Finalizar Pedido`}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+      {step <= 2 && <div className="h-20 md:hidden" />}
+
       <Footer />
       <WhatsAppButton />
     </div>
