@@ -24,6 +24,7 @@ import StoreSettingsPage from "./pages/admin/StoreSettingsPage";
 import IntegrationsPage from "./pages/admin/IntegrationsPage";
 import RecoveryPage from "./pages/admin/RecoveryPage";
 import CouponsPage from "./pages/admin/CouponsPage";
+import RecentPurchasePopup from "./components/RecentPurchasePopup";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <RecentPurchasePopup />
             <Routes>
               <Route path="/" element={<BlingRedirect />} />
               <Route path="/produtos" element={<ProductsPage />} />
