@@ -15,6 +15,10 @@ export interface Product {
   reviews: number;
   badge?: string;
   stock: number;
+  weight: number;
+  height: number;
+  width: number;
+  length: number;
 }
 
 // Fallback images for products without uploaded images
@@ -43,6 +47,10 @@ function mapDbProduct(p: any): Product {
     reviews: p.reviews_count,
     badge: p.badge || undefined,
     stock: p.stock,
+    weight: Number(p.weight) || 0.3,
+    height: Number(p.height) || 5,
+    width: Number(p.width) || 15,
+    length: Number(p.length) || 20,
   };
 }
 

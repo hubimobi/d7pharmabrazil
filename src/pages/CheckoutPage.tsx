@@ -148,7 +148,7 @@ const CheckoutPage = () => {
                 <ShippingCalculator
                   cep={form.cep}
                   onCepChange={(cep) => setForm({ ...form, cep })}
-                  items={items.map((i) => ({ price: i.product.price, quantity: i.quantity }))}
+                  items={items.map((i) => ({ price: i.product.price, quantity: i.quantity, weight: i.product.weight, height: i.product.height, width: i.product.width, length: i.product.length }))}
                   selectedOption={selectedShipping}
                   onSelectOption={setSelectedShipping}
                 />

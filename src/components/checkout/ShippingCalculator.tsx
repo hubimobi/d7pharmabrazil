@@ -18,7 +18,7 @@ export interface ShippingOption {
 interface ShippingCalculatorProps {
   cep: string;
   onCepChange: (cep: string) => void;
-  items: { price: number; quantity: number }[];
+  items: { price: number; quantity: number; weight: number; height: number; width: number; length: number }[];
   selectedOption: ShippingOption | null;
   onSelectOption: (option: ShippingOption) => void;
 }
@@ -55,10 +55,10 @@ export default function ShippingCalculator({
       const produtos = items.map((i) => ({
         price: i.price,
         quantity: i.quantity,
-        weight: 0.3,
-        height: 5,
-        width: 15,
-        length: 20,
+        weight: i.weight,
+        height: i.height,
+        width: i.width,
+        length: i.length,
       }));
 
       const { data, error } = await supabase.functions.invoke("calculate-shipping", {
