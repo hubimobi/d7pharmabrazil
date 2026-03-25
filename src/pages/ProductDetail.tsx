@@ -1,5 +1,5 @@
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote } from "lucide-react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ const ProductDetail = () => {
   const { slug } = useParams();
   const { data: product, isLoading } = useProduct(slug);
   const { addItem } = useCart();
+  const navigate = useNavigate();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showUpsell, setShowUpsell] = useState(false);
@@ -144,7 +145,7 @@ const ProductDetail = () => {
               <p className="mt-3 animate-pulse-soft text-sm font-semibold text-destructive">⚠️ Apenas {product.stock} unidades em estoque!</p>
             )}
 
-            <div className="mt-6 flex items-center gap-3">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="flex items-center rounded-md border border-border">
                 <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-3 py-2 text-lg font-medium text-muted-foreground hover:text-foreground">−</button>
                 <span className="min-w-[2rem] text-center text-sm font-semibold">{qty}</span>
@@ -155,6 +156,12 @@ const ProductDetail = () => {
                 setShowUpsell(true);
               }}>
                 <ShoppingCart className="h-5 w-5" /> Adicionar ao Carrinho
+              </Button>
+              <Button size="lg" className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground" onClick={() => {
+                addItem(product, qty);
+                navigate("/checkout");
+              }}>
+                <Zap className="h-5 w-5" /> Comprar Agora
               </Button>
             </div>
 
