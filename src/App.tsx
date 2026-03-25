@@ -21,6 +21,7 @@ import ReportsPage from "./pages/admin/ReportsPage";
 import AdminProductsPage from "./pages/admin/ProductsPage";
 import CommissionsPage from "./pages/admin/CommissionsPage";
 import StoreSettingsPage from "./pages/admin/StoreSettingsPage";
+import IntegrationsPage from "./pages/admin/IntegrationsPage";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/admin/comissoes" element={<AdminLayout><CommissionsPage /></AdminLayout>} />
               <Route path="/admin/relatorios" element={<AdminLayout><ReportsPage /></AdminLayout>} />
               <Route path="/admin/configuracoes" element={<AdminLayout><StoreSettingsPage /></AdminLayout>} />
+              <Route path="/admin/integracoes" element={<AdminLayout><IntegrationsPage /></AdminLayout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
