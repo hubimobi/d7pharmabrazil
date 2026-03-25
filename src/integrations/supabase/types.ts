@@ -545,7 +545,10 @@ export type Database = {
           store_name: string
           tiktok: string | null
           updated_at: string
+          webchat_enabled: boolean
+          webchat_script: string | null
           whatsapp: string | null
+          whatsapp_button_enabled: boolean
           youtube: string | null
         }
         Insert: {
@@ -565,7 +568,10 @@ export type Database = {
           store_name?: string
           tiktok?: string | null
           updated_at?: string
+          webchat_enabled?: boolean
+          webchat_script?: string | null
           whatsapp?: string | null
+          whatsapp_button_enabled?: boolean
           youtube?: string | null
         }
         Update: {
@@ -585,7 +591,10 @@ export type Database = {
           store_name?: string
           tiktok?: string | null
           updated_at?: string
+          webchat_enabled?: boolean
+          webchat_script?: string | null
           whatsapp?: string | null
+          whatsapp_button_enabled?: boolean
           youtube?: string | null
         }
         Relationships: []

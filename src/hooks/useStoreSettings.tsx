@@ -18,6 +18,9 @@ export interface StoreSettings {
   facebook: string;
   tiktok: string;
   youtube: string;
+  webchat_enabled: boolean;
+  webchat_script: string;
+  whatsapp_button_enabled: boolean;
 }
 
 export function useStoreSettings() {
