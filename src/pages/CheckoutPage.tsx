@@ -140,7 +140,7 @@ const CheckoutPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.doctor) {
-      toast.error("O nome do Doutor é obrigatório!");
+      toast.error("O nome do Prescritor é obrigatório!");
       return;
     }
 
@@ -374,11 +374,11 @@ const CheckoutPage = () => {
                   <div><Label>Estado *</Label><Input required value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></div>
                 </div>
 
-                <h2 className="text-lg font-semibold">Doutor Responsável *</h2>
+                <h2 className="text-lg font-semibold">Prescritor Responsável *</h2>
                 <div className="relative">
                   <Input
                     required
-                    placeholder="Buscar nome do Doutor..."
+                    placeholder="Buscar nome do Prescritor..."
                     value={form.doctor || doctorSearch}
                     onChange={(e) => {
                       setDoctorSearch(e.target.value);
@@ -412,7 +412,7 @@ const CheckoutPage = () => {
                       ))}
                       {filteredDoctors.length === 0 && (
                         <p className="px-4 py-3 text-sm text-muted-foreground">
-                          Nenhum doutor encontrado. Consulte seu representante.
+                          Nenhum prescritor encontrado. Consulte seu representante.
                         </p>
                       )}
                     </div>

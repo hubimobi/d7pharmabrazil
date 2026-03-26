@@ -20,9 +20,12 @@ interface DocForm {
   city: string;
   state: string;
   representative_id: string;
+  email: string;
+  cpf: string;
+  pix: string;
 }
 
-const emptyForm: DocForm = { name: "", crm: "", specialty: "", city: "", state: "", representative_id: "" };
+const emptyForm: DocForm = { name: "", crm: "", specialty: "", city: "", state: "", representative_id: "", email: "", cpf: "", pix: "" };
 
 export default function DoctorsPage() {
   const [open, setOpen] = useState(false);
@@ -62,16 +65,46 @@ export default function DoctorsPage() {
 
   const save = useMutation({
     mutationFn: async () => {
-      const payload = {
-        ...form,
-        representative_id: isAdmin ? form.representative_id : repId!,
+      const repIdVal = isAdmin ? form.representative_id : repId!;
+      const payload: any = {
+        name: form.name,
+        crm: form.crm || null,
+        specialty: form.specialty || null,
+        city: form.city || null,
+        state: form.state || null,
+        representative_id: repIdVal,
+        email: form.email || null,
+        cpf: form.cpf || null,
+        pix: form.pix || null,
       };
+
       if (editId) {
         const { error } = await supabase.from("doctors").update(payload).eq("id", editId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("doctors").insert(payload);
+        // Create prescriber
+        const { data: inserted, error } = await supabase.from("doctors").insert(payload).select().single();
         if (error) throw error;
+
+        // Auto-create coupon for prescriber
+        if (inserted) {
+          const repShort = repIdVal.slice(0, 4).toUpperCase();
+          const docShort = inserted.id.slice(0, 4).toUpperCase();
+          const couponCode = `DESCONTO10-${repShort}-${docShort}`;
+          await supabase.from("coupons").insert({
+            code: couponCode,
+            description: `Cupom do Prescritor ${form.name}`,
+            discount_type: "percent",
+            discount_value: 10,
+            active: true,
+          });
+        }
+
+        // Create auth user for prescriber if email provided
+        if (form.email) {
+          // We'll create the user via edge function or admin API later
+          // For now just set up the record
+        }
       }
     },
     onSuccess: () => {
@@ -79,9 +112,9 @@ export default function DoctorsPage() {
       setOpen(false);
       setForm(emptyForm);
       setEditId(null);
-      toast({ title: editId ? "Doutor atualizado" : "Doutor cadastrado" });
+      toast({ title: editId ? "Prescritor atualizado" : "Prescritor cadastrado com cupom automático!" });
     },
-    onError: () => toast({ title: "Erro ao salvar", variant: "destructive" }),
+    onError: (err: any) => toast({ title: "Erro ao salvar", description: err?.message, variant: "destructive" }),
   });
 
   const toggleActive = useMutation({
@@ -101,6 +134,9 @@ export default function DoctorsPage() {
       city: doc.city ?? "",
       state: doc.state ?? "",
       representative_id: doc.representative_id,
+      email: (doc as any).email ?? "",
+      cpf: (doc as any).cpf ?? "",
+      pix: (doc as any).pix ?? "",
     });
     setOpen(true);
   };
@@ -108,19 +144,33 @@ export default function DoctorsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Doutores</h2>
+        <h2 className="text-2xl font-bold">Prescritores</h2>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditId(null); setForm(emptyForm); } }}>
           <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />Novo Doutor</Button>
+            <Button><Plus className="h-4 w-4 mr-2" />Novo Prescritor</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editId ? "Editar" : "Novo"} Doutor</DialogTitle>
+              <DialogTitle>{editId ? "Editar" : "Novo"} Prescritor</DialogTitle>
             </DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
               <div className="space-y-2">
-                <Label>Nome</Label>
+                <Label>Nome *</Label>
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>E-mail</Label>
+                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="prescritor@email.com" />
+                </div>
+                <div className="space-y-2">
+                  <Label>CPF</Label>
+                  <Input value={form.cpf} onChange={(e) => setForm({ ...form, cpf: e.target.value })} placeholder="000.000.000-00" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Chave Pix</Label>
+                <Input value={form.pix} onChange={(e) => setForm({ ...form, pix: e.target.value })} placeholder="CPF, e-mail, telefone ou chave aleatória" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -169,6 +219,7 @@ export default function DoctorsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>E-mail</TableHead>
                 <TableHead>CRM</TableHead>
                 <TableHead>Especialidade</TableHead>
                 <TableHead>Cidade/UF</TableHead>
@@ -179,13 +230,14 @@ export default function DoctorsPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !doctors?.length ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum doutor cadastrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum prescritor cadastrado</TableCell></TableRow>
               ) : (
                 doctors.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium">{doc.name}</TableCell>
+                    <TableCell className="text-sm">{(doc as any).email ?? "—"}</TableCell>
                     <TableCell>{doc.crm ?? "—"}</TableCell>
                     <TableCell>{doc.specialty ?? "—"}</TableCell>
                     <TableCell>{[doc.city, doc.state].filter(Boolean).join("/") || "—"}</TableCell>

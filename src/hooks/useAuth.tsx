@@ -11,6 +11,7 @@ interface AuthContextType {
   roles: AppRole[];
   isAdmin: boolean;
   isRepresentative: boolean;
+  isPrescriber: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -76,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         roles,
         isAdmin: roles.includes("admin"),
         isRepresentative: roles.includes("representative"),
+        isPrescriber: roles.includes("prescriber" as AppRole),
         loading,
         signIn,
         signOut,
