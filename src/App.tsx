@@ -75,7 +75,10 @@ const App = () => (
               <Route path="/pedido-confirmado/:orderId" element={<OrderConfirmationPage />} />
               <Route path="/acompanhar-pedido" element={<TrackOrderPage />} />
               <Route path="/prescritor" element={<PrescritorPage />} />
-              <Route path="/:slug" element={<StaticPage />} />
+              <Route path="/politica-de-privacidade" element={<StaticPage />} />
+              <Route path="/termos-de-uso" element={<StaticPage />} />
+              <Route path="/trocas-e-devolucoes" element={<StaticPage />} />
+              <Route path="/quem-somos" element={<StaticPage />} />
               <Route path="/admin" element={<AdminLayout><DashboardPage /></AdminLayout>} />
               <Route path="/admin/representantes" element={<AdminLayout><RepresentativesPage /></AdminLayout>} />
               <Route path="/admin/produtos" element={<AdminLayout><AdminProductsPage /></AdminLayout>} />
