@@ -454,13 +454,13 @@ export default function ProductsPage() {
       </div>
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Produto</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Grupo</TableHead>
+                <TableHead className="hidden md:table-cell">SKU</TableHead>
+                <TableHead className="hidden lg:table-cell">Grupo</TableHead>
                 <TableHead>Preço</TableHead>
                 <TableHead>Estoque</TableHead>
                 <TableHead>Status</TableHead>
@@ -476,8 +476,8 @@ export default function ProductsPage() {
                 products.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{(p as any).sku || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{(p as any).group_name || "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground text-xs">{(p as any).sku || "—"}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">{(p as any).group_name || "—"}</TableCell>
                     <TableCell>{fmt(p.price)}</TableCell>
                     <TableCell>{p.stock}</TableCell>
                     <TableCell>

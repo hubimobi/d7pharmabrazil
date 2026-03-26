@@ -139,13 +139,14 @@ export default function OrdersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold">Vendas</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={handleSyncAll} disabled={syncingAll}>
             {syncingAll ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-            {syncingAll ? "Sincronizando..." : "Sincronizar Tudo (Bling)"}
+            <span className="hidden sm:inline">{syncingAll ? "Sincronizando..." : "Sincronizar Tudo (Bling)"}</span>
+            <span className="sm:hidden">{syncingAll ? "Sync..." : "Sync Bling"}</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-2" /> Atualizar
+            <RefreshCw className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Atualizar</span>
           </Button>
         </div>
       </div>
@@ -218,18 +219,18 @@ export default function OrdersPage() {
 
       {/* Orders Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Pedido</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Fatura Asaas</TableHead>
-                <TableHead>Pedido Bling</TableHead>
+                <TableHead className="hidden md:table-cell">Fatura Asaas</TableHead>
+                <TableHead className="hidden md:table-cell">Pedido Bling</TableHead>
                 <TableHead>Total</TableHead>
-                <TableHead>Cupom</TableHead>
+                <TableHead className="hidden lg:table-cell">Cupom</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Data</TableHead>
+                <TableHead className="hidden sm:table-cell">Data</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -260,16 +261,16 @@ export default function OrdersPage() {
                           <p className="text-xs text-muted-foreground">{order.customer_email}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="hidden md:table-cell font-mono text-xs text-muted-foreground">
                         {order.asaas_payment_id || "—"}
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="hidden md:table-cell font-mono text-xs text-muted-foreground">
                         {(order as any).bling_order_id || "—"}
                       </TableCell>
                       <TableCell className="font-semibold">
                         R$ {Number(order.total).toFixed(2)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         {order.coupon_code ? (
                           <Badge variant="secondary" className="text-xs">{order.coupon_code}</Badge>
                         ) : (
@@ -279,7 +280,7 @@ export default function OrdersPage() {
                       <TableCell>
                         <Badge variant={st.variant}>{st.label}</Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                         {format(new Date(order.created_at), "dd/MM/yyyy HH:mm")}
                       </TableCell>
                       <TableCell>

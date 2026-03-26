@@ -206,14 +206,14 @@ export default function CustomersPage() {
 
       {/* Customers Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Pedidos</TableHead>
                 <TableHead>Total Gasto</TableHead>
-                <TableHead>Última Compra</TableHead>
+                <TableHead className="hidden md:table-cell">Última Compra</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -250,7 +250,7 @@ export default function CustomersPage() {
                     <TableCell className="font-semibold">
                       R$ {customer.total_spent.toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                       {format(new Date(customer.last_order_date), "dd/MM/yyyy")}
                     </TableCell>
                     <TableCell>

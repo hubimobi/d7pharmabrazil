@@ -173,16 +173,16 @@ export default function RecoveryPage() {
 
       {/* Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Produtos</TableHead>
+                <TableHead className="hidden md:table-cell">Produtos</TableHead>
                 <TableHead>Valor</TableHead>
-                <TableHead>Data</TableHead>
+                <TableHead className="hidden sm:table-cell">Data</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>GHL</TableHead>
+                <TableHead className="hidden lg:table-cell">GHL</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -225,7 +225,7 @@ export default function RecoveryPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <div className="max-w-[200px]">
                           {cart.items.map((item, i) => (
                             <p key={i} className="text-xs text-muted-foreground truncate">
@@ -235,7 +235,7 @@ export default function RecoveryPage() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{fmt(displayTotal)}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
                         {format(new Date(cart.created_at), "dd/MM/yyyy HH:mm")}
                       </TableCell>
                       <TableCell>
@@ -244,7 +244,7 @@ export default function RecoveryPage() {
                           {sc.label}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         {cart.ghl_synced ? (
                           <Badge variant="secondary" className="text-xs">Enviado</Badge>
                         ) : (
