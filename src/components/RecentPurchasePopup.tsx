@@ -18,6 +18,15 @@ const CITIES = [
   "Recife/PE", "Goiânia/GO", "Manaus/AM", "Campinas/SP",
 ];
 
+// Fallback fake purchases when no real orders exist
+const FALLBACK_PURCHASES: RecentOrder[] = [
+  { customer_name: "Ana C.", items: [{ name: "TCF-4 Premium" }], created_at: new Date(Date.now() - 3 * 60000).toISOString() },
+  { customer_name: "Marcos S.", items: [{ name: "Vitamina D3 10.000UI" }], created_at: new Date(Date.now() - 8 * 60000).toISOString() },
+  { customer_name: "Juliana R.", items: [{ name: "Ômega 3 Ultra" }], created_at: new Date(Date.now() - 15 * 60000).toISOString() },
+  { customer_name: "Carlos M.", items: [{ name: "Magnésio Quelado" }], created_at: new Date(Date.now() - 22 * 60000).toISOString() },
+  { customer_name: "Fernanda L.", items: [{ name: "Complexo B Premium" }], created_at: new Date(Date.now() - 35 * 60000).toISOString() },
+];
+
 export default function RecentPurchasePopup() {
   const [visible, setVisible] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
