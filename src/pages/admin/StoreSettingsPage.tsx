@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,26 @@ import { toast } from "sonner";
 import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload, Trash2, Award, Plus, X, FlaskConical, ShieldCheck, TrendingUp, Heart, Star, Zap, Clock, Eye, Gift, ThumbsUp, CheckCircle, Sparkles, Flame } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
 import { useProducts } from "@/hooks/useProducts";
+import { CropImageDialog } from "@/components/admin/CropImageDialog";
+
+async function resizeImage(blob: Blob, width: number, height: number): Promise<Blob> {
+  const img = new window.Image();
+  const url = URL.createObjectURL(blob);
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = reject;
+    img.src = url;
+  });
+  URL.revokeObjectURL(url);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(img, 0, 0, width, height);
+  return new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b!), "image/png", 1);
+  });
+}
 
 const benefitIconOptions = [
   { value: "FlaskConical", label: "Farmácia", Icon: FlaskConical },
@@ -38,6 +58,44 @@ export default function StoreSettingsPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const horizontalLogoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropImageUrl, setCropImageUrl] = useState("");
+
+  const handleHorizontalLogoFile = useCallback((file: File) => {
+    const url = URL.createObjectURL(file);
+    setCropImageUrl(url);
+    setCropOpen(true);
+  }, []);
+
+  const handleCropComplete = useCallback(async (blob: Blob) => {
+    const resized = await resizeImage(blob, 480, 120);
+    const file = new File([resized], "horizontal-logo.png", { type: "image/png" });
+    handleUploadDirect(file, "horizontal_logo");
+  }, []);
+
+  const handleUploadDirect = async (file: File, type: "logo" | "horizontal_logo" | "favicon") => {
+    const setUploading = type === "logo" ? setUploadingLogo : type === "horizontal_logo" ? setUploadingHorizontalLogo : setUploadingFavicon;
+    const field = type === "logo" ? "logo_url" : type === "horizontal_logo" ? "horizontal_logo_url" : "favicon_url";
+    const filePath = `${type.replace("_", "-")}.png`;
+
+    setUploading(true);
+    try {
+      await supabase.storage.from("store-assets").remove([filePath]);
+      const { error: uploadError } = await supabase.storage
+        .from("store-assets")
+        .upload(filePath, file, { upsert: true, cacheControl: "0" });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(filePath);
+      const publicUrl = urlData.publicUrl + "?t=" + Date.now();
+      update(field as keyof StoreSettings, publicUrl);
+      const labels: Record<string, string> = { logo: "Logo Principal", horizontal_logo: "Logo Horizontal", favicon: "Favicon" };
+      toast.success(`${labels[type]} enviado com sucesso!`);
+    } catch (err: any) {
+      toast.error(`Erro ao enviar: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["store-settings-admin"],
@@ -158,7 +216,7 @@ export default function StoreSettingsPage() {
         {/* Logo e Favicon */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <h2 className="text-lg font-semibold flex items-center gap-2"><Image className="h-5 w-5" /> Logo, Logo Horizontal e Favicon</h2>
-          <p className="text-xs text-muted-foreground">A <strong>Logo Principal</strong> é usada no favicon e em formatos quadrados. A <strong>Logo Horizontal</strong> aparece no topo do site ao lado do menu (recomendado: 200x50px).</p>
+          <p className="text-xs text-muted-foreground">A <strong>Logo Principal</strong> é usada no favicon e em formatos quadrados. A <strong>Logo Horizontal</strong> aparece no topo do site (tamanho ideal: 480×120px, proporção 4:1 — será recortada automaticamente).</p>
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Logo Upload */}
             <div className="space-y-2">
@@ -204,7 +262,7 @@ export default function StoreSettingsPage() {
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) handleUpload(file, "horizontal_logo");
+                  if (file) handleHorizontalLogoFile(file);
                   e.target.value = "";
                 }}
               />
@@ -570,6 +628,14 @@ export default function StoreSettingsPage() {
           Salvar Configurações
         </Button>
       </form>
+
+      <CropImageDialog
+        open={cropOpen}
+        onOpenChange={setCropOpen}
+        imageUrl={cropImageUrl}
+        onCropComplete={handleCropComplete}
+        aspect={4}
+      />
     </div>
   );
 }
