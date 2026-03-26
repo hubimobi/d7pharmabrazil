@@ -62,12 +62,15 @@ const CheckoutPage = () => {
         price: i.product.price,
       }));
 
-      const dbPayload = {
+      const itemsTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+      const dbPayload: any = {
         customer_name: form.name,
         customer_email: form.email || null,
         customer_phone: form.phone || null,
         items: cartItems,
-        cart_total: total,
+        cart_total: itemsTotal,
+        shipping_cep: form.cep?.replace(/\D/g, "") || null,
       };
 
       // Save to abandoned_carts table

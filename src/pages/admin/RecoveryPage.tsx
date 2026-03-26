@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, RefreshCw, Send, ShoppingCart, Clock, CheckCircle, XCircle } from "lucide-react";
+import { MessageCircle, RefreshCw, Send, ShoppingCart, Clock, CheckCircle, XCircle, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
@@ -57,7 +57,6 @@ export default function RecoveryPage() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      // Mark as synced
       await supabase
         .from("abandoned_carts")
         .update({ ghl_synced: true } as any)
@@ -90,10 +89,9 @@ export default function RecoveryPage() {
     },
   });
 
-  const generateWhatsAppLink = (cart: AbandonedCart) => {
+  const openWhatsApp = (cart: AbandonedCart) => {
     let phone = (cart.customer_phone || "").replace(/\D/g, "");
-    if (!phone) return null;
-    // Ensure country code 55 is present but not duplicated
+    if (!phone) return;
     if (!phone.startsWith("55")) {
       phone = "55" + phone;
     }
@@ -104,7 +102,12 @@ export default function RecoveryPage() {
 
     const message = `Olá ${firstName}! Sou o ${profileName} da D7Pharma Brasil! Vi que você foi até o carrinho de compra do produto "${productNames}"! Ficou alguma dúvida que eu possa te ajudar?`;
 
-    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const calcItemsTotal = (items: { name: string; quantity: number; price: number }[]) => {
+    return items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
   const fmt = (v: number) => `R$ ${Number(v).toFixed(2).replace(".", ",")}`;
@@ -117,7 +120,10 @@ export default function RecoveryPage() {
 
   const abandonedCount = carts?.filter((c) => c.status === "abandoned").length ?? 0;
   const recoveredCount = carts?.filter((c) => c.status === "recovered").length ?? 0;
-  const totalLost = carts?.filter((c) => c.status === "abandoned").reduce((s, c) => s + c.cart_total, 0) ?? 0;
+  const totalLost = carts?.filter((c) => c.status === "abandoned").reduce((s, c) => {
+    const itemsTotal = calcItemsTotal(c.items);
+    return s + (itemsTotal > 0 ? itemsTotal : c.cart_total);
+  }, 0) ?? 0;
 
   return (
     <div className="space-y-6">
@@ -195,7 +201,11 @@ export default function RecoveryPage() {
                 carts.map((cart) => {
                   const sc = statusConfig[cart.status] || statusConfig.abandoned;
                   const StatusIcon = sc.icon;
-                  const whatsappLink = generateWhatsAppLink(cart);
+                  const hasPhone = !!(cart.customer_phone || "").replace(/\D/g, "");
+                  const itemsTotal = calcItemsTotal(cart.items);
+                  const displayTotal = itemsTotal > 0 ? itemsTotal : cart.cart_total;
+                  const cartData = cart as any;
+                  const shippingCep = cartData.shipping_cep || null;
 
                   return (
                     <TableRow key={cart.id}>
@@ -208,18 +218,23 @@ export default function RecoveryPage() {
                           {cart.customer_email && (
                             <p className="text-xs text-muted-foreground">{cart.customer_email}</p>
                           )}
+                          {shippingCep && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <MapPin className="h-3 w-3" /> CEP: {shippingCep}
+                            </p>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="max-w-[200px]">
                           {cart.items.map((item, i) => (
                             <p key={i} className="text-xs text-muted-foreground truncate">
-                              {item.quantity}x {item.name}
+                              {item.quantity}x {item.name} — {fmt(item.price * item.quantity)}
                             </p>
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">{fmt(cart.cart_total)}</TableCell>
+                      <TableCell className="font-medium">{fmt(displayTotal)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {format(new Date(cart.created_at), "dd/MM/yyyy HH:mm")}
                       </TableCell>
@@ -238,7 +253,6 @@ export default function RecoveryPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
-                          {/* Trigger GHL Recovery */}
                           {cart.status === "abandoned" && !cart.ghl_synced && (
                             <Button
                               variant="outline"
@@ -252,22 +266,18 @@ export default function RecoveryPage() {
                             </Button>
                           )}
 
-                          {/* WhatsApp Button */}
-                          {whatsappLink && cart.status === "abandoned" && (
+                          {hasPhone && cart.status === "abandoned" && (
                             <Button
                               variant="outline"
                               size="sm"
                               className="gap-1 text-xs text-success hover:text-success"
-                              asChild
+                              onClick={() => openWhatsApp(cart)}
                             >
-                              <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
-                                <MessageCircle className="h-3 w-3" />
-                                Falar com Cliente
-                              </a>
+                              <MessageCircle className="h-3 w-3" />
+                              Falar com Cliente
                             </Button>
                           )}
 
-                          {/* Mark as Recovered */}
                           {cart.status === "abandoned" && (
                             <Button
                               variant="ghost"
