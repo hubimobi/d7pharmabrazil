@@ -96,8 +96,21 @@ const HeroSection = () => {
     return () => clearInterval(timer);
   }, [carouselEnabled, interval, next, activeBanners.length]);
 
+  const safeIndex = activeBanners.length > 0 ? current % activeBanners.length : 0;
+  const banner = activeBanners.length > 0 ? activeBanners[safeIndex] : null;
+
+  const btn1Style = useMemo(() => {
+    if (!banner?.btn1_bg_color) return {};
+    return { backgroundColor: banner.btn1_bg_color, borderColor: banner.btn1_bg_color, color: "#ffffff" } as React.CSSProperties;
+  }, [banner?.btn1_bg_color]);
+
+  const btn2Style = useMemo(() => {
+    if (!banner?.btn2_bg_color) return {};
+    return { backgroundColor: banner.btn2_bg_color, borderColor: banner.btn2_bg_color, color: "#ffffff" } as React.CSSProperties;
+  }, [banner?.btn2_bg_color]);
+
   // Fallback if no banners
-  if (activeBanners.length === 0) {
+  if (!banner) {
     return (
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
@@ -113,23 +126,10 @@ const HeroSection = () => {
     );
   }
 
-  const banner = activeBanners[current % activeBanners.length];
   const variants = effectVariants[effect as keyof typeof effectVariants] || effectVariants.fade;
   const youtubeId = banner.media_type === "video" && banner.video_url ? extractYoutubeId(banner.video_url) : null;
   const bgImage = banner.image_url || heroBg;
   const badges = (banner.badges || []).slice(0, 3);
-
-  const btn1Style = useMemo(() => {
-    const bg = banner.btn1_bg_color;
-    if (!bg) return {};
-    return { backgroundColor: bg, borderColor: bg, color: "#ffffff" } as React.CSSProperties;
-  }, [banner.btn1_bg_color]);
-
-  const btn2Style = useMemo(() => {
-    const bg = banner.btn2_bg_color;
-    if (!bg) return {};
-    return { backgroundColor: bg, borderColor: bg, color: "#ffffff" } as React.CSSProperties;
-  }, [banner.btn2_bg_color]);
 
   return (
     <section className="relative overflow-hidden">
