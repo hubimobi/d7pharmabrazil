@@ -24,14 +24,12 @@ const ProductCard = ({ product }: { product: Product }) => {
           Últimas {product.stock} unidades!
         </span>
       )}
-      <Link to={`/produto/${product.slug}`} className="overflow-hidden bg-muted p-6">
+      <Link to={`/produto/${product.slug}`} className="overflow-hidden bg-muted">
         <img
           src={product.image}
           alt={product.name}
-          className="mx-auto h-48 w-48 object-contain transition-transform duration-300 group-hover:scale-105"
+          className="mx-auto h-56 w-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
-          width={192}
-          height={192}
         />
       </Link>
       <div className="flex flex-1 flex-col p-4">
@@ -58,9 +56,9 @@ const ProductCard = ({ product }: { product: Product }) => {
             ou até {product.price >= 500 ? "12" : product.price >= 200 ? "6" : "3"}x de R$ {(product.price / (product.price >= 500 ? 12 : product.price >= 200 ? 6 : 3)).toFixed(2).replace(".", ",")}
           </p>
           {product.showCountdown && <CountdownTimer label="Oferta expira em" className="mt-2" />}
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex flex-col gap-1.5">
             <Button
-              className="flex-1 gap-1"
+              className="w-full gap-1"
               size="sm"
               onClick={() => {
                 addItem(product);
@@ -71,7 +69,7 @@ const ProductCard = ({ product }: { product: Product }) => {
               Adicionar ao Carrinho
             </Button>
             <Button
-              className="flex-1 gap-1 bg-success hover:bg-success/90 text-success-foreground"
+              className="w-full gap-1 bg-success hover:bg-success/90 text-success-foreground animate-pulse-soft"
               size="sm"
               onClick={() => {
                 addItem(product);
