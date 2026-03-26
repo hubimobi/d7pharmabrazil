@@ -213,13 +213,24 @@ export default function DoctorsPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              )}
+              <Button type="submit" className="w-full" disabled={save.isPending}>
+                {save.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Success coupon dialog */}
       <Dialog open={!!successCoupon} onOpenChange={(v) => { if (!v) setSuccessCoupon(null); }}>
         <DialogContent className="max-w-md text-center">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Cupom criado</DialogTitle>
+          </DialogHeader>
           <div className="flex flex-col items-center gap-4 py-4">
-            <CheckCircle className="h-12 w-12 text-green-500" />
+            <CheckCircle className="h-12 w-12 text-primary" />
             <h2 className="text-xl font-bold">Cadastro de Prescritor Criado!</h2>
             <p className="text-muted-foreground">
               O cupom de <span className="font-bold text-primary">10% de Desconto</span> do prescritor <span className="font-semibold">{successCoupon?.name}</span> é:
@@ -245,14 +256,6 @@ export default function DoctorsPage() {
           </div>
         </DialogContent>
       </Dialog>
-              )}
-              <Button type="submit" className="w-full" disabled={save.isPending}>
-                {save.isPending ? "Salvando..." : "Salvar"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
 
       <Card>
         <CardContent className="p-0">
