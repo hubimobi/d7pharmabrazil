@@ -15,7 +15,7 @@ export default function WebchatWidget() {
   const position = settings?.webchat_position || "right";
 
   useEffect(() => {
-    if (!settings?.webchat_enabled || !settings?.webchat_script) return;
+    if (!settings?.webchat_enabled || !settings?.webchat_script || hideOnCheckout) return;
 
     const shouldDelay = delaySeconds > 0;
     const shouldScroll = showOnScroll;
