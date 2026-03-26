@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Clock, Gift, Truck, ShieldCheck, Headphones, Package, Users, Flame } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Clock, Gift, Truck, ShieldCheck, Headphones, Package, Users, Flame, Eye } from "lucide-react";
 
 interface CheckoutUrgencyProps {
   reviewsCount?: number;
@@ -14,13 +14,21 @@ function getRemainingOrders(): number {
 }
 
 function getBuyersThisMonth(reviewsCount: number): number {
-  // Use reviews as base, add a realistic multiplier
   return Math.max(142, reviewsCount + 100 + Math.floor(reviewsCount * 0.3));
+}
+
+function getInitialViewers(): number {
+  const hour = new Date().getHours();
+  // More viewers during peak hours (10-22h)
+  if (hour >= 10 && hour <= 22) return Math.floor(Math.random() * 15) + 18; // 18-32
+  return Math.floor(Math.random() * 8) + 7; // 7-14
 }
 
 export default function CheckoutUrgency({ reviewsCount = 500, firstBenefit }: CheckoutUrgencyProps) {
   const [remainingOrders] = useState(getRemainingOrders);
   const buyersThisMonth = getBuyersThisMonth(reviewsCount);
+  const [viewers, setViewers] = useState(getInitialViewers);
+  const viewersRef = useRef(viewers);
   const [giftSeconds, setGiftSeconds] = useState(() => {
     const saved = sessionStorage.getItem("d7-gift-timer-end");
     if (saved) {
