@@ -314,15 +314,16 @@ export default function CouponsPage() {
                 <TableHead>Desconto</TableHead>
                 <TableHead>Regras</TableHead>
                 <TableHead>Usos</TableHead>
+                <TableHead>Compras Finalizadas</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-24">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !coupons?.length ? (
-                <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Nenhum cupom cadastrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Nenhum cupom cadastrado</TableCell></TableRow>
               ) : (
                 coupons.map((c: any) => {
                   const isExpired = c.expires_at && new Date(c.expires_at) < new Date();
@@ -361,6 +362,17 @@ export default function CouponsPage() {
                       </TableCell>
                       <TableCell className="text-sm">
                         {c.used_count}{c.max_uses ? `/${c.max_uses}` : ""}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <ShoppingCart className="h-3.5 w-3.5 text-green-600" />
+                          <span className="text-sm font-semibold text-green-700">
+                            {couponOrderCounts?.[c.code]?.paid ?? 0}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            / {couponOrderCounts?.[c.code]?.total ?? 0} pedidos
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         {isExpired ? (
