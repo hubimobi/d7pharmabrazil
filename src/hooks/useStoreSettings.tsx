@@ -36,6 +36,7 @@ export interface StoreSettings {
   hero_button2_link: string;
   hero_image_url: string;
   logo_url: string;
+  horizontal_logo_url: string;
   favicon_url: string;
   whatsapp_position: string;
   whatsapp_delay_seconds: number;

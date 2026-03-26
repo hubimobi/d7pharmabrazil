@@ -33,8 +33,10 @@ export default function StoreSettingsPage() {
   const { data: allProducts } = useProducts();
   const [form, setForm] = useState<Partial<StoreSettings> | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingHorizontalLogo, setUploadingHorizontalLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const horizontalLogoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
 
   const { data: settings, isLoading } = useQuery({
@@ -80,15 +82,14 @@ export default function StoreSettingsPage() {
   const update = (field: keyof StoreSettings, value: any) =>
     setForm((prev) => prev ? { ...prev, [field]: value } : prev);
 
-  const handleUpload = async (file: File, type: "logo" | "favicon") => {
-    const setUploading = type === "logo" ? setUploadingLogo : setUploadingFavicon;
-    const field = type === "logo" ? "logo_url" : "favicon_url";
+  const handleUpload = async (file: File, type: "logo" | "horizontal_logo" | "favicon") => {
+    const setUploading = type === "logo" ? setUploadingLogo : type === "horizontal_logo" ? setUploadingHorizontalLogo : setUploadingFavicon;
+    const field = type === "logo" ? "logo_url" : type === "horizontal_logo" ? "horizontal_logo_url" : "favicon_url";
     const ext = file.name.split(".").pop() || "png";
-    const filePath = `${type}.${ext}`;
+    const filePath = `${type.replace("_", "-")}.${ext}`;
 
     setUploading(true);
     try {
-      // Remove old file first (ignore errors)
       await supabase.storage.from("store-assets").remove([filePath]);
 
       const { error: uploadError } = await supabase.storage
@@ -102,18 +103,19 @@ export default function StoreSettingsPage() {
         .getPublicUrl(filePath);
 
       const publicUrl = urlData.publicUrl + "?t=" + Date.now();
-      update(field, publicUrl);
-      toast.success(`${type === "logo" ? "Logo" : "Favicon"} enviado com sucesso!`);
+      update(field as keyof StoreSettings, publicUrl);
+      const labels: Record<string, string> = { logo: "Logo Principal", horizontal_logo: "Logo Horizontal", favicon: "Favicon" };
+      toast.success(`${labels[type]} enviado com sucesso!`);
     } catch (err: any) {
-      toast.error(`Erro ao enviar ${type}: ${err.message}`);
+      toast.error(`Erro ao enviar: ${err.message}`);
     } finally {
       setUploading(false);
     }
   };
 
-  const handleRemoveAsset = async (type: "logo" | "favicon") => {
-    const field = type === "logo" ? "logo_url" : "favicon_url";
-    update(field, "");
+  const handleRemoveAsset = async (type: "logo" | "horizontal_logo" | "favicon") => {
+    const field = type === "logo" ? "logo_url" : type === "horizontal_logo" ? "horizontal_logo_url" : "favicon_url";
+    update(field as keyof StoreSettings, "");
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -155,7 +157,8 @@ export default function StoreSettingsPage() {
 
         {/* Logo e Favicon */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2"><Image className="h-5 w-5" /> Logo e Favicon</h2>
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Image className="h-5 w-5" /> Logo, Logo Horizontal e Favicon</h2>
+          <p className="text-xs text-muted-foreground">A <strong>Logo Principal</strong> é usada no favicon e em formatos quadrados. A <strong>Logo Horizontal</strong> aparece no topo do site ao lado do menu (recomendado: 200x50px).</p>
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Logo Upload */}
             <div className="space-y-2">
@@ -188,6 +191,40 @@ export default function StoreSettingsPage() {
                 <Button type="button" variant="outline" className="w-full gap-2" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
                   {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   Enviar Logo
+                </Button>
+              )}
+            </div>
+            {/* Horizontal Logo Upload */}
+            <div className="space-y-2">
+              <Label>Logo Horizontal <span className="text-xs text-muted-foreground">(topo do site)</span></Label>
+              <input
+                ref={horizontalLogoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUpload(file, "horizontal_logo");
+                  e.target.value = "";
+                }}
+              />
+              {form.horizontal_logo_url ? (
+                <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30">
+                  <img src={form.horizontal_logo_url} alt="Logo Horizontal" className="h-10 max-w-[160px] object-contain" />
+                  <div className="flex gap-2 ml-auto">
+                    <Button type="button" variant="outline" size="sm" onClick={() => horizontalLogoInputRef.current?.click()} disabled={uploadingHorizontalLogo}>
+                      {uploadingHorizontalLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      Trocar
+                    </Button>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => handleRemoveAsset("horizontal_logo")}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button type="button" variant="outline" className="w-full gap-2" onClick={() => horizontalLogoInputRef.current?.click()} disabled={uploadingHorizontalLogo}>
+                  {uploadingHorizontalLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Enviar Logo Horizontal
                 </Button>
               )}
             </div>
