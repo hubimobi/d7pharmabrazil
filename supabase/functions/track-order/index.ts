@@ -26,12 +26,21 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data, error } = await supabase
+    // Fetch orders by email, then filter by id prefix in code (UUID can't use ilike)
+    const { data: orders, error } = await supabase
       .from("orders")
       .select("id, customer_name, items, total, status, shipping_address, tracking_code, created_at")
-      .eq("customer_email", email)
-      .filter("id::text", "ilike", `${order_code}%`)
-      .maybeSingle();
+      .eq("customer_email", email);
+
+    if (error) {
+      return new Response(
+        JSON.stringify({ error: "Erro ao buscar pedido" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const code = order_code.toLowerCase();
+    const data = (orders || []).find((o: any) => o.id.toLowerCase().startsWith(code)) || null;
 
     if (error) {
       return new Response(
