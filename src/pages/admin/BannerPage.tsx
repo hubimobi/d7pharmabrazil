@@ -563,6 +563,16 @@ export default function BannerPage() {
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">Máximo de 5 banners. {localBanners.length}/5 utilizados.</p>
+
+      {/* Crop Dialog */}
+      {cropDialog && (
+        <CropImageDialog
+          open={!!cropDialog}
+          onOpenChange={(open) => { if (!open) setCropDialog(null); }}
+          imageUrl={cropDialog.imageUrl}
+          onCropComplete={(blob) => handleCropComplete(blob, cropDialog.bannerId)}
+        />
+      )}
     </div>
   );
 }
