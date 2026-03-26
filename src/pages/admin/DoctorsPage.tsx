@@ -10,8 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, CheckCircle, Copy } from "lucide-react";
+import { Plus, Pencil, CheckCircle, Copy, UserPlus, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface DocForm {
   name: string;
@@ -31,9 +32,13 @@ export default function DoctorsPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<DocForm>(emptyForm);
-  const [successCoupon, setSuccessCoupon] = useState<{ code: string; name: string } | null>(null);
+  const [successCoupon, setSuccessCoupon] = useState<{ code: string; name: string; doctorId: string; email: string } | null>(null);
+  const [createUserNow, setCreateUserNow] = useState(true);
+  const [userPassword, setUserPassword] = useState("");
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [userCreationDialog, setUserCreationDialog] = useState<{ doctorId: string; email: string; name: string } | null>(null);
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { isAdmin, session } = useAuth();
   const qc = useQueryClient();
 
   const { data: reps } = useQuery({
@@ -102,22 +107,16 @@ export default function DoctorsPage() {
             representative_id: repIdVal,
           } as any);
 
-          return couponCode;
-        }
-
-        // Create auth user for prescriber if email provided
-        if (form.email) {
-          // We'll create the user via edge function or admin API later
-          // For now just set up the record
+          return { couponCode, doctorId: inserted.id, email: form.email };
         }
       }
       return null;
     },
-    onSuccess: (couponCode) => {
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ["doctors"] });
       setOpen(false);
-      if (couponCode && !editId) {
-        setSuccessCoupon({ code: couponCode, name: form.name });
+      if (result?.couponCode && !editId) {
+        setSuccessCoupon({ code: result.couponCode, name: form.name, doctorId: result.doctorId, email: result.email });
       } else {
         toast({ title: editId ? "Prescritor atualizado" : "Prescritor cadastrado!" });
       }
