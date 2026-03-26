@@ -1,41 +1,18 @@
 
 
-## Log de Atividades Vazio - Diagnóstico e Correção
+## Pedido do Bling sem ID - Diagnóstico e Correção
 
-### Problema
-A tabela `integration_logs` está completamente vazia (0 registros). Apenas 2 das 6 edge functions inserem logs (bling-refresh-token e bling-sync-order). As demais (check-payment-status, create-payment, asaas-webhook, ghl-sync) não registram nenhuma atividade.
+### Causa Provável
+O pedido do Marcio T Garcia foi sincronizado com Bling **antes** da migração que adicionou a coluna `bling_order_id`. O pedido existe no Bling mas o ID não foi salvo no banco.
 
-### Correção
+### Solução
 
-#### 1. Adicionar logs no `asaas-webhook`
-Registrar quando um webhook é recebido, quando o pagamento é confirmado, e quando há erros.
+1. **Corrigir `handleSyncBling`** para dar `refetch()` após sincronizar — assim o ID aparece na tabela sem precisar recarregar a página manualmente.
 
-#### 2. Adicionar logs no `check-payment-status`
-Registrar quando o polling detecta um pagamento confirmado ou quando falha.
+2. **Ação imediata**: O botão de sync individual já busca no Bling e salva o ID (linha 159-160 do edge function). Basta clicar no ícone de sincronizar do pedido do Marcio — ele vai encontrar o pedido existente no Bling e salvar o ID.
 
-#### 3. Adicionar logs no `create-payment`
-Registrar quando um pagamento é criado com sucesso (Pix gerado ou cartão aprovado) e erros.
+3. **Corrigir `handleSyncAll`** para também dar `refetch()` ao final.
 
-#### 4. Adicionar logs no `ghl-sync`
-Registrar quando um contato é criado/atualizado, quando tags são adicionadas, e quando oportunidades são criadas.
-
-#### 5. Inserir log inicial de teste
-Executar uma migração para inserir um registro de teste na tabela, confirmando que a exibição funciona.
-
-### Padrão de log
-Cada insert segue o mesmo formato já usado no Bling:
-```typescript
-await supabase.from("integration_logs").insert({
-  integration: "asaas",  // ou "ghl"
-  action: "payment_created",
-  status: "success",     // ou "error"
-  details: "Pix gerado para pedido #abc123"
-});
-```
-
-### Arquivos modificados
-- `supabase/functions/asaas-webhook/index.ts`
-- `supabase/functions/check-payment-status/index.ts`
-- `supabase/functions/create-payment/index.ts`
-- `supabase/functions/ghl-sync/index.ts`
+### Alteração técnica
+- **`src/pages/admin/OrdersPage.tsx`**: Adicionar `refetch()` após `handleSyncBling` e `handleSyncAll` para atualizar a tabela com os IDs salvos.
 
