@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Store, Save, Loader2 } from "lucide-react";
+import { Store, Save, Loader2, Image, Globe, Instagram } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
 
 export default function StoreSettingsPage() {
@@ -91,6 +91,33 @@ export default function StoreSettingsPage() {
               <Input placeholder="(11) 99999-9999" value={form.whatsapp || ""} onChange={(e) => update("whatsapp", e.target.value)} />
             </div>
           </div>
+        </div>
+
+        {/* Logo e Favicon */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Image className="h-5 w-5" /> Logo e Favicon</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label>URL da Logo</Label>
+              <Input placeholder="https://exemplo.com/logo.png" value={form.logo_url || ""} onChange={(e) => update("logo_url", e.target.value)} />
+              {form.logo_url && (
+                <div className="mt-2 p-2 border border-border rounded bg-muted/30">
+                  <img src={form.logo_url} alt="Logo preview" className="h-12 object-contain" />
+                </div>
+              )}
+            </div>
+            <div>
+              <Label>URL do Favicon</Label>
+              <Input placeholder="https://exemplo.com/favicon.png" value={form.favicon_url || ""} onChange={(e) => update("favicon_url", e.target.value)} />
+              {form.favicon_url && (
+                <div className="mt-2 p-2 border border-border rounded bg-muted/30 flex items-center gap-2">
+                  <img src={form.favicon_url} alt="Favicon preview" className="h-8 w-8 object-contain" />
+                  <span className="text-xs text-muted-foreground">Preview</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">A logo aparece no cabeçalho do site. O favicon é o ícone que aparece na aba do navegador.</p>
         </div>
 
         {/* Endereço */}
