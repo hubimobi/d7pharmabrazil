@@ -69,19 +69,17 @@ export default function RecentPurchasePopup() {
     }, 8000);
 
     return () => clearTimeout(initialTimer);
-  }, [orders, dismissed]);
+  }, [displayOrders.length, dismissed, isAdmin]);
 
   useEffect(() => {
-    if (!visible || !orders?.length || dismissed) return;
+    if (!visible || !displayOrders.length || dismissed || isAdmin) return;
 
-    // Auto-hide after 6 seconds
     const hideTimer = setTimeout(() => {
       setVisible(false);
     }, 6000);
 
-    // Show next one after 25 seconds
     const nextTimer = setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % (orders?.length || 1));
+      setCurrentIndex((prev) => (prev + 1) % displayOrders.length);
       setVisible(true);
     }, 25000);
 
@@ -89,11 +87,11 @@ export default function RecentPurchasePopup() {
       clearTimeout(hideTimer);
       clearTimeout(nextTimer);
     };
-  }, [visible, currentIndex, orders, dismissed]);
+  }, [visible, currentIndex, displayOrders.length, dismissed, isAdmin]);
 
-  if (!orders?.length || dismissed) return null;
+  if (!displayOrders.length || dismissed || isAdmin) return null;
 
-  const order = orders[currentIndex % orders.length];
+  const order = displayOrders[currentIndex % displayOrders.length];
   const firstName = order.customer_name?.split(" ")[0] || "Cliente";
   const city = CITIES[currentIndex % CITIES.length];
   const orderItems = Array.isArray(order.items) ? order.items : [];
