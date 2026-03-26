@@ -84,6 +84,14 @@ export default function CheckoutUrgency({ reviewsCount = 500, firstBenefit }: Ch
         </div>
       </div>
 
+      {/* Real-time viewers */}
+      <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2">
+        <Eye className="h-4 w-4 text-destructive flex-shrink-0 animate-pulse" />
+        <span className="text-xs font-medium text-foreground">
+          <span className="font-bold text-destructive tabular-nums">{viewers}</span> pessoas estão vendo este produto agora
+        </span>
+      </div>
+
       {/* Social proof - buyers this month */}
       <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2">
         <Users className="h-4 w-4 text-primary flex-shrink-0" />
