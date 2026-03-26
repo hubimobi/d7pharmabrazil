@@ -1,40 +1,37 @@
 
 
-## Integração Bling V3 (OAuth2)
+## Problem
 
-O Bling V3 usa OAuth2 — não tem "API Key" simples. Os dados da sua tela (Client ID, Client Secret, Link de convite) são exatamente o que precisamos.
+After paying via PIX, the checkout stays stuck on the QR Code screen forever. There is no mechanism to check if the payment was confirmed by Asaas -- the app just shows the QR code and waits indefinitely.
 
-### Fluxo OAuth2 do Bling
+## Solution
 
-```text
-1. Admin clica "Conectar Bling" no painel
-2. Redireciona para Bling (link de convite)
-3. Bling redireciona de volta com ?code=XXXXX
-4. Edge function troca o code por access_token + refresh_token
-5. Tokens salvos no banco (bling_tokens)
-6. A cada pedido, usa access_token para enviar ao Bling (com refresh automático)
-```
+Add automatic payment status polling that checks Asaas every few seconds and transitions to a success screen when the payment is confirmed.
 
-### O que será criado
+### 1. Create edge function `check-payment-status`
 
-**1. Tabela `bling_tokens`** — armazena access_token, refresh_token, expires_at
+A new backend function that receives a `payment_id`, queries Asaas API for the current status, and returns it. Also updates the order status in the database when confirmed.
 
-**2. Secrets** — `BLING_CLIENT_ID` e `BLING_CLIENT_SECRET` (os valores da sua tela)
+### 2. Add polling to `PixPaymentResult` component
 
-**3. Edge Function `bling-callback`** — recebe o `?code=` após autorização e troca pelo token
+- Accept `payment_id` and `order_id` as new props
+- Use `setInterval` (every 5 seconds) to call the new edge function
+- When status is `CONFIRMED` or `RECEIVED`:
+  - Show success screen with green checkmark and "Pagamento Confirmado!"
+  - Clear the cart
+  - Stop polling
+- Show a subtle "Aguardando confirmação..." indicator while polling
+- Auto-stop polling after 15 minutes (timeout)
 
-**4. Edge Function `bling-sync-order`** — envia pedido ao Bling V3 usando os campos SKU, NCM, GTIN, Unidade já cadastrados nos produtos
+### 3. Update `CheckoutPage` to pass payment data
 
-**5. Página admin "Integrações"** — botão "Conectar Bling" que abre o link de autorização, e mostra status da conexão
+Pass `payment_id` and `order_id` from `paymentResult` down to `PixPaymentResult`, and pass `clearCart` so the cart is cleared on confirmation.
 
-**6. Disparo automático** — após pagamento confirmado, chama `bling-sync-order`
+### Files to create/edit
 
-### Pré-requisito do usuário
-
-Antes de implementar, preciso que você:
-1. Vá em "Dados básicos" do app no Bling
-2. Configure a **URL de callback** como: `https://xufiemrhlmirkrdrcxox.supabase.co/functions/v1/bling-callback`
-3. Confirme aqui que configurou
-
-Depois vou solicitar que salve o Client ID e Client Secret como secrets seguros.
+| File | Action |
+|------|--------|
+| `supabase/functions/check-payment-status/index.ts` | Create -- queries Asaas `GET /payments/{id}` and updates order |
+| `src/components/checkout/PixPaymentResult.tsx` | Edit -- add polling logic and success state |
+| `src/pages/CheckoutPage.tsx` | Edit -- pass `payment_id`, `order_id`, `onConfirmed` to PixPaymentResult |
 
