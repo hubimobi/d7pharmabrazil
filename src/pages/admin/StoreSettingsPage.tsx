@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,26 @@ import { toast } from "sonner";
 import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload, Trash2, Award, Plus, X, FlaskConical, ShieldCheck, TrendingUp, Heart, Star, Zap, Clock, Eye, Gift, ThumbsUp, CheckCircle, Sparkles, Flame } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
 import { useProducts } from "@/hooks/useProducts";
+import { CropImageDialog } from "@/components/admin/CropImageDialog";
+
+async function resizeImage(blob: Blob, width: number, height: number): Promise<Blob> {
+  const img = new window.Image();
+  const url = URL.createObjectURL(blob);
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = reject;
+    img.src = url;
+  });
+  URL.revokeObjectURL(url);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(img, 0, 0, width, height);
+  return new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b!), "image/png", 1);
+  });
+}
 
 const benefitIconOptions = [
   { value: "FlaskConical", label: "Farmácia", Icon: FlaskConical },
