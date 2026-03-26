@@ -20,10 +20,11 @@ export default function LeadsPage() {
   const exportCSV = () => {
     if (!leads?.length) return;
     const rows = [
-      ["Nome", "E-mail", "Fonte", "Data"],
-      ...leads.map((l) => [
+      ["Nome", "E-mail", "WhatsApp", "Fonte", "Data"],
+      ...leads.map((l: any) => [
         l.name || "",
         l.email,
+        l.phone || "",
         l.source || "",
         new Date(l.created_at || "").toLocaleDateString("pt-BR"),
       ]),
@@ -70,23 +71,25 @@ export default function LeadsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-2 font-medium">Nome</th>
-                    <th className="text-left py-2 font-medium">E-mail</th>
-                    <th className="text-left py-2 font-medium">Fonte</th>
-                    <th className="text-left py-2 font-medium">Data</th>
-                  </tr>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 font-medium">Nome</th>
+                      <th className="text-left py-2 font-medium">E-mail</th>
+                      <th className="text-left py-2 font-medium">WhatsApp</th>
+                      <th className="text-left py-2 font-medium">Fonte</th>
+                      <th className="text-left py-2 font-medium">Data</th>
+                    </tr>
                 </thead>
                 <tbody>
-                  {leads.map((lead) => (
-                    <tr key={lead.id} className="border-b border-border/50">
-                      <td className="py-2">{lead.name || "—"}</td>
-                      <td className="py-2">{lead.email}</td>
-                      <td className="py-2 text-muted-foreground">{lead.source || "popup"}</td>
-                      <td className="py-2 text-muted-foreground">
-                        {new Date(lead.created_at || "").toLocaleDateString("pt-BR")}
-                      </td>
-                    </tr>
+                    {leads.map((lead: any) => (
+                      <tr key={lead.id} className="border-b border-border/50">
+                        <td className="py-2">{lead.name || "—"}</td>
+                        <td className="py-2">{lead.email}</td>
+                        <td className="py-2">{lead.phone || "—"}</td>
+                        <td className="py-2 text-muted-foreground">{lead.source || "popup"}</td>
+                        <td className="py-2 text-muted-foreground">
+                          {new Date(lead.created_at || "").toLocaleDateString("pt-BR")}
+                        </td>
+                      </tr>
                   ))}
                 </tbody>
               </table>

@@ -14,6 +14,7 @@ export default function PopupBanner() {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -45,7 +46,7 @@ export default function PopupBanner() {
     if (!email) return;
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("popup_leads" as any).insert({ email, name, source: "popup" } as any);
+      const { error } = await supabase.from("popup_leads" as any).insert({ email, name, phone: phone || null, source: "popup" } as any);
       if (error) throw error;
       setSubmitted(true);
       toast.success("Cadastro realizado com sucesso!");
@@ -103,6 +104,12 @@ export default function PopupBanner() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+              />
+              <Input
+                type="tel"
+                placeholder="WhatsApp (00) 00000-0000"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
               />
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? "Enviando..." : (settings?.popup_banner_cta_text || "Cadastre-se")}
