@@ -378,17 +378,29 @@ function WebchatWhatsAppSettings() {
 
   const [webchatEnabled, setWebchatEnabled] = useState(false);
   const [webchatScript, setWebchatScript] = useState("");
+  const [webchatPosition, setWebchatPosition] = useState("right");
+  const [webchatDelay, setWebchatDelay] = useState(0);
+  const [webchatShowOnScroll, setWebchatShowOnScroll] = useState(false);
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
   const [whatsappName, setWhatsappName] = useState("Fale com um Especialista");
   const [whatsappMessage, setWhatsappMessage] = useState("Olá! Gostaria de falar com um especialista.");
+  const [whatsappPosition, setWhatsappPosition] = useState("right");
+  const [whatsappDelay, setWhatsappDelay] = useState(0);
+  const [whatsappShowOnScroll, setWhatsappShowOnScroll] = useState(false);
 
   useEffect(() => {
     if (settings) {
       setWebchatEnabled(settings.webchat_enabled ?? false);
       setWebchatScript(settings.webchat_script ?? "");
+      setWebchatPosition(settings.webchat_position || "right");
+      setWebchatDelay(settings.webchat_delay_seconds || 0);
+      setWebchatShowOnScroll(settings.webchat_show_on_scroll ?? false);
       setWhatsappEnabled(settings.whatsapp_button_enabled ?? true);
       setWhatsappName(settings.whatsapp_button_name || "Fale com um Especialista");
       setWhatsappMessage(settings.whatsapp_button_message || "Olá! Gostaria de falar com um especialista.");
+      setWhatsappPosition(settings.whatsapp_position || "right");
+      setWhatsappDelay(settings.whatsapp_delay_seconds || 0);
+      setWhatsappShowOnScroll(settings.whatsapp_show_on_scroll ?? false);
     }
   }, [settings]);
 
@@ -409,7 +421,13 @@ function WebchatWhatsAppSettings() {
   });
 
   const saveWebchat = () => {
-    mutation.mutate({ webchat_enabled: webchatEnabled, webchat_script: webchatScript });
+    mutation.mutate({
+      webchat_enabled: webchatEnabled,
+      webchat_script: webchatScript,
+      webchat_position: webchatPosition,
+      webchat_delay_seconds: webchatDelay,
+      webchat_show_on_scroll: webchatShowOnScroll,
+    });
   };
 
   const saveWhatsapp = () => {
@@ -417,6 +435,9 @@ function WebchatWhatsAppSettings() {
       whatsapp_button_enabled: whatsappEnabled,
       whatsapp_button_name: whatsappName,
       whatsapp_button_message: whatsappMessage,
+      whatsapp_position: whatsappPosition,
+      whatsapp_delay_seconds: whatsappDelay,
+      whatsapp_show_on_scroll: whatsappShowOnScroll,
     });
   };
 
