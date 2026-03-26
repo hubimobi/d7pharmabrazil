@@ -10,8 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus, Link2, Check, Eye } from "lucide-react";
+import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus, Link2, Check, Eye, Download, ArrowUpRight, RefreshCw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
 import { useToast } from "@/hooks/use-toast";
 import RichTextEditor from "@/components/admin/RichTextEditor";
@@ -213,12 +214,15 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-2xl font-bold">Produtos</h2>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />Novo Produto</Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2 flex-wrap">
+          <BlingImportDialog onImported={() => qc.invalidateQueries({ queryKey: ["admin-products"] })} />
+          <BlingExportDialog products={products || []} />
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-2" />Novo Produto</Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editId ? "Editar" : "Novo"} Produto</DialogTitle></DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
@@ -446,6 +450,7 @@ export default function ProductsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>
@@ -580,5 +585,223 @@ function AdminShippingSimulator({ form }: { form: ProdForm }) {
         </div>
       )}
     </div>
+  );
+}
+
+interface BlingProduct {
+  id: number;
+  nome: string;
+  codigo: string;
+  preco: number;
+  unidade: string;
+  estoque: number;
+  gtin: string;
+  ncm: string;
+}
+
+function BlingImportDialog({ onImported }: { onImported: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [blingProducts, setBlingProducts] = useState<BlingProduct[]>([]);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [search, setSearch] = useState("");
+  const { toast } = useToast();
+
+  const loadProducts = async () => {
+    setLoading(true);
+    setBlingProducts([]);
+    try {
+      const { data, error } = await supabase.functions.invoke("bling-list-products", {
+        body: { page: 1, search },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setBlingProducts(data.products || []);
+    } catch (err: any) {
+      toast({ title: err.message || "Erro ao buscar produtos do Bling", variant: "destructive" });
+    }
+    setLoading(false);
+  };
+
+  const toggleSelect = (id: number) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelected(next);
+  };
+
+  const toggleAll = () => {
+    if (selected.size === blingProducts.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(blingProducts.map(p => p.id)));
+    }
+  };
+
+  const handleImport = async () => {
+    if (selected.size === 0) return;
+    setImporting(true);
+    let success = 0;
+    let fail = 0;
+    for (const blingId of selected) {
+      const bp = blingProducts.find(p => p.id === blingId);
+      if (!bp) continue;
+      try {
+        const slug = bp.codigo?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "") || bp.nome.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
+        const { error } = await supabase.from("products").insert({
+          name: bp.nome,
+          slug: slug + "-" + Date.now().toString(36).slice(-4),
+          price: bp.preco || 0,
+          original_price: bp.preco || 0,
+          stock: bp.estoque || 0,
+          sku: bp.codigo || "",
+          unit: bp.unidade || "UN",
+          ncm: bp.ncm || "",
+          gtin: bp.gtin || "",
+          active: true,
+        });
+        if (error) throw error;
+        success++;
+      } catch {
+        fail++;
+      }
+    }
+    setImporting(false);
+    toast({ title: `Importação: ${success} ok, ${fail} erros` });
+    if (success > 0) onImported();
+    setOpen(false);
+    setSelected(new Set());
+    setBlingProducts([]);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setBlingProducts([]); setSelected(new Set()); } }}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="gap-2"><Download className="h-4 w-4" />Importar do Bling</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Importar Produtos do Bling</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Input placeholder="Buscar por nome ou código..." value={search} onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && loadProducts()} />
+            <Button onClick={loadProducts} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              <span className="ml-2">Buscar</span>
+            </Button>
+          </div>
+
+          {blingProducts.length > 0 && (
+            <>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox checked={selected.size === blingProducts.length} onCheckedChange={toggleAll} />
+                  Selecionar todos ({blingProducts.length})
+                </label>
+                <span className="text-sm text-muted-foreground">{selected.size} selecionado(s)</span>
+              </div>
+              <div className="border rounded-lg divide-y max-h-[40vh] overflow-y-auto">
+                {blingProducts.map((p) => (
+                  <label key={p.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                    <Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{p.nome}</p>
+                      <p className="text-xs text-muted-foreground">{p.codigo || "Sem código"} · R$ {Number(p.preco).toFixed(2).replace(".", ",")} · Estoque: {p.estoque}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <Button onClick={handleImport} disabled={importing || selected.size === 0} className="w-full">
+                {importing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                Importar {selected.size} produto(s)
+              </Button>
+            </>
+          )}
+
+          {!loading && blingProducts.length === 0 && (
+            <p className="text-center text-sm text-muted-foreground py-8">
+              Clique em "Buscar" para listar os produtos do Bling
+            </p>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BlingExportDialog({ products }: { products: any[] }) {
+  const [open, setOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { toast } = useToast();
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelected(next);
+  };
+
+  const toggleAll = () => {
+    if (selected.size === products.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(products.map(p => p.id)));
+    }
+  };
+
+  const handleExport = async () => {
+    if (selected.size === 0) return;
+    setExporting(true);
+    let success = 0;
+    let fail = 0;
+    for (const productId of selected) {
+      try {
+        const { data, error } = await supabase.functions.invoke("bling-export-product", {
+          body: { product_id: productId },
+        });
+        if (error || data?.error) { fail++; } else { success++; }
+      } catch { fail++; }
+      await new Promise(r => setTimeout(r, 500));
+    }
+    setExporting(false);
+    toast({ title: `Exportação: ${success} ok, ${fail} erros` });
+    setOpen(false);
+    setSelected(new Set());
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSelected(new Set()); }}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="gap-2"><ArrowUpRight className="h-4 w-4" />Enviar ao Bling</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Enviar Produtos ao Bling</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox checked={selected.size === products.length && products.length > 0} onCheckedChange={toggleAll} />
+              Selecionar todos ({products.length})
+            </label>
+            <span className="text-sm text-muted-foreground">{selected.size} selecionado(s)</span>
+          </div>
+          <div className="border rounded-lg divide-y max-h-[50vh] overflow-y-auto">
+            {products.map((p) => (
+              <label key={p.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                <Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{p.name}</p>
+                  <p className="text-xs text-muted-foreground">{p.sku || "Sem SKU"} · R$ {Number(p.price).toFixed(2).replace(".", ",")} · Estoque: {p.stock}</p>
+                </div>
+                <Badge variant={p.active ? "default" : "secondary"} className="text-xs">{p.active ? "Ativo" : "Inativo"}</Badge>
+              </label>
+            ))}
+          </div>
+          <Button onClick={handleExport} disabled={exporting || selected.size === 0} className="w-full">
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowUpRight className="h-4 w-4 mr-2" />}
+            Enviar {selected.size} produto(s) ao Bling
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
