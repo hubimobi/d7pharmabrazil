@@ -37,7 +37,7 @@ serve(async (req) => {
 
     // Call Lovable AI image editing model
     const aiResponse = await fetch(
-      "https://ai-gateway.lovable.dev/v1/chat/completions",
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: "POST",
         headers: {
@@ -63,6 +63,7 @@ serve(async (req) => {
               ],
             },
           ],
+          modalities: ["image", "text"],
         }),
       }
     );
@@ -76,27 +77,42 @@ serve(async (req) => {
 
     const aiData = await aiResponse.json();
 
-    // Extract image from response - try multiple formats
+    // Extract image from response
     let resultBase64: string | null = null;
     let resultMime = "image/png";
 
-    const content = aiData.choices?.[0]?.message?.content;
+    const message = aiData.choices?.[0]?.message;
 
-    if (typeof content === "string") {
-      // Check if content contains base64 image data
-      const b64Match = content.match(
+    // Check for images array (Lovable AI gateway format)
+    if (message?.images && Array.isArray(message.images)) {
+      for (const img of message.images) {
+        if (img.image_url?.url) {
+          const match = img.image_url.url.match(
+            /data:(image\/[a-z]+);base64,([A-Za-z0-9+/=\n\r]+)/s
+          );
+          if (match) {
+            resultMime = match[1];
+            resultBase64 = match[2].replace(/[\n\r]/g, "");
+            break;
+          }
+        }
+      }
+    }
+
+    // Fallback: check content string for base64
+    if (!resultBase64 && typeof message?.content === "string") {
+      const b64Match = message.content.match(
         /data:(image\/[a-z]+);base64,([A-Za-z0-9+/=]+)/
       );
       if (b64Match) {
         resultMime = b64Match[1];
         resultBase64 = b64Match[2];
       }
-    } else if (Array.isArray(content)) {
-      for (const part of content) {
-        if (part.type === "image" && part.data) {
-          resultBase64 = part.data;
-          break;
-        }
+    }
+
+    // Fallback: check content array
+    if (!resultBase64 && Array.isArray(message?.content)) {
+      for (const part of message.content) {
         if (part.type === "image_url" && part.image_url?.url) {
           const match = part.image_url.url.match(
             /data:(image\/[a-z]+);base64,([A-Za-z0-9+/=]+)/
@@ -104,20 +120,6 @@ serve(async (req) => {
           if (match) {
             resultMime = match[1];
             resultBase64 = match[2];
-            break;
-          }
-        }
-      }
-    }
-
-    // Also check for inline_data format (Gemini specific)
-    if (!resultBase64 && aiData.choices?.[0]?.message?.content) {
-      const parts = aiData.candidates?.[0]?.content?.parts;
-      if (Array.isArray(parts)) {
-        for (const part of parts) {
-          if (part.inline_data?.data) {
-            resultBase64 = part.inline_data.data;
-            resultMime = part.inline_data.mime_type || "image/png";
             break;
           }
         }
