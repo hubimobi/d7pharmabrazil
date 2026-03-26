@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload, Trash2 } from "lucide-react";
+import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload, Trash2, Award, Plus, X, FlaskConical, ShieldCheck, TrendingUp, Heart, Star, Zap, Clock, Eye, Gift, ThumbsUp, CheckCircle, Sparkles } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
 
 export default function StoreSettingsPage() {
