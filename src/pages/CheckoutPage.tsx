@@ -128,9 +128,14 @@ const CheckoutPage = () => {
     },
   });
 
-  const filteredDoctors = (doctors ?? []).filter((d) =>
-    d.name.toLowerCase().includes(doctorSearch.toLowerCase())
-  );
+  const filteredDoctors = (doctors ?? []).filter((d) => {
+    const search = doctorSearch.toLowerCase();
+    return (
+      d.name.toLowerCase().includes(search) ||
+      (d.city && d.city.toLowerCase().includes(search)) ||
+      (d.state && d.state.toLowerCase().includes(search))
+    );
+  });
 
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
   const shipping = freeShipping ? 0 : (selectedShipping?.price ?? (subtotal >= 199 ? 0 : 19.90));
@@ -139,8 +144,8 @@ const CheckoutPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.doctor) {
-      toast.error("O nome do Prescritor é obrigatório!");
+    if (!form.doctor && !selectedDoctorId) {
+      toast.error("Selecione um Prescritor ou marque 'Não Sei'.");
       return;
     }
 
@@ -374,11 +379,10 @@ const CheckoutPage = () => {
                   <div><Label>Estado *</Label><Input required value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></div>
                 </div>
 
-                <h2 className="text-lg font-semibold">Prescritor Responsável *</h2>
+                <h2 className="text-lg font-semibold">Prescritor ou Médico Responsável</h2>
                 <div className="relative">
                   <Input
-                    required
-                    placeholder="Buscar nome do Prescritor..."
+                    placeholder="Buscar por nome, cidade ou estado..."
                     value={form.doctor || doctorSearch}
                     onChange={(e) => {
                       setDoctorSearch(e.target.value);
@@ -386,6 +390,7 @@ const CheckoutPage = () => {
                       setSelectedDoctorId(null);
                       setShowDoctorResults(true);
                     }}
+                    disabled={selectedDoctorId === "sem-prescritor"}
                   />
                   {showDoctorResults && doctorSearch && (
                     <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
@@ -412,11 +417,33 @@ const CheckoutPage = () => {
                       ))}
                       {filteredDoctors.length === 0 && (
                         <p className="px-4 py-3 text-sm text-muted-foreground">
-                          Nenhum prescritor encontrado. Consulte seu representante.
+                          Nenhum prescritor encontrado. Use "Não Sei" abaixo.
                         </p>
                       )}
                     </div>
                   )}
+                </div>
+                <div className="flex items-center gap-3 mt-2">
+                  <Button
+                    type="button"
+                    variant={selectedDoctorId === "sem-prescritor" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      if (selectedDoctorId === "sem-prescritor") {
+                        setSelectedDoctorId(null);
+                        setForm({ ...form, doctor: "" });
+                        setDoctorSearch("");
+                      } else {
+                        setSelectedDoctorId("sem-prescritor");
+                        setForm({ ...form, doctor: "Sem Prescritor" });
+                        setDoctorSearch("");
+                        setShowDoctorResults(false);
+                      }
+                    }}
+                  >
+                    {selectedDoctorId === "sem-prescritor" ? "✓ Sem Prescritor" : "Não Sei / Sem Prescritor"}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">Selecione se não possui prescritor</span>
                 </div>
 
                 <h2 className="text-lg font-semibold">Pagamento</h2>
