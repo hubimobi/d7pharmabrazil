@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Clock, Gift, Truck, ShieldCheck, Headphones, Package, Users, Flame } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Clock, Gift, Truck, ShieldCheck, Headphones, Package, Users, Flame, Eye } from "lucide-react";
 
 interface CheckoutUrgencyProps {
   reviewsCount?: number;
@@ -14,13 +14,21 @@ function getRemainingOrders(): number {
 }
 
 function getBuyersThisMonth(reviewsCount: number): number {
-  // Use reviews as base, add a realistic multiplier
   return Math.max(142, reviewsCount + 100 + Math.floor(reviewsCount * 0.3));
+}
+
+function getInitialViewers(): number {
+  const hour = new Date().getHours();
+  // More viewers during peak hours (10-22h)
+  if (hour >= 10 && hour <= 22) return Math.floor(Math.random() * 15) + 18; // 18-32
+  return Math.floor(Math.random() * 8) + 7; // 7-14
 }
 
 export default function CheckoutUrgency({ reviewsCount = 500, firstBenefit }: CheckoutUrgencyProps) {
   const [remainingOrders] = useState(getRemainingOrders);
   const buyersThisMonth = getBuyersThisMonth(reviewsCount);
+  const [viewers, setViewers] = useState(getInitialViewers);
+  const viewersRef = useRef(viewers);
   const [giftSeconds, setGiftSeconds] = useState(() => {
     const saved = sessionStorage.getItem("d7-gift-timer-end");
     if (saved) {
@@ -31,6 +39,28 @@ export default function CheckoutUrgency({ reviewsCount = 500, firstBenefit }: Ch
     sessionStorage.setItem("d7-gift-timer-end", String(end));
     return 15 * 60;
   });
+
+  // Fluctuate viewers every 3-8 seconds
+  useEffect(() => {
+    const fluctuate = () => {
+      const delta = Math.random() > 0.5 ? 1 : -1;
+      const change = Math.floor(Math.random() * 3) + 1;
+      setViewers((prev) => {
+        const next = prev + delta * change;
+        viewersRef.current = Math.max(5, Math.min(45, next));
+        return viewersRef.current;
+      });
+    };
+    const scheduleNext = () => {
+      const delay = (Math.random() * 5 + 3) * 1000; // 3-8s
+      return setTimeout(() => {
+        fluctuate();
+        timerRef = scheduleNext();
+      }, delay);
+    };
+    let timerRef = scheduleNext();
+    return () => clearTimeout(timerRef);
+  }, []);
 
   useEffect(() => {
     if (giftSeconds <= 0) return;
@@ -52,6 +82,14 @@ export default function CheckoutUrgency({ reviewsCount = 500, firstBenefit }: Ch
           <span className="font-semibold text-warning">Alta demanda</span>
           <span className="text-foreground">: restam poucas unidades desse lote</span>
         </div>
+      </div>
+
+      {/* Real-time viewers */}
+      <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2">
+        <Eye className="h-4 w-4 text-destructive flex-shrink-0 animate-pulse" />
+        <span className="text-xs font-medium text-foreground">
+          <span className="font-bold text-destructive tabular-nums">{viewers}</span> pessoas estão vendo este produto agora
+        </span>
       </div>
 
       {/* Social proof - buyers this month */}
