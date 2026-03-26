@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export default function PopupBanner() {
   const { data: settings } = useStoreSettings();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -18,14 +20,25 @@ export default function PopupBanner() {
   const enabled = settings?.popup_banner_enabled;
   const delay = settings?.popup_banner_delay_seconds || 5;
 
+  // Don't show on admin pages
+  const isAdmin = location.pathname.startsWith("/admin");
+
   useEffect(() => {
-    if (!enabled) return;
-    // Don't show again if already dismissed this session
+    if (!enabled || isAdmin) return;
     if (sessionStorage.getItem("popup-dismissed")) return;
 
     const timer = setTimeout(() => setOpen(true), delay * 1000);
     return () => clearTimeout(timer);
-  }, [enabled, delay]);
+  }, [enabled, delay, isAdmin]);
+
+  // Re-trigger on route change (e.g. navigating to checkout) if not dismissed
+  useEffect(() => {
+    if (!enabled || isAdmin || open) return;
+    if (sessionStorage.getItem("popup-dismissed")) return;
+
+    const timer = setTimeout(() => setOpen(true), delay * 1000);
+    return () => clearTimeout(timer);
+  }, [location.pathname, enabled, isAdmin, delay, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +65,7 @@ export default function PopupBanner() {
     sessionStorage.setItem("popup-dismissed", "1");
   };
 
-  if (!enabled) return null;
+  if (!enabled || isAdmin) return null;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>

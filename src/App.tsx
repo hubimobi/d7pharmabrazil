@@ -25,6 +25,7 @@ import IntegrationsPage from "./pages/admin/IntegrationsPage";
 import RecoveryPage from "./pages/admin/RecoveryPage";
 import CouponsPage from "./pages/admin/CouponsPage";
 import BannerPage from "./pages/admin/BannerPage";
+import PopupsPage from "./pages/admin/PopupsPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import TrackOrderPage from "./pages/TrackOrderPage";
 import PrescritorPage from "./pages/PrescritorPage";
@@ -80,6 +81,7 @@ const App = () => (
               <Route path="/admin/recuperacao" element={<AdminLayout><RecoveryPage /></AdminLayout>} />
               <Route path="/admin/cupons" element={<AdminLayout><CouponsPage /></AdminLayout>} />
               <Route path="/admin/banner" element={<AdminLayout><BannerPage /></AdminLayout>} />
+              <Route path="/admin/popups" element={<AdminLayout><PopupsPage /></AdminLayout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
