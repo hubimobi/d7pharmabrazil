@@ -1,46 +1,42 @@
 
 
-## Webhook Asaas para Confirmação Instantânea de Pagamento
+## Configurações de Posição e Aparição dos Widgets
 
-### Problema Atual
-O sistema usa polling (a cada 5s por até 15 min) para verificar o status do pagamento PIX. Isso é lento, consome recursos e pode falhar se o cliente fechar a página.
+### O que será feito
 
-### Solução
-Criar um webhook que o Asaas chama automaticamente quando o pagamento é confirmado, atualizando o pedido instantaneamente. Manter o polling como fallback.
+Adicionar ao painel admin (Integrações) e aos componentes do site opções para:
 
-### Implementação
+1. **Alinhamento** (direita ou esquerda) -- para Webchat e WhatsApp
+2. **Delay de aparição** (X segundos) -- para ambos
+3. **Aparecer após rolagem** (alternativa ao delay) -- para ambos
 
-#### 1. Adicionar coluna `asaas_payment_id` na tabela `orders`
-Migração SQL para adicionar a coluna que vincula o pedido ao pagamento Asaas, permitindo o webhook encontrar o pedido correto.
+### Mudanças no banco
 
-#### 2. Salvar `asaas_payment_id` no pedido (edge function `create-payment`)
-Após criar o pagamento no Asaas, salvar o `paymentData.id` na coluna `asaas_payment_id` do pedido.
+Migration adicionando 6 colunas na `store_settings`:
 
-#### 3. Criar edge function `asaas-webhook`
-- Recebe POST do Asaas com evento de pagamento (`PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`)
-- Valida o payload
-- Busca o pedido pelo `asaas_payment_id`
-- Atualiza status para `paid`
-- Endpoint público (sem JWT) pois é chamado pelo Asaas
+```sql
+ALTER TABLE public.store_settings
+  ADD COLUMN IF NOT EXISTS whatsapp_position text DEFAULT 'right',
+  ADD COLUMN IF NOT EXISTS whatsapp_delay_seconds integer DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS whatsapp_show_on_scroll boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS webchat_position text DEFAULT 'right',
+  ADD COLUMN IF NOT EXISTS webchat_delay_seconds integer DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS webchat_show_on_scroll boolean DEFAULT false;
+```
 
-#### 4. Habilitar Realtime na tabela `orders`
-Para que o frontend receba a atualização instantaneamente via WebSocket.
+### Mudanças nos arquivos
 
-#### 5. Atualizar `PixPaymentResult` para usar Realtime
-- Escutar mudanças na tabela `orders` filtradas pelo `order_id`
-- Quando `status` mudar para `paid`, mostrar tela de confirmação
-- Manter polling como fallback (intervalo maior, 15s)
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/hooks/useStoreSettings.tsx` | Adicionar os 6 novos campos na interface |
+| `src/pages/admin/IntegrationsPage.tsx` | Adicionar controles de posição (Select direita/esquerda), delay (Input numérico em segundos), e toggle "aparecer após rolagem" nos cards de Webchat e WhatsApp |
+| `src/components/WhatsAppButton.tsx` | Usar `useState` + `useEffect` para controlar visibilidade com delay ou scroll listener; aplicar classe `left-6` ou `right-6` dinamicamente |
+| `src/components/WebchatWidget.tsx` | Aplicar mesma lógica de delay/scroll e posicionamento CSS via classe injetada |
 
-### Arquivos
+### Lógica de aparição
 
-| Arquivo | Ação |
-|---------|------|
-| Migration SQL | Criar — `asaas_payment_id` + realtime |
-| `supabase/functions/asaas-webhook/index.ts` | Criar |
-| `supabase/functions/create-payment/index.ts` | Editar — salvar `asaas_payment_id` |
-| `src/components/checkout/PixPaymentResult.tsx` | Editar — adicionar listener Realtime |
-
-### Configuração necessária
-Após implementação, o usuário precisará configurar a URL do webhook no painel do Asaas:
-`https://xufiemrhlmirkrdrcxox.supabase.co/functions/v1/asaas-webhook`
+- Se `show_on_scroll = true`: componente aparece quando o usuário rolar mais de 300px
+- Se `delay_seconds > 0`: componente aparece após X segundos
+- Se ambos estiverem desativados (delay=0, scroll=false): aparece imediatamente
+- Se ambos estiverem ativados: aparece quando qualquer condição for satisfeita primeiro
 
