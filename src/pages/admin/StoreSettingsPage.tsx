@@ -82,15 +82,14 @@ export default function StoreSettingsPage() {
   const update = (field: keyof StoreSettings, value: any) =>
     setForm((prev) => prev ? { ...prev, [field]: value } : prev);
 
-  const handleUpload = async (file: File, type: "logo" | "favicon") => {
-    const setUploading = type === "logo" ? setUploadingLogo : setUploadingFavicon;
-    const field = type === "logo" ? "logo_url" : "favicon_url";
+  const handleUpload = async (file: File, type: "logo" | "horizontal_logo" | "favicon") => {
+    const setUploading = type === "logo" ? setUploadingLogo : type === "horizontal_logo" ? setUploadingHorizontalLogo : setUploadingFavicon;
+    const field = type === "logo" ? "logo_url" : type === "horizontal_logo" ? "horizontal_logo_url" : "favicon_url";
     const ext = file.name.split(".").pop() || "png";
-    const filePath = `${type}.${ext}`;
+    const filePath = `${type.replace("_", "-")}.${ext}`;
 
     setUploading(true);
     try {
-      // Remove old file first (ignore errors)
       await supabase.storage.from("store-assets").remove([filePath]);
 
       const { error: uploadError } = await supabase.storage
@@ -104,18 +103,19 @@ export default function StoreSettingsPage() {
         .getPublicUrl(filePath);
 
       const publicUrl = urlData.publicUrl + "?t=" + Date.now();
-      update(field, publicUrl);
-      toast.success(`${type === "logo" ? "Logo" : "Favicon"} enviado com sucesso!`);
+      update(field as keyof StoreSettings, publicUrl);
+      const labels: Record<string, string> = { logo: "Logo Principal", horizontal_logo: "Logo Horizontal", favicon: "Favicon" };
+      toast.success(`${labels[type]} enviado com sucesso!`);
     } catch (err: any) {
-      toast.error(`Erro ao enviar ${type}: ${err.message}`);
+      toast.error(`Erro ao enviar: ${err.message}`);
     } finally {
       setUploading(false);
     }
   };
 
-  const handleRemoveAsset = async (type: "logo" | "favicon") => {
-    const field = type === "logo" ? "logo_url" : "favicon_url";
-    update(field, "");
+  const handleRemoveAsset = async (type: "logo" | "horizontal_logo" | "favicon") => {
+    const field = type === "logo" ? "logo_url" : type === "horizontal_logo" ? "horizontal_logo_url" : "favicon_url";
+    update(field as keyof StoreSettings, "");
   };
 
   const handleSave = (e: React.FormEvent) => {
