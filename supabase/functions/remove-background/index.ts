@@ -34,14 +34,12 @@ serve(async (req) => {
     const imgBuffer = await imgResponse.arrayBuffer();
     const imgBytes = new Uint8Array(imgBuffer);
     
-    // If image is larger than 500KB, we'll send URL directly instead of base64
     const imageSizeKB = imgBytes.length / 1024;
     console.log(`Image size: ${imageSizeKB.toFixed(0)}KB`);
 
-    // Build the image content - use URL for large images, base64 for small ones
+    // Build the image content
     let imageContent: any;
     if (imageSizeKB > 500) {
-      // For large images, pass the URL directly (let the AI gateway handle it)
       imageContent = {
         type: "image_url",
         image_url: { url: image_url },
@@ -55,7 +53,7 @@ serve(async (req) => {
       };
     }
 
-    // Call Lovable AI image editing model
+    // Step 1: Use AI to place the subject on a solid bright green (#00FF00) background
     const aiResponse = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
@@ -72,7 +70,7 @@ serve(async (req) => {
               content: [
                 {
                   type: "text",
-                  text: "Remove the background from this image. Return ONLY the image with transparent background as PNG. No text.",
+                  text: "Remove the background from this product image and replace it with a perfectly uniform solid bright green color (#00FF00). The entire background must be exactly #00FF00 with no gradients, shadows, or variations. Keep only the product/subject with all its details intact. Output as PNG image.",
                 },
                 imageContent,
               ],
@@ -108,14 +106,12 @@ serve(async (req) => {
     const message = aiData.choices?.[0]?.message;
     
     console.log("AI finish_reason:", aiData.choices?.[0]?.finish_reason);
-    console.log("Has images array:", !!message?.images);
-    console.log("Content type:", typeof message?.content);
 
     // Extract image from response
     let resultBase64: string | null = null;
     let resultMime = "image/png";
 
-    // Method 1: images array (Lovable AI gateway format)
+    // Method 1: images array
     if (message?.images && Array.isArray(message.images)) {
       for (const img of message.images) {
         const url = img.image_url?.url || img.url;
@@ -130,7 +126,7 @@ serve(async (req) => {
       }
     }
 
-    // Method 2: content string with embedded base64
+    // Method 2: content string
     if (!resultBase64 && typeof message?.content === "string") {
       const b64Match = message.content.match(/data:(image\/[a-z]+);base64,([A-Za-z0-9+/=]+)/);
       if (b64Match) {
@@ -139,7 +135,7 @@ serve(async (req) => {
       }
     }
 
-    // Method 3: content array with image parts
+    // Method 3: content array
     if (!resultBase64 && Array.isArray(message?.content)) {
       for (const part of message.content) {
         const url = part.image_url?.url;
@@ -155,7 +151,6 @@ serve(async (req) => {
     }
 
     if (!resultBase64) {
-      // Log full structure for debugging
       const debugInfo = {
         hasChoices: !!aiData.choices,
         finishReason: aiData.choices?.[0]?.finish_reason,
@@ -163,26 +158,75 @@ serve(async (req) => {
         imagesCount: message?.images?.length,
         contentType: typeof message?.content,
         contentIsArray: Array.isArray(message?.content),
-        contentPreview: typeof message?.content === "string" 
-          ? message.content.slice(0, 200) 
-          : Array.isArray(message?.content) 
-            ? JSON.stringify(message.content.map((p: any) => ({ type: p.type })))
-            : "unknown",
       };
       console.error("Could not extract image. Debug:", JSON.stringify(debugInfo));
       
       return new Response(
         JSON.stringify({
-          error: "Não foi possível processar a imagem. O modelo não retornou uma imagem. Tente com uma imagem menor.",
-          details: "Could not extract image from AI response",
+          error: "Não foi possível processar a imagem. Tente com uma imagem menor.",
           debug: debugInfo,
         }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // Step 2: Convert green background to transparency using canvas-like pixel manipulation
+    // Decode the base64 image and use a simple approach via a second pass
+    // We'll use the Deno ImageMagick or manual pixel replacement
+    
+    // Since Deno doesn't have Canvas natively, we'll use a pragmatic approach:
+    // Decode PNG, find green pixels, make them transparent
+    // For simplicity and reliability, use a WebAssembly-free approach with raw pixel manipulation
+    
+    // Actually, let's use the built-in OffscreenCanvas or a simpler method
+    // We'll convert using a second AI call that explicitly outputs with transparency
+    // OR we process the green-screen image server-side
+    
+    // Best approach: Use ImageScript (pure TypeScript image library for Deno)
+    const { Image } = await import("https://deno.land/x/imagescript@1.3.0/mod.ts");
+    
+    // Decode the AI-generated image
+    const greenScreenBytes = Uint8Array.from(atob(resultBase64), c => c.charCodeAt(0));
+    const img = await Image.decode(greenScreenBytes);
+    
+    // Replace bright green pixels with transparent
+    // Use a tolerance-based approach to catch near-green pixels
+    const tolerance = 80; // color distance tolerance
+    
+    for (let x = 0; x < img.width; x++) {
+      for (let y = 0; y < img.height; y++) {
+        const pixel = img.getPixelAt(x + 1, y + 1); // ImageScript is 1-indexed
+        const r = (pixel >> 24) & 0xFF;
+        const g = (pixel >> 16) & 0xFF;
+        const b = (pixel >> 8) & 0xFF;
+        
+        // Check if pixel is close to bright green (#00FF00)
+        // Green channel should be high, red and blue should be low
+        const distR = r;
+        const distG = 255 - g;
+        const distB = b;
+        const distance = Math.sqrt(distR * distR + distG * distG + distB * distB);
+        
+        if (distance < tolerance) {
+          // Make transparent (RGBA with alpha=0)
+          img.setPixelAt(x + 1, y + 1, 0x00000000);
+        } else if (distance < tolerance + 30) {
+          // Semi-transparent edge for smoother cutout
+          const alpha = Math.round(((distance - tolerance) / 30) * 255);
+          const newPixel = ((r & 0xFF) << 24) | ((g & 0xFF) << 16) | ((b & 0xFF) << 8) | (alpha & 0xFF);
+          img.setPixelAt(x + 1, y + 1, newPixel);
+        }
+      }
+    }
+    
+    // Encode as PNG with transparency
+    const pngBytes = await img.encode(1); // PNG format
+    const finalBase64 = base64Encode(pngBytes);
+
+    console.log("Background removed successfully with green-screen technique");
+
     return new Response(
-      JSON.stringify({ image_base64: resultBase64, mime_type: resultMime }),
+      JSON.stringify({ image_base64: finalBase64, mime_type: "image/png" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
