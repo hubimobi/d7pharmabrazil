@@ -21,7 +21,7 @@ const adminItems = [
   { title: "Produtos", url: "/admin/produtos", icon: Package },
   { title: "Representantes", url: "/admin/representantes", icon: Users },
   { title: "Doutores", url: "/admin/doutores", icon: Stethoscope },
-  { title: "Comissões", url: "/admin/comissoes", icon: DollarSign },
+  { title: "Cashback", url: "/admin/comissoes", icon: DollarSign },
   { title: "Recuperação", url: "/admin/recuperacao", icon: ShoppingCart },
   { title: "Cupons", url: "/admin/cupons", icon: Tag },
   { title: "Relatórios", url: "/admin/relatorios", icon: BarChart3 },

@@ -21,28 +21,28 @@ export default function CommissionsPage() {
     },
   });
 
-  const totalCommission = commissions?.reduce((s, c) => s + Number(c.commission_value), 0) ?? 0;
-  const pendingCommission = commissions?.filter((c) => c.status === "pending").reduce((s, c) => s + Number(c.commission_value), 0) ?? 0;
+  const totalCashback = commissions?.reduce((s, c) => s + Number(c.commission_value), 0) ?? 0;
+  const pendingCashback = commissions?.filter((c) => c.status === "pending").reduce((s, c) => s + Number(c.commission_value), 0) ?? 0;
   const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Comissões</h2>
+      <h2 className="text-2xl font-bold">Cashback</h2>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Comissões</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Cashback</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent><p className="text-2xl font-bold">{fmt(totalCommission)}</p></CardContent>
+          <CardContent><p className="text-2xl font-bold">{fmt(totalCashback)}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent><p className="text-2xl font-bold text-warning">{fmt(pendingCommission)}</p></CardContent>
+          <CardContent><p className="text-2xl font-bold text-warning">{fmt(pendingCashback)}</p></CardContent>
         </Card>
       </div>
 
@@ -54,9 +54,9 @@ export default function CommissionsPage() {
                 <TableHead>Pedido</TableHead>
                 {isAdmin && <TableHead>Representante</TableHead>}
                 <TableHead>Doutor</TableHead>
-                <TableHead>Valor Pedido</TableHead>
+                <TableHead>Valor Produtos</TableHead>
                 <TableHead>Taxa</TableHead>
-                <TableHead>Comissão</TableHead>
+                <TableHead>Cashback</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -64,7 +64,7 @@ export default function CommissionsPage() {
               {isLoading ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !commissions?.length ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma comissão ainda</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum cashback ainda</TableCell></TableRow>
               ) : (
                 commissions.map((c) => (
                   <TableRow key={c.id}>
