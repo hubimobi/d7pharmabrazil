@@ -29,6 +29,7 @@ import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import TrackOrderPage from "./pages/TrackOrderPage";
 import RecentPurchasePopup from "./components/RecentPurchasePopup";
 import WebchatWidget from "./components/WebchatWidget";
+import PopupBanner from "./components/PopupBanner";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ const App = () => (
           <BrowserRouter>
             <RecentPurchasePopup />
             <WebchatWidget />
+            <PopupBanner />
             <Routes>
               <Route path="/" element={<BlingRedirect />} />
               <Route path="/produtos" element={<ProductsPage />} />
