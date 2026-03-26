@@ -1,19 +1,27 @@
 import { useState, useEffect } from "react";
-import { Clock, Gift, Truck, ShieldCheck, Headphones, Package } from "lucide-react";
+import { Clock, Gift, Truck, ShieldCheck, Headphones, Package, Users, Flame } from "lucide-react";
+
+interface CheckoutUrgencyProps {
+  reviewsCount?: number;
+  firstBenefit?: string;
+}
 
 /** Returns remaining orders based on hour: 01h→40, 23h→5, linearly */
 function getRemainingOrders(): number {
   const hour = new Date().getHours();
-  // From 1 (40 orders) to 23 (5 orders) linearly
-  // slope: (5-40)/(23-1) = -35/22 ≈ -1.59 per hour
   const orders = Math.round(40 - ((hour - 1) * 35) / 22);
   return Math.max(3, Math.min(40, orders));
 }
 
-export default function CheckoutUrgency() {
+function getBuyersThisMonth(reviewsCount: number): number {
+  // Use reviews as base, add a realistic multiplier
+  return Math.max(142, reviewsCount + 100 + Math.floor(reviewsCount * 0.3));
+}
+
+export default function CheckoutUrgency({ reviewsCount = 500, firstBenefit }: CheckoutUrgencyProps) {
   const [remainingOrders] = useState(getRemainingOrders);
+  const buyersThisMonth = getBuyersThisMonth(reviewsCount);
   const [giftSeconds, setGiftSeconds] = useState(() => {
-    // 15 minutes from component mount
     const saved = sessionStorage.getItem("d7-gift-timer-end");
     if (saved) {
       const remaining = Math.max(0, Math.floor((Number(saved) - Date.now()) / 1000));
@@ -37,13 +45,21 @@ export default function CheckoutUrgency() {
 
   return (
     <div className="space-y-3">
-      {/* Remaining orders */}
+      {/* Alta demanda */}
       <div className="flex items-center gap-2 rounded-lg bg-warning/10 border border-warning/20 px-3 py-2.5">
-        <Package className="h-4 w-4 text-warning flex-shrink-0" />
+        <Flame className="h-4 w-4 text-warning flex-shrink-0" />
         <div className="text-xs">
-          <span className="font-semibold text-warning">Produção diária limitada</span>
-          <span className="text-foreground"> — Faltam <strong className="text-warning">{remainingOrders} pedidos</strong> hoje</span>
+          <span className="font-semibold text-warning">Alta demanda</span>
+          <span className="text-foreground">: restam poucas unidades desse lote</span>
         </div>
+      </div>
+
+      {/* Social proof - buyers this month */}
+      <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2">
+        <Users className="h-4 w-4 text-primary flex-shrink-0" />
+        <span className="text-xs font-medium text-foreground">
+          +{buyersThisMonth} clientes compraram este mês
+        </span>
       </div>
 
       {/* Shipping promise */}
