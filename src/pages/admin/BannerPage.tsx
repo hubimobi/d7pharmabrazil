@@ -409,14 +409,13 @@ export default function BannerPage() {
                         </div>
                         <div className="flex gap-2">
                           <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => {
-                            toast.info("Para recortar a imagem, utilize um editor de imagem externo e reenvie o arquivo recortado.");
+                            setCropDialog({ bannerId: banner.id, imageUrl: banner.side_image_url! });
                           }}>
                             <Crop className="h-4 w-4" /> Recortar
                           </Button>
-                          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => {
-                            toast.info("Para remover o fundo, utilize uma ferramenta como remove.bg e reenvie a imagem.");
-                          }}>
-                            <Eraser className="h-4 w-4" /> Remover Fundo
+                          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => handleRemoveBg(banner.id, banner.side_image_url!)} disabled={removingBg === banner.id}>
+                            {removingBg === banner.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eraser className="h-4 w-4" />}
+                            {removingBg === banner.id ? "Processando..." : "Remover Fundo"}
                           </Button>
                         </div>
                       </div>
