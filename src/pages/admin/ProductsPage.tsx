@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, Upload, Trash2, Star, X } from "lucide-react";
+import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import CreatableSelect from "@/components/admin/CreatableSelect";
@@ -271,12 +271,23 @@ export default function ProductsPage() {
 
                 <TabsContent value="dimensions" className="space-y-4 mt-4">
                   <p className="text-sm text-muted-foreground">Dados usados para cálculo automático de frete via Melhor Envio.</p>
+                  
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => {
+                      setForm({ ...form, weight: "0.3", height: "10", width: "20", length: "25" });
+                    }}>
+                      <Package className="h-4 w-4" /> Caixa Padrão (até 4 potes)
+                    </Button>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2"><Label>Peso (kg) *</Label><Input type="number" step="0.01" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} /></div>
                     <div className="space-y-2"><Label>Altura (cm) *</Label><Input type="number" step="0.1" value={form.height} onChange={(e) => setForm({ ...form, height: e.target.value })} /></div>
                     <div className="space-y-2"><Label>Largura (cm) *</Label><Input type="number" step="0.1" value={form.width} onChange={(e) => setForm({ ...form, width: e.target.value })} /></div>
                     <div className="space-y-2"><Label>Comprimento (cm) *</Label><Input type="number" step="0.1" value={form.length} onChange={(e) => setForm({ ...form, length: e.target.value })} /></div>
                   </div>
+
+                  <AdminShippingSimulator form={form} />
                 </TabsContent>
 
                 <TabsContent value="bling" className="space-y-4 mt-4">
@@ -417,6 +428,76 @@ export default function ProductsPage() {
           </Table>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function AdminShippingSimulator({ form }: { form: ProdForm }) {
+  const [cep, setCep] = useState("");
+  const [qty, setQty] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<any[]>([]);
+
+  const formatCep = (v: string) => {
+    const d = v.replace(/\D/g, "").slice(0, 8);
+    return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+  };
+
+  const simulate = async () => {
+    const clean = cep.replace(/\D/g, "");
+    if (clean.length !== 8) return;
+    setLoading(true);
+    setResults([]);
+    try {
+      const { data, error } = await supabase.functions.invoke("calculate-shipping", {
+        body: {
+          cep_destino: clean,
+          produtos: [{
+            price: parseFloat(form.price) || 0,
+            quantity: qty,
+            weight: parseFloat(form.weight) || 0.3,
+            height: parseFloat(form.height) || 5,
+            width: parseFloat(form.width) || 15,
+            length: parseFloat(form.length) || 20,
+          }],
+        },
+      });
+      if (!error && data?.options) setResults(data.options);
+    } catch { /* ignore */ }
+    setLoading(false);
+  };
+
+  return (
+    <div className="mt-4 rounded-lg border border-dashed border-border p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Truck className="h-4 w-4 text-primary" />
+        <span className="text-sm font-semibold">Simular Frete</span>
+      </div>
+      <div className="flex items-end gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs">CEP destino</Label>
+          <Input placeholder="00000-000" value={cep} onChange={(e) => setCep(formatCep(e.target.value))} className="w-36" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Qtd</Label>
+          <Input type="number" min={1} max={10} value={qty} onChange={(e) => setQty(Number(e.target.value) || 1)} className="w-20" />
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={simulate} disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Calcular"}
+        </Button>
+      </div>
+      {results.length > 0 && (
+        <div className="space-y-1">
+          {results.map((r: any) => (
+            <div key={r.id} className="flex items-center justify-between rounded border border-border px-3 py-2 text-sm">
+              <span>{r.company} — {r.name}</span>
+              <span className="font-semibold text-primary">
+                {r.price === 0 ? "Grátis" : `R$ ${r.price.toFixed(2).replace(".", ",")}`} · {r.delivery_time}d
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
