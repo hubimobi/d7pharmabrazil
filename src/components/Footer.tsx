@@ -98,9 +98,10 @@ const Footer = () => {
           <div>
             <h4 className="text-sm font-semibold text-foreground">Institucional</h4>
             <nav className="mt-3 flex flex-col gap-2">
-              <span className="text-sm text-muted-foreground">Política de Privacidade</span>
-              <span className="text-sm text-muted-foreground">Termos de Uso</span>
-              <span className="text-sm text-muted-foreground">Trocas e Devoluções</span>
+              <Link to="/quem-somos" className="text-sm text-muted-foreground hover:text-primary">Quem Somos</Link>
+              <Link to="/politica-de-privacidade" className="text-sm text-muted-foreground hover:text-primary">Política de Privacidade</Link>
+              <Link to="/termos-de-uso" className="text-sm text-muted-foreground hover:text-primary">Termos de Uso</Link>
+              <Link to="/trocas-e-devolucoes" className="text-sm text-muted-foreground hover:text-primary">Trocas e Devoluções</Link>
             </nav>
           </div>
           <div>
