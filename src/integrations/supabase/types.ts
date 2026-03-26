@@ -333,6 +333,8 @@ export type Database = {
         Row: {
           active: boolean
           badges: Json
+          bg_color: string | null
+          bg_gradient: string | null
           btn1_bg_color: string | null
           btn1_hover_color: string | null
           btn2_bg_color: string | null
@@ -355,6 +357,8 @@ export type Database = {
         Insert: {
           active?: boolean
           badges?: Json
+          bg_color?: string | null
+          bg_gradient?: string | null
           btn1_bg_color?: string | null
           btn1_hover_color?: string | null
           btn2_bg_color?: string | null
@@ -377,6 +381,8 @@ export type Database = {
         Update: {
           active?: boolean
           badges?: Json
+          bg_color?: string | null
+          bg_gradient?: string | null
           btn1_bg_color?: string | null
           btn1_hover_color?: string | null
           btn2_bg_color?: string | null
