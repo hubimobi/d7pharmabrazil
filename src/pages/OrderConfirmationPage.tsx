@@ -26,12 +26,15 @@ export default function OrderConfirmationPage() {
   useEffect(() => {
     if (!orderId) return;
     const fetchOrder = async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("id", orderId)
-        .maybeSingle();
-      if (data) setOrder(data as any);
+      try {
+        const { data, error } = await supabase.functions.invoke("get-order", {
+          body: { order_id: orderId },
+        });
+        if (error) throw error;
+        if (data?.order) setOrder(data.order as any);
+      } catch {
+        console.error("Failed to fetch order");
+      }
       setLoading(false);
     };
     fetchOrder();
