@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,6 +38,18 @@ serve(async (req) => {
       );
     }
 
+    // Fetch origin CEP from store settings
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: settings } = await supabaseClient
+      .from("store_settings")
+      .select("address_cep")
+      .limit(1)
+      .single();
+    const originCep = (settings?.address_cep || "01001000").replace(/\D/g, "");
+
     // Build products payload for Melhor Envio
     const totalWeight = produtos.reduce((sum: number, p: any) => sum + (p.weight || 0.3) * (p.quantity || 1), 0);
     const maxHeight = Math.max(...produtos.map((p: any) => p.height || 5));
@@ -45,7 +58,7 @@ serve(async (req) => {
     const totalValue = produtos.reduce((sum: number, p: any) => sum + (p.price || 0) * (p.quantity || 1), 0);
 
     const body = {
-      from: { postal_code: "01001000" }, // CEP de origem da loja (São Paulo)
+      from: { postal_code: originCep },
       to: { postal_code: cleanCep },
       products: [
         {
