@@ -315,6 +315,33 @@ export type Database = {
           },
         ]
       }
+      integration_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: string | null
+          id: string
+          integration: string
+          status: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          integration: string
+          status?: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          integration?: string
+          status?: string
+        }
+        Relationships: []
+      }
       manufacturers: {
         Row: {
           created_at: string

@@ -375,7 +375,97 @@ export default function IntegrationsPage() {
 
       {/* Webchat & WhatsApp Section */}
       <WebchatWhatsAppSettings />
+
+      {/* Integration Logs */}
+      <IntegrationLogs />
     </div>
+  );
+}
+
+function IntegrationLogs() {
+  const [filter, setFilter] = useState("all");
+
+  const { data: logs, isLoading } = useQuery({
+    queryKey: ["integration-logs", filter],
+    queryFn: async () => {
+      let query = supabase
+        .from("integration_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (filter !== "all") {
+        query = query.eq("integration", filter);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as Array<{
+        id: string;
+        integration: string;
+        action: string;
+        status: string;
+        details: string | null;
+        created_at: string;
+      }>;
+    },
+  });
+
+  const statusColor = (status: string) => {
+    if (status === "success") return "default";
+    if (status === "error") return "destructive";
+    return "outline";
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <CardTitle>Log de Atividades</CardTitle>
+            <CardDescription>Histórico de renovações de token e sincronizações</CardDescription>
+          </div>
+          <Select value={filter} onValueChange={setFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="bling">Bling</SelectItem>
+              <SelectItem value="asaas">Asaas</SelectItem>
+              <SelectItem value="ghl">GHL</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="text-sm text-muted-foreground text-center py-4">Carregando...</div>
+        ) : !logs || logs.length === 0 ? (
+          <div className="text-sm text-muted-foreground text-center py-4">Nenhum registro encontrado</div>
+        ) : (
+          <div className="space-y-2 max-h-96 overflow-auto">
+            {logs.map((log) => (
+              <div key={log.id} className="flex items-start gap-3 p-3 rounded-md border text-sm">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-xs">{log.integration.toUpperCase()}</Badge>
+                    <span className="font-medium">{log.action.replace(/_/g, " ")}</span>
+                    <Badge variant={statusColor(log.status)} className="text-xs">{log.status}</Badge>
+                  </div>
+                  {log.details && (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">{log.details}</p>
+                  )}
+                </div>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {new Date(log.created_at).toLocaleString("pt-BR")}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
