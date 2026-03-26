@@ -20,7 +20,7 @@ const adminItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Produtos", url: "/admin/produtos", icon: Package },
   { title: "Representantes", url: "/admin/representantes", icon: Users },
-  { title: "Doutores", url: "/admin/doutores", icon: Stethoscope },
+  { title: "Prescritores", url: "/admin/prescritores", icon: Stethoscope },
   { title: "Cashback", url: "/admin/comissoes", icon: DollarSign },
   { title: "Recuperação", url: "/admin/recuperacao", icon: ShoppingCart },
   { title: "Cupons", url: "/admin/cupons", icon: Tag },
@@ -32,7 +32,7 @@ const adminItems = [
 
 const repItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
-  { title: "Meus Doutores", url: "/admin/doutores", icon: Stethoscope },
+  { title: "Meus Prescritores", url: "/admin/prescritores", icon: Stethoscope },
   { title: "Cashback", url: "/admin/comissoes", icon: DollarSign },
   { title: "Relatórios", url: "/admin/relatorios", icon: BarChart3 },
 ];

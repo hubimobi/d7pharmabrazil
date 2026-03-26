@@ -40,7 +40,7 @@ export default function DashboardPage() {
 
   const cards = [
     ...(isAdmin ? [{ title: "Representantes", value: stats?.representatives ?? 0, icon: Users, color: "text-primary" }] : []),
-    { title: "Doutores", value: stats?.doctors ?? 0, icon: Stethoscope, color: "text-secondary" },
+    { title: "Prescritores", value: stats?.doctors ?? 0, icon: Stethoscope, color: "text-secondary" },
     { title: "Pedidos", value: stats?.orders ?? 0, icon: ShoppingCart, color: "text-success" },
     { title: "Faturamento", value: `R$ ${(stats?.revenue ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, color: "text-warning" },
   ];

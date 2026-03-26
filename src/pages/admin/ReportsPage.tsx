@@ -43,7 +43,7 @@ export default function ReportsPage() {
   data?.forEach((order) => {
     const doc = order.doctors as any;
     const repName = doc?.representatives?.name ?? "Sem representante";
-    const docName = doc?.name ?? "Sem doutor";
+    const docName = doc?.name ?? "Sem prescritor";
     const month = new Date(order.created_at).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
 
     if (!byRep[repName]) byRep[repName] = { name: repName, total: 0, count: 0 };
@@ -65,7 +65,7 @@ export default function ReportsPage() {
 
   const exportCSV = () => {
     if (!data?.length) return;
-    const rows = [["Pedido", "Cliente", "Doutor", "Representante", "Total", "Data"].join(",")];
+    const rows = [["Pedido", "Cliente", "Prescritor", "Representante", "Total", "Data"].join(",")];
     data.forEach((o) => {
       const doc = o.doctors as any;
       rows.push([o.id, o.customer_name, doc?.name ?? "", doc?.representatives?.name ?? "", o.total, new Date(o.created_at).toLocaleDateString("pt-BR")].join(","));
@@ -135,13 +135,13 @@ export default function ReportsPage() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Top Doutores</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Top Prescritores</CardTitle></CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>#</TableHead>
-                <TableHead>Doutor</TableHead>
+                <TableHead>Prescritor</TableHead>
                 <TableHead>Pedidos</TableHead>
                 <TableHead>Total</TableHead>
               </TableRow>
