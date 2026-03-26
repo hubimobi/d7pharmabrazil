@@ -32,6 +32,12 @@ export interface StoreSettings {
   hero_image_url: string;
   logo_url: string;
   favicon_url: string;
+  whatsapp_position: string;
+  whatsapp_delay_seconds: number;
+  whatsapp_show_on_scroll: boolean;
+  webchat_position: string;
+  webchat_delay_seconds: number;
+  webchat_show_on_scroll: boolean;
 }
 
 export function useStoreSettings() {

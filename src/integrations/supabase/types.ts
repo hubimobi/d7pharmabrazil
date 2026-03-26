@@ -575,12 +575,18 @@ export type Database = {
           store_name: string
           tiktok: string | null
           updated_at: string
+          webchat_delay_seconds: number | null
           webchat_enabled: boolean
+          webchat_position: string | null
           webchat_script: string | null
+          webchat_show_on_scroll: boolean | null
           whatsapp: string | null
           whatsapp_button_enabled: boolean
           whatsapp_button_message: string | null
           whatsapp_button_name: string | null
+          whatsapp_delay_seconds: number | null
+          whatsapp_position: string | null
+          whatsapp_show_on_scroll: boolean | null
           youtube: string | null
         }
         Insert: {
@@ -609,12 +615,18 @@ export type Database = {
           store_name?: string
           tiktok?: string | null
           updated_at?: string
+          webchat_delay_seconds?: number | null
           webchat_enabled?: boolean
+          webchat_position?: string | null
           webchat_script?: string | null
+          webchat_show_on_scroll?: boolean | null
           whatsapp?: string | null
           whatsapp_button_enabled?: boolean
           whatsapp_button_message?: string | null
           whatsapp_button_name?: string | null
+          whatsapp_delay_seconds?: number | null
+          whatsapp_position?: string | null
+          whatsapp_show_on_scroll?: boolean | null
           youtube?: string | null
         }
         Update: {
@@ -643,12 +655,18 @@ export type Database = {
           store_name?: string
           tiktok?: string | null
           updated_at?: string
+          webchat_delay_seconds?: number | null
           webchat_enabled?: boolean
+          webchat_position?: string | null
           webchat_script?: string | null
+          webchat_show_on_scroll?: boolean | null
           whatsapp?: string | null
           whatsapp_button_enabled?: boolean
           whatsapp_button_message?: string | null
           whatsapp_button_name?: string | null
+          whatsapp_delay_seconds?: number | null
+          whatsapp_position?: string | null
+          whatsapp_show_on_scroll?: boolean | null
           youtube?: string | null
         }
         Relationships: []

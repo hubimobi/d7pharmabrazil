@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug, Power, PowerOff, AlertTriangle, MessageSquare, Phone } from "lucide-react";
 import { toast } from "sonner";
@@ -378,17 +379,29 @@ function WebchatWhatsAppSettings() {
 
   const [webchatEnabled, setWebchatEnabled] = useState(false);
   const [webchatScript, setWebchatScript] = useState("");
+  const [webchatPosition, setWebchatPosition] = useState("right");
+  const [webchatDelay, setWebchatDelay] = useState(0);
+  const [webchatShowOnScroll, setWebchatShowOnScroll] = useState(false);
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
   const [whatsappName, setWhatsappName] = useState("Fale com um Especialista");
   const [whatsappMessage, setWhatsappMessage] = useState("Olá! Gostaria de falar com um especialista.");
+  const [whatsappPosition, setWhatsappPosition] = useState("right");
+  const [whatsappDelay, setWhatsappDelay] = useState(0);
+  const [whatsappShowOnScroll, setWhatsappShowOnScroll] = useState(false);
 
   useEffect(() => {
     if (settings) {
       setWebchatEnabled(settings.webchat_enabled ?? false);
       setWebchatScript(settings.webchat_script ?? "");
+      setWebchatPosition(settings.webchat_position || "right");
+      setWebchatDelay(settings.webchat_delay_seconds || 0);
+      setWebchatShowOnScroll(settings.webchat_show_on_scroll ?? false);
       setWhatsappEnabled(settings.whatsapp_button_enabled ?? true);
       setWhatsappName(settings.whatsapp_button_name || "Fale com um Especialista");
       setWhatsappMessage(settings.whatsapp_button_message || "Olá! Gostaria de falar com um especialista.");
+      setWhatsappPosition(settings.whatsapp_position || "right");
+      setWhatsappDelay(settings.whatsapp_delay_seconds || 0);
+      setWhatsappShowOnScroll(settings.whatsapp_show_on_scroll ?? false);
     }
   }, [settings]);
 
@@ -409,7 +422,13 @@ function WebchatWhatsAppSettings() {
   });
 
   const saveWebchat = () => {
-    mutation.mutate({ webchat_enabled: webchatEnabled, webchat_script: webchatScript });
+    mutation.mutate({
+      webchat_enabled: webchatEnabled,
+      webchat_script: webchatScript,
+      webchat_position: webchatPosition,
+      webchat_delay_seconds: webchatDelay,
+      webchat_show_on_scroll: webchatShowOnScroll,
+    });
   };
 
   const saveWhatsapp = () => {
@@ -417,6 +436,9 @@ function WebchatWhatsAppSettings() {
       whatsapp_button_enabled: whatsappEnabled,
       whatsapp_button_name: whatsappName,
       whatsapp_button_message: whatsappMessage,
+      whatsapp_position: whatsappPosition,
+      whatsapp_delay_seconds: whatsappDelay,
+      whatsapp_show_on_scroll: whatsappShowOnScroll,
     });
   };
 
@@ -458,6 +480,27 @@ function WebchatWhatsAppSettings() {
                 Cole aqui o código completo do widget (ex: GoHighLevel, Tidio, Crisp, etc.)
               </p>
             </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label>Posição</Label>
+                <Select value={webchatPosition} onValueChange={setWebchatPosition}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="right">Direita</SelectItem>
+                    <SelectItem value="left">Esquerda</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Delay (segundos)</Label>
+                <Input type="number" min={0} value={webchatDelay} onChange={(e) => setWebchatDelay(Number(e.target.value))} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Após rolagem</Label>
+                <Switch checked={webchatShowOnScroll} onCheckedChange={setWebchatShowOnScroll} />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Se delay=0 e rolagem desativada, aparece imediatamente. Se ambos ativos, aparece quando qualquer condição for atendida primeiro.</p>
             <Button onClick={saveWebchat} disabled={mutation.isPending} size="sm">
               {mutation.isPending ? "Salvando..." : "Salvar Webchat"}
             </Button>
@@ -509,6 +552,27 @@ function WebchatWhatsAppSettings() {
                 <p className="mt-1">Número atual: <code className="bg-background px-1 rounded">{settings.whatsapp}</code></p>
               )}
             </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label>Posição</Label>
+                <Select value={whatsappPosition} onValueChange={setWhatsappPosition}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="right">Direita</SelectItem>
+                    <SelectItem value="left">Esquerda</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Delay (segundos)</Label>
+                <Input type="number" min={0} value={whatsappDelay} onChange={(e) => setWhatsappDelay(Number(e.target.value))} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Após rolagem</Label>
+                <Switch checked={whatsappShowOnScroll} onCheckedChange={setWhatsappShowOnScroll} />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Se delay=0 e rolagem desativada, aparece imediatamente. Se ambos ativos, aparece quando qualquer condição for atendida primeiro.</p>
             <Button onClick={saveWhatsapp} disabled={mutation.isPending} size="sm">
               {mutation.isPending ? "Salvando..." : "Salvar WhatsApp"}
             </Button>
