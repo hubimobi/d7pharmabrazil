@@ -1,31 +1,44 @@
 
 
-## Correção: "Unexpected end of JSON input" no Bling Callback e Asaas Webhook
+## Melhoria: CEP de origem configurável no cálculo de frete
 
-### Problema
+### Situação atual
 
-Dois problemas identificados:
+O cálculo de frete via Melhor Envio está **funcionando corretamente**:
+- Dimensões e peso dos produtos são lidos do banco de dados
+- Valores são consolidados em um pacote único com regras de mínimo/máximo
+- O valor do seguro é calculado com base no preço × quantidade
+- Opções de frete são retornadas ordenadas por preço
 
-1. **Bling Callback** (`bling-callback/index.ts` linha 42): `tokenRes.json()` falha se o Bling retornar resposta vazia ou não-JSON (ex: HTML de erro, body vazio). Isso causa o crash "Unexpected end of JSON input" no `catch`, que retorna apenas "Erro interno."
+**Problema identificado**: O CEP de origem está fixo como `01001000` (São Paulo) na edge function. Deveria usar o CEP cadastrado nas configurações da loja.
 
-2. **Asaas Webhook** (`asaas-webhook/index.ts` linha 16): `req.json()` falha quando acessado via browser (GET sem body) — isso é o que aparece no screenshot. Embora seja comportamento esperado para webhooks, deve retornar erro amigável.
+### Plano
 
-### Solução
+#### 1. Atualizar edge function para buscar CEP de origem do banco
+- Na `calculate-shipping/index.ts`, consultar `store_settings.address_cep` para usar como CEP de origem
+- Manter fallback para `01001000` caso não esteja configurado
 
-#### 1. `bling-callback/index.ts`
-- Ler resposta como texto primeiro (`tokenRes.text()`)
-- Tentar parsear JSON com try/catch
-- Se falhar, logar o texto raw e retornar mensagem de erro descritiva
-- Adicionar log do status HTTP para debug
+#### 2. Nenhuma mudança no frontend necessária
+- O `ShippingCalculator` e as páginas de checkout/produto já passam corretamente todos os dados (peso, dimensões, preço, quantidade)
 
-#### 2. `asaas-webhook/index.ts`
-- Verificar se o método é GET/HEAD e retornar mensagem amigável ("Webhook ativo")
-- Envolver `req.json()` em try/catch separado para tratar body vazio/inválido
-
-### Arquivos alterados
+### Arquivo alterado
 
 | Arquivo | Mudança |
 |---|---|
-| `supabase/functions/bling-callback/index.ts` | Safe JSON parsing com `text()` + `JSON.parse()` e logs detalhados |
-| `supabase/functions/asaas-webhook/index.ts` | Tratar GET requests e safe JSON parsing do body |
+| `supabase/functions/calculate-shipping/index.ts` | Buscar `address_cep` de `store_settings` como CEP de origem |
+
+### Detalhes técnicos
+
+Na edge function, antes de montar o body da requisição:
+```typescript
+// Buscar CEP de origem das configurações
+const { data: settings } = await supabaseClient
+  .from("store_settings")
+  .select("address_cep")
+  .limit(1)
+  .single();
+const originCep = (settings?.address_cep || "01001000").replace(/\D/g, "");
+```
+
+Usar `originCep` no campo `from.postal_code` ao invés do valor hardcoded.
 
