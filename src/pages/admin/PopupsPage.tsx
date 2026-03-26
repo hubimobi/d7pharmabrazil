@@ -28,17 +28,8 @@ export default function PopupsPage() {
     },
   });
 
-  const { data: leads, isLoading: loadingLeads } = useQuery({
-    queryKey: ["popup-leads"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("popup_leads")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
+
+
 
   const [form, setForm] = useState<Partial<StoreSettings> | null>(null);
 
