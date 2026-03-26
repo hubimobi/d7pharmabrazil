@@ -46,16 +46,14 @@ export default function TrackOrderPage() {
     setSearched(true);
 
     try {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("customer_email", email.trim().toLowerCase())
-        .ilike("id", `${orderCode.trim()}%`)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke("track-order", {
+        body: { email: email.trim().toLowerCase(), order_code: orderCode.trim() },
+      });
 
       if (error) throw error;
-      setOrder(data as any);
-      if (!data) toast.error("Pedido não encontrado. Verifique os dados.");
+      const result = data?.order || null;
+      setOrder(result as any);
+      if (!result) toast.error("Pedido não encontrado. Verifique os dados.");
     } catch {
       toast.error("Erro ao buscar pedido.");
     } finally {
