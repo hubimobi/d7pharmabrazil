@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard } from "lucide-react";
+import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard, Share2, Copy, MessageCircle } from "lucide-react";
 import CountdownTimer from "@/components/CountdownTimer";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -80,13 +80,11 @@ const ProductDetail = () => {
         <div className="grid gap-8 md:grid-cols-2">
           {/* Image Gallery */}
           <div className="space-y-3">
-            <div className="flex items-center justify-center rounded-lg bg-muted p-8 min-h-[320px]">
+            <div className="aspect-square overflow-hidden rounded-lg bg-muted">
               <img
                 src={selectedImage || product.image}
                 alt={product.name}
-                className="max-h-80 w-auto object-contain transition-opacity duration-200"
-                width={320}
-                height={320}
+                className="h-full w-full object-cover transition-opacity duration-200"
               />
             </div>
             {product.extraImages.length > 0 && (
@@ -116,7 +114,31 @@ const ProductDetail = () => {
 
           <div>
             {product.badge && <Badge className="mb-3 bg-secondary text-secondary-foreground">{product.badge}</Badge>}
-            <h1 className="text-2xl font-bold text-foreground md:text-3xl">{product.name}</h1>
+            <div className="flex items-start justify-between gap-2">
+              <h1 className="text-2xl font-bold text-foreground md:text-3xl">{product.name}</h1>
+              <div className="flex gap-1 flex-shrink-0 pt-1">
+                <button
+                  onClick={() => {
+                    const url = window.location.href;
+                    navigator.clipboard.writeText(url);
+                    import("sonner").then(({ toast }) => toast.success("Link copiado!"));
+                  }}
+                  className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition"
+                  title="Copiar link"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(product.name + " - " + window.location.href)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full p-2 text-muted-foreground hover:bg-success/10 hover:text-success transition"
+                  title="Compartilhar no WhatsApp"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                </a>
+              </div>
+            </div>
 
             <div className="mt-2 flex items-center gap-2">
               <div className="flex gap-0.5">
