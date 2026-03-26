@@ -42,12 +42,6 @@ Deno.serve(async (req) => {
     const code = order_code.toLowerCase();
     const data = (orders || []).find((o: any) => o.id.toLowerCase().startsWith(code)) || null;
 
-    if (error) {
-      return new Response(
-        JSON.stringify({ error: "Erro ao buscar pedido" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     return new Response(
       JSON.stringify({ order: data }),
