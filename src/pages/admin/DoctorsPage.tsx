@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, CheckCircle, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface DocForm {
@@ -31,6 +31,7 @@ export default function DoctorsPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<DocForm>(emptyForm);
+  const [successCoupon, setSuccessCoupon] = useState<{ code: string; name: string } | null>(null);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const qc = useQueryClient();
@@ -97,7 +98,11 @@ export default function DoctorsPage() {
             discount_type: "percent",
             discount_value: 10,
             active: true,
-          });
+            doctor_id: inserted.id,
+            representative_id: repIdVal,
+          } as any);
+
+          return couponCode;
         }
 
         // Create auth user for prescriber if email provided
@@ -106,13 +111,18 @@ export default function DoctorsPage() {
           // For now just set up the record
         }
       }
+      return null;
     },
-    onSuccess: () => {
+    onSuccess: (couponCode) => {
       qc.invalidateQueries({ queryKey: ["doctors"] });
       setOpen(false);
+      if (couponCode && !editId) {
+        setSuccessCoupon({ code: couponCode, name: form.name });
+      } else {
+        toast({ title: editId ? "Prescritor atualizado" : "Prescritor cadastrado!" });
+      }
       setForm(emptyForm);
       setEditId(null);
-      toast({ title: editId ? "Prescritor atualizado" : "Prescritor cadastrado com cupom automático!" });
     },
     onError: (err: any) => toast({ title: "Erro ao salvar", description: err?.message, variant: "destructive" }),
   });
@@ -212,6 +222,40 @@ export default function DoctorsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Success coupon dialog */}
+      <Dialog open={!!successCoupon} onOpenChange={(v) => { if (!v) setSuccessCoupon(null); }}>
+        <DialogContent className="max-w-md text-center">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Cupom criado</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <CheckCircle className="h-12 w-12 text-primary" />
+            <h2 className="text-xl font-bold">Cadastro de Prescritor Criado!</h2>
+            <p className="text-muted-foreground">
+              O cupom de <span className="font-bold text-primary">10% de Desconto</span> do prescritor <span className="font-semibold">{successCoupon?.name}</span> é:
+            </p>
+            <div className="flex items-center gap-2 rounded-lg border-2 border-primary bg-primary/5 px-6 py-3">
+              <span className="text-xl font-mono font-bold text-primary">{successCoupon?.code}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  navigator.clipboard.writeText(successCoupon?.code || "");
+                  toast({ title: "Cupom copiado!" });
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Em cada venda, o comprador ganha <span className="font-semibold">10% de desconto</span> e o Prescritor recebe <span className="font-semibold">20% de Cashback</span> sobre o valor dos produtos (sem o frete).
+            </p>
+            <Button onClick={() => setSuccessCoupon(null)} className="mt-2">Entendido</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardContent className="p-0">
