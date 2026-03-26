@@ -153,10 +153,16 @@ export default function IntegrationsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {blingStatus?.connected && !blingStatus.expired && !showReconnect && (
-              <div className="flex items-center gap-2 text-sm text-primary">
-                <CheckCircle className="h-4 w-4" />
-                Conectado — token válido até{" "}
-                {new Date(blingStatus.expiresAt!).toLocaleString("pt-BR")}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm text-primary">
+                  <CheckCircle className="h-4 w-4" />
+                  Conectado — token válido até{" "}
+                  {new Date(blingStatus.expiresAt!).toLocaleString("pt-BR")}
+                </div>
+                <p className="text-xs text-muted-foreground ml-6">
+                  Última atualização: {new Date(blingStatus.updatedAt!).toLocaleString("pt-BR")}
+                  {" • "}Renovação automática a cada 12h
+                </p>
               </div>
             )}
             {blingStatus?.connected && blingStatus.expired && (
