@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug, Power, PowerOff, AlertTriangle, MessageSquare, Phone, ShoppingBag, Copy, Check } from "lucide-react";
+import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug, Power, PowerOff, AlertTriangle, MessageSquare, Phone, ShoppingBag, Copy, Check, Upload, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 
@@ -374,6 +374,9 @@ export default function IntegrationsPage() {
 
         {/* Meta / Instagram Shopping */}
         <MetaFeedCard />
+
+        {/* TikTok Shop */}
+        <TikTokShopCard />
       </div>
 
       {/* Manual Bling Sync */}
@@ -817,6 +820,178 @@ function MetaFeedCard() {
             <ExternalLink className="h-4 w-4 mr-2" />
             Baixar CSV
           </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TikTokShopCard() {
+  const [syncing, setSyncing] = useState<string | null>(null);
+  const qc = useQueryClient();
+
+  const callbackUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/tiktok-shop-callback`;
+
+  const { data: tiktokStatus, isLoading, refetch } = useQuery({
+    queryKey: ["tiktok-status"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("tiktok_tokens" as any) as any)
+        .select("id, shop_id, shop_name, expires_at, updated_at")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (error || !data || data.length === 0) return { connected: false };
+
+      const token = data[0];
+      const expired = new Date(token.expires_at) < new Date();
+      return {
+        connected: true,
+        expired,
+        shopId: token.shop_id,
+        shopName: token.shop_name,
+        expiresAt: token.expires_at,
+        updatedAt: token.updated_at,
+      };
+    },
+  });
+
+  const handleConnect = () => {
+    // TikTok Shop OAuth URL - user needs to replace with their app's auth URL
+    const appKey = prompt("Informe o App Key do TikTok Shop:");
+    if (!appKey) return;
+    const authUrl = `https://services.tiktokshop.com/open/authorize?service_id=${appKey}`;
+    window.open(authUrl, "_blank");
+  };
+
+  const handleSyncProducts = async () => {
+    setSyncing("products");
+    try {
+      const { data, error } = await supabase.functions.invoke("tiktok-shop-sync-products", {
+        body: { action: "export" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const results = data?.results || [];
+      const success = results.filter((r: any) => r.success).length;
+      const failed = results.filter((r: any) => !r.success).length;
+      toast.success(`${success} produto(s) exportado(s)${failed > 0 ? `, ${failed} com erro` : ""}`);
+    } catch (err: any) {
+      toast.error(`Erro: ${err.message}`);
+    } finally {
+      setSyncing(null);
+    }
+  };
+
+  const handleSyncOrders = async () => {
+    setSyncing("orders");
+    try {
+      const { data, error } = await supabase.functions.invoke("tiktok-shop-sync-orders");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data?.imported || 0} pedido(s) importado(s) de ${data?.total_found || 0} encontrado(s)`);
+      qc.invalidateQueries({ queryKey: ["admin-orders"] });
+    } catch (err: any) {
+      toast.error(`Erro: ${err.message}`);
+    } finally {
+      setSyncing(null);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    const { error } = await (supabase.from("tiktok_tokens" as any) as any)
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+    if (error) {
+      toast.error("Erro ao desconectar.");
+    } else {
+      toast.success("TikTok Shop desconectado.");
+      refetch();
+    }
+  };
+
+  return (
+    <Card className={!tiktokStatus?.connected ? "opacity-75" : ""}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          TikTok Shop
+          {isLoading ? (
+            <Badge variant="outline">Verificando...</Badge>
+          ) : tiktokStatus?.connected ? (
+            <Badge variant={tiktokStatus.expired ? "destructive" : "default"}>
+              {tiktokStatus.expired ? "Token expirado" : "Conectado"}
+            </Badge>
+          ) : (
+            <Badge variant="outline">Desconectado</Badge>
+          )}
+        </CardTitle>
+        <CardDescription>
+          Sincronização de produtos e pedidos com o TikTok Shop.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {tiktokStatus?.connected && !tiktokStatus.expired && (
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-sm text-primary">
+              <CheckCircle className="h-4 w-4" />
+              Conectado{tiktokStatus.shopName ? ` — Loja: ${tiktokStatus.shopName}` : ""} 
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">
+              Token válido até {new Date(tiktokStatus.expiresAt!).toLocaleString("pt-BR")}
+              {" • "}Renovação automática
+            </p>
+          </div>
+        )}
+
+        {tiktokStatus?.connected && tiktokStatus.expired && (
+          <div className="flex items-center gap-2 text-sm text-destructive">
+            <XCircle className="h-4 w-4" />
+            Token expirado. Reconecte abaixo.
+          </div>
+        )}
+
+        {!tiktokStatus?.connected && (
+          <div className="text-sm text-muted-foreground">
+            Conecte sua conta do TikTok Shop para sincronizar produtos e receber pedidos.
+          </div>
+        )}
+
+        <div className="flex gap-2 flex-wrap">
+          {tiktokStatus?.connected && !tiktokStatus.expired ? (
+            <>
+              <Button variant="outline" size="sm" onClick={handleSyncProducts} disabled={!!syncing}>
+                {syncing === "products" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                Enviar Produtos
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleSyncOrders} disabled={!!syncing}>
+                {syncing === "orders" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                Importar Pedidos
+              </Button>
+              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={handleDisconnect}>
+                <PowerOff className="h-4 w-4 mr-2" />
+                Desconectar
+              </Button>
+            </>
+          ) : (
+            <Button variant="default" size="sm" onClick={handleConnect}>
+              <Power className="h-4 w-4 mr-2" />
+              Conectar TikTok Shop
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+            Verificar status
+          </Button>
+        </div>
+
+        <div className="rounded-md bg-muted p-3 space-y-1">
+          <p className="text-xs font-medium">Configuração do App TikTok Shop:</p>
+          <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+            <li>Crie um App no <a href="https://partner.tiktokshop.com/" target="_blank" rel="noopener noreferrer" className="text-primary underline">TikTok Shop Partner Center</a></li>
+            <li>Permissões necessárias: <strong>Products</strong>, <strong>Orders</strong></li>
+            <li>URL de callback:
+              <code className="bg-background px-1 rounded text-xs break-all ml-1">{callbackUrl}</code>
+            </li>
+          </ul>
         </div>
       </CardContent>
     </Card>
