@@ -1,36 +1,41 @@
 
 
-## Pedido Pago Não Sincroniza com Bling - Diagnóstico e Correção
+## Log de Atividades Vazio - Diagnóstico e Correção
 
-### Problema Raiz
+### Problema
+A tabela `integration_logs` está completamente vazia (0 registros). Apenas 2 das 6 edge functions inserem logs (bling-refresh-token e bling-sync-order). As demais (check-payment-status, create-payment, asaas-webhook, ghl-sync) não registram nenhuma atividade.
 
-Existem **3 caminhos** onde um pagamento pode ser confirmado, mas apenas 1 deles (webhook) tenta sincronizar com o Bling — e o webhook **não está recebendo chamadas** (zero logs):
+### Correção
 
-```text
-Caminho 1: Webhook Asaas → atualiza order → chama bling-sync ✅ (mas webhook não chega)
-Caminho 2: Polling (check-payment-status) → atualiza order → NÃO chama bling ❌
-Caminho 3: Cartão aprovado na hora (create-payment) → salva como "paid" → NÃO chama bling ❌
+#### 1. Adicionar logs no `asaas-webhook`
+Registrar quando um webhook é recebido, quando o pagamento é confirmado, e quando há erros.
+
+#### 2. Adicionar logs no `check-payment-status`
+Registrar quando o polling detecta um pagamento confirmado ou quando falha.
+
+#### 3. Adicionar logs no `create-payment`
+Registrar quando um pagamento é criado com sucesso (Pix gerado ou cartão aprovado) e erros.
+
+#### 4. Adicionar logs no `ghl-sync`
+Registrar quando um contato é criado/atualizado, quando tags são adicionadas, e quando oportunidades são criadas.
+
+#### 5. Inserir log inicial de teste
+Executar uma migração para inserir um registro de teste na tabela, confirmando que a exibição funciona.
+
+### Padrão de log
+Cada insert segue o mesmo formato já usado no Bling:
+```typescript
+await supabase.from("integration_logs").insert({
+  integration: "asaas",  // ou "ghl"
+  action: "payment_created",
+  status: "success",     // ou "error"
+  details: "Pix gerado para pedido #abc123"
+});
 ```
 
-O pagamento Pix do screenshot foi confirmado pelo **polling** (check-payment-status), que atualizou o pedido para "paid" mas nunca chamou o `bling-sync-order`.
-
-### Correções
-
-#### 1. Adicionar sync com Bling no `check-payment-status`
-Quando o polling detecta pagamento confirmado e atualiza o pedido, também chamar `bling-sync-order` — mesmo padrão do webhook.
-
-#### 2. Adicionar sync com Bling no `create-payment`
-Quando cartão de crédito é aprovado instantaneamente (status CONFIRMED), chamar `bling-sync-order` logo após salvar o pedido.
-
-#### 3. Adicionar botão manual "Sincronizar com Bling" no admin
-Na página de integrações ou em uma futura página de pedidos, permitir reenvio manual para casos de falha. Por ora, adicionar na página de integrações um campo para inserir o ID do pedido e forçar a sincronização.
-
-#### 4. Verificar configuração do webhook no Asaas
-Informar ao usuário que o webhook do Asaas precisa estar configurado apontando para:
-`https://xufiemrhlmirkrdrcxox.supabase.co/functions/v1/asaas-webhook`
-
-### Arquivos Modificados
-- `supabase/functions/check-payment-status/index.ts` — adicionar chamada ao bling-sync-order após confirmar pagamento
-- `supabase/functions/create-payment/index.ts` — adicionar chamada ao bling-sync-order quando cartão aprovado na hora
-- `src/pages/admin/IntegrationsPage.tsx` — adicionar botão de sync manual com Bling
+### Arquivos modificados
+- `supabase/functions/asaas-webhook/index.ts`
+- `supabase/functions/check-payment-status/index.ts`
+- `supabase/functions/create-payment/index.ts`
+- `supabase/functions/ghl-sync/index.ts`
 
