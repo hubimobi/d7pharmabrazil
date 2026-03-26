@@ -1,30 +1,41 @@
 
 
-## Logo Horizontal — Tamanho Ideal e Otimização
+## Modernizar Admin Panel — Inspirado no Lunoz
 
-### Tamanho Recomendado
+Baseado na referência do Lunoz, vamos aplicar melhorias visuais mantendo a estrutura funcional existente.
 
-Para headers de e-commerce, o padrão ideal é **200×50px** (proporção 4:1). O header atual tem `h-16` (64px), e a logo usa `h-10` (40px) — sobrando padding. O tamanho ideal final da imagem é **240×60px** a 2x para telas retina, ou seja, o arquivo deve ter **480×120px** e ser exibido em 240×60.
+### Mudanças Planejadas
 
-### Sobre conversão JPG/PNG → SVG
+#### 1. Sidebar Dark (`AdminSidebar.tsx`)
+- Fundo escuro (slate-900) como no Lunoz, com texto claro
+- Logo "D7 Pharma" estilizada no topo com fundo destacado
+- Itens agrupados em seções com labels sutis: **Menu**, **Catálogo**, **Marketing**, **Financeiro**, **Sistema**
+- Item ativo com fundo highlight (primary) e bordas arredondadas
+- Ícones com cor sutil, destaque no hover
+- Footer com avatar/iniciais do usuário + email
 
-Converter automaticamente fotos/bitmaps para SVG vetorial **não é viável com qualidade confiável**. SVG é ideal para logos criados em vetor — converter um PNG de logo gera traçados imperfeitos. O que podemos fazer:
+#### 2. Header Limpo (`AdminLayout.tsx`)
+- Fundo branco com sombra sutil (shadow-sm) em vez de border-b
+- Breadcrumb à direita mostrando caminho atual (ex: "D7 Pharma > Menu > Dashboard")
+- Título da página dinâmico baseado na rota
+- Notificações mantidas, com visual mais limpo
 
-1. **Redimensionar e comprimir** automaticamente ao upload (canvas resize para 480×120 + export WebP/PNG otimizado)
-2. **Aceitar SVG** nativamente (já aceita) — se o usuário tiver o SVG original, é a melhor opção
-3. **Crop automático** com aspect ratio fixo 4:1 no upload
+#### 3. Dashboard Cards Estilo Lunoz (`DashboardPage.tsx`)
+- Cards com borda leve, ícone grande semitransparente no canto direito (como no Lunoz)
+- Label em uppercase pequeno (ex: "PEDIDOS"), valor grande abaixo
+- Badge de variação colorido (verde +X%, vermelho -X%) — visual estático por enquanto
+- Layout 4 colunas responsivo
 
-### Plano de Implementação
+#### 4. CSS Variables (`index.css`)
+- Atualizar sidebar palette: `--sidebar-background` para tom escuro (220 20% 18%), texto claro
+- `--sidebar-primary` highlight visível sobre fundo escuro
+- `--sidebar-accent` tom intermediário para hover
 
-#### 1. `src/pages/admin/StoreSettingsPage.tsx`
-- No upload da logo horizontal, abrir o `CropImageDialog` com `aspect={4}` (4:1) antes de fazer upload
-- Após o crop, redimensionar o canvas para **480×120px** (2x retina) antes de enviar
-- Adicionar texto de ajuda: "Tamanho ideal: 480×120px (4:1). A imagem será recortada automaticamente."
+### Arquivos Modificados
+- `src/components/admin/AdminSidebar.tsx` — sidebar dark + agrupamento + logo
+- `src/components/admin/AdminLayout.tsx` — header com shadow + breadcrumb
+- `src/pages/admin/DashboardPage.tsx` — cards estilo Lunoz
+- `src/index.css` — sidebar CSS variables
 
-#### 2. `src/components/Header.tsx`
-- Ajustar classe da logo: `h-10 max-w-[240px]` → garantir que não estoure em mobile
-- Adicionar `w-auto` para manter proporção
-
-#### 3. Função auxiliar `resizeImage`
-- Criar no `StoreSettingsPage` uma função que recebe o Blob cropado e redimensiona para 480×120 via canvas, exportando como PNG de alta qualidade
+Sem mudancas de banco ou rotas.
 
