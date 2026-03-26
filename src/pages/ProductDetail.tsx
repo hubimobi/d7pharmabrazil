@@ -299,4 +299,25 @@ const ProductDetail = () => {
   );
 };
 
+function RelatedProducts({ currentProductId }: { currentProductId: string }) {
+  const { data: allProducts } = useProducts();
+  const related = allProducts?.filter((p) => p.id !== currentProductId).slice(0, 4);
+
+  if (!related || related.length === 0) return null;
+
+  return (
+    <section className="mt-16">
+      <div className="mb-8 text-center">
+        <h2 className="text-2xl font-bold text-foreground">Outros clientes compraram esses produtos no mesmo pedido</h2>
+        <p className="mt-2 text-muted-foreground">Combine seus resultados com esses produtos</p>
+      </div>
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {related.map((p) => (
+          <ProductCard key={p.id} product={p} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default ProductDetail;
