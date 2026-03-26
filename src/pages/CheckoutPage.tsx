@@ -14,6 +14,7 @@ import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
 import CartRecommendations from "@/components/checkout/CartRecommendations";
 import CheckoutUrgency from "@/components/checkout/CheckoutUrgency";
+import ComboUpsell from "@/components/checkout/ComboUpsell";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -310,10 +311,21 @@ const CheckoutPage = () => {
 
         <h1 className="text-2xl font-bold text-foreground">Checkout</h1>
 
-        <div className="mt-6 flex gap-4">
-          {[1, 2].map((s) => (
-            <div key={s} className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${step >= s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{s}</div>
-          ))}
+        {/* Motivational step indicator */}
+        <div className="mt-6 space-y-2">
+          <div className="flex items-center gap-4">
+            {[1, 2].map((s) => (
+              <div key={s} className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${step >= s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{s}</div>
+            ))}
+          </div>
+          {items.length > 0 && (
+            <p className="text-sm text-primary font-medium">
+              ✨ Você está a {step === 1 ? "2 passos" : "1 passo"} de{" "}
+              {items[0]?.product?.benefits?.[0]
+                ? items[0].product.benefits[0].toLowerCase()
+                : "melhorar sua performance"}
+            </p>
+          )}
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-3">
@@ -351,6 +363,8 @@ const CheckoutPage = () => {
                   selectedOption={selectedShipping}
                   onSelectOption={setSelectedShipping}
                 />
+
+                <ComboUpsell />
 
                 <CartRecommendations cartItems={items} />
 
@@ -522,7 +536,10 @@ const CheckoutPage = () => {
                 </div>
               </div>
               <div className="mt-4">
-                <CheckoutUrgency />
+                <CheckoutUrgency
+                  reviewsCount={items.reduce((sum, i) => sum + (i.product.reviews || 0), 0)}
+                  firstBenefit={items[0]?.product?.benefits?.[0]}
+                />
               </div>
             </div>
           )}
