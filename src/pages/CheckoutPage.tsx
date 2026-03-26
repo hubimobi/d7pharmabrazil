@@ -30,7 +30,7 @@ interface PaymentResult {
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping } = useCart();
+  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount } = useCart();
   const { data: storeSettings } = useStoreSettings();
   const [step, setStep] = useState(1);
   const [couponInput, setCouponInput] = useState("");
@@ -169,7 +169,7 @@ const CheckoutPage = () => {
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
   const freeShippingMinValue = Number(storeSettings?.free_shipping_min_value) || 499;
   const qualifiesForFreeShipping = storeSettings?.free_shipping_enabled && subtotal >= freeShippingMinValue;
-  const shipping = freeShipping || qualifiesForFreeShipping ? 0 : (selectedShipping?.price ?? 0);
+  const shipping = freeShipping || comboFreeShipping || qualifiesForFreeShipping ? 0 : (selectedShipping?.price ?? 0);
   const finalTotal = total + shipping;
   const pixTotal = finalTotal * 0.95;
 
@@ -177,6 +177,13 @@ const CheckoutPage = () => {
     e.preventDefault();
     if (!form.doctor && !selectedDoctorId) {
       toast.error("Selecione um Prescritor ou marque 'Não Sei'.");
+      return;
+    }
+
+    // Validate minimum value for Asaas (R$5.00)
+    const paymentTotal = form.paymentMethod === "pix" ? pixTotal : finalTotal;
+    if (paymentTotal < 5) {
+      toast.error("O valor mínimo para pagamento é R$ 5,00. Adicione mais produtos ao carrinho.");
       return;
     }
 
@@ -589,10 +596,13 @@ const CheckoutPage = () => {
                   {discount > 0 && (
                     <div className="flex justify-between text-success"><span>Desconto ({coupon})</span><span>-R$ {discount.toFixed(2).replace(".", ",")}</span></div>
                   )}
+                  {comboDiscount > 0 && (
+                    <div className="flex justify-between text-success"><span>Desconto Combo</span><span>-R$ {comboDiscount.toFixed(2).replace(".", ",")}</span></div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Frete</span>
-                    <span className={shipping === 0 && (qualifiesForFreeShipping || freeShipping || selectedShipping) ? "font-semibold text-success" : ""}>
-                      {qualifiesForFreeShipping || freeShipping ? "Grátis" : selectedShipping ? (shipping === 0 ? "Grátis" : `R$ ${shipping.toFixed(2).replace(".", ",")}`) : "Calcular no carrinho"}
+                    <span className={shipping === 0 && (qualifiesForFreeShipping || freeShipping || comboFreeShipping || selectedShipping) ? "font-semibold text-success" : ""}>
+                      {qualifiesForFreeShipping || freeShipping || comboFreeShipping ? "Grátis" : selectedShipping ? (shipping === 0 ? "Grátis" : `R$ ${shipping.toFixed(2).replace(".", ",")}`) : "Calcular no carrinho"}
                     </span>
                   </div>
                   {selectedShipping && (
