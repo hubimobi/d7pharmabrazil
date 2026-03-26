@@ -165,6 +165,39 @@ export default function CommissionsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Vendas sem Prescritor */}
+      {(prescriberFilter === "all" || prescriberFilter === "no-prescriber") && noPrescOrders && noPrescOrders.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Vendas sem Prescritor Identificado</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {noPrescOrders.map((o) => (
+                  <TableRow key={o.id}>
+                    <TableCell>{o.customer_name}</TableCell>
+                    <TableCell>{fmt(Number(o.total))}</TableCell>
+                    <TableCell>{new Date(o.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{o.status}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
