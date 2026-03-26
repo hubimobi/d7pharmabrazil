@@ -265,7 +265,7 @@ const HeroSection = () => {
               key={i}
               onClick={() => setCurrent(i)}
               className={`h-2.5 rounded-full transition-all duration-300 ${
-                i === current % activeBanners.length
+                i === safeIndex
                   ? "w-8 bg-primary-foreground"
                   : "w-2.5 bg-primary-foreground/40 hover:bg-primary-foreground/60"
               }`}
