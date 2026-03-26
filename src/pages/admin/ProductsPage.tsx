@@ -10,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus } from "lucide-react";
+import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus, Link2, Check } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
 import { useToast } from "@/hooks/use-toast";
 import RichTextEditor from "@/components/admin/RichTextEditor";
@@ -268,9 +269,12 @@ export default function ProductsPage() {
                     <div className="space-y-2"><Label>Estoque</Label><Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
                   </div>
                   <div className="space-y-2"><Label>Badge</Label><Input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="ex: Mais Vendido" /></div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <input type="checkbox" id="show_countdown" checked={form.show_countdown} onChange={(e) => setForm({ ...form, show_countdown: e.target.checked })} className="h-4 w-4 rounded border-border" />
-                    <Label htmlFor="show_countdown">Exibir contador de promoção</Label>
+                  <div className="flex items-center justify-between rounded-lg border border-border p-3 mt-2">
+                    <div>
+                      <Label htmlFor="show_countdown" className="font-medium">Contador de Oferta</Label>
+                      <p className="text-xs text-muted-foreground">Exibir cronômetro de promoção no produto</p>
+                    </div>
+                    <Switch id="show_countdown" checked={form.show_countdown} onCheckedChange={(checked) => setForm({ ...form, show_countdown: checked })} />
                   </div>
                   <div className="space-y-2"><Label>Benefícios (um por linha)</Label><Textarea value={form.benefits} onChange={(e) => setForm({ ...form, benefits: e.target.value })} rows={4} /></div>
                 </TabsContent>
@@ -477,7 +481,10 @@ export default function ProductsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
+                        <CopyLinkButton slug={p.slug} />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -487,6 +494,21 @@ export default function ProductsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function CopyLinkButton({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}/produto/${slug}?ref=direct`;
+  const handleCopy = () => {
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <Button variant="ghost" size="icon" title="Copiar link de compra direta" onClick={handleCopy}>
+      {copied ? <Check className="h-4 w-4 text-green-500" /> : <Link2 className="h-4 w-4" />}
+    </Button>
   );
 }
 
