@@ -196,11 +196,14 @@ serve(async (req) => {
 
     if (!blingRes.ok) {
       console.error("Bling sync error:", blingData);
+      await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "error", details: `Pedido ${order_id.slice(0, 8)}: ${JSON.stringify(blingData).slice(0, 300)}` });
       return new Response(
         JSON.stringify({ error: "Erro ao enviar pedido ao Bling", details: blingData }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "success", details: `Pedido ${order_id.slice(0, 8)} sincronizado. Bling ID: ${blingData?.data?.id || 'N/A'}` });
 
     return new Response(
       JSON.stringify({ success: true, bling_order: blingData }),
