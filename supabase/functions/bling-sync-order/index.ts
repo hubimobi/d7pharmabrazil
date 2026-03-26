@@ -151,7 +151,7 @@ serve(async (req) => {
 
     // Fetch product details
     const items = order.items as any[];
-    const productIds = items.map((i: any) => i.id).filter(Boolean);
+    const productIds = items.map((i: any) => i.product_id || i.id).filter(Boolean);
 
     const { data: products } = await supabase
       .from("products")
@@ -161,7 +161,7 @@ serve(async (req) => {
     const productMap = new Map((products || []).map((p: any) => [p.id, p]));
 
     const blingItems = items.map((item: any) => {
-      const prod = productMap.get(item.id);
+      const prod = productMap.get(item.product_id || item.id);
       return {
         descricao: item.name || prod?.name || "Produto",
         quantidade: item.quantity || 1,
