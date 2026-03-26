@@ -553,8 +553,8 @@ const CheckoutPage = () => {
                   )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Frete</span>
-                    <span className={shipping === 0 ? "font-semibold text-success" : ""}>
-                      {shipping === 0 ? "Grátis" : `R$ ${shipping.toFixed(2).replace(".", ",")}`}
+                    <span className={shipping === 0 && (qualifiesForFreeShipping || freeShipping || selectedShipping) ? "font-semibold text-success" : ""}>
+                      {qualifiesForFreeShipping || freeShipping ? "Grátis" : selectedShipping ? (shipping === 0 ? "Grátis" : `R$ ${shipping.toFixed(2).replace(".", ",")}`) : "Calcular no carrinho"}
                     </span>
                   </div>
                   {selectedShipping && (
