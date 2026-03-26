@@ -155,12 +155,14 @@ export type Database = {
           description: string
           discount_type: string
           discount_value: number
+          doctor_id: string | null
           expires_at: string | null
           free_shipping: boolean
           id: string
           max_uses: number | null
           min_order_value: number | null
           product_id: string | null
+          representative_id: string | null
           starts_at: string | null
           updated_at: string
           used_count: number
@@ -172,12 +174,14 @@ export type Database = {
           description?: string
           discount_type?: string
           discount_value?: number
+          doctor_id?: string | null
           expires_at?: string | null
           free_shipping?: boolean
           id?: string
           max_uses?: number | null
           min_order_value?: number | null
           product_id?: string | null
+          representative_id?: string | null
           starts_at?: string | null
           updated_at?: string
           used_count?: number
@@ -189,22 +193,38 @@ export type Database = {
           description?: string
           discount_type?: string
           discount_value?: number
+          doctor_id?: string | null
           expires_at?: string | null
           free_shipping?: boolean
           id?: string
           max_uses?: number | null
           min_order_value?: number | null
           product_id?: string | null
+          representative_id?: string | null
           starts_at?: string | null
           updated_at?: string
           used_count?: number
         }
         Relationships: [
           {
+            foreignKeyName: "coupons_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "coupons_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupons_representative_id_fkey"
+            columns: ["representative_id"]
+            isOneToOne: false
+            referencedRelation: "representatives"
             referencedColumns: ["id"]
           },
         ]
