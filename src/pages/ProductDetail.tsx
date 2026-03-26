@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap } from "lucide-react";
+import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard } from "lucide-react";
 import CountdownTimer from "@/components/CountdownTimer";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import SEOHead from "@/components/SEOHead";
 import { useState } from "react";
 import UpsellDialog from "@/components/UpsellDialog";
+import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -23,6 +24,8 @@ const ProductDetail = () => {
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showUpsell, setShowUpsell] = useState(false);
+  const [shippingCep, setShippingCep] = useState("");
+  const [shippingOption, setShippingOption] = useState<ShippingOption | null>(null);
 
   const { data: testimonials } = useQuery({
     queryKey: ["product-testimonials", product?.id],
@@ -62,6 +65,7 @@ const ProductDetail = () => {
   }
 
   const discountPercent = Math.round((1 - product.price / product.originalPrice) * 100);
+  const displayReviews = product.reviews < 500 ? product.reviews + 500 : product.reviews;
 
   return (
     <div className="min-h-screen">
@@ -86,7 +90,6 @@ const ProductDetail = () => {
             </div>
             {product.extraImages.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {/* Main image thumbnail */}
                 <button
                   onClick={() => setSelectedImage(null)}
                   className={`flex-shrink-0 rounded-md border-2 overflow-hidden transition ${
@@ -95,7 +98,6 @@ const ProductDetail = () => {
                 >
                   <img src={product.image} alt={product.name} className="h-16 w-16 object-cover" />
                 </button>
-                {/* Extra images thumbnails */}
                 {product.extraImages.map((img, i) => (
                   <button
                     key={i}
@@ -122,7 +124,7 @@ const ProductDetail = () => {
                 ))}
               </div>
               <span className="text-sm font-medium">{product.rating}</span>
-              <span className="text-sm text-muted-foreground">({product.reviews} avaliações)</span>
+              <span className="text-sm text-muted-foreground">({displayReviews} avaliações)</span>
             </div>
 
             {product.description.startsWith("<") ? (
@@ -146,7 +148,9 @@ const ProductDetail = () => {
               <p className="mt-3 animate-pulse-soft text-sm font-semibold text-destructive">⚠️ Apenas {product.stock} unidades em estoque!</p>
             )}
 
-            <CountdownTimer label="🔥 Preço promocional expira em" className="mt-4" />
+            {product.showCountdown && (
+              <CountdownTimer label="🔥 Preço promocional expira em" className="mt-4" />
+            )}
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="flex items-center rounded-md border border-border">
@@ -164,7 +168,7 @@ const ProductDetail = () => {
                 addItem(product, qty);
                 navigate("/checkout");
               }}>
-                <Zap className="h-5 w-5" /> Comprar Agora
+                <Zap className="h-5 w-5" /> Compra Rápida
               </Button>
             </div>
 
@@ -176,10 +180,40 @@ const ProductDetail = () => {
               ))}
             </div>
 
+            {/* Shipping Calculator */}
+            <div className="mt-6 rounded-lg border border-border p-4">
+              <ShippingCalculator
+                cep={shippingCep}
+                onCepChange={setShippingCep}
+                items={[{
+                  price: product.price,
+                  quantity: qty,
+                  weight: product.weight,
+                  height: product.height,
+                  width: product.width,
+                  length: product.length,
+                }]}
+                selectedOption={shippingOption}
+                onSelectOption={setShippingOption}
+              />
+            </div>
+
             <div className="mt-6 flex flex-wrap gap-4 rounded-lg bg-muted p-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-primary" /> Qualidade ANVISA</span>
-              <span className="flex items-center gap-1"><Truck className="h-4 w-4 text-primary" /> Frete Grátis +R$199</span>
+              <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-primary" /> Qualidade Comprovada</span>
+              <span className="flex items-center gap-1"><Truck className="h-4 w-4 text-primary" /> Frete Grátis +R$499</span>
               <span className="flex items-center gap-1">🔒 Pagamento Seguro</span>
+            </div>
+
+            {/* Credit Card Flags */}
+            <div className="mt-3 flex items-center gap-3 px-1">
+              <span className="text-xs text-muted-foreground">Aceitamos:</span>
+              <div className="flex items-center gap-2">
+                {["Visa", "Mastercard", "Elo", "Amex", "Pix"].map((flag) => (
+                  <span key={flag} className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                    <CreditCard className="h-3 w-3" /> {flag}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>

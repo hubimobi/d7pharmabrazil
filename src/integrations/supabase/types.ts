@@ -405,6 +405,7 @@ export type Database = {
           rating: number
           reviews_count: number
           short_description: string
+          show_countdown: boolean
           sku: string | null
           slug: string
           stock: number
@@ -434,6 +435,7 @@ export type Database = {
           rating?: number
           reviews_count?: number
           short_description?: string
+          show_countdown?: boolean
           sku?: string | null
           slug: string
           stock?: number
@@ -463,6 +465,7 @@ export type Database = {
           rating?: number
           reviews_count?: number
           short_description?: string
+          show_countdown?: boolean
           sku?: string | null
           slug?: string
           stock?: number

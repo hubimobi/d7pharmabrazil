@@ -37,8 +37,8 @@ const ProductCard = ({ product }: { product: Product }) => {
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-center gap-1">
           <Star className="h-3.5 w-3.5 fill-warning text-warning" />
-          <span className="text-xs font-medium">{product.rating}</span>
-          <span className="text-xs text-muted-foreground">({product.reviews})</span>
+              <span className="text-xs font-medium">{product.rating}</span>
+            <span className="text-xs text-muted-foreground">({product.reviews < 500 ? product.reviews + 500 : product.reviews})</span>
         </div>
         <Link to={`/produto/${product.slug}`}>
           <h3 className="mt-1 text-sm font-semibold text-foreground line-clamp-2">{product.name}</h3>
@@ -57,7 +57,7 @@ const ProductCard = ({ product }: { product: Product }) => {
           <p className="text-[10px] text-muted-foreground">
             ou 3x de R$ {(product.price / 3).toFixed(2).replace(".", ",")} sem juros
           </p>
-          <CountdownTimer label="Oferta expira em" className="mt-2" />
+          {product.showCountdown && <CountdownTimer label="Oferta expira em" className="mt-2" />}
           <div className="mt-2 flex gap-2">
             <Button
               className="flex-1 gap-1"
@@ -79,7 +79,7 @@ const ProductCard = ({ product }: { product: Product }) => {
               }}
             >
               <Zap className="h-4 w-4" />
-              Comprar Agora
+              Compra Rápida
             </Button>
           </div>
         </div>

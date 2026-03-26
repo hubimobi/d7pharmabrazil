@@ -20,6 +20,7 @@ export interface Product {
   height: number;
   width: number;
   length: number;
+  showCountdown: boolean;
 }
 
 // Fallback images for products without uploaded images
@@ -55,6 +56,7 @@ function mapDbProduct(p: any): Product {
     height: Number(p.height) || 5,
     width: Number(p.width) || 15,
     length: Number(p.length) || 20,
+    showCountdown: p.show_countdown !== false,
   };
 }
 
