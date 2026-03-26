@@ -152,6 +152,11 @@ export default function CreditCardForm({
             ))}
           </SelectContent>
         </Select>
+        {selectedOpt && selectedOpt.n > 3 && (
+          <p className="text-xs text-muted-foreground">
+            Total com juros: <span className="font-semibold text-foreground">R$ {selectedOpt.totalWithInterest.toFixed(2).replace(".", ",")}</span>
+          </p>
+        )}
       </div>
     </div>
   );
