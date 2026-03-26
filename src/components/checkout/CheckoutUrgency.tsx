@@ -40,6 +40,28 @@ export default function CheckoutUrgency({ reviewsCount = 500, firstBenefit }: Ch
     return 15 * 60;
   });
 
+  // Fluctuate viewers every 3-8 seconds
+  useEffect(() => {
+    const fluctuate = () => {
+      const delta = Math.random() > 0.5 ? 1 : -1;
+      const change = Math.floor(Math.random() * 3) + 1;
+      setViewers((prev) => {
+        const next = prev + delta * change;
+        viewersRef.current = Math.max(5, Math.min(45, next));
+        return viewersRef.current;
+      });
+    };
+    const scheduleNext = () => {
+      const delay = (Math.random() * 5 + 3) * 1000; // 3-8s
+      return setTimeout(() => {
+        fluctuate();
+        timerRef = scheduleNext();
+      }, delay);
+    };
+    let timerRef = scheduleNext();
+    return () => clearTimeout(timerRef);
+  }, []);
+
   useEffect(() => {
     if (giftSeconds <= 0) return;
     const interval = setInterval(() => {
