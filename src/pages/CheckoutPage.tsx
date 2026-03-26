@@ -174,7 +174,7 @@ const CheckoutPage = () => {
         billing_type: form.paymentMethod === "pix" ? "PIX" : "CREDIT_CARD",
         value: paymentValue,
         items: orderItems,
-        doctor_id: selectedDoctorId,
+        doctor_id: selectedDoctorId === "sem-prescritor" ? null : selectedDoctorId,
         shipping_address: {
           street: form.street,
           number: form.number,
