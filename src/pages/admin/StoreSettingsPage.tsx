@@ -525,6 +525,79 @@ export default function StoreSettingsPage() {
           </div>
         </div>
 
+        {/* Oferta Combo */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Flame className="h-5 w-5" /> Oferta Combo (Checkout)</h2>
+          <p className="text-sm text-muted-foreground">Configure uma oferta combo que aparece no checkout para aumentar o ticket médio.</p>
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={form.combo_offer_enabled ?? false}
+              onCheckedChange={(v) => update("combo_offer_enabled", v)}
+              id="combo-toggle"
+            />
+            <Label htmlFor="combo-toggle">Oferta Combo Ativa</Label>
+          </div>
+          {form.combo_offer_enabled && (
+            <div className="space-y-4">
+              <div>
+                <Label>Título da Oferta</Label>
+                <Input
+                  value={form.combo_offer_label || "OFERTA EXCLUSIVA PARA VOCÊ"}
+                  onChange={(e) => update("combo_offer_label", e.target.value)}
+                  maxLength={80}
+                />
+              </div>
+              <div>
+                <Label>Produtos do Combo (selecione pelo menos 2)</Label>
+                <div className="space-y-2 mt-2">
+                  {(allProducts || []).map((p) => {
+                    const selected = (form.combo_offer_products || []).includes(p.id);
+                    return (
+                      <label key={p.id} className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition ${selected ? "border-primary bg-primary/5" : "border-border"}`}>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => {
+                            const current = form.combo_offer_products || [];
+                            const updated = selected ? current.filter((id: string) => id !== p.id) : [...current, p.id];
+                            update("combo_offer_products", updated);
+                          }}
+                          className="rounded"
+                        />
+                        <img src={p.image} alt="" className="h-10 w-10 rounded object-contain" />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium">{p.name}</span>
+                          <span className="text-xs text-muted-foreground ml-2">R$ {p.price.toFixed(2).replace(".", ",")}</span>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>Desconto (%)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={form.combo_offer_discount ?? 17}
+                    onChange={(e) => update("combo_offer_discount", Number(e.target.value))}
+                  />
+                </div>
+                <div className="flex items-center gap-3 pt-6">
+                  <Switch
+                    checked={form.combo_offer_free_shipping ?? true}
+                    onCheckedChange={(v) => update("combo_offer_free_shipping", v)}
+                    id="combo-free-shipping"
+                  />
+                  <Label htmlFor="combo-free-shipping">Frete Grátis no Combo</Label>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Endereço */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <h2 className="text-lg font-semibold">Endereço</h2>
