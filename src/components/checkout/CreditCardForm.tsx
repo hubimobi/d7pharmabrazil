@@ -10,6 +10,13 @@ export interface CreditCardData {
   ccv: string;
 }
 
+export interface InstallmentOption {
+  n: number;
+  label: string;
+  installmentValue: number;
+  totalWithInterest: number;
+}
+
 interface CreditCardFormProps {
   card: CreditCardData;
   onChange: (card: CreditCardData) => void;
