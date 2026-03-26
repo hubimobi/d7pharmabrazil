@@ -203,16 +203,38 @@ serve(async (req) => {
 
     const productMap = new Map((products || []).map((p: any) => [p.id, p]));
 
-    const blingItems = items.map((item: any) => {
+    // Build Bling items — search for existing products in Bling by SKU to reference by ID
+    const blingItems = [];
+    for (const item of items) {
       const prod = productMap.get(item.product_id || item.id);
-      return {
+      const sku = prod?.sku || "";
+      const blingItem: any = {
         descricao: item.name || prod?.name || "Produto",
         quantidade: item.quantity || 1,
         valor: item.price || prod?.price || 0,
-        codigo: prod?.sku || "",
         unidade: prod?.unit || "UN",
       };
-    });
+
+      // Try to find existing product in Bling by SKU to avoid "code already exists" error
+      if (sku) {
+        try {
+          const prodSearchRes = await fetch(
+            `${BLING_API}/produtos?pesquisa=${encodeURIComponent(sku)}&limite=1`,
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+          const prodSearchData = await prodSearchRes.json();
+          if (prodSearchRes.ok && prodSearchData.data?.length > 0) {
+            blingItem.produto = { id: prodSearchData.data[0].id };
+          } else {
+            blingItem.codigo = sku;
+          }
+        } catch {
+          blingItem.codigo = sku;
+        }
+      }
+
+      blingItems.push(blingItem);
+    }
 
     // Calculate discount: difference between items total and order.total
     const itemsTotal = blingItems.reduce((sum, item) => sum + (item.valor * item.quantidade), 0);
