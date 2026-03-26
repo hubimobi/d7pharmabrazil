@@ -39,7 +39,21 @@ serve(async (req) => {
       }),
     });
 
-    const tokenData = await tokenRes.json();
+    // Safe JSON parsing
+    const tokenText = await tokenRes.text();
+    console.log("Bling token response status:", tokenRes.status);
+    console.log("Bling token response body:", tokenText.substring(0, 500));
+
+    let tokenData: any;
+    try {
+      tokenData = JSON.parse(tokenText);
+    } catch {
+      console.error("Bling returned non-JSON response:", tokenText.substring(0, 500));
+      return new Response(`Erro ao conectar com o Bling. Resposta inesperada (HTTP ${tokenRes.status}). Tente novamente.`, {
+        status: 400,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    }
 
     if (!tokenRes.ok || !tokenData.access_token) {
       console.error("Bling token error:", tokenData);
@@ -81,7 +95,7 @@ serve(async (req) => {
     });
   } catch (err) {
     console.error("Bling callback error:", err);
-    return new Response("Erro interno.", {
+    return new Response("Erro interno ao processar autenticação do Bling.", {
       status: 500,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });

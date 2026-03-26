@@ -12,8 +12,25 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Handle GET/HEAD requests (browser access)
+  if (req.method === "GET" || req.method === "HEAD") {
+    return new Response(JSON.stringify({ status: "Webhook ativo" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
-    const body = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Body vazio ou JSON inválido" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     console.log("Asaas webhook received:", JSON.stringify(body));
 
     const event = body.event;
@@ -26,7 +43,6 @@ serve(async (req) => {
       });
     }
 
-    // Only process confirmed payments
     if (event !== "PAYMENT_CONFIRMED" && event !== "PAYMENT_RECEIVED") {
       return new Response(JSON.stringify({ ok: true, message: "Event ignored" }), {
         status: 200,
