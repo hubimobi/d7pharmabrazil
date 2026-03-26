@@ -35,7 +35,7 @@ const Header = () => {
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           {headerLogo ? (
-            <img src={headerLogo} alt={settings?.store_name || "Logo"} className="h-10 max-h-10 object-contain" />
+            <img src={headerLogo} alt={settings?.store_name || "Logo"} className="h-10 w-auto max-w-[240px] object-contain" />
           ) : (
             <span className="text-xl font-bold text-primary">
               D7 <span className="text-secondary">Pharma</span> Brazil
