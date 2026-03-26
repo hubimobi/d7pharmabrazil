@@ -628,6 +628,14 @@ export default function StoreSettingsPage() {
           Salvar Configurações
         </Button>
       </form>
+
+      <CropImageDialog
+        open={cropOpen}
+        onOpenChange={setCropOpen}
+        imageUrl={cropImageUrl}
+        onCropComplete={handleCropComplete}
+        aspect={4}
+      />
     </div>
   );
 }
