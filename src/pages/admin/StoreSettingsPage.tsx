@@ -58,6 +58,44 @@ export default function StoreSettingsPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const horizontalLogoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropImageUrl, setCropImageUrl] = useState("");
+
+  const handleHorizontalLogoFile = useCallback((file: File) => {
+    const url = URL.createObjectURL(file);
+    setCropImageUrl(url);
+    setCropOpen(true);
+  }, []);
+
+  const handleCropComplete = useCallback(async (blob: Blob) => {
+    const resized = await resizeImage(blob, 480, 120);
+    const file = new File([resized], "horizontal-logo.png", { type: "image/png" });
+    handleUploadDirect(file, "horizontal_logo");
+  }, []);
+
+  const handleUploadDirect = async (file: File, type: "logo" | "horizontal_logo" | "favicon") => {
+    const setUploading = type === "logo" ? setUploadingLogo : type === "horizontal_logo" ? setUploadingHorizontalLogo : setUploadingFavicon;
+    const field = type === "logo" ? "logo_url" : type === "horizontal_logo" ? "horizontal_logo_url" : "favicon_url";
+    const filePath = `${type.replace("_", "-")}.png`;
+
+    setUploading(true);
+    try {
+      await supabase.storage.from("store-assets").remove([filePath]);
+      const { error: uploadError } = await supabase.storage
+        .from("store-assets")
+        .upload(filePath, file, { upsert: true, cacheControl: "0" });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(filePath);
+      const publicUrl = urlData.publicUrl + "?t=" + Date.now();
+      update(field as keyof StoreSettings, publicUrl);
+      const labels: Record<string, string> = { logo: "Logo Principal", horizontal_logo: "Logo Horizontal", favicon: "Favicon" };
+      toast.success(`${labels[type]} enviado com sucesso!`);
+    } catch (err: any) {
+      toast.error(`Erro ao enviar: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["store-settings-admin"],
