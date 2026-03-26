@@ -1,42 +1,41 @@
 
 
-## Configurações de Posição e Aparição dos Widgets
+## Por que o Token do Bling Expira
 
-### O que será feito
+O Bling usa OAuth2 com dois tokens:
+- **Access token**: expira em ~6 horas
+- **Refresh token**: expira em ~30 dias
 
-Adicionar ao painel admin (Integrações) e aos componentes do site opções para:
+Atualmente, o sistema só renova o token quando um pedido é sincronizado (`bling-sync-order`). Se nenhum pedido for feito por 30 dias, o refresh token expira e é necessário reconectar manualmente.
 
-1. **Alinhamento** (direita ou esquerda) -- para Webchat e WhatsApp
-2. **Delay de aparição** (X segundos) -- para ambos
-3. **Aparecer após rolagem** (alternativa ao delay) -- para ambos
+## Solução: Renovação Automática com Cron Job
 
-### Mudanças no banco
+Criar uma edge function agendada (cron) que roda a cada 12 horas para renovar o token automaticamente, garantindo que ele nunca expire.
 
-Migration adicionando 6 colunas na `store_settings`:
+### Arquivos
 
-```sql
-ALTER TABLE public.store_settings
-  ADD COLUMN IF NOT EXISTS whatsapp_position text DEFAULT 'right',
-  ADD COLUMN IF NOT EXISTS whatsapp_delay_seconds integer DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS whatsapp_show_on_scroll boolean DEFAULT false,
-  ADD COLUMN IF NOT EXISTS webchat_position text DEFAULT 'right',
-  ADD COLUMN IF NOT EXISTS webchat_delay_seconds integer DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS webchat_show_on_scroll boolean DEFAULT false;
+| Arquivo | Ação |
+|---------|------|
+| `supabase/functions/bling-refresh-token/index.ts` | Criar -- função que verifica se o token expira em menos de 24h e renova proativamente |
+| `supabase/config.toml` | Editar -- adicionar schedule cron a cada 12h |
+| `src/pages/admin/IntegrationsPage.tsx` | Editar -- mostrar quando o token foi renovado pela última vez e próxima expiração |
+
+### Lógica da função cron
+
+1. Buscar token mais recente da tabela `bling_tokens`
+2. Se `expires_at` é dentro das próximas 24 horas, usar o `refresh_token` para obter novos tokens
+3. Salvar os novos tokens no banco
+4. Se o refresh token falhou (expirado), logar erro para que o admin reconecte
+
+### Config do cron no `config.toml`
+
+```toml
+[functions.bling-refresh-token]
+schedule = "0 */12 * * *"
+verify_jwt = false
 ```
 
-### Mudanças nos arquivos
+### Resolução imediata
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/hooks/useStoreSettings.tsx` | Adicionar os 6 novos campos na interface |
-| `src/pages/admin/IntegrationsPage.tsx` | Adicionar controles de posição (Select direita/esquerda), delay (Input numérico em segundos), e toggle "aparecer após rolagem" nos cards de Webchat e WhatsApp |
-| `src/components/WhatsAppButton.tsx` | Usar `useState` + `useEffect` para controlar visibilidade com delay ou scroll listener; aplicar classe `left-6` ou `right-6` dinamicamente |
-| `src/components/WebchatWidget.tsx` | Aplicar mesma lógica de delay/scroll e posicionamento CSS via classe injetada |
-
-### Lógica de aparição
-
-- Se `show_on_scroll = true`: componente aparece quando o usuário rolar mais de 300px
-- Se `delay_seconds > 0`: componente aparece após X segundos
-- Se ambos estiverem desativados (delay=0, scroll=false): aparece imediatamente
-- Se ambos estiverem ativados: aparece quando qualquer condição for satisfeita primeiro
+Para resolver agora: reconectar o Bling pelo painel admin em `/admin/integracoes` clicando no link de convite novamente. Após a reconexão, o cron manterá o token sempre válido.
 
