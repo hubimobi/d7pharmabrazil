@@ -87,13 +87,18 @@ export default function OrdersPage() {
     setSyncingAll(true);
     let success = 0;
     let fail = 0;
-    for (const order of syncableOrders) {
+    for (let i = 0; i < syncableOrders.length; i++) {
+      const order = syncableOrders[i];
       try {
         const { data, error } = await supabase.functions.invoke("bling-sync-order", {
           body: { order_id: order.id },
         });
         if (error || data?.error) { fail++; } else { success++; }
       } catch { fail++; }
+      // Delay between requests to avoid Bling API rate-limiting
+      if (i < syncableOrders.length - 1) {
+        await new Promise(r => setTimeout(r, 500));
+      }
     }
     setSyncingAll(false);
     toast.success(`Sincronização concluída: ${success} ok, ${fail} erros de ${syncableOrders.length} pedidos.`);
