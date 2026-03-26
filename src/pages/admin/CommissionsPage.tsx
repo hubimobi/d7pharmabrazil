@@ -88,15 +88,22 @@ export default function CommissionsPage() {
               ))}
             </SelectContent>
           </Select>
-           <Select value={statusFilter} onValueChange={setStatusFilter}>
-77:             <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
-78:             <SelectContent>
-79:               <SelectItem value="all">Todos</SelectItem>
-80:               <SelectItem value="pending">Gerada</SelectItem>
-81:               <SelectItem value="awaiting">Aguardando</SelectItem>
-82:               <SelectItem value="paid">Paga</SelectItem>
-83:             </SelectContent>
-84:           </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="pending">Gerada</SelectItem>
+              <SelectItem value="awaiting">Aguardando</SelectItem>
+              <SelectItem value="paid">Paga</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={prescriberFilter} onValueChange={setPrescriberFilter}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Prescritor" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="no-prescriber">Sem Prescritor</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
