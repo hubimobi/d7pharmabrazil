@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, Download, Loader2, Eye, EyeOff, Bell } from "lucide-react";
+import { Megaphone, Loader2, Eye, EyeOff, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -119,7 +119,7 @@ export default function PopupsPage() {
     <div>
       <div className="mb-6 flex items-center gap-3">
         <Megaphone className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold">PopUps & Notificações</h1>
+        <h1 className="text-2xl font-bold">PopUps & Barra</h1>
       </div>
 
       <div className="max-w-2xl space-y-6">
