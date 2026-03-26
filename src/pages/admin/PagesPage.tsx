@@ -80,9 +80,9 @@ export default function PagesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <FileText className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold">Páginas</h1>
+      <div>
+        <h2 className="text-2xl font-bold">Páginas</h2>
+        <p className="text-sm text-muted-foreground mt-1">Edite as páginas institucionais da loja</p>
       </div>
 
       <Tabs defaultValue={orderedSlugs[0]} className="w-full">

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, RefreshCw, Send, ShoppingCart, Clock, CheckCircle, XCircle, MapPin } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 
@@ -24,7 +24,6 @@ interface AbandonedCart {
 }
 
 export default function RecoveryPage() {
-  const { toast } = useToast();
   const { user } = useAuth();
   const qc = useQueryClient();
   const [syncing, setSyncing] = useState<string | null>(null);
@@ -66,11 +65,11 @@ export default function RecoveryPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["abandoned-carts"] });
-      toast({ title: "Workflow de recuperação ativado no GHL!" });
+      toast.success("Workflow de recuperação ativado no GHL!");
       setSyncing(null);
     },
     onError: (err: any) => {
-      toast({ title: "Erro ao sincronizar com GHL", description: err?.message, variant: "destructive" });
+      toast.error(`Erro ao sincronizar com GHL: ${err?.message}`);
       setSyncing(null);
     },
   });
@@ -85,7 +84,7 @@ export default function RecoveryPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["abandoned-carts"] });
-      toast({ title: "Carrinho marcado como recuperado!" });
+      toast.success("Carrinho marcado como recuperado!");
     },
   });
 

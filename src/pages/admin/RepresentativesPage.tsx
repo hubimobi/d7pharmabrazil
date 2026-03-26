@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, UserMinus, Download } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface RepForm {
   name: string;
@@ -28,7 +28,6 @@ export default function RepresentativesPage() {
   const [form, setForm] = useState<RepForm>(emptyForm);
   const [deleteDialog, setDeleteDialog] = useState<{ id: string; name: string } | null>(null);
   const [transferRepId, setTransferRepId] = useState<string>("");
-  const { toast } = useToast();
   const qc = useQueryClient();
 
   const { data: reps, isLoading } = useQuery({
@@ -55,9 +54,9 @@ export default function RepresentativesPage() {
       setOpen(false);
       setForm(emptyForm);
       setEditId(null);
-      toast({ title: editId ? "Representante atualizado" : "Representante criado" });
+      toast.success(editId ? "Representante atualizado" : "Representante criado");
     },
-    onError: () => toast({ title: "Erro ao salvar", variant: "destructive" }),
+    onError: () => toast.error("Erro ao salvar"),
   });
 
   const toggleActive = useMutation({
@@ -67,7 +66,7 @@ export default function RepresentativesPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["representatives"] });
-      toast({ title: "Status atualizado. Comissões futuras não serão mais geradas para representantes inativos." });
+      toast.success("Status atualizado. Comissões futuras não serão mais geradas para representantes inativos.");
     },
   });
 
@@ -117,9 +116,9 @@ export default function RepresentativesPage() {
       qc.invalidateQueries({ queryKey: ["doctors"] });
       setDeleteDialog(null);
       setTransferRepId("");
-      toast({ title: "Representante excluído. Relatório baixado e prescritores transferidos." });
+      toast.success("Representante excluído. Relatório baixado e prescritores transferidos.");
     },
-    onError: (err: any) => toast({ title: "Erro ao excluir", description: err?.message, variant: "destructive" }),
+    onError: (err: any) => toast.error(`Erro ao excluir: ${err?.message}`),
   });
 
   const openEdit = (rep: NonNullable<typeof reps>[number]) => {
@@ -132,8 +131,11 @@ export default function RepresentativesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Representantes</h2>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="text-2xl font-bold">Representantes</h2>
+          <p className="text-sm text-muted-foreground mt-1">Gerencie sua equipe de representantes</p>
+        </div>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditId(null); setForm(emptyForm); } }}>
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" />Novo Representante</Button>

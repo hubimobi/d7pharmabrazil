@@ -138,7 +138,10 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-bold">Vendas</h1>
+        <div>
+          <h2 className="text-2xl font-bold">Vendas</h2>
+          <p className="text-sm text-muted-foreground mt-1">Gerencie e acompanhe todos os pedidos da loja</p>
+        </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={handleSyncAll} disabled={syncingAll}>
             {syncingAll ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
@@ -152,43 +155,28 @@ export default function OrdersPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <DollarSign className="h-8 w-8 text-primary" />
-            <div>
-              <p className="text-sm text-muted-foreground">Total Pedidos</p>
-              <p className="text-2xl font-bold">{stats.total}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <CheckCircle className="h-8 w-8 text-green-600" />
-            <div>
-              <p className="text-sm text-muted-foreground">Pagos</p>
-              <p className="text-2xl font-bold">{stats.paid}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Truck className="h-8 w-8 text-blue-600" />
-            <div>
-              <p className="text-sm text-muted-foreground">Enviados</p>
-              <p className="text-2xl font-bold">{stats.shipped}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Package className="h-8 w-8 text-emerald-600" />
-            <div>
-              <p className="text-sm text-muted-foreground">Finalizados</p>
-              <p className="text-2xl font-bold">{stats.delivered}</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        {[
+          { title: "TOTAL PEDIDOS", value: stats.total, icon: DollarSign, iconBg: "bg-primary/10", iconColor: "text-primary" },
+          { title: "PAGOS", value: stats.paid, icon: CheckCircle, iconBg: "bg-green-500/10", iconColor: "text-green-600" },
+          { title: "ENVIADOS", value: stats.shipped, icon: Truck, iconBg: "bg-blue-500/10", iconColor: "text-blue-600" },
+          { title: "FINALIZADOS", value: stats.delivered, icon: Package, iconBg: "bg-emerald-500/10", iconColor: "text-emerald-600" },
+        ].map((card) => (
+          <Card key={card.title} className="relative overflow-hidden border border-border/50">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-medium tracking-wider text-muted-foreground">{card.title}</p>
+                  <p className="text-2xl font-bold text-foreground">{card.value}</p>
+                </div>
+                <div className={`h-12 w-12 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                  <card.icon className={`h-6 w-6 ${card.iconColor}`} />
+                </div>
+              </div>
+              <card.icon className={`absolute -bottom-3 -right-3 h-24 w-24 ${card.iconColor} opacity-[0.04]`} />
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Filters */}

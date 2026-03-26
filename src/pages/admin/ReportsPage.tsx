@@ -81,7 +81,10 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h2 className="text-2xl font-bold">Relatórios</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Relatórios</h2>
+          <p className="text-sm text-muted-foreground mt-1">Análise de vendas, prescritores e representantes</p>
+        </div>
         <div className="flex gap-2">
           <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
