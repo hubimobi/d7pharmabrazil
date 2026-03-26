@@ -522,6 +522,7 @@ export type Database = {
           ghl_synced: boolean | null
           id: string
           name: string | null
+          phone: string | null
           source: string | null
         }
         Insert: {
@@ -530,6 +531,7 @@ export type Database = {
           ghl_synced?: boolean | null
           id?: string
           name?: string | null
+          phone?: string | null
           source?: string | null
         }
         Update: {
@@ -538,6 +540,7 @@ export type Database = {
           ghl_synced?: boolean | null
           id?: string
           name?: string | null
+          phone?: string | null
           source?: string | null
         }
         Relationships: []
