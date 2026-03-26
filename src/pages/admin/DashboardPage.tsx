@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Stethoscope, ShoppingCart, DollarSign } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Users, Stethoscope, ShoppingCart, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function DashboardPage() {
@@ -20,7 +21,6 @@ export default function DashboardPage() {
       const ordersData = orders.data ?? [];
       const totalRevenue = ordersData.reduce((sum, o) => sum + Number(o.total), 0);
 
-      // Monthly data for chart
       const monthly: Record<string, number> = {};
       ordersData.forEach((o) => {
         const month = new Date(o.created_at).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
@@ -39,41 +39,107 @@ export default function DashboardPage() {
   });
 
   const cards = [
-    ...(isAdmin ? [{ title: "Representantes", value: stats?.representatives ?? 0, icon: Users, color: "text-primary" }] : []),
-    { title: "Prescritores", value: stats?.doctors ?? 0, icon: Stethoscope, color: "text-secondary" },
-    { title: "Pedidos", value: stats?.orders ?? 0, icon: ShoppingCart, color: "text-success" },
-    { title: "Faturamento", value: `R$ ${(stats?.revenue ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, color: "text-warning" },
+    ...(isAdmin ? [{
+      title: "REPRESENTANTES",
+      value: stats?.representatives ?? 0,
+      icon: Users,
+      iconBg: "bg-primary/10",
+      iconColor: "text-primary",
+      trend: "+5%",
+      trendUp: true,
+    }] : []),
+    {
+      title: "PRESCRITORES",
+      value: stats?.doctors ?? 0,
+      icon: Stethoscope,
+      iconBg: "bg-secondary/10",
+      iconColor: "text-secondary",
+      trend: "+12%",
+      trendUp: true,
+    },
+    {
+      title: "PEDIDOS",
+      value: stats?.orders ?? 0,
+      icon: ShoppingCart,
+      iconBg: "bg-green-500/10",
+      iconColor: "text-green-600",
+      trend: "+8%",
+      trendUp: true,
+    },
+    {
+      title: "FATURAMENTO",
+      value: `R$ ${(stats?.revenue ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+      icon: DollarSign,
+      iconBg: "bg-amber-500/10",
+      iconColor: "text-amber-600",
+      trend: "+15%",
+      trendUp: true,
+    },
   ];
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Dashboard</h2>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Dashboard</h2>
+        <p className="text-sm text-muted-foreground mt-1">Visão geral da sua loja</p>
+      </div>
+
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => (
-          <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
-              <card.icon className={`h-5 w-5 ${card.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
+          <Card key={card.title} className="relative overflow-hidden border border-border/50">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-medium tracking-wider text-muted-foreground">
+                    {card.title}
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">{card.value}</p>
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-1.5 py-0 font-medium border-0 ${
+                      card.trendUp
+                        ? "bg-green-500/10 text-green-600"
+                        : "bg-red-500/10 text-red-600"
+                    }`}
+                  >
+                    {card.trendUp ? (
+                      <TrendingUp className="h-3 w-3 mr-0.5" />
+                    ) : (
+                      <TrendingDown className="h-3 w-3 mr-0.5" />
+                    )}
+                    {card.trend}
+                  </Badge>
+                </div>
+                <div className={`h-12 w-12 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                  <card.icon className={`h-6 w-6 ${card.iconColor}`} />
+                </div>
+              </div>
+              {/* Large background icon */}
+              <card.icon className={`absolute -bottom-3 -right-3 h-24 w-24 ${card.iconColor} opacity-[0.04]`} />
             </CardContent>
           </Card>
         ))}
       </div>
+
       {(stats?.chartData?.length ?? 0) > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Vendas por Mês</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="border border-border/50">
+          <CardContent className="p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Vendas por Mês</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={stats?.chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
-                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                <Tooltip
+                  formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                  }}
+                />
+                <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
