@@ -357,6 +357,34 @@ const CheckoutPage = () => {
                   </div>
                 ))}
 
+                {/* Free shipping progress bar */}
+                {storeSettings?.free_shipping_enabled && !freeShipping && (() => {
+                  const minValue = Number(storeSettings.free_shipping_min_value) || 299;
+                  const subtotalValue = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+                  const remaining = Math.max(0, minValue - subtotalValue);
+                  const progress = Math.min(100, (subtotalValue / minValue) * 100);
+                  return (
+                    <div className="rounded-lg border border-success/20 bg-success/5 p-3">
+                      {remaining > 0 ? (
+                        <>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Truck className="h-4 w-4 text-success flex-shrink-0" />
+                            <p className="text-sm font-medium text-foreground">
+                              Faltam <span className="font-bold text-success">R$ {remaining.toFixed(2).replace(".", ",")}</span> para <strong>frete grátis!</strong>
+                            </p>
+                          </div>
+                          <Progress value={progress} className="h-2 [&>div]:bg-success" />
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-success flex-shrink-0" />
+                          <p className="text-sm font-bold text-success">🎉 Parabéns! Você ganhou frete grátis!</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 <div className="flex gap-2">
                   <Input placeholder="Cupom de desconto" value={couponInput} onChange={(e) => setCouponInput(e.target.value)} className="max-w-xs" />
                   <Button variant="outline" size="sm" className="gap-1" onClick={() => applyCoupon(couponInput)}>
