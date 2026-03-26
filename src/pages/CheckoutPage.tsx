@@ -133,7 +133,7 @@ const CheckoutPage = () => {
         .eq("active", true)
         .order("name");
       if (error) throw error;
-      return data;
+      return data as unknown as { id: string; name: string; specialty: string | null; city: string | null; state: string | null }[];
     },
   });
 
