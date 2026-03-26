@@ -18,13 +18,28 @@ export default function CommissionsPage() {
   const { isAdmin } = useAuth();
   const [monthFilter, setMonthFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [prescriberFilter, setPrescriberFilter] = useState("all");
 
   const { data: commissions, isLoading } = useQuery({
     queryKey: ["commissions"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("commissions")
-        .select("*, representatives(name), doctors(name), orders(customer_name, created_at)")
+        .select("*, representatives(name), doctors(name), orders(customer_name, created_at, doctor_id)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Also fetch orders without doctor for "Sem Prescritor" section
+  const { data: noPrescOrders } = useQuery({
+    queryKey: ["orders-no-prescriber"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, customer_name, total, created_at, status")
+        .is("doctor_id", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -80,6 +95,13 @@ export default function CommissionsPage() {
               <SelectItem value="pending">Gerada</SelectItem>
               <SelectItem value="awaiting">Aguardando</SelectItem>
               <SelectItem value="paid">Paga</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={prescriberFilter} onValueChange={setPrescriberFilter}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Prescritor" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="no-prescriber">Sem Prescritor</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -143,6 +165,39 @@ export default function CommissionsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Vendas sem Prescritor */}
+      {(prescriberFilter === "all" || prescriberFilter === "no-prescriber") && noPrescOrders && noPrescOrders.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Vendas sem Prescritor Identificado</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {noPrescOrders.map((o) => (
+                  <TableRow key={o.id}>
+                    <TableCell>{o.customer_name}</TableCell>
+                    <TableCell>{fmt(Number(o.total))}</TableCell>
+                    <TableCell>{new Date(o.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{o.status}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
