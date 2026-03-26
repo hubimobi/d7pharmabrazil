@@ -104,7 +104,7 @@ export default function RecoveryPage() {
 
     const message = `Olá ${firstName}! Sou o ${profileName} da D7Pharma Brasil! Vi que você foi até o carrinho de compra do produto "${productNames}"! Ficou alguma dúvida que eu possa te ajudar?`;
 
-    return `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };
 
   const fmt = (v: number) => `R$ ${Number(v).toFixed(2).replace(".", ",")}`;
