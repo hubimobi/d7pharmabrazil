@@ -67,7 +67,6 @@ async function findOrCreateContact(
   email: string,
   phone: string
 ): Promise<number> {
-  // Search by email first
   if (email) {
     const searchRes = await fetch(
       `${BLING_API}/contatos?pesquisa=${encodeURIComponent(email)}&limite=1`,
@@ -79,7 +78,6 @@ async function findOrCreateContact(
     }
   }
 
-  // Create new contact
   const contactPayload = {
     nome: name || "Cliente Loja Online",
     tipo: "F",
@@ -139,10 +137,18 @@ serve(async (req) => {
       });
     }
 
+    // Block pending/cancelled orders unless forced
+    if (!force && (order.status === "pending" || order.status === "cancelled")) {
+      return new Response(
+        JSON.stringify({ error: `Pedido com status "${order.status}" não pode ser sincronizado. Use force=true para forçar.` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const accessToken = await getValidToken(supabase);
     const orderRef = order.id.slice(0, 8);
 
-    // Check if order already exists in Bling by searching observations
+    // Check if order already exists in Bling — use full observation text for precision
     if (!force) {
       try {
         const searchRes = await fetch(
@@ -151,18 +157,27 @@ serve(async (req) => {
         );
         const searchData = await searchRes.json();
         if (searchRes.ok && searchData.data && searchData.data.length > 0) {
-          await supabase.from("integration_logs").insert({
-            integration: "bling", action: "sync_order", status: "success",
-            details: `Pedido ${orderRef} já existe no Bling (ID: ${searchData.data[0].id}). Pulando.`
+          // Validate that at least one result matches our customer name to avoid collisions
+          const matchingOrder = searchData.data.find((blingOrder: any) => {
+            const blingName = blingOrder.contato?.nome?.toLowerCase() || "";
+            const ourName = order.customer_name?.toLowerCase() || "";
+            return blingName.includes(ourName.split(" ")[0]) || ourName.includes(blingName.split(" ")[0]);
           });
-          // Save bling ID if not already saved
-          const existingBlingId = String(searchData.data[0].numero || searchData.data[0].id);
-          await supabase.from("orders").update({ bling_order_id: existingBlingId }).eq("id", order_id);
 
-          return new Response(
-            JSON.stringify({ success: true, already_exists: true, bling_id: searchData.data[0].id }),
-            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          if (matchingOrder) {
+            await supabase.from("integration_logs").insert({
+              integration: "bling", action: "sync_order", status: "success",
+              details: `Pedido ${orderRef} já existe no Bling (ID: ${matchingOrder.id}). Pulando.`
+            });
+            const existingBlingId = String(matchingOrder.numero || matchingOrder.id);
+            await supabase.from("orders").update({ bling_order_id: existingBlingId }).eq("id", order_id);
+
+            return new Response(
+              JSON.stringify({ success: true, already_exists: true, bling_id: matchingOrder.id }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          // No name match — treat as no duplicate found, proceed with creation
         }
       } catch (e) {
         console.log("Bling search failed, proceeding with sync:", e.message);
@@ -199,13 +214,26 @@ serve(async (req) => {
       };
     });
 
-    const blingPayload = {
+    // Calculate discount: difference between items total and order.total
+    const itemsTotal = blingItems.reduce((sum, item) => sum + (item.valor * item.quantidade), 0);
+    const orderTotal = Number(order.total) || 0;
+    const discountValue = Math.max(0, Math.round((itemsTotal - orderTotal) * 100) / 100);
+
+    const blingPayload: any = {
       numero: 0,
       data: new Date(order.created_at).toISOString().split("T")[0],
       contato: { id: contactId },
       itens: blingItems,
-      observacoes: `Pedido loja online #${orderRef}`,
+      observacoes: `Pedido loja online #${orderRef}${order.coupon_code ? ` | Cupom: ${order.coupon_code}` : ""}`,
     };
+
+    // Add discount if applicable
+    if (discountValue > 0) {
+      blingPayload.desconto = {
+        valor: discountValue,
+        unidade: "REAL",
+      };
+    }
 
     console.log("Sending to Bling:", JSON.stringify(blingPayload));
 
@@ -232,12 +260,11 @@ serve(async (req) => {
     const blingId = blingData?.data?.id ? String(blingData.data.id) : null;
     const blingNumero = blingData?.data?.numero ? String(blingData.data.numero) : blingId;
 
-    // Save bling order ID to orders table
     if (blingId) {
       await supabase.from("orders").update({ bling_order_id: blingNumero || blingId }).eq("id", order_id);
     }
 
-    await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "success", details: `Pedido ${orderRef} sincronizado. Bling ID: ${blingId || 'N/A'}` });
+    await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "success", details: `Pedido ${orderRef} sincronizado. Bling ID: ${blingId || 'N/A'}${discountValue > 0 ? ` | Desconto: R$${discountValue.toFixed(2)}` : ''}` });
 
     return new Response(
       JSON.stringify({ success: true, bling_order: blingData }),
