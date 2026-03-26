@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug, Power, PowerOff, AlertTriangle, MessageSquare, Phone } from "lucide-react";
+import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug, Power, PowerOff, AlertTriangle, MessageSquare, Phone, ShoppingBag, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 
@@ -371,6 +371,9 @@ export default function IntegrationsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Meta / Instagram Shopping */}
+        <MetaFeedCard />
       </div>
 
       {/* Manual Bling Sync */}
@@ -738,5 +741,84 @@ function WebchatWhatsAppSettings() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function MetaFeedCard() {
+  const [copied, setCopied] = useState<string | null>(null);
+  const feedBaseUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/meta-product-feed`;
+  const xmlUrl = feedBaseUrl;
+  const csvUrl = `${feedBaseUrl}?format=csv`;
+
+  const handleCopy = (url: string, type: string) => {
+    navigator.clipboard.writeText(url);
+    setCopied(type);
+    toast.success("URL copiada!");
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ShoppingBag className="h-5 w-5" />
+          Meta / Instagram Shopping
+          <Badge variant="default">Ativo</Badge>
+        </CardTitle>
+        <CardDescription>
+          Feed automático de produtos para Facebook Shop e Instagram Shopping via Meta Commerce Manager.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-2 text-sm text-primary">
+          <CheckCircle className="h-4 w-4" />
+          Feed gerado automaticamente com todos os produtos ativos
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs font-medium">Feed XML (recomendado)</Label>
+            <div className="flex gap-2 mt-1">
+              <Input value={xmlUrl} readOnly className="text-xs font-mono" />
+              <Button variant="outline" size="sm" onClick={() => handleCopy(xmlUrl, "xml")}>
+                {copied === "xml" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs font-medium">Feed CSV (alternativo)</Label>
+            <div className="flex gap-2 mt-1">
+              <Input value={csvUrl} readOnly className="text-xs font-mono" />
+              <Button variant="outline" size="sm" onClick={() => handleCopy(csvUrl, "csv")}>
+                {copied === "csv" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-md bg-muted p-3 space-y-2">
+          <p className="text-xs font-medium">Como configurar no Meta Commerce Manager:</p>
+          <ol className="text-xs text-muted-foreground list-decimal pl-4 space-y-1">
+            <li>Acesse o <a href="https://business.facebook.com/commerce" target="_blank" rel="noopener noreferrer" className="text-primary underline">Meta Commerce Manager</a></li>
+            <li>Crie ou selecione um <strong>Catálogo</strong></li>
+            <li>Vá em <strong>Fontes de Dados → Data Feed</strong></li>
+            <li>Cole a <strong>URL do Feed XML</strong> acima</li>
+            <li>Configure a atualização automática (recomendado: <strong>diária</strong>)</li>
+            <li>Conecte o catálogo ao <strong>Instagram Shopping</strong> nas configurações</li>
+          </ol>
+        </div>
+
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => window.open(xmlUrl, "_blank")}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Visualizar Feed XML
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.open(csvUrl, "_blank")}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Baixar CSV
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
