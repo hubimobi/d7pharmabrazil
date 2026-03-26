@@ -213,38 +213,50 @@ export type Database = {
         Row: {
           active: boolean
           city: string | null
+          cpf: string | null
           created_at: string
           crm: string | null
+          email: string | null
           id: string
           name: string
+          pix: string | null
           representative_id: string
           specialty: string | null
           state: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           active?: boolean
           city?: string | null
+          cpf?: string | null
           created_at?: string
           crm?: string | null
+          email?: string | null
           id?: string
           name: string
+          pix?: string | null
           representative_id: string
           specialty?: string | null
           state?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           active?: boolean
           city?: string | null
+          cpf?: string | null
           created_at?: string
           crm?: string | null
+          email?: string | null
           id?: string
           name?: string
+          pix?: string | null
           representative_id?: string
           specialty?: string | null
           state?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -763,6 +775,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_doctor_id: { Args: never; Returns: string }
       get_representative_id: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -774,7 +787,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "representative"
+      app_role: "admin" | "representative" | "prescriber"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -902,7 +915,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "representative"],
+      app_role: ["admin", "representative", "prescriber"],
     },
   },
 } as const
