@@ -339,6 +339,10 @@ export default function OrdersPage() {
                   <p className="text-muted-foreground">Asaas ID</p>
                   <p className="font-mono text-xs">{selectedOrder.asaas_payment_id || "—"}</p>
                 </div>
+                <div>
+                  <p className="text-muted-foreground">Cupom</p>
+                  <p className="font-medium">{selectedOrder.coupon_code || "—"}</p>
+                </div>
                 {selectedOrder.tracking_code && (
                   <div className="col-span-2">
                     <p className="text-muted-foreground">Rastreio</p>
