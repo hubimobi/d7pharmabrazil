@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function ComboUpsell() {
   const { data: allProducts } = useProducts();
-  const { items, addItem } = useCart();
+  const { items, addItem, setComboDiscount, setComboFreeShipping } = useCart();
   const [accepted, setAccepted] = useState(false);
   const [savings, setSavings] = useState(0);
 
@@ -39,7 +39,6 @@ export default function ComboUpsell() {
 
   if (comboProducts.length < 2) return null;
 
-  // Check if user already has ALL combo products in cart
   const cartIds = new Set(items.map((i) => i.product.id));
   const allInCart = comboProducts.every((p) => cartIds.has(p.id));
   if (allInCart || accepted) {
@@ -65,18 +64,25 @@ export default function ComboUpsell() {
 
   const discountPercent = Number(comboSettings.combo_offer_discount) || 17;
   const originalTotal = comboProducts.reduce((sum, p) => sum + p.price, 0);
-  const discountedTotal = originalTotal * (1 - discountPercent / 100);
-  const totalSavings = originalTotal - discountedTotal;
+  const totalSavings = originalTotal * (discountPercent / 100);
 
   const handleAccept = () => {
+    // Add missing products to cart
     comboProducts.forEach((p) => {
       if (!cartIds.has(p.id)) {
         addItem(p, 1);
       }
     });
+    // Apply real combo discount to cart total
+    setComboDiscount(totalSavings);
+    if (comboSettings.combo_offer_free_shipping) {
+      setComboFreeShipping(true);
+    }
     setSavings(totalSavings);
     setAccepted(true);
   };
+
+  const discountedTotal = originalTotal - totalSavings;
 
   return (
     <motion.div

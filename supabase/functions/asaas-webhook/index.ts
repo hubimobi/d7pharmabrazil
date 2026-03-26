@@ -80,6 +80,24 @@ serve(async (req) => {
 
     console.log("Order updated:", data?.id || "no matching order found");
 
+    // Auto-sync to Bling when order is paid
+    if (data?.id) {
+      try {
+        const blingRes = await fetch(`${supabaseUrl}/functions/v1/bling-sync-order`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ order_id: data.id }),
+        });
+        const blingData = await blingRes.json();
+        console.log("Bling auto-sync result:", JSON.stringify(blingData));
+      } catch (blingErr) {
+        console.error("Bling auto-sync error (non-fatal):", blingErr);
+      }
+    }
+
     return new Response(
       JSON.stringify({ ok: true, order_id: data?.id || null }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
