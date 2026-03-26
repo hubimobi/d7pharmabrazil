@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, Upload, Trash2, Star, X } from "lucide-react";
+import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import CreatableSelect from "@/components/admin/CreatableSelect";
@@ -271,12 +271,23 @@ export default function ProductsPage() {
 
                 <TabsContent value="dimensions" className="space-y-4 mt-4">
                   <p className="text-sm text-muted-foreground">Dados usados para cálculo automático de frete via Melhor Envio.</p>
+                  
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => {
+                      setForm({ ...form, weight: "0.3", height: "10", width: "20", length: "25" });
+                    }}>
+                      <Package className="h-4 w-4" /> Caixa Padrão (até 4 potes)
+                    </Button>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2"><Label>Peso (kg) *</Label><Input type="number" step="0.01" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} /></div>
                     <div className="space-y-2"><Label>Altura (cm) *</Label><Input type="number" step="0.1" value={form.height} onChange={(e) => setForm({ ...form, height: e.target.value })} /></div>
                     <div className="space-y-2"><Label>Largura (cm) *</Label><Input type="number" step="0.1" value={form.width} onChange={(e) => setForm({ ...form, width: e.target.value })} /></div>
                     <div className="space-y-2"><Label>Comprimento (cm) *</Label><Input type="number" step="0.1" value={form.length} onChange={(e) => setForm({ ...form, length: e.target.value })} /></div>
                   </div>
+
+                  <AdminShippingSimulator form={form} />
                 </TabsContent>
 
                 <TabsContent value="bling" className="space-y-4 mt-4">
