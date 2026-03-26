@@ -480,6 +480,27 @@ function WebchatWhatsAppSettings() {
                 Cole aqui o código completo do widget (ex: GoHighLevel, Tidio, Crisp, etc.)
               </p>
             </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label>Posição</Label>
+                <Select value={webchatPosition} onValueChange={setWebchatPosition}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="right">Direita</SelectItem>
+                    <SelectItem value="left">Esquerda</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Delay (segundos)</Label>
+                <Input type="number" min={0} value={webchatDelay} onChange={(e) => setWebchatDelay(Number(e.target.value))} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Após rolagem</Label>
+                <Switch checked={webchatShowOnScroll} onCheckedChange={setWebchatShowOnScroll} />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Se delay=0 e rolagem desativada, aparece imediatamente. Se ambos ativos, aparece quando qualquer condição for atendida primeiro.</p>
             <Button onClick={saveWebchat} disabled={mutation.isPending} size="sm">
               {mutation.isPending ? "Salvando..." : "Salvar Webchat"}
             </Button>
@@ -531,6 +552,27 @@ function WebchatWhatsAppSettings() {
                 <p className="mt-1">Número atual: <code className="bg-background px-1 rounded">{settings.whatsapp}</code></p>
               )}
             </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label>Posição</Label>
+                <Select value={whatsappPosition} onValueChange={setWhatsappPosition}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="right">Direita</SelectItem>
+                    <SelectItem value="left">Esquerda</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Delay (segundos)</Label>
+                <Input type="number" min={0} value={whatsappDelay} onChange={(e) => setWhatsappDelay(Number(e.target.value))} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Após rolagem</Label>
+                <Switch checked={whatsappShowOnScroll} onCheckedChange={setWhatsappShowOnScroll} />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Se delay=0 e rolagem desativada, aparece imediatamente. Se ambos ativos, aparece quando qualquer condição for atendida primeiro.</p>
             <Button onClick={saveWhatsapp} disabled={mutation.isPending} size="sm">
               {mutation.isPending ? "Salvando..." : "Salvar WhatsApp"}
             </Button>
