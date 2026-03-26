@@ -450,6 +450,7 @@ export default function ProductsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>
