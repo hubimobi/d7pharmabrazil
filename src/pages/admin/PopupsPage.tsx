@@ -272,55 +272,7 @@ export default function PopupsPage() {
           </CardContent>
         </Card>
 
-        {/* Leads List */}
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Leads Capturados ({leads?.length || 0})</h2>
-              {(leads?.length || 0) > 0 && (
-                <Button variant="outline" size="sm" onClick={exportCSV} className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Exportar CSV
-                </Button>
-              )}
-            </div>
 
-            {loadingLeads ? (
-              <div className="py-8 text-center">
-                <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-              </div>
-            ) : !leads?.length ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                Nenhum lead capturado ainda. Ative o popup para começar a coletar.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 font-medium">Nome</th>
-                      <th className="text-left py-2 font-medium">E-mail</th>
-                      <th className="text-left py-2 font-medium">Fonte</th>
-                      <th className="text-left py-2 font-medium">Data</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leads.map((lead) => (
-                      <tr key={lead.id} className="border-b border-border/50">
-                        <td className="py-2">{lead.name || "—"}</td>
-                        <td className="py-2">{lead.email}</td>
-                        <td className="py-2 text-muted-foreground">{lead.source || "popup"}</td>
-                        <td className="py-2 text-muted-foreground">
-                          {new Date(lead.created_at || "").toLocaleDateString("pt-BR")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

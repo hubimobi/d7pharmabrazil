@@ -26,6 +26,7 @@ import RecoveryPage from "./pages/admin/RecoveryPage";
 import CouponsPage from "./pages/admin/CouponsPage";
 import BannerPage from "./pages/admin/BannerPage";
 import PopupsPage from "./pages/admin/PopupsPage";
+import LeadsPage from "./pages/admin/LeadsPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import CustomersPage from "./pages/admin/CustomersPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
