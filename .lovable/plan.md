@@ -1,37 +1,45 @@
 
 
-## Problem
+## Plan: Order Confirmation Page + Customer Order Tracking Portal
 
-After paying via PIX, the checkout stays stuck on the QR Code screen forever. There is no mechanism to check if the payment was confirmed by Asaas -- the app just shows the QR code and waits indefinitely.
+### What we'll build
 
-## Solution
+1. **Enhanced "Venda Confirmada" screen** — After payment is confirmed (both PIX and card), show a rich confirmation page with order details, delivery address info, and a message that the order is being prepared for shipping.
 
-Add automatic payment status polling that checks Asaas every few seconds and transitions to a success screen when the payment is confirmed.
+2. **Customer Order Tracking page** (`/meus-pedidos`) — A public page where customers can look up their order by email + order ID (no full auth needed), and see the current status and delivery info.
 
-### 1. Create edge function `check-payment-status`
+3. **Customer Login Portal** (`/acompanhar-pedido`) — Simple lookup form (email + order number) that queries the orders table and displays status timeline (Pendente → Pago → Preparando → Enviado → Entregue).
 
-A new backend function that receives a `payment_id`, queries Asaas API for the current status, and returns it. Also updates the order status in the database when confirmed.
+### Technical Details
 
-### 2. Add polling to `PixPaymentResult` component
+#### Files to create:
+| File | Purpose |
+|------|---------|
+| `src/pages/OrderConfirmationPage.tsx` | Rich confirmation screen with order summary, address, status |
+| `src/pages/TrackOrderPage.tsx` | Customer lookup page — enter email + order code to see status |
 
-- Accept `payment_id` and `order_id` as new props
-- Use `setInterval` (every 5 seconds) to call the new edge function
-- When status is `CONFIRMED` or `RECEIVED`:
-  - Show success screen with green checkmark and "Pagamento Confirmado!"
-  - Clear the cart
-  - Stop polling
-- Show a subtle "Aguardando confirmação..." indicator while polling
-- Auto-stop polling after 15 minutes (timeout)
-
-### 3. Update `CheckoutPage` to pass payment data
-
-Pass `payment_id` and `order_id` from `paymentResult` down to `PixPaymentResult`, and pass `clearCart` so the cart is cleared on confirmation.
-
-### Files to create/edit
-
-| File | Action |
+#### Files to edit:
+| File | Change |
 |------|--------|
-| `supabase/functions/check-payment-status/index.ts` | Create -- queries Asaas `GET /payments/{id}` and updates order |
-| `src/components/checkout/PixPaymentResult.tsx` | Edit -- add polling logic and success state |
-| `src/pages/CheckoutPage.tsx` | Edit -- pass `payment_id`, `order_id`, `onConfirmed` to PixPaymentResult |
+| `src/components/checkout/PixPaymentResult.tsx` | After confirmation, redirect to `/pedido-confirmado/:orderId` instead of showing inline success |
+| `src/pages/CheckoutPage.tsx` | After card payment success, redirect to `/pedido-confirmado/:orderId`; pass address data to order |
+| `src/App.tsx` | Add routes for `/pedido-confirmado/:orderId` and `/acompanhar-pedido` |
+| `src/components/Header.tsx` | Add "Acompanhar Pedido" link |
+
+#### Database migration:
+Add `customer_cpf`, `shipping_address` (jsonb), and `tracking_code` columns to `orders` table so we can store delivery info and allow tracking.
+
+#### Order Confirmation Page content:
+- ✅ Green checkmark + "Venda Confirmada!"
+- "Seu pedido está sendo preparado para envio"
+- Order number, items summary, total paid
+- Delivery address display
+- "Acompanhar Pedido" button
+- "Continuar Comprando" button
+
+#### Track Order Page:
+- Simple form: Email + últimos 8 dígitos do pedido
+- No authentication required (lookup by email + order ID prefix)
+- Shows order status timeline with visual steps
+- RLS: add SELECT policy for anon users filtered by email match
 
