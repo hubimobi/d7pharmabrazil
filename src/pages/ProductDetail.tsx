@@ -150,19 +150,19 @@ const ProductDetail = () => {
               <CountdownTimer label="🔥 Preço promocional expira em" className="mt-4" />
             )}
 
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="mt-4 flex flex-col gap-3">
               <div className="flex items-center rounded-md border border-border">
                 <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-3 py-2 text-lg font-medium text-muted-foreground hover:text-foreground">−</button>
                 <span className="min-w-[2rem] text-center text-sm font-semibold">{qty}</span>
                 <button onClick={() => setQty(qty + 1)} className="px-3 py-2 text-lg font-medium text-muted-foreground hover:text-foreground">+</button>
               </div>
-              <Button size="lg" className="flex-1 gap-2" onClick={() => {
+              <Button size="lg" className="h-14 text-base gap-2 w-full" onClick={() => {
                 addItem(product, qty);
                 setShowUpsell(true);
               }}>
                 <ShoppingCart className="h-5 w-5" /> Adicionar ao Carrinho
               </Button>
-              <Button size="lg" className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground" onClick={() => {
+              <Button size="lg" className="h-14 text-base gap-2 w-full bg-success hover:bg-success/90 text-success-foreground animate-pulse-soft" onClick={() => {
                 addItem(product, qty);
                 navigate("/checkout");
               }}>
@@ -276,11 +276,11 @@ const ProductDetail = () => {
         <RelatedProducts currentProductId={product.id} />
       </main>
 
-      {/* Fixed mobile bottom bar */}
-      <div className="fixed bottom-0 inset-x-0 z-40 flex gap-2 border-t border-border bg-card p-3 shadow-lg md:hidden">
+      {/* Fixed mobile top bar */}
+      <div className="fixed top-0 inset-x-0 z-50 flex gap-2 border-b border-border bg-card p-3 shadow-lg md:hidden">
         <Button
           size="lg"
-          className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground text-sm"
+          className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground text-sm h-12"
           onClick={() => {
             addItem(product, qty);
             navigate("/checkout");
@@ -290,7 +290,7 @@ const ProductDetail = () => {
         </Button>
         <Button
           size="lg"
-          className="flex-1 gap-2 text-sm"
+          className="flex-1 gap-2 text-sm h-12"
           onClick={() => {
             addItem(product, qty);
             setShowUpsell(true);
@@ -299,8 +299,6 @@ const ProductDetail = () => {
           <ShoppingCart className="h-4 w-4" /> Adicionar
         </Button>
       </div>
-      {/* Spacer for fixed bar */}
-      <div className="h-20 md:hidden" />
 
       <Footer />
       <WhatsAppButton />
