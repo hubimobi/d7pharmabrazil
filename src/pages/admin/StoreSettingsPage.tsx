@@ -11,6 +11,22 @@ import { toast } from "sonner";
 import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload, Trash2, Award, Plus, X, FlaskConical, ShieldCheck, TrendingUp, Heart, Star, Zap, Clock, Eye, Gift, ThumbsUp, CheckCircle, Sparkles } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
 
+const benefitIconOptions = [
+  { value: "FlaskConical", label: "Farmácia", Icon: FlaskConical },
+  { value: "Truck", label: "Entrega", Icon: Truck },
+  { value: "ShieldCheck", label: "Segurança", Icon: ShieldCheck },
+  { value: "TrendingUp", label: "Resultados", Icon: TrendingUp },
+  { value: "Heart", label: "Coração", Icon: Heart },
+  { value: "Star", label: "Estrela", Icon: Star },
+  { value: "Zap", label: "Raio", Icon: Zap },
+  { value: "Clock", label: "Relógio", Icon: Clock },
+  { value: "Eye", label: "Olho", Icon: Eye },
+  { value: "Gift", label: "Presente", Icon: Gift },
+  { value: "ThumbsUp", label: "Aprovação", Icon: ThumbsUp },
+  { value: "CheckCircle", label: "Check", Icon: CheckCircle },
+  { value: "Sparkles", label: "Brilho", Icon: Sparkles },
+];
+
 export default function StoreSettingsPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<Partial<StoreSettings> | null>(null);
