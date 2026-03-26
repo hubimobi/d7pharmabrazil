@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
@@ -7,7 +7,8 @@ import { Loader2 } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 
 export default function StaticPage() {
-  const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
+  const slug = location.pathname.replace("/", "");
 
   const { data: page, isLoading } = useQuery({
     queryKey: ["static-page", slug],
