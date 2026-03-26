@@ -80,6 +80,7 @@ export default function CreditCardForm({
   };
 
   const installmentOptions = getInstallmentOptions(total);
+  const selectedOpt = installmentOptions.find((o) => o.n === installments);
 
   return (
     <div className="space-y-4 rounded-lg border border-border bg-card p-4">
