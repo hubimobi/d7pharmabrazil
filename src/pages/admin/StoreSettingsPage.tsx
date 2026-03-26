@@ -62,15 +62,48 @@ export default function StoreSettingsPage() {
   const update = (field: keyof StoreSettings, value: any) =>
     setForm((prev) => prev ? { ...prev, [field]: value } : prev);
 
+  const handleUpload = async (file: File, type: "logo" | "favicon") => {
+    const setUploading = type === "logo" ? setUploadingLogo : setUploadingFavicon;
+    const field = type === "logo" ? "logo_url" : "favicon_url";
+    const ext = file.name.split(".").pop() || "png";
+    const filePath = `${type}.${ext}`;
+
+    setUploading(true);
+    try {
+      // Remove old file first (ignore errors)
+      await supabase.storage.from("store-assets").remove([filePath]);
+
+      const { error: uploadError } = await supabase.storage
+        .from("store-assets")
+        .upload(filePath, file, { upsert: true, cacheControl: "0" });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("store-assets")
+        .getPublicUrl(filePath);
+
+      const publicUrl = urlData.publicUrl + "?t=" + Date.now();
+      update(field, publicUrl);
+      toast.success(`${type === "logo" ? "Logo" : "Favicon"} enviado com sucesso!`);
+    } catch (err: any) {
+      toast.error(`Erro ao enviar ${type}: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveAsset = async (type: "logo" | "favicon") => {
+    const field = type === "logo" ? "logo_url" : "favicon_url";
+    update(field, "");
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const { id, ...values } = form as StoreSettings;
     mutation.mutate(values);
   };
 
-  return (
-    <div>
-      <div className="mb-6 flex items-center gap-3">
         <Store className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold">Configurações da Loja</h1>
       </div>
@@ -103,27 +136,77 @@ export default function StoreSettingsPage() {
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <h2 className="text-lg font-semibold flex items-center gap-2"><Image className="h-5 w-5" /> Logo e Favicon</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>URL da Logo</Label>
-              <Input placeholder="https://exemplo.com/logo.png" value={form.logo_url || ""} onChange={(e) => update("logo_url", e.target.value)} />
-              {form.logo_url && (
-                <div className="mt-2 p-2 border border-border rounded bg-muted/30">
-                  <img src={form.logo_url} alt="Logo preview" className="h-12 object-contain" />
+            {/* Logo Upload */}
+            <div className="space-y-2">
+              <Label>Logo</Label>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUpload(file, "logo");
+                  e.target.value = "";
+                }}
+              />
+              {form.logo_url ? (
+                <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30">
+                  <img src={form.logo_url} alt="Logo" className="h-14 object-contain" />
+                  <div className="flex gap-2 ml-auto">
+                    <Button type="button" variant="outline" size="sm" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
+                      {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      Trocar
+                    </Button>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => handleRemoveAsset("logo")}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
+              ) : (
+                <Button type="button" variant="outline" className="w-full gap-2" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
+                  {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Enviar Logo
+                </Button>
               )}
             </div>
-            <div>
-              <Label>URL do Favicon</Label>
-              <Input placeholder="https://exemplo.com/favicon.png" value={form.favicon_url || ""} onChange={(e) => update("favicon_url", e.target.value)} />
-              {form.favicon_url && (
-                <div className="mt-2 p-2 border border-border rounded bg-muted/30 flex items-center gap-2">
-                  <img src={form.favicon_url} alt="Favicon preview" className="h-8 w-8 object-contain" />
-                  <span className="text-xs text-muted-foreground">Preview</span>
+            {/* Favicon Upload */}
+            <div className="space-y-2">
+              <Label>Favicon</Label>
+              <input
+                ref={faviconInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/x-icon,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUpload(file, "favicon");
+                  e.target.value = "";
+                }}
+              />
+              {form.favicon_url ? (
+                <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30">
+                  <img src={form.favicon_url} alt="Favicon" className="h-10 w-10 object-contain" />
+                  <span className="text-xs text-muted-foreground">Favicon atual</span>
+                  <div className="flex gap-2 ml-auto">
+                    <Button type="button" variant="outline" size="sm" onClick={() => faviconInputRef.current?.click()} disabled={uploadingFavicon}>
+                      {uploadingFavicon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      Trocar
+                    </Button>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => handleRemoveAsset("favicon")}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
+              ) : (
+                <Button type="button" variant="outline" className="w-full gap-2" onClick={() => faviconInputRef.current?.click()} disabled={uploadingFavicon}>
+                  {uploadingFavicon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Enviar Favicon
+                </Button>
               )}
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">A logo aparece no cabeçalho do site. O favicon é o ícone que aparece na aba do navegador.</p>
+          <p className="text-xs text-muted-foreground">A logo aparece no cabeçalho do site. O favicon é o ícone que aparece na aba do navegador. Formatos aceitos: PNG, JPG, SVG, WebP.</p>
         </div>
 
         {/* Configuração de Frete */}
