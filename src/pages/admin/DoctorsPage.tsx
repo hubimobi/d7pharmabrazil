@@ -94,9 +94,17 @@ export default function DoctorsPage() {
 
         // Auto-create coupon for prescriber
         if (inserted) {
-          const repShort = repIdVal.slice(0, 4).toUpperCase();
-          const docShort = inserted.id.slice(0, 4).toUpperCase();
-          const couponCode = `DESCONTO10-${repShort}-${docShort}`;
+          // Generate coupon: initials of prescriber name + random digit + sequential number
+          const initials = form.name
+            .split(/\s+/)
+            .filter(Boolean)
+            .map(w => w[0].toUpperCase())
+            .join("");
+          const randomDigit = Math.floor(Math.random() * 10);
+          // Count existing doctors for sequential number
+          const { count } = await supabase.from("doctors").select("id", { count: "exact", head: true });
+          const seq = count ?? 1;
+          const couponCode = `${initials}${randomDigit}R${seq}`;
           await supabase.from("coupons").insert({
             code: couponCode,
             description: `Cupom do Prescritor ${form.name}`,
