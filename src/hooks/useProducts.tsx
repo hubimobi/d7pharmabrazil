@@ -27,6 +27,7 @@ export interface Product {
 import productProteinKids from "@/assets/product-protein-kids.png";
 import productTcf4 from "@/assets/product-tcf4.png";
 import productEaa from "@/assets/product-eaa.png";
+import noProductImage from "@/assets/no-product-image.gif";
 
 const fallbackImages: Record<string, string> = {
   "protein-kids": productProteinKids,
@@ -35,7 +36,7 @@ const fallbackImages: Record<string, string> = {
 };
 
 function mapDbProduct(p: any): Product {
-  const mainImage = p.image_url || fallbackImages[p.slug] || "/placeholder.svg";
+  const mainImage = p.image_url || fallbackImages[p.slug] || noProductImage;
   const extras = Array.isArray(p.extra_images) ? p.extra_images.filter(Boolean) : [];
   return {
     id: p.id,
