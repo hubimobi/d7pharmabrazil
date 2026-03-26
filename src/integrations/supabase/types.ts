@@ -273,6 +273,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          asaas_payment_id: string | null
           created_at: string
           customer_cpf: string | null
           customer_email: string | null
@@ -288,6 +289,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asaas_payment_id?: string | null
           created_at?: string
           customer_cpf?: string | null
           customer_email?: string | null
@@ -303,6 +305,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asaas_payment_id?: string | null
           created_at?: string
           customer_cpf?: string | null
           customer_email?: string | null
