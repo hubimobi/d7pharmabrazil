@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Copy, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 interface PixPaymentResultProps {
@@ -23,6 +23,7 @@ export default function PixPaymentResult({
   orderId,
   onConfirmed,
 }: PixPaymentResultProps) {
+  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -51,6 +52,7 @@ export default function PixPaymentResult({
           onConfirmed?.();
           if (intervalRef.current) clearInterval(intervalRef.current);
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          if (orderId) navigate(`/pedido-confirmado/${orderId}`);
         }
       } catch {
         // silently retry

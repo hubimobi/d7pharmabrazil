@@ -34,6 +34,7 @@ serve(async (req) => {
       credit_card_holder_info,
       installment_count,
       remote_ip,
+      shipping_address,
     } = body;
 
     if (!customer_name || !customer_email || !customer_cpf || !billing_type || !value) {
@@ -155,10 +156,12 @@ serve(async (req) => {
       customer_name,
       customer_email,
       customer_phone,
+      customer_cpf,
       doctor_id: doctor_id || null,
       items: items || [],
       total: Number(value),
       status: paymentData.status === "CONFIRMED" || paymentData.status === "RECEIVED" ? "paid" : "pending",
+      shipping_address: shipping_address || {},
     }).select("id").single();
 
     if (orderError) {

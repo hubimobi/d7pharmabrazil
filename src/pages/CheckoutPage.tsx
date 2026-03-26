@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ interface PaymentResult {
 }
 
 const CheckoutPage = () => {
+  const navigate = useNavigate();
   const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping } = useCart();
   const [step, setStep] = useState(1);
   const [couponInput, setCouponInput] = useState("");
@@ -160,6 +161,15 @@ const CheckoutPage = () => {
         value: paymentValue,
         items: orderItems,
         doctor_id: selectedDoctorId,
+        shipping_address: {
+          street: form.street,
+          number: form.number,
+          complement: form.complement,
+          neighborhood: form.neighborhood,
+          city: form.city,
+          state: form.state,
+          cep: form.cep,
+        },
       };
 
       if (form.paymentMethod === "card") {
@@ -203,9 +213,14 @@ const CheckoutPage = () => {
       if (form.paymentMethod === "card" && (data.status === "CONFIRMED" || data.status === "RECEIVED")) {
         toast.success("Pagamento aprovado! 🎉");
         clearCart();
-        setStep(3);
+        if (data.order_id) {
+          navigate(`/pedido-confirmado/${data.order_id}`);
+        } else {
+          setStep(3);
+        }
       } else if (form.paymentMethod === "pix") {
         toast.success("Cobrança Pix gerada! Escaneie o QR Code.");
+        setPaymentResult(data);
         setStep(3);
       } else {
         toast.error("Pagamento não aprovado. Verifique os dados do cartão.");
