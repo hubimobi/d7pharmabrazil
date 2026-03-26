@@ -151,46 +151,38 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Clientes</h1>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="text-2xl font-bold">Clientes</h2>
+          <p className="text-sm text-muted-foreground mt-1">Base de clientes e ações de relacionamento</p>
+        </div>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
           <RefreshCw className="h-4 w-4 mr-2" /> Atualizar
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Users className="h-8 w-8 text-primary" />
-            <div>
-              <p className="text-sm text-muted-foreground">Total Clientes</p>
-              <p className="text-2xl font-bold">{customers.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Users className="h-8 w-8 text-green-600" />
-            <div>
-              <p className="text-sm text-muted-foreground">Recorrentes</p>
-              <p className="text-2xl font-bold">
-                {customers.filter((c) => c.orders_count > 1).length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Users className="h-8 w-8 text-blue-600" />
-            <div>
-              <p className="text-sm text-muted-foreground">Com Email</p>
-              <p className="text-2xl font-bold">
-                {customers.filter((c) => c.email).length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
+        {[
+          { title: "TOTAL CLIENTES", value: customers.length, icon: Users, iconBg: "bg-primary/10", iconColor: "text-primary" },
+          { title: "RECORRENTES", value: customers.filter((c) => c.orders_count > 1).length, icon: Users, iconBg: "bg-green-500/10", iconColor: "text-green-600" },
+          { title: "COM EMAIL", value: customers.filter((c) => c.email).length, icon: Users, iconBg: "bg-blue-500/10", iconColor: "text-blue-600" },
+        ].map((card) => (
+          <Card key={card.title} className="relative overflow-hidden border border-border/50">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-medium tracking-wider text-muted-foreground">{card.title}</p>
+                  <p className="text-2xl font-bold text-foreground">{card.value}</p>
+                </div>
+                <div className={`h-12 w-12 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                  <card.icon className={`h-6 w-6 ${card.iconColor}`} />
+                </div>
+              </div>
+              <card.icon className={`absolute -bottom-3 -right-3 h-24 w-24 ${card.iconColor} opacity-[0.04]`} />
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Search */}

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// CardHeader/CardTitle kept for "Vendas sem Prescritor" section
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -77,7 +78,10 @@ export default function CommissionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h2 className="text-2xl font-bold">Cashback</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Cashback</h2>
+          <p className="text-sm text-muted-foreground mt-1">Acompanhe comissões e cashback dos prescritores</p>
+        </div>
         <div className="flex gap-2 flex-wrap">
           <Select value={monthFilter} onValueChange={setMonthFilter}>
             <SelectTrigger className="w-36 sm:w-44"><SelectValue placeholder="Mês" /></SelectTrigger>
@@ -107,21 +111,26 @@ export default function CommissionsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Cashback</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent><p className="text-2xl font-bold">{fmt(totalCashback)}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent><p className="text-2xl font-bold text-warning">{fmt(pendingCashback)}</p></CardContent>
-        </Card>
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
+        {[
+          { title: "TOTAL CASHBACK", value: fmt(totalCashback), icon: DollarSign, iconBg: "bg-primary/10", iconColor: "text-primary" },
+          { title: "PENDENTES", value: fmt(pendingCashback), icon: TrendingUp, iconBg: "bg-amber-500/10", iconColor: "text-amber-600" },
+        ].map((card) => (
+          <Card key={card.title} className="relative overflow-hidden border border-border/50">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-medium tracking-wider text-muted-foreground">{card.title}</p>
+                  <p className="text-2xl font-bold text-foreground">{card.value}</p>
+                </div>
+                <div className={`h-12 w-12 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                  <card.icon className={`h-6 w-6 ${card.iconColor}`} />
+                </div>
+              </div>
+              <card.icon className={`absolute -bottom-3 -right-3 h-24 w-24 ${card.iconColor} opacity-[0.04]`} />
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Card>

@@ -91,9 +91,9 @@ export default function PopupsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center gap-3">
-        <Megaphone className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold">PopUps & Barra</h1>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">PopUps & Barra</h2>
+        <p className="text-sm text-muted-foreground mt-1">Configure popups e barra de notificação da loja</p>
       </div>
 
       <div className="max-w-2xl space-y-6">

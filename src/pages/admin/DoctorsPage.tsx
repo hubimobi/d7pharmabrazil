@@ -10,8 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, CheckCircle, Copy, UserPlus, Key } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Plus, Pencil, CheckCircle, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface DocForm {
@@ -37,7 +37,6 @@ export default function DoctorsPage() {
   const [userPassword, setUserPassword] = useState("");
   const [creatingUser, setCreatingUser] = useState(false);
   const [userCreationDialog, setUserCreationDialog] = useState<{ doctorId: string; email: string; name: string } | null>(null);
-  const { toast } = useToast();
   const { isAdmin, session } = useAuth();
   const qc = useQueryClient();
 
@@ -126,12 +125,12 @@ export default function DoctorsPage() {
       if (result?.couponCode && !editId) {
         setSuccessCoupon({ code: result.couponCode, name: form.name, doctorId: result.doctorId, email: result.email });
       } else {
-        toast({ title: editId ? "Prescritor atualizado" : "Prescritor cadastrado!" });
+        toast.success(editId ? "Prescritor atualizado" : "Prescritor cadastrado!");
       }
       setForm(emptyForm);
       setEditId(null);
     },
-    onError: (err: any) => toast({ title: "Erro ao salvar", description: err?.message, variant: "destructive" }),
+    onError: (err: any) => toast.error(`Erro ao salvar: ${err?.message}`),
   });
 
   const toggleActive = useMutation({
@@ -160,8 +159,11 @@ export default function DoctorsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Prescritores</h2>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="text-2xl font-bold">Prescritores</h2>
+          <p className="text-sm text-muted-foreground mt-1">Cadastre e gerencie prescritores e cupons</p>
+        </div>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditId(null); setForm(emptyForm); } }}>
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" />Novo Prescritor</Button>
@@ -252,7 +254,7 @@ export default function DoctorsPage() {
                 className="h-8 w-8"
                 onClick={() => {
                   navigator.clipboard.writeText(successCoupon?.code || "");
-                  toast({ title: "Cupom copiado!" });
+                  toast.success("Cupom copiado!");
                 }}
               >
                 <Copy className="h-4 w-4" />
