@@ -373,12 +373,67 @@ export default function IntegrationsPage() {
         </Card>
       </div>
 
+      {/* Manual Bling Sync */}
+      <ManualBlingSync />
+
       {/* Webchat & WhatsApp Section */}
       <WebchatWhatsAppSettings />
 
       {/* Integration Logs */}
       <IntegrationLogs />
     </div>
+  );
+}
+
+function ManualBlingSync() {
+  const [orderId, setOrderId] = useState("");
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = async () => {
+    if (!orderId.trim()) {
+      toast.error("Informe o ID do pedido");
+      return;
+    }
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("bling-sync-order", {
+        body: { order_id: orderId.trim() },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Pedido sincronizado com o Bling!");
+      setOrderId("");
+    } catch (err: any) {
+      toast.error(`Erro: ${err.message || "Falha ao sincronizar"}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Sincronização Manual - Bling</CardTitle>
+        <CardDescription>Reenvie um pedido para o Bling informando o ID do pedido</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
+            <Label htmlFor="sync-order-id">ID do Pedido</Label>
+            <Input
+              id="sync-order-id"
+              placeholder="Cole o ID do pedido aqui..."
+              value={orderId}
+              onChange={(e) => setOrderId(e.target.value)}
+            />
+          </div>
+          <Button onClick={handleSync} disabled={syncing}>
+            {syncing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            Sincronizar
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

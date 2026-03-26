@@ -171,6 +171,23 @@ serve(async (req) => {
       console.error("Order save error:", orderError);
     }
 
+    // If payment was instantly confirmed (credit card), sync with Bling
+    if (order?.id && (paymentData.status === "CONFIRMED" || paymentData.status === "RECEIVED")) {
+      try {
+        await fetch(`${supabaseUrl}/functions/v1/bling-sync-order`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ order_id: order.id }),
+        });
+        console.log("Bling sync triggered for order:", order.id);
+      } catch (blingErr) {
+        console.error("Bling sync failed (non-fatal):", blingErr);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
