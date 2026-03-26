@@ -83,6 +83,7 @@ export interface StoreSettings {
   combo_offer_discount: number;
   combo_offer_free_shipping: boolean;
   combo_offer_label: string;
+  hide_chat_on_checkout: boolean;
 }
 
 export function useStoreSettings() {
