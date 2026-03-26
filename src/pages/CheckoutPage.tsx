@@ -147,7 +147,9 @@ const CheckoutPage = () => {
   });
 
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-  const shipping = freeShipping ? 0 : (selectedShipping?.price ?? (subtotal >= 199 ? 0 : 19.90));
+  const freeShippingMinValue = Number(storeSettings?.free_shipping_min_value) || 499;
+  const qualifiesForFreeShipping = storeSettings?.free_shipping_enabled && subtotal >= freeShippingMinValue;
+  const shipping = freeShipping || qualifiesForFreeShipping ? 0 : (selectedShipping?.price ?? 0);
   const finalTotal = total + shipping;
   const pixTotal = finalTotal * 0.95;
 
@@ -358,9 +360,9 @@ const CheckoutPage = () => {
                 ))}
 
                 {/* Free shipping progress bar */}
-                {storeSettings?.free_shipping_enabled && !freeShipping && (() => {
-                  const minValue = Number(storeSettings.free_shipping_min_value) || 299;
-                  const subtotalValue = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+                {storeSettings?.free_shipping_enabled && (() => {
+                  const minValue = freeShippingMinValue;
+                  const subtotalValue = subtotal;
                   const remaining = Math.max(0, minValue - subtotalValue);
                   const progress = Math.min(100, (subtotalValue / minValue) * 100);
                   return (
@@ -551,8 +553,8 @@ const CheckoutPage = () => {
                   )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Frete</span>
-                    <span className={shipping === 0 ? "font-semibold text-success" : ""}>
-                      {shipping === 0 ? "Grátis" : `R$ ${shipping.toFixed(2).replace(".", ",")}`}
+                    <span className={shipping === 0 && (qualifiesForFreeShipping || freeShipping || selectedShipping) ? "font-semibold text-success" : ""}>
+                      {qualifiesForFreeShipping || freeShipping ? "Grátis" : selectedShipping ? (shipping === 0 ? "Grátis" : `R$ ${shipping.toFixed(2).replace(".", ",")}`) : "Calcular no carrinho"}
                     </span>
                   </div>
                   {selectedShipping && (

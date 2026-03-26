@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Clock, Gift, Truck, ShieldCheck, Headphones, Package, Users, Flame, Eye } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CheckoutUrgencyProps {
   reviewsCount?: number;
@@ -75,8 +76,8 @@ export default function CheckoutUrgency({ reviewsCount = 500, firstBenefit }: Ch
 
   return (
     <div className="space-y-3">
-      {/* Alta demanda */}
-      <div className="flex items-center gap-2 rounded-lg bg-warning/10 border border-warning/20 px-3 py-2.5">
+      {/* Alta demanda - pulsing/blinking */}
+      <div className="flex items-center gap-2 rounded-lg bg-warning/10 border border-warning/20 px-3 py-2.5 animate-pulse">
         <Flame className="h-4 w-4 text-warning flex-shrink-0" />
         <div className="text-xs">
           <span className="font-semibold text-warning">Alta demanda</span>
@@ -84,11 +85,23 @@ export default function CheckoutUrgency({ reviewsCount = 500, firstBenefit }: Ch
         </div>
       </div>
 
-      {/* Real-time viewers */}
+      {/* Real-time viewers with animated number */}
       <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2">
         <Eye className="h-4 w-4 text-destructive flex-shrink-0 animate-pulse" />
         <span className="text-xs font-medium text-foreground">
-          <span className="font-bold text-destructive tabular-nums">{viewers}</span> pessoas estão vendo este produto agora
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={viewers}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.3 }}
+              className="inline-block font-bold text-destructive tabular-nums"
+            >
+              {viewers}
+            </motion.span>
+          </AnimatePresence>{" "}
+          pessoas estão vendo este produto agora
         </span>
       </div>
 
