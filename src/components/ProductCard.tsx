@@ -55,7 +55,7 @@ const ProductCard = ({ product }: { product: Product }) => {
             <span className="text-xs font-semibold text-success">-{discountPercent}%</span>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            ou 3x de R$ {(product.price / 3).toFixed(2).replace(".", ",")} sem juros
+            ou até {product.price >= 500 ? "12" : product.price >= 200 ? "6" : "3"}x de R$ {(product.price / (product.price >= 500 ? 12 : product.price >= 200 ? 6 : 3)).toFixed(2).replace(".", ",")}
           </p>
           {product.showCountdown && <CountdownTimer label="Oferta expira em" className="mt-2" />}
           <div className="mt-2 flex gap-2">

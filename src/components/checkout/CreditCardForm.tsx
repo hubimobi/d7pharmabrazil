@@ -18,6 +18,33 @@ interface CreditCardFormProps {
   total: number;
 }
 
+function getInstallmentOptions(total: number) {
+  // Rules:
+  // 1-3x sem juros always available
+  // 4-6x available if total >= 200
+  // 7-12x available if total >= 500
+  // Min installment value: R$20
+  const options: { n: number; label: string; value: number }[] = [];
+
+  for (let n = 1; n <= 12; n++) {
+    const installmentValue = total / n;
+
+    // Min installment R$20
+    if (installmentValue < 20 && n > 1) break;
+
+    // Tier limits
+    if (n > 6 && total < 500) break;
+    if (n > 3 && total < 200) break;
+
+    const noInterest = n <= 3;
+    const label = `${n}x de R$ ${installmentValue.toFixed(2).replace(".", ",")}${noInterest ? " sem juros" : ""}`;
+
+    options.push({ n, label, value: installmentValue });
+  }
+
+  return options;
+}
+
 export default function CreditCardForm({
   card,
   onChange,
@@ -30,8 +57,7 @@ export default function CreditCardForm({
     return digits.replace(/(.{4})/g, "$1 ").trim();
   };
 
-  const maxInstallments = 3;
-  const installmentOptions = Array.from({ length: maxInstallments }, (_, i) => i + 1);
+  const installmentOptions = getInstallmentOptions(total);
 
   return (
     <div className="space-y-4 rounded-lg border border-border bg-card p-4">
@@ -97,9 +123,9 @@ export default function CreditCardForm({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {installmentOptions.map((n) => (
-              <SelectItem key={n} value={String(n)}>
-                {n}x de R$ {(total / n).toFixed(2).replace(".", ",")} {n <= 3 ? "sem juros" : ""}
+            {installmentOptions.map((opt) => (
+              <SelectItem key={opt.n} value={String(opt.n)}>
+                {opt.label}
               </SelectItem>
             ))}
           </SelectContent>
