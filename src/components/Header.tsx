@@ -21,6 +21,7 @@ const Header = () => {
           <Link to="/produtos" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">Produtos</Link>
           <Link to="/#beneficios" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">Benefícios</Link>
           <Link to="/#depoimentos" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">Depoimentos</Link>
+          <Link to="/acompanhar-pedido" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">Meu Pedido</Link>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -50,6 +51,7 @@ const Header = () => {
             <Link to="/" onClick={() => setMobileOpen(false)} className="text-sm font-medium">Início</Link>
             <Link to="/produtos" onClick={() => setMobileOpen(false)} className="text-sm font-medium">Produtos</Link>
             <Link to="/checkout" onClick={() => setMobileOpen(false)} className="text-sm font-medium">Carrinho</Link>
+            <Link to="/acompanhar-pedido" onClick={() => setMobileOpen(false)} className="text-sm font-medium">Meu Pedido</Link>
           </nav>
         </div>
       )}

@@ -25,6 +25,8 @@ import IntegrationsPage from "./pages/admin/IntegrationsPage";
 import RecoveryPage from "./pages/admin/RecoveryPage";
 import CouponsPage from "./pages/admin/CouponsPage";
 import BannerPage from "./pages/admin/BannerPage";
+import OrderConfirmationPage from "./pages/OrderConfirmationPage";
+import TrackOrderPage from "./pages/TrackOrderPage";
 import RecentPurchasePopup from "./components/RecentPurchasePopup";
 import WebchatWidget from "./components/WebchatWidget";
 
@@ -61,6 +63,8 @@ const App = () => (
               <Route path="/login" element={<LoginPage />} />
               <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/pedido-confirmado/:orderId" element={<OrderConfirmationPage />} />
+              <Route path="/acompanhar-pedido" element={<TrackOrderPage />} />
               <Route path="/admin" element={<AdminLayout><DashboardPage /></AdminLayout>} />
               <Route path="/admin/representantes" element={<AdminLayout><RepresentativesPage /></AdminLayout>} />
               <Route path="/admin/produtos" element={<AdminLayout><AdminProductsPage /></AdminLayout>} />
