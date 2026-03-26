@@ -10,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package } from "lucide-react";
+import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus } from "lucide-react";
+import { CropImageDialog } from "@/components/admin/CropImageDialog";
 import { useToast } from "@/hooks/use-toast";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import CreatableSelect from "@/components/admin/CreatableSelect";
@@ -51,6 +52,10 @@ export default function ProductsPage() {
   const [existingExtras, setExistingExtras] = useState<string[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [newTestimonial, setNewTestimonial] = useState<Testimonial>({ author_name: "", content: "", rating: 5 });
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropImageUrl, setCropImageUrl] = useState("");
+  const [removingBg, setRemovingBg] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -154,6 +159,7 @@ export default function ProductsPage() {
     setForm(emptyForm); setEditId(null); setImageFile(null);
     setExtraFiles([]); setExistingExtras([]); setTestimonials([]);
     setNewTestimonial({ author_name: "", content: "", rating: 5 });
+    setImagePreview(null);
   };
 
   const openEdit = async (p: NonNullable<typeof products>[number]) => {
@@ -303,16 +309,68 @@ export default function ProductsPage() {
                 </TabsContent>
 
                 <TabsContent value="images" className="space-y-4 mt-4">
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <Label>Imagem Destaque</Label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => document.getElementById("prod-img")?.click()}>
                         <Upload className="h-4 w-4" /> Selecionar
                       </Button>
-                      <span className="text-sm text-muted-foreground">{imageFile?.name || "Nenhum arquivo"}</span>
+                      {(imagePreview || (editId && products?.find(p => p.id === editId)?.image_url)) && (
+                        <>
+                          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => {
+                            const url = imagePreview || products?.find(p => p.id === editId)?.image_url;
+                            if (url) { setCropImageUrl(url); setCropOpen(true); }
+                          }}>
+                            <Crop className="h-4 w-4" /> Recortar
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" className="gap-1" disabled={removingBg} onClick={async () => {
+                            const url = imagePreview || products?.find(p => p.id === editId)?.image_url;
+                            if (!url) return;
+                            setRemovingBg(true);
+                            try {
+                              const { data, error } = await supabase.functions.invoke("remove-background", { body: { image_url: url } });
+                              if (error || !data?.image_base64) throw new Error(data?.error || "Erro ao remover fundo");
+                              const byteString = atob(data.image_base64);
+                              const ab = new ArrayBuffer(byteString.length);
+                              const ia = new Uint8Array(ab);
+                              for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+                              const blob = new Blob([ab], { type: data.mime_type || "image/png" });
+                              const file = new File([blob], "sem-fundo.png", { type: "image/png" });
+                              setImageFile(file);
+                              setImagePreview(URL.createObjectURL(blob));
+                              toast({ title: "Fundo removido com sucesso!" });
+                            } catch (err: any) {
+                              toast({ title: err.message || "Erro ao remover fundo", variant: "destructive" });
+                            } finally { setRemovingBg(false); }
+                          }}>
+                            {removingBg ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageMinus className="h-4 w-4" />}
+                            {removingBg ? "Processando..." : "Remover Fundo"}
+                          </Button>
+                        </>
+                      )}
                     </div>
-                    <input id="prod-img" type="file" accept="image/*" className="hidden" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+                    {(imagePreview || (editId && products?.find(p => p.id === editId)?.image_url)) && (
+                      <img src={imagePreview || products?.find(p => p.id === editId)?.image_url || ""} alt="Preview" className="h-24 w-24 rounded border border-border object-contain bg-muted" />
+                    )}
+                    <input id="prod-img" type="file" accept="image/*" className="hidden" onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setImageFile(file);
+                      if (file) setImagePreview(URL.createObjectURL(file));
+                    }} />
+                    {!imagePreview && !editId && <span className="text-sm text-muted-foreground">{imageFile?.name || "Nenhum arquivo"}</span>}
                   </div>
+
+                  <CropImageDialog
+                    open={cropOpen}
+                    onOpenChange={setCropOpen}
+                    imageUrl={cropImageUrl}
+                    aspect={1}
+                    onCropComplete={(blob) => {
+                      const file = new File([blob], "cropped.png", { type: "image/png" });
+                      setImageFile(file);
+                      setImagePreview(URL.createObjectURL(blob));
+                    }}
+                  />
 
                   <div className="space-y-2">
                     <Label>Imagens Extras</Label>
