@@ -655,6 +655,10 @@ function WebchatWhatsAppSettings() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Se delay=0 e rolagem desativada, aparece imediatamente. Se ambos ativos, aparece quando qualquer condição for atendida primeiro.</p>
+            <div className="flex items-center gap-3">
+              <Switch checked={hideChatOnCheckout} onCheckedChange={setHideChatOnCheckout} id="hide-chat-checkout" />
+              <Label htmlFor="hide-chat-checkout">Ocultar chat/WhatsApp no Checkout</Label>
+            </div>
             <Button onClick={saveWebchat} disabled={mutation.isPending} size="sm">
               {mutation.isPending ? "Salvando..." : "Salvar Webchat"}
             </Button>
