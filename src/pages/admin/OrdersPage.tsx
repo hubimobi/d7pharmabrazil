@@ -27,6 +27,7 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [trackingCode, setTrackingCode] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [syncingAll, setSyncingAll] = useState(false);
 
   const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ["admin-orders", statusFilter],
