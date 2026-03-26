@@ -274,38 +274,47 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
+          customer_cpf: string | null
           customer_email: string | null
           customer_name: string
           customer_phone: string | null
           doctor_id: string | null
           id: string
           items: Json
+          shipping_address: Json | null
           status: string
           total: number
+          tracking_code: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          customer_cpf?: string | null
           customer_email?: string | null
           customer_name: string
           customer_phone?: string | null
           doctor_id?: string | null
           id?: string
           items?: Json
+          shipping_address?: Json | null
           status?: string
           total?: number
+          tracking_code?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          customer_cpf?: string | null
           customer_email?: string | null
           customer_name?: string
           customer_phone?: string | null
           doctor_id?: string | null
           id?: string
           items?: Json
+          shipping_address?: Json | null
           status?: string
           total?: number
+          tracking_code?: string | null
           updated_at?: string
         }
         Relationships: [
