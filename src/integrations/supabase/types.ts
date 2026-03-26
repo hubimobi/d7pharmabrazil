@@ -25,6 +25,7 @@ export type Database = {
           id: string
           items: Json
           recovered_at: string | null
+          shipping_cep: string | null
           status: string
           updated_at: string
         }
@@ -38,6 +39,7 @@ export type Database = {
           id?: string
           items?: Json
           recovered_at?: string | null
+          shipping_cep?: string | null
           status?: string
           updated_at?: string
         }
@@ -51,6 +53,7 @@ export type Database = {
           id?: string
           items?: Json
           recovered_at?: string | null
+          shipping_cep?: string | null
           status?: string
           updated_at?: string
         }
