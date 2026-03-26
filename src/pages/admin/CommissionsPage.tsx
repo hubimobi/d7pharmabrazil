@@ -18,13 +18,28 @@ export default function CommissionsPage() {
   const { isAdmin } = useAuth();
   const [monthFilter, setMonthFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [prescriberFilter, setPrescriberFilter] = useState("all");
 
   const { data: commissions, isLoading } = useQuery({
     queryKey: ["commissions"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("commissions")
-        .select("*, representatives(name), doctors(name), orders(customer_name, created_at)")
+        .select("*, representatives(name), doctors(name), orders(customer_name, created_at, doctor_id)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Also fetch orders without doctor for "Sem Prescritor" section
+  const { data: noPrescOrders } = useQuery({
+    queryKey: ["orders-no-prescriber"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, customer_name, total, created_at, status")
+        .is("doctor_id", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
