@@ -113,8 +113,13 @@ const Footer = () => {
             </div>
           </div>
         </div>
-        <div className="mt-8 border-t border-border pt-6 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} {storeName}. Todos os direitos reservados.
+        <div className="mt-8 border-t border-border pt-6 text-center">
+          <p className="text-xs font-semibold text-muted-foreground mb-2">
+            🔒 100% Seguro — 100% Transparente — 100% Protegido
+          </p>
+          <p className="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} {storeName}. Todos os direitos reservados.
+          </p>
         </div>
       </div>
     </footer>

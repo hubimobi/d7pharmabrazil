@@ -48,6 +48,11 @@ const CheckoutPage = () => {
   });
   const abandonmentSaved = useRef(false);
 
+  // Scroll to top when checkout page mounts
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, []);
+
   // Track cart abandonment: save to DB + sync to GHL when user leaves without completing
   useEffect(() => {
     const saveAbandonment = () => {
