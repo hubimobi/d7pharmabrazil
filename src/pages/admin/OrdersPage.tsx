@@ -217,6 +217,8 @@ export default function OrdersPage() {
               <TableRow>
                 <TableHead>Pedido</TableHead>
                 <TableHead>Cliente</TableHead>
+                <TableHead>Fatura Asaas</TableHead>
+                <TableHead>Pedido Bling</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Data</TableHead>
@@ -226,13 +228,13 @@ export default function OrdersPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : filteredOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Nenhum pedido encontrado
                   </TableCell>
                 </TableRow>
@@ -249,6 +251,12 @@ export default function OrdersPage() {
                           <p className="font-medium text-sm">{order.customer_name}</p>
                           <p className="text-xs text-muted-foreground">{order.customer_email}</p>
                         </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {order.asaas_payment_id || "—"}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {(order as any).bling_order_id || "—"}
                       </TableCell>
                       <TableCell className="font-semibold">
                         R$ {Number(order.total).toFixed(2)}

@@ -155,6 +155,10 @@ serve(async (req) => {
             integration: "bling", action: "sync_order", status: "success",
             details: `Pedido ${orderRef} já existe no Bling (ID: ${searchData.data[0].id}). Pulando.`
           });
+          // Save bling ID if not already saved
+          const existingBlingId = String(searchData.data[0].numero || searchData.data[0].id);
+          await supabase.from("orders").update({ bling_order_id: existingBlingId }).eq("id", order_id);
+
           return new Response(
             JSON.stringify({ success: true, already_exists: true, bling_id: searchData.data[0].id }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -225,7 +229,15 @@ serve(async (req) => {
       );
     }
 
-    await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "success", details: `Pedido ${orderRef} sincronizado. Bling ID: ${blingData?.data?.id || 'N/A'}` });
+    const blingId = blingData?.data?.id ? String(blingData.data.id) : null;
+    const blingNumero = blingData?.data?.numero ? String(blingData.data.numero) : blingId;
+
+    // Save bling order ID to orders table
+    if (blingId) {
+      await supabase.from("orders").update({ bling_order_id: blingNumero || blingId }).eq("id", order_id);
+    }
+
+    await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "success", details: `Pedido ${orderRef} sincronizado. Bling ID: ${blingId || 'N/A'}` });
 
     return new Response(
       JSON.stringify({ success: true, bling_order: blingData }),
