@@ -69,8 +69,9 @@ export default function OrdersPage() {
       if (data?.already_exists) {
         toast.info(`Pedido já existe no Bling (ID: ${data.bling_id}).`);
       } else {
-        toast.success("Pedido sincronizado com Bling!");
+      toast.success("Pedido sincronizado com Bling!");
       }
+      refetch();
     } catch (err: any) {
       toast.error(`Erro: ${err.message}`);
     }
@@ -96,6 +97,7 @@ export default function OrdersPage() {
     }
     setSyncingAll(false);
     toast.success(`Sincronização concluída: ${success} ok, ${fail} erros de ${syncableOrders.length} pedidos.`);
+    refetch();
   };
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
