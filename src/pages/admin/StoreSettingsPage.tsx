@@ -157,7 +157,8 @@ export default function StoreSettingsPage() {
 
         {/* Logo e Favicon */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2"><Image className="h-5 w-5" /> Logo e Favicon</h2>
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Image className="h-5 w-5" /> Logo, Logo Horizontal e Favicon</h2>
+          <p className="text-xs text-muted-foreground">A <strong>Logo Principal</strong> é usada no favicon e em formatos quadrados. A <strong>Logo Horizontal</strong> aparece no topo do site ao lado do menu (recomendado: 200x50px).</p>
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Logo Upload */}
             <div className="space-y-2">
