@@ -54,6 +54,28 @@ serve(async () => {
 
     if (!res.ok || !data.access_token) {
       console.error("Falha ao renovar token do Bling:", data);
+      
+      // Store alert notification for admin
+      try {
+        const { data: settings } = await supabase
+          .from("store_settings")
+          .select("email, store_name")
+          .limit(1)
+          .single();
+        
+        // Insert admin notification
+        await supabase.from("admin_notifications").insert({
+          type: "bling_token_expired",
+          title: "Token do Bling expirado",
+          message: `A renovação automática do token do Bling falhou. Reconecte o Bling em Integrações. Erro: ${JSON.stringify(data).slice(0, 200)}`,
+          read: false,
+        });
+        
+        console.log("Notificação de alerta criada para o admin");
+      } catch (notifErr) {
+        console.error("Falha ao criar notificação:", notifErr);
+      }
+      
       return new Response(
         JSON.stringify({ error: "Token refresh failed", details: data }),
         { status: 500 }
