@@ -8,10 +8,12 @@ import GuaranteeSection from "@/components/GuaranteeSection";
 import FinalCTA from "@/components/FinalCTA";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import NotificationBar from "@/components/NotificationBar";
 
 const Index = () => (
   <div className="min-h-screen">
     <SEOHead title="Suplementos de Alta Performance" description="D7 Pharma Brazil — suplementos com qualidade farmacêutica para resultados reais. Frete grátis acima de R$199." />
+    <NotificationBar />
     <Header />
     <main>
       <HeroSection />

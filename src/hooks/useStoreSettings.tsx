@@ -38,6 +38,23 @@ export interface StoreSettings {
   webchat_position: string;
   webchat_delay_seconds: number;
   webchat_show_on_scroll: boolean;
+  // Shipping
+  free_shipping_enabled: boolean;
+  free_shipping_min_value: number;
+  free_shipping_regions: string;
+  // Notification bar
+  notification_bar_enabled: boolean;
+  notification_bar_text: string;
+  notification_bar_bg_color: string;
+  notification_bar_text_color: string;
+  // Popup banner
+  popup_banner_enabled: boolean;
+  popup_banner_title: string;
+  popup_banner_description: string;
+  popup_banner_image_url: string;
+  popup_banner_cta_text: string;
+  popup_banner_collect_email: boolean;
+  popup_banner_delay_seconds: number;
 }
 
 export function useStoreSettings() {
