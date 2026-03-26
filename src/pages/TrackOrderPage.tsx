@@ -31,14 +31,24 @@ interface OrderResult {
 export default function TrackOrderPage() {
   const [email, setEmail] = useState("");
   const [orderCode, setOrderCode] = useState("");
+  const [cpf, setCpf] = useState("");
   const [loading, setLoading] = useState(false);
   const [order, setOrder] = useState<OrderResult | null>(null);
   const [searched, setSearched] = useState(false);
 
+  const formatCpf = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  };
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !orderCode.trim()) {
-      toast.error("Preencha o email e o código do pedido.");
+    const hasInput = email.trim() || orderCode.trim() || cpf.replace(/\D/g, "").length >= 11;
+    if (!hasInput) {
+      toast.error("Preencha ao menos um campo para buscar.");
       return;
     }
 
@@ -47,7 +57,11 @@ export default function TrackOrderPage() {
 
     try {
       const { data, error } = await supabase.functions.invoke("track-order", {
-        body: { email: email.trim().toLowerCase(), order_code: orderCode.trim() },
+        body: {
+          email: email.trim().toLowerCase() || undefined,
+          order_code: orderCode.trim() || undefined,
+          cpf: cpf.replace(/\D/g, "") || undefined,
+        },
       });
 
       if (error) throw error;
@@ -71,14 +85,42 @@ export default function TrackOrderPage() {
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold">Acompanhar Pedido</h1>
           <p className="text-muted-foreground">
-            Digite seu email e o código do pedido para verificar o status
+            Busque pelo número do pedido, CPF ou email
           </p>
         </div>
 
-        {/* Search Form */}
         <Card>
           <CardContent className="p-6">
             <form onSubmit={handleSearch} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="orderCode">Número do Pedido</Label>
+                <Input
+                  id="orderCode"
+                  placeholder="Ex: a1b2c3d4-..."
+                  value={orderCode}
+                  onChange={(e) => setOrderCode(e.target.value)}
+                />
+              </div>
+              <div className="relative flex items-center">
+                <div className="flex-1 border-t border-border" />
+                <span className="px-3 text-xs text-muted-foreground">ou</span>
+                <div className="flex-1 border-t border-border" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cpf">CPF</Label>
+                <Input
+                  id="cpf"
+                  placeholder="000.000.000-00"
+                  value={cpf}
+                  onChange={(e) => setCpf(formatCpf(e.target.value))}
+                  maxLength={14}
+                />
+              </div>
+              <div className="relative flex items-center">
+                <div className="flex-1 border-t border-border" />
+                <span className="px-3 text-xs text-muted-foreground">ou</span>
+                <div className="flex-1 border-t border-border" />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email usado na compra</Label>
                 <Input
@@ -89,16 +131,6 @@ export default function TrackOrderPage() {
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="orderCode">Código do Pedido (primeiros 8 caracteres)</Label>
-                <Input
-                  id="orderCode"
-                  placeholder="Ex: a1b2c3d4"
-                  value={orderCode}
-                  onChange={(e) => setOrderCode(e.target.value)}
-                  maxLength={8}
-                />
-              </div>
               <Button type="submit" className="w-full gap-2" disabled={loading}>
                 <Search className="h-4 w-4" />
                 {loading ? "Buscando..." : "Buscar Pedido"}
@@ -107,10 +139,8 @@ export default function TrackOrderPage() {
           </CardContent>
         </Card>
 
-        {/* Order Result */}
         {searched && order && (
           <div className="space-y-6">
-            {/* Timeline */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Status do Pedido</CardTitle>
@@ -150,7 +180,6 @@ export default function TrackOrderPage() {
               </CardContent>
             </Card>
 
-            {/* Order Details */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Detalhes do Pedido</CardTitle>
@@ -183,7 +212,6 @@ export default function TrackOrderPage() {
               </CardContent>
             </Card>
 
-            {/* Address */}
             {order.shipping_address && Object.keys(order.shipping_address).length > 0 && (
               <Card>
                 <CardHeader>
