@@ -30,6 +30,8 @@ export interface StoreSettings {
   hero_button2_text: string;
   hero_button2_link: string;
   hero_image_url: string;
+  logo_url: string;
+  favicon_url: string;
 }
 
 export function useStoreSettings() {

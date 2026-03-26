@@ -3,17 +3,25 @@ import { Link } from "react-router-dom";
 import { ShoppingCart, Menu, X, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
 
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { items } = useCart();
+  const { data: settings } = useStoreSettings();
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="text-xl font-bold text-primary">
-          D7 <span className="text-secondary">Pharma</span> Brazil
+        <Link to="/" className="flex items-center gap-2">
+          {settings?.logo_url ? (
+            <img src={settings.logo_url} alt={settings?.store_name || "Logo"} className="h-10 object-contain" />
+          ) : (
+            <span className="text-xl font-bold text-primary">
+              D7 <span className="text-secondary">Pharma</span> Brazil
+            </span>
+          )}
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
