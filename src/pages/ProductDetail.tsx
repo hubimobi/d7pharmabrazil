@@ -114,7 +114,31 @@ const ProductDetail = () => {
 
           <div>
             {product.badge && <Badge className="mb-3 bg-secondary text-secondary-foreground">{product.badge}</Badge>}
-            <h1 className="text-2xl font-bold text-foreground md:text-3xl">{product.name}</h1>
+            <div className="flex items-start justify-between gap-2">
+              <h1 className="text-2xl font-bold text-foreground md:text-3xl">{product.name}</h1>
+              <div className="flex gap-1 flex-shrink-0 pt-1">
+                <button
+                  onClick={() => {
+                    const url = window.location.href;
+                    navigator.clipboard.writeText(url);
+                    import("sonner").then(({ toast }) => toast.success("Link copiado!"));
+                  }}
+                  className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition"
+                  title="Copiar link"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(product.name + " - " + window.location.href)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full p-2 text-muted-foreground hover:bg-success/10 hover:text-success transition"
+                  title="Compartilhar no WhatsApp"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                </a>
+              </div>
+            </div>
 
             <div className="mt-2 flex items-center gap-2">
               <div className="flex gap-0.5">
