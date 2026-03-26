@@ -360,9 +360,9 @@ const CheckoutPage = () => {
                 ))}
 
                 {/* Free shipping progress bar */}
-                {storeSettings?.free_shipping_enabled && !freeShipping && (() => {
-                  const minValue = Number(storeSettings.free_shipping_min_value) || 299;
-                  const subtotalValue = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+                {storeSettings?.free_shipping_enabled && (() => {
+                  const minValue = freeShippingMinValue;
+                  const subtotalValue = subtotal;
                   const remaining = Math.max(0, minValue - subtotalValue);
                   const progress = Math.min(100, (subtotalValue / minValue) * 100);
                   return (
