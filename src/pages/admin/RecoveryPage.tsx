@@ -91,8 +91,12 @@ export default function RecoveryPage() {
   });
 
   const generateWhatsAppLink = (cart: AbandonedCart) => {
-    const phone = (cart.customer_phone || "").replace(/\D/g, "");
+    let phone = (cart.customer_phone || "").replace(/\D/g, "");
     if (!phone) return null;
+    // Ensure country code 55 is present but not duplicated
+    if (!phone.startsWith("55")) {
+      phone = "55" + phone;
+    }
 
     const profileName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Equipe";
     const productNames = cart.items.map((i) => i.name).join(", ");
@@ -100,7 +104,7 @@ export default function RecoveryPage() {
 
     const message = `Olá ${firstName}! Sou o ${profileName} da D7Pharma Brasil! Vi que você foi até o carrinho de compra do produto "${productNames}"! Ficou alguma dúvida que eu possa te ajudar?`;
 
-    return `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };
 
   const fmt = (v: number) => `R$ ${Number(v).toFixed(2).replace(".", ",")}`;
