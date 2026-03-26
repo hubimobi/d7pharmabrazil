@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       .from("orders")
       .select("id, customer_name, items, total, status, shipping_address, tracking_code, created_at")
       .eq("customer_email", email)
-      .ilike("id", `${order_code}%`)
+      .filter("id::text", "ilike", `${order_code}%`)
       .maybeSingle();
 
     if (error) {
