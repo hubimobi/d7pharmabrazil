@@ -739,6 +739,9 @@ export type Database = {
           address_number: string | null
           address_state: string | null
           address_street: string | null
+          benefits_items: Json
+          benefits_subtitle: string
+          benefits_title: string
           cnpj: string | null
           created_at: string
           email: string | null
@@ -803,6 +806,9 @@ export type Database = {
           address_number?: string | null
           address_state?: string | null
           address_street?: string | null
+          benefits_items?: Json
+          benefits_subtitle?: string
+          benefits_title?: string
           cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -867,6 +873,9 @@ export type Database = {
           address_number?: string | null
           address_state?: string | null
           address_street?: string | null
+          benefits_items?: Json
+          benefits_subtitle?: string
+          benefits_title?: string
           cnpj?: string | null
           created_at?: string
           email?: string | null

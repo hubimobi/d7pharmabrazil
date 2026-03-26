@@ -8,8 +8,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload, Trash2 } from "lucide-react";
+import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload, Trash2, Award, Plus, X, FlaskConical, ShieldCheck, TrendingUp, Heart, Star, Zap, Clock, Eye, Gift, ThumbsUp, CheckCircle, Sparkles } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
+
+const benefitIconOptions = [
+  { value: "FlaskConical", label: "Farmácia", Icon: FlaskConical },
+  { value: "Truck", label: "Entrega", Icon: Truck },
+  { value: "ShieldCheck", label: "Segurança", Icon: ShieldCheck },
+  { value: "TrendingUp", label: "Resultados", Icon: TrendingUp },
+  { value: "Heart", label: "Coração", Icon: Heart },
+  { value: "Star", label: "Estrela", Icon: Star },
+  { value: "Zap", label: "Raio", Icon: Zap },
+  { value: "Clock", label: "Relógio", Icon: Clock },
+  { value: "Eye", label: "Olho", Icon: Eye },
+  { value: "Gift", label: "Presente", Icon: Gift },
+  { value: "ThumbsUp", label: "Aprovação", Icon: ThumbsUp },
+  { value: "CheckCircle", label: "Check", Icon: CheckCircle },
+  { value: "Sparkles", label: "Brilho", Icon: Sparkles },
+];
 
 export default function StoreSettingsPage() {
   const queryClient = useQueryClient();
@@ -395,6 +411,116 @@ export default function StoreSettingsPage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Seção Benefícios */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Award className="h-5 w-5" /> Seção "Por que escolher"</h2>
+          <p className="text-sm text-muted-foreground">Edite o título, subtítulo e os cards de benefícios exibidos na página inicial.</p>
+          <div className="space-y-4">
+            <div>
+              <Label>Título da Seção</Label>
+              <Input
+                value={form.benefits_title || ""}
+                onChange={(e) => update("benefits_title", e.target.value)}
+                placeholder="Por que escolher a D7 Pharma?"
+                maxLength={100}
+              />
+            </div>
+            <div>
+              <Label>Subtítulo</Label>
+              <Input
+                value={form.benefits_subtitle || ""}
+                onChange={(e) => update("benefits_subtitle", e.target.value)}
+                placeholder="Compromisso com excelência em cada detalhe"
+                maxLength={200}
+              />
+            </div>
+            <div className="space-y-3">
+              <Label>Cards de Benefícios (máx. 4)</Label>
+              {(form.benefits_items || []).map((item: any, idx: number) => (
+                <div key={idx} className="flex items-start gap-3 rounded-lg border border-border p-3 bg-muted/30">
+                  <div className="space-y-2 min-w-[100px]">
+                    <Label className="text-xs">Ícone</Label>
+                    <Select
+                      value={item.icon}
+                      onValueChange={(v) => {
+                        const items = [...(form.benefits_items || [])];
+                        items[idx] = { ...items[idx], icon: v };
+                        update("benefits_items", items);
+                      }}
+                    >
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {benefitIconOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            <span className="flex items-center gap-2">
+                              <opt.Icon className="h-4 w-4" />
+                              {opt.label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <Label className="text-xs">Título</Label>
+                      <Input
+                        value={item.title}
+                        onChange={(e) => {
+                          const items = [...(form.benefits_items || [])];
+                          items[idx] = { ...items[idx], title: e.target.value };
+                          update("benefits_items", items);
+                        }}
+                        maxLength={50}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Descrição</Label>
+                      <Input
+                        value={item.desc}
+                        onChange={(e) => {
+                          const items = [...(form.benefits_items || [])];
+                          items[idx] = { ...items[idx], desc: e.target.value };
+                          update("benefits_items", items);
+                        }}
+                        maxLength={150}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="mt-6 shrink-0"
+                    onClick={() => {
+                      const items = (form.benefits_items || []).filter((_: any, i: number) => i !== idx);
+                      update("benefits_items", items);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              {(form.benefits_items || []).length < 4 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => {
+                    const items = [...(form.benefits_items || []), { icon: "Star", title: "", desc: "" }];
+                    update("benefits_items", items);
+                  }}
+                >
+                  <Plus className="h-4 w-4" /> Adicionar Benefício
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Endereço */}

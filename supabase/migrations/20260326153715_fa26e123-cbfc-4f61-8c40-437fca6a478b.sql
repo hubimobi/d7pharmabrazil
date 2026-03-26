@@ -1,0 +1,4 @@
+ALTER TABLE public.store_settings
+ADD COLUMN IF NOT EXISTS benefits_title text NOT NULL DEFAULT 'Por que escolher a D7 Pharma?',
+ADD COLUMN IF NOT EXISTS benefits_subtitle text NOT NULL DEFAULT 'Compromisso com excelência em cada detalhe',
+ADD COLUMN IF NOT EXISTS benefits_items jsonb NOT NULL DEFAULT '[{"icon":"FlaskConical","title":"Alta Qualidade Farmacêutica","desc":"Produtos desenvolvidos com rigoroso controle de qualidade e aprovação ANVISA."},{"icon":"Truck","title":"Entrega Rápida","desc":"Enviamos para todo o Brasil com rastreamento em tempo real."},{"icon":"ShieldCheck","title":"Compra Segura","desc":"Pagamento criptografado e seus dados 100% protegidos."},{"icon":"TrendingUp","title":"Resultados Comprovados","desc":"Fórmulas validadas cientificamente com eficácia comprovada."}]';
