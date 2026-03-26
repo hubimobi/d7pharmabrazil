@@ -57,9 +57,11 @@ export default function RecentPurchasePopup() {
     },
     staleTime: 5 * 60 * 1000,
   });
+  // Merge real orders with fallbacks to always have at least 5
+  const displayOrders = [...(orders || []), ...FALLBACK_PURCHASES].slice(0, Math.max(5, orders?.length || 0));
 
   useEffect(() => {
-    if (!orders?.length || dismissed) return;
+    if (!displayOrders.length || dismissed || isAdmin) return;
 
     // Show first popup after 8 seconds
     const initialTimer = setTimeout(() => {
