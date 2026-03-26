@@ -140,8 +140,7 @@ export default function StoreSettingsPage() {
     );
   }
 
-  const update = (field: keyof StoreSettings, value: any) =>
-    setForm((prev) => prev ? { ...prev, [field]: value } : prev);
+  const update = updateField;
 
   const handleUpload = async (file: File, type: "logo" | "horizontal_logo" | "favicon") => {
     const setUploading = type === "logo" ? setUploadingLogo : type === "horizontal_logo" ? setUploadingHorizontalLogo : setUploadingFavicon;
