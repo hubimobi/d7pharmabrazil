@@ -272,6 +272,36 @@ serve(async (req) => {
 
     if (!blingRes.ok) {
       console.error("Bling sync error:", blingData);
+      
+      // Handle "identical order" error — means order already exists in Bling
+      const isDuplicate = blingData?.error?.fields?.some((f: any) => f.code === 3);
+      if (isDuplicate) {
+        // Search Bling for the existing order to get its ID
+        try {
+          const searchRes = await fetch(
+            `${BLING_API}/pedidos/vendas?pesquisa=${encodeURIComponent(orderRef)}&limite=5`,
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+          const searchData = await searchRes.json();
+          if (searchRes.ok && searchData.data?.length > 0) {
+            const existingId = String(searchData.data[0].numero || searchData.data[0].id);
+            await supabase.from("orders").update({ bling_order_id: existingId }).eq("id", order_id);
+            await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "success", details: `Pedido ${orderRef} já existia no Bling (ID: ${existingId}). Atualizado.` });
+            return new Response(
+              JSON.stringify({ success: true, already_exists: true, bling_id: existingId }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        } catch (_) { /* fallthrough */ }
+        
+        // If search failed, still treat as success
+        await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "success", details: `Pedido ${orderRef} já existe no Bling (duplicata detectada).` });
+        return new Response(
+          JSON.stringify({ success: true, already_exists: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
       await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "error", details: `Pedido ${orderRef}: ${JSON.stringify(blingData).slice(0, 300)}` });
       return new Response(
         JSON.stringify({ error: "Erro ao enviar pedido ao Bling", details: blingData }),
