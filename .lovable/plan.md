@@ -1,41 +1,49 @@
 
 
-## Modernizar Admin Panel — Inspirado no Lunoz
+## Melhorar Responsividade Mobile do Painel Admin
 
-Baseado na referência do Lunoz, vamos aplicar melhorias visuais mantendo a estrutura funcional existente.
+### Problemas Identificados
 
-### Mudanças Planejadas
+1. **Tabelas sem scroll horizontal** — OrdersPage (9 colunas), CustomersPage, ProductsPage, CouponsPage, DoctorsPage, RepresentativesPage, CommissionsPage, RecoveryPage usam `<Table>` dentro de `<Card>` sem `overflow-x-auto`, causando overflow no mobile
+2. **Botões de ação no header das páginas** — vários usam `flex` sem wrap adequado, botões ficam cortados
+3. **Colunas desnecessárias no mobile** — ex: "Fatura Asaas", "Pedido Bling" na OrdersPage podem ser escondidas em telas pequenas
+4. **Dialogs muito largos** — vários `DialogContent` não limitam largura no mobile
 
-#### 1. Sidebar Dark (`AdminSidebar.tsx`)
-- Fundo escuro (slate-900) como no Lunoz, com texto claro
-- Logo "D7 Pharma" estilizada no topo com fundo destacado
-- Itens agrupados em seções com labels sutis: **Menu**, **Catálogo**, **Marketing**, **Financeiro**, **Sistema**
-- Item ativo com fundo highlight (primary) e bordas arredondadas
-- Ícones com cor sutil, destaque no hover
-- Footer com avatar/iniciais do usuário + email
+### Plano de Implementação
 
-#### 2. Header Limpo (`AdminLayout.tsx`)
-- Fundo branco com sombra sutil (shadow-sm) em vez de border-b
-- Breadcrumb à direita mostrando caminho atual (ex: "D7 Pharma > Menu > Dashboard")
-- Título da página dinâmico baseado na rota
-- Notificações mantidas, com visual mais limpo
+#### 1. Wrapper de scroll horizontal em todas as tabelas admin
+Adicionar `<div className="overflow-x-auto">` ao redor de cada `<Table>` nas seguintes páginas:
+- `OrdersPage.tsx`
+- `CustomersPage.tsx`
+- `ProductsPage.tsx`
+- `CouponsPage.tsx`
+- `DoctorsPage.tsx`
+- `RepresentativesPage.tsx`
+- `CommissionsPage.tsx`
+- `RecoveryPage.tsx`
 
-#### 3. Dashboard Cards Estilo Lunoz (`DashboardPage.tsx`)
-- Cards com borda leve, ícone grande semitransparente no canto direito (como no Lunoz)
-- Label em uppercase pequeno (ex: "PEDIDOS"), valor grande abaixo
-- Badge de variação colorido (verde +X%, vermelho -X%) — visual estático por enquanto
-- Layout 4 colunas responsivo
+#### 2. Esconder colunas secundárias no mobile
+Em `OrdersPage.tsx`: adicionar `className="hidden md:table-cell"` nas colunas "Fatura Asaas", "Pedido Bling", "Cupom" (TableHead + TableCell), e ajustar `colSpan` dos estados vazios
 
-#### 4. CSS Variables (`index.css`)
-- Atualizar sidebar palette: `--sidebar-background` para tom escuro (220 20% 18%), texto claro
-- `--sidebar-primary` highlight visível sobre fundo escuro
-- `--sidebar-accent` tom intermediário para hover
+Em `CustomersPage.tsx`: esconder "Última Compra" no mobile
+
+Em `CouponsPage.tsx`: esconder colunas de datas no mobile
+
+#### 3. Botões responsivos nas headers
+Em páginas com múltiplos botões no header (OrdersPage, ProductsPage): usar `flex-wrap` e reduzir texto dos botões no mobile com `hidden sm:inline`
+
+#### 4. Cards de stats responsivos
+Garantir que grids de stats cards usem `grid-cols-2` como mínimo (já funciona na maioria)
 
 ### Arquivos Modificados
-- `src/components/admin/AdminSidebar.tsx` — sidebar dark + agrupamento + logo
-- `src/components/admin/AdminLayout.tsx` — header com shadow + breadcrumb
-- `src/pages/admin/DashboardPage.tsx` — cards estilo Lunoz
-- `src/index.css` — sidebar CSS variables
+- `src/pages/admin/OrdersPage.tsx`
+- `src/pages/admin/CustomersPage.tsx`
+- `src/pages/admin/ProductsPage.tsx`
+- `src/pages/admin/CouponsPage.tsx`
+- `src/pages/admin/DoctorsPage.tsx`
+- `src/pages/admin/RepresentativesPage.tsx`
+- `src/pages/admin/CommissionsPage.tsx`
+- `src/pages/admin/RecoveryPage.tsx`
 
-Sem mudancas de banco ou rotas.
+Sem mudanças de banco de dados — apenas CSS/classes Tailwind.
 
