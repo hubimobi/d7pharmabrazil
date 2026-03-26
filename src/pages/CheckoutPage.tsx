@@ -179,6 +179,7 @@ const CheckoutPage = () => {
           state: form.state,
           cep: form.cep,
         },
+        coupon_code: coupon || null,
       };
 
       if (form.paymentMethod === "card") {
