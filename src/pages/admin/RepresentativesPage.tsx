@@ -208,14 +208,14 @@ export default function RepresentativesPage() {
       </AlertDialog>
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Região</TableHead>
+                <TableHead className="hidden md:table-cell">Email</TableHead>
+                <TableHead className="hidden lg:table-cell">Telefone</TableHead>
+                <TableHead className="hidden lg:table-cell">Região</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-32">Ações</TableHead>
               </TableRow>
@@ -229,9 +229,9 @@ export default function RepresentativesPage() {
                 reps.map((rep) => (
                   <TableRow key={rep.id}>
                     <TableCell className="font-medium">{rep.name}</TableCell>
-                    <TableCell>{rep.email}</TableCell>
-                    <TableCell>{rep.phone ?? "—"}</TableCell>
-                    <TableCell>{rep.region ?? "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell">{rep.email}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{rep.phone ?? "—"}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{rep.region ?? "—"}</TableCell>
                     <TableCell>
                       <Badge
                         variant={rep.active ? "default" : "secondary"}

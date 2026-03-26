@@ -306,15 +306,15 @@ export default function CouponsPage() {
       </div>
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Desconto</TableHead>
-                <TableHead>Regras</TableHead>
+                <TableHead className="hidden md:table-cell">Regras</TableHead>
                 <TableHead>Usos</TableHead>
-                <TableHead>Compras Finalizadas</TableHead>
+                <TableHead className="hidden lg:table-cell">Compras Finalizadas</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-24">Ações</TableHead>
               </TableRow>
@@ -358,7 +358,7 @@ export default function CouponsPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <div className="text-xs text-muted-foreground space-y-0.5">
                           {c.min_order_value && <p>Mínimo: {fmt(c.min_order_value)}</p>}
                           {c.products?.name && <p>Produto: {c.products.name}</p>}
@@ -368,7 +368,7 @@ export default function CouponsPage() {
                       <TableCell className="text-sm">
                         {c.used_count}{c.max_uses ? `/${c.max_uses}` : ""}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         <div className="flex items-center gap-1.5">
                           <ShoppingCart className="h-3.5 w-3.5 text-green-600" />
                           <span className="text-sm font-semibold text-green-700">

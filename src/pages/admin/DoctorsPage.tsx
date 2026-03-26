@@ -267,16 +267,16 @@ export default function DoctorsPage() {
       </Dialog>
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>CRM</TableHead>
-                <TableHead>Especialidade</TableHead>
-                <TableHead>Cidade/UF</TableHead>
-                {isAdmin && <TableHead>Representante</TableHead>}
+                <TableHead className="hidden md:table-cell">E-mail</TableHead>
+                <TableHead className="hidden lg:table-cell">CRM</TableHead>
+                <TableHead className="hidden lg:table-cell">Especialidade</TableHead>
+                <TableHead className="hidden md:table-cell">Cidade/UF</TableHead>
+                {isAdmin && <TableHead className="hidden lg:table-cell">Representante</TableHead>}
                 <TableHead>Status</TableHead>
                 <TableHead className="w-24">Ações</TableHead>
               </TableRow>
@@ -290,11 +290,11 @@ export default function DoctorsPage() {
                 doctors.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium">{doc.name}</TableCell>
-                    <TableCell className="text-sm">{(doc as any).email ?? "—"}</TableCell>
-                    <TableCell>{doc.crm ?? "—"}</TableCell>
-                    <TableCell>{doc.specialty ?? "—"}</TableCell>
-                    <TableCell>{[doc.city, doc.state].filter(Boolean).join("/") || "—"}</TableCell>
-                    {isAdmin && <TableCell>{(doc as any).representatives?.name ?? "—"}</TableCell>}
+                    <TableCell className="hidden md:table-cell text-sm">{(doc as any).email ?? "—"}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{doc.crm ?? "—"}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{doc.specialty ?? "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell">{[doc.city, doc.state].filter(Boolean).join("/") || "—"}</TableCell>
+                    {isAdmin && <TableCell className="hidden lg:table-cell">{(doc as any).representatives?.name ?? "—"}</TableCell>}
                     <TableCell>
                       <Badge
                         variant={doc.active ? "default" : "secondary"}

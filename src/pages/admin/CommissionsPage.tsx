@@ -78,9 +78,9 @@ export default function CommissionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h2 className="text-2xl font-bold">Cashback</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Select value={monthFilter} onValueChange={setMonthFilter}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="Mês" /></SelectTrigger>
+            <SelectTrigger className="w-36 sm:w-44"><SelectValue placeholder="Mês" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os meses</SelectItem>
               {months.map((m) => (
@@ -125,15 +125,15 @@ export default function CommissionsPage() {
       </div>
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Pedido</TableHead>
-                {isAdmin && <TableHead>Representante</TableHead>}
+                {isAdmin && <TableHead className="hidden md:table-cell">Representante</TableHead>}
                 <TableHead>Prescritor</TableHead>
-                <TableHead>Valor Produtos</TableHead>
-                <TableHead>Taxa</TableHead>
+                <TableHead className="hidden sm:table-cell">Valor Produtos</TableHead>
+                <TableHead className="hidden md:table-cell">Taxa</TableHead>
                 <TableHead>Cashback</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -149,10 +149,10 @@ export default function CommissionsPage() {
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="text-sm">{(c as any).orders?.customer_name ?? "—"}</TableCell>
-                      {isAdmin && <TableCell>{(c as any).representatives?.name ?? "—"}</TableCell>}
+                      {isAdmin && <TableCell className="hidden md:table-cell">{(c as any).representatives?.name ?? "—"}</TableCell>}
                       <TableCell>{(c as any).doctors?.name ?? "—"}</TableCell>
-                      <TableCell>{fmt(Number(c.order_total))}</TableCell>
-                      <TableCell>{c.commission_rate}%</TableCell>
+                      <TableCell className="hidden sm:table-cell">{fmt(Number(c.order_total))}</TableCell>
+                      <TableCell className="hidden md:table-cell">{c.commission_rate}%</TableCell>
                       <TableCell className="font-semibold">{fmt(Number(c.commission_value))}</TableCell>
                       <TableCell>
                         <Badge variant={st.variant}>{st.label}</Badge>
@@ -173,12 +173,12 @@ export default function CommissionsPage() {
             <CardTitle className="text-lg">Vendas sem Prescritor Identificado</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
+           <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Valor</TableHead>
-                  <TableHead>Data</TableHead>
+                  <TableHead className="hidden sm:table-cell">Data</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -187,7 +187,7 @@ export default function CommissionsPage() {
                   <TableRow key={o.id}>
                     <TableCell>{o.customer_name}</TableCell>
                     <TableCell>{fmt(Number(o.total))}</TableCell>
-                    <TableCell>{new Date(o.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{new Date(o.created_at).toLocaleDateString("pt-BR")}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{o.status}</Badge>
                     </TableCell>
