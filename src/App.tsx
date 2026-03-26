@@ -26,6 +26,7 @@ import RecoveryPage from "./pages/admin/RecoveryPage";
 import CouponsPage from "./pages/admin/CouponsPage";
 import BannerPage from "./pages/admin/BannerPage";
 import PopupsPage from "./pages/admin/PopupsPage";
+import LeadsPage from "./pages/admin/LeadsPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import CustomersPage from "./pages/admin/CustomersPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
@@ -84,6 +85,7 @@ const App = () => (
               <Route path="/admin/cupons" element={<AdminLayout><CouponsPage /></AdminLayout>} />
               <Route path="/admin/banner" element={<AdminLayout><BannerPage /></AdminLayout>} />
               <Route path="/admin/popups" element={<AdminLayout><PopupsPage /></AdminLayout>} />
+              <Route path="/admin/leads" element={<AdminLayout><LeadsPage /></AdminLayout>} />
               <Route path="/admin/vendas" element={<AdminLayout><OrdersPage /></AdminLayout>} />
               <Route path="/admin/clientes" element={<AdminLayout><CustomersPage /></AdminLayout>} />
               <Route path="*" element={<NotFound />} />
