@@ -743,6 +743,11 @@ export type Database = {
           benefits_subtitle: string
           benefits_title: string
           cnpj: string | null
+          combo_offer_discount: number
+          combo_offer_enabled: boolean
+          combo_offer_free_shipping: boolean
+          combo_offer_label: string
+          combo_offer_products: Json
           created_at: string
           email: string | null
           facebook: string | null
@@ -810,6 +815,11 @@ export type Database = {
           benefits_subtitle?: string
           benefits_title?: string
           cnpj?: string | null
+          combo_offer_discount?: number
+          combo_offer_enabled?: boolean
+          combo_offer_free_shipping?: boolean
+          combo_offer_label?: string
+          combo_offer_products?: Json
           created_at?: string
           email?: string | null
           facebook?: string | null
@@ -877,6 +887,11 @@ export type Database = {
           benefits_subtitle?: string
           benefits_title?: string
           cnpj?: string | null
+          combo_offer_discount?: number
+          combo_offer_enabled?: boolean
+          combo_offer_free_shipping?: boolean
+          combo_offer_label?: string
+          combo_offer_products?: Json
           created_at?: string
           email?: string | null
           facebook?: string | null
