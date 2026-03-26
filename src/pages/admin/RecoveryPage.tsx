@@ -91,8 +91,12 @@ export default function RecoveryPage() {
   });
 
   const generateWhatsAppLink = (cart: AbandonedCart) => {
-    const phone = (cart.customer_phone || "").replace(/\D/g, "");
+    let phone = (cart.customer_phone || "").replace(/\D/g, "");
     if (!phone) return null;
+    // Ensure country code 55 is present but not duplicated
+    if (!phone.startsWith("55")) {
+      phone = "55" + phone;
+    }
 
     const profileName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Equipe";
     const productNames = cart.items.map((i) => i.name).join(", ");
