@@ -36,12 +36,24 @@ serve(async (req) => {
     const event = body.event;
     const payment = body.payment;
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
     if (!event || !payment) {
       return new Response(JSON.stringify({ error: "Invalid payload" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Log webhook received
+    await supabaseAdmin.from("integration_logs").insert({
+      integration: "asaas",
+      action: "webhook_received",
+      status: "success",
+      details: `Evento: ${event}, Payment ID: ${payment?.id || "N/A"}`,
+    });
 
     if (event !== "PAYMENT_CONFIRMED" && event !== "PAYMENT_RECEIVED") {
       return new Response(JSON.stringify({ ok: true, message: "Event ignored" }), {
@@ -58,10 +70,6 @@ serve(async (req) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-
     const { data, error } = await supabaseAdmin
       .from("orders")
       .update({ status: "paid" })
@@ -72,6 +80,12 @@ serve(async (req) => {
 
     if (error) {
       console.error("Error updating order:", error);
+      await supabaseAdmin.from("integration_logs").insert({
+        integration: "asaas",
+        action: "webhook_update_order",
+        status: "error",
+        details: `Erro ao atualizar pedido (payment: ${asaasPaymentId}): ${error.message}`,
+      });
       return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -79,6 +93,14 @@ serve(async (req) => {
     }
 
     console.log("Order updated:", data?.id || "no matching order found");
+
+    // Log payment confirmed
+    await supabaseAdmin.from("integration_logs").insert({
+      integration: "asaas",
+      action: "payment_confirmed",
+      status: "success",
+      details: `Pagamento confirmado via webhook. Payment: ${asaasPaymentId}, Pedido: ${data?.id || "não encontrado"}`,
+    });
 
     // Auto-sync to Bling when order is paid
     if (data?.id) {
@@ -105,6 +127,20 @@ serve(async (req) => {
   } catch (error: unknown) {
     console.error("Webhook error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
+
+    // Try to log the error
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const sb = createClient(supabaseUrl, supabaseKey);
+      await sb.from("integration_logs").insert({
+        integration: "asaas",
+        action: "webhook_error",
+        status: "error",
+        details: message,
+      });
+    } catch (_) {}
+
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
