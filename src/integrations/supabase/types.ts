@@ -315,6 +315,75 @@ export type Database = {
           },
         ]
       }
+      hero_banners: {
+        Row: {
+          active: boolean
+          badges: Json
+          btn1_bg_color: string | null
+          btn1_hover_color: string | null
+          btn2_bg_color: string | null
+          btn2_hover_color: string | null
+          button_link: string
+          button_text: string
+          button2_link: string
+          button2_text: string
+          created_at: string
+          id: string
+          image_url: string | null
+          media_type: string
+          side_image_url: string | null
+          sort_order: number
+          subtitle: string
+          title: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          active?: boolean
+          badges?: Json
+          btn1_bg_color?: string | null
+          btn1_hover_color?: string | null
+          btn2_bg_color?: string | null
+          btn2_hover_color?: string | null
+          button_link?: string
+          button_text?: string
+          button2_link?: string
+          button2_text?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          media_type?: string
+          side_image_url?: string | null
+          sort_order?: number
+          subtitle?: string
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          active?: boolean
+          badges?: Json
+          btn1_bg_color?: string | null
+          btn1_hover_color?: string | null
+          btn2_bg_color?: string | null
+          btn2_hover_color?: string | null
+          button_link?: string
+          button_text?: string
+          button2_link?: string
+          button2_text?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          media_type?: string
+          side_image_url?: string | null
+          sort_order?: number
+          subtitle?: string
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       integration_logs: {
         Row: {
           action: string
@@ -687,6 +756,9 @@ export type Database = {
           hero_button_text: string | null
           hero_button2_link: string | null
           hero_button2_text: string | null
+          hero_carousel_effect: string
+          hero_carousel_enabled: boolean
+          hero_carousel_interval: number
           hero_image_url: string | null
           hero_media_type: string | null
           hero_subtitle: string | null
@@ -748,6 +820,9 @@ export type Database = {
           hero_button_text?: string | null
           hero_button2_link?: string | null
           hero_button2_text?: string | null
+          hero_carousel_effect?: string
+          hero_carousel_enabled?: boolean
+          hero_carousel_interval?: number
           hero_image_url?: string | null
           hero_media_type?: string | null
           hero_subtitle?: string | null
@@ -809,6 +884,9 @@ export type Database = {
           hero_button_text?: string | null
           hero_button2_link?: string | null
           hero_button2_text?: string | null
+          hero_carousel_effect?: string
+          hero_carousel_enabled?: boolean
+          hero_carousel_interval?: number
           hero_image_url?: string | null
           hero_media_type?: string | null
           hero_subtitle?: string | null
