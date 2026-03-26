@@ -374,6 +374,9 @@ export default function IntegrationsPage() {
 
         {/* Meta / Instagram Shopping */}
         <MetaFeedCard />
+
+        {/* TikTok Shop */}
+        <TikTokShopCard />
       </div>
 
       {/* Manual Bling Sync */}
