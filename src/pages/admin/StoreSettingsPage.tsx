@@ -14,6 +14,10 @@ import type { StoreSettings } from "@/hooks/useStoreSettings";
 export default function StoreSettingsPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<Partial<StoreSettings> | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["store-settings-admin"],
