@@ -59,14 +59,18 @@ export default function OrdersPage() {
     );
   });
 
-  const handleSyncBling = async (orderId: string) => {
+  const handleSyncBling = async (orderId: string, force = false) => {
     try {
       const { data, error } = await supabase.functions.invoke("bling-sync-order", {
-        body: { order_id: orderId },
+        body: { order_id: orderId, force },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Pedido sincronizado com Bling!");
+      if (data?.already_exists) {
+        toast.info(`Pedido já existe no Bling (ID: ${data.bling_id}).`);
+      } else {
+        toast.success("Pedido sincronizado com Bling!");
+      }
     } catch (err: any) {
       toast.error(`Erro: ${err.message}`);
     }
