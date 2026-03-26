@@ -222,6 +222,7 @@ export default function OrdersPage() {
                 <TableHead>Fatura Asaas</TableHead>
                 <TableHead>Pedido Bling</TableHead>
                 <TableHead>Total</TableHead>
+                <TableHead>Cupom</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Ações</TableHead>
@@ -230,13 +231,13 @@ export default function OrdersPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : filteredOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     Nenhum pedido encontrado
                   </TableCell>
                 </TableRow>
@@ -262,6 +263,13 @@ export default function OrdersPage() {
                       </TableCell>
                       <TableCell className="font-semibold">
                         R$ {Number(order.total).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        {order.coupon_code ? (
+                          <Badge variant="secondary" className="text-xs">{order.coupon_code}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={st.variant}>{st.label}</Badge>
@@ -330,6 +338,10 @@ export default function OrdersPage() {
                 <div>
                   <p className="text-muted-foreground">Asaas ID</p>
                   <p className="font-mono text-xs">{selectedOrder.asaas_payment_id || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Cupom</p>
+                  <p className="font-medium">{selectedOrder.coupon_code || "—"}</p>
                 </div>
                 {selectedOrder.tracking_code && (
                   <div className="col-span-2">
