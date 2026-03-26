@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, TrendingUp, LogOut } from "lucide-react";
+import { DollarSign, TrendingUp, LogOut, UserPlus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -20,14 +21,17 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
 };
 
 export default function PrescritorPage() {
-  const { user, signOut, session } = useAuth();
+  const { user, signOut, session, signIn } = useAuth();
+  const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [monthFilter, setMonthFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const { signIn } = useAuth();
 
   // Get doctor record for logged in user
   const { data: doctor } = useQuery({
@@ -69,7 +73,45 @@ export default function PrescritorPage() {
     setIsLoggingIn(false);
   };
 
-  // Not logged in — show login form
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+
+    if (password.length < 6) {
+      setLoginError("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setLoginError("As senhas não conferem.");
+      return;
+    }
+
+    setIsSigningUp(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("create-prescriber-signup", {
+        body: { email, password },
+      });
+
+      if (error || data?.error) {
+        setLoginError(data?.error || "Erro ao criar conta.");
+        setIsSigningUp(false);
+        return;
+      }
+
+      // Auto-login after signup
+      const { error: loginErr } = await signIn(email, password);
+      if (loginErr) {
+        toast({ title: "Conta criada!", description: "Faça login com suas credenciais." });
+        setMode("login");
+      }
+    } catch (err: any) {
+      setLoginError(err?.message || "Erro ao criar conta.");
+    }
+    setIsSigningUp(false);
+  };
+
+  // Not logged in — show login/signup form
   if (!session) {
     return (
       <div className="min-h-screen bg-background">
@@ -78,23 +120,68 @@ export default function PrescritorPage() {
           <Card>
             <CardHeader className="text-center">
               <CardTitle className="text-xl">Portal do Prescritor</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Acesse para visualizar seus cashbacks</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {mode === "login" ? "Acesse para visualizar seus cashbacks" : "Crie sua conta para acessar seus cashbacks"}
+              </p>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>E-mail</Label>
-                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="seu@email.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Senha</Label>
-                  <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                </div>
-                {loginError && <p className="text-sm text-destructive">{loginError}</p>}
-                <Button type="submit" className="w-full" disabled={isLoggingIn}>
-                  {isLoggingIn ? "Entrando..." : "Entrar"}
-                </Button>
-              </form>
+              {mode === "login" ? (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>E-mail</Label>
+                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="seu@email.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Senha</Label>
+                    <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  </div>
+                  {loginError && <p className="text-sm text-destructive">{loginError}</p>}
+                  <Button type="submit" className="w-full" disabled={isLoggingIn}>
+                    {isLoggingIn ? "Entrando..." : "Entrar"}
+                  </Button>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      className="text-sm text-primary hover:underline"
+                      onClick={() => { setMode("signup"); setLoginError(""); }}
+                    >
+                      <UserPlus className="inline h-3.5 w-3.5 mr-1" />
+                      Não tem conta? Criar acesso
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <p className="text-xs text-muted-foreground bg-muted p-3 rounded-md">
+                    Somente prescritores já cadastrados no sistema podem criar acesso. Use o mesmo e-mail informado no seu cadastro.
+                  </p>
+                  <div className="space-y-2">
+                    <Label>E-mail cadastrado</Label>
+                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="seu@email.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Criar Senha</Label>
+                    <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Mínimo 6 caracteres" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Confirmar Senha</Label>
+                    <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                  </div>
+                  {loginError && <p className="text-sm text-destructive">{loginError}</p>}
+                  <Button type="submit" className="w-full" disabled={isSigningUp}>
+                    {isSigningUp ? "Criando conta..." : "Criar Conta"}
+                  </Button>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      className="text-sm text-primary hover:underline"
+                      onClick={() => { setMode("login"); setLoginError(""); }}
+                    >
+                      Já tem conta? Fazer login
+                    </button>
+                  </div>
+                </form>
+              )}
             </CardContent>
           </Card>
         </main>
