@@ -336,6 +336,33 @@ export type Database = {
           },
         ]
       }
+      popup_leads: {
+        Row: {
+          created_at: string | null
+          email: string
+          ghl_synced: boolean | null
+          id: string
+          name: string | null
+          source: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          ghl_synced?: boolean | null
+          id?: string
+          name?: string | null
+          source?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          ghl_synced?: boolean | null
+          id?: string
+          name?: string | null
+          source?: string | null
+        }
+        Relationships: []
+      }
       product_groups: {
         Row: {
           created_at: string
@@ -562,6 +589,9 @@ export type Database = {
           email: string | null
           facebook: string | null
           favicon_url: string | null
+          free_shipping_enabled: boolean | null
+          free_shipping_min_value: number | null
+          free_shipping_regions: string | null
           hero_button_link: string | null
           hero_button_text: string | null
           hero_button2_link: string | null
@@ -572,6 +602,17 @@ export type Database = {
           id: string
           instagram: string | null
           logo_url: string | null
+          notification_bar_bg_color: string | null
+          notification_bar_enabled: boolean | null
+          notification_bar_text: string | null
+          notification_bar_text_color: string | null
+          popup_banner_collect_email: boolean | null
+          popup_banner_cta_text: string | null
+          popup_banner_delay_seconds: number | null
+          popup_banner_description: string | null
+          popup_banner_enabled: boolean | null
+          popup_banner_image_url: string | null
+          popup_banner_title: string | null
           store_name: string
           tiktok: string | null
           updated_at: string
@@ -602,6 +643,9 @@ export type Database = {
           email?: string | null
           facebook?: string | null
           favicon_url?: string | null
+          free_shipping_enabled?: boolean | null
+          free_shipping_min_value?: number | null
+          free_shipping_regions?: string | null
           hero_button_link?: string | null
           hero_button_text?: string | null
           hero_button2_link?: string | null
@@ -612,6 +656,17 @@ export type Database = {
           id?: string
           instagram?: string | null
           logo_url?: string | null
+          notification_bar_bg_color?: string | null
+          notification_bar_enabled?: boolean | null
+          notification_bar_text?: string | null
+          notification_bar_text_color?: string | null
+          popup_banner_collect_email?: boolean | null
+          popup_banner_cta_text?: string | null
+          popup_banner_delay_seconds?: number | null
+          popup_banner_description?: string | null
+          popup_banner_enabled?: boolean | null
+          popup_banner_image_url?: string | null
+          popup_banner_title?: string | null
           store_name?: string
           tiktok?: string | null
           updated_at?: string
@@ -642,6 +697,9 @@ export type Database = {
           email?: string | null
           facebook?: string | null
           favicon_url?: string | null
+          free_shipping_enabled?: boolean | null
+          free_shipping_min_value?: number | null
+          free_shipping_regions?: string | null
           hero_button_link?: string | null
           hero_button_text?: string | null
           hero_button2_link?: string | null
@@ -652,6 +710,17 @@ export type Database = {
           id?: string
           instagram?: string | null
           logo_url?: string | null
+          notification_bar_bg_color?: string | null
+          notification_bar_enabled?: boolean | null
+          notification_bar_text?: string | null
+          notification_bar_text_color?: string | null
+          popup_banner_collect_email?: boolean | null
+          popup_banner_cta_text?: string | null
+          popup_banner_delay_seconds?: number | null
+          popup_banner_description?: string | null
+          popup_banner_enabled?: boolean | null
+          popup_banner_image_url?: string | null
+          popup_banner_title?: string | null
           store_name?: string
           tiktok?: string | null
           updated_at?: string
