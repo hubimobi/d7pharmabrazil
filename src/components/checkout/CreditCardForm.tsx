@@ -10,6 +10,13 @@ export interface CreditCardData {
   ccv: string;
 }
 
+export interface InstallmentOption {
+  n: number;
+  label: string;
+  installmentValue: number;
+  totalWithInterest: number;
+}
+
 interface CreditCardFormProps {
   card: CreditCardData;
   onChange: (card: CreditCardData) => void;
@@ -18,28 +25,43 @@ interface CreditCardFormProps {
   total: number;
 }
 
-function getInstallmentOptions(total: number) {
-  // Rules:
-  // 1-3x sem juros always available
-  // 4-6x available if total >= 200
-  // 7-12x available if total >= 500
-  // Min installment value: R$20
-  const options: { n: number; label: string; value: number }[] = [];
+function getMonthlyRate(n: number): number {
+  if (n <= 3) return 0;
+  if (n <= 6) return 0.0199; // 1.99% a.m.
+  return 0.0249; // 2.49% a.m.
+}
+
+function calcTotalWithInterest(total: number, n: number): number {
+  const rate = getMonthlyRate(n);
+  if (rate === 0) return total;
+  // Price table: PMT = PV * r / (1 - (1+r)^-n)
+  const pmt = total * rate / (1 - Math.pow(1 + rate, -n));
+  return pmt * n;
+}
+
+export function getInstallmentOptions(total: number): InstallmentOption[] {
+  const options: InstallmentOption[] = [];
 
   for (let n = 1; n <= 12; n++) {
-    const installmentValue = total / n;
-
-    // Min installment R$20
-    if (installmentValue < 20 && n > 1) break;
-
     // Tier limits
     if (n > 6 && total < 500) break;
     if (n > 3 && total < 200) break;
 
-    const noInterest = n <= 3;
-    const label = `${n}x de R$ ${installmentValue.toFixed(2).replace(".", ",")}${noInterest ? " sem juros" : ""}`;
+    const totalWithInterest = calcTotalWithInterest(total, n);
+    const installmentValue = totalWithInterest / n;
 
-    options.push({ n, label, value: installmentValue });
+    // Min installment R$20
+    if (installmentValue < 20 && n > 1) break;
+
+    const rate = getMonthlyRate(n);
+    let label: string;
+    if (rate === 0) {
+      label = `${n}x de R$ ${installmentValue.toFixed(2).replace(".", ",")} sem juros`;
+    } else {
+      label = `${n}x de R$ ${installmentValue.toFixed(2).replace(".", ",")} (${(rate * 100).toFixed(2).replace(".", ",")}% a.m.)`;
+    }
+
+    options.push({ n, label, installmentValue, totalWithInterest });
   }
 
   return options;
@@ -58,6 +80,7 @@ export default function CreditCardForm({
   };
 
   const installmentOptions = getInstallmentOptions(total);
+  const selectedOpt = installmentOptions.find((o) => o.n === installments);
 
   return (
     <div className="space-y-4 rounded-lg border border-border bg-card p-4">
@@ -130,6 +153,11 @@ export default function CreditCardForm({
             ))}
           </SelectContent>
         </Select>
+        {selectedOpt && selectedOpt.n > 3 && (
+          <p className="text-xs text-muted-foreground">
+            Total com juros: <span className="font-semibold text-foreground">R$ {selectedOpt.totalWithInterest.toFixed(2).replace(".", ",")}</span>
+          </p>
+        )}
       </div>
     </div>
   );

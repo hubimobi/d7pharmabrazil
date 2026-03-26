@@ -9,7 +9,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
-import CreditCardForm, { CreditCardData } from "@/components/checkout/CreditCardForm";
+import CreditCardForm, { CreditCardData, getInstallmentOptions } from "@/components/checkout/CreditCardForm";
 import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
 import CartRecommendations from "@/components/checkout/CartRecommendations";
@@ -150,7 +150,13 @@ const CheckoutPage = () => {
         quantity: i.quantity,
       }));
 
-      const paymentValue = form.paymentMethod === "pix" ? pixTotal : finalTotal;
+      // For card with installments > 3, use total with interest
+      let paymentValue = form.paymentMethod === "pix" ? pixTotal : finalTotal;
+      if (form.paymentMethod === "card" && installments > 3) {
+        const opts = getInstallmentOptions(finalTotal);
+        const selected = opts.find((o) => o.n === installments);
+        if (selected) paymentValue = Number(selected.totalWithInterest.toFixed(2));
+      }
 
       const payload: any = {
         customer_name: form.name,
