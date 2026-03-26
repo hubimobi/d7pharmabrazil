@@ -437,7 +437,7 @@ function ManualBlingSync() {
   );
 }
 
-
+function IntegrationLogs() {
   const [filter, setFilter] = useState("all");
 
   const { data: logs, isLoading } = useQuery({
