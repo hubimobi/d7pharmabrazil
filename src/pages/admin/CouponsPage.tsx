@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Tag, Truck, Percent, DollarSign } from "lucide-react";
+import { Plus, Pencil, Trash2, Tag, Truck, Percent, DollarSign, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -50,6 +50,28 @@ export default function CouponsPage() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Count completed orders per coupon code
+  const { data: couponOrderCounts } = useQuery({
+    queryKey: ["coupon-order-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("coupon_code, status")
+        .not("coupon_code", "is", null);
+      if (error) throw error;
+      const counts: Record<string, { total: number; paid: number }> = {};
+      (data || []).forEach((o: any) => {
+        const code = o.coupon_code;
+        if (!counts[code]) counts[code] = { total: 0, paid: 0 };
+        counts[code].total++;
+        if (o.status === "paid" || o.status === "confirmed" || o.status === "preparing" || o.status === "shipped" || o.status === "delivered") {
+          counts[code].paid++;
+        }
+      });
+      return counts;
     },
   });
 
