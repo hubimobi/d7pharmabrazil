@@ -33,7 +33,7 @@ const adminItems = [
 const repItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Meus Doutores", url: "/admin/doutores", icon: Stethoscope },
-  { title: "Comissões", url: "/admin/comissoes", icon: DollarSign },
+  { title: "Cashback", url: "/admin/comissoes", icon: DollarSign },
   { title: "Relatórios", url: "/admin/relatorios", icon: BarChart3 },
 ];
 
