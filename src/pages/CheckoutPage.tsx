@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,26 @@ const CheckoutPage = () => {
     doctor: "", paymentMethod: "pix" as "pix" | "card",
   });
   const abandonmentSaved = useRef(false);
+  const [cepLoading, setCepLoading] = useState(false);
+
+  const fetchAddress = useCallback(async (cep: string) => {
+    setCepLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setForm((prev) => ({
+          ...prev,
+          street: data.logradouro || prev.street,
+          neighborhood: data.bairro || prev.neighborhood,
+          city: data.localidade || prev.city,
+          state: data.uf || prev.state,
+          complement: data.complemento || prev.complement,
+        }));
+      }
+    } catch { /* ignore */ }
+    setCepLoading(false);
+  }, []);
 
   // Scroll to top when checkout page mounts
   useEffect(() => {
@@ -422,13 +442,31 @@ const CheckoutPage = () => {
 
                 <h2 className="text-lg font-semibold">Endereço</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div><Label>CEP *</Label><Input required value={form.cep} onChange={(e) => setForm({ ...form, cep: e.target.value })} /></div>
+                  <div>
+                    <Label>CEP *</Label>
+                    <div className="relative">
+                      <Input
+                        required
+                        value={form.cep}
+                        placeholder="00000-000"
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
+                          const formatted = raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw;
+                          setForm({ ...form, cep: formatted });
+                          if (raw.length === 8) fetchAddress(raw);
+                        }}
+                      />
+                      {cepLoading && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground animate-pulse">Buscando...</span>
+                      )}
+                    </div>
+                  </div>
                   <div><Label>Rua *</Label><Input required value={form.street} onChange={(e) => setForm({ ...form, street: e.target.value })} /></div>
-                  <div><Label>Número *</Label><Input required value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} /></div>
+                  <div><Label>Número *</Label><Input required value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} autoFocus={!!form.street && !form.number} /></div>
                   <div><Label>Complemento</Label><Input value={form.complement} onChange={(e) => setForm({ ...form, complement: e.target.value })} /></div>
                   <div><Label>Bairro *</Label><Input required value={form.neighborhood} onChange={(e) => setForm({ ...form, neighborhood: e.target.value })} /></div>
-                  <div><Label>Cidade *</Label><Input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
-                  <div><Label>Estado *</Label><Input required value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></div>
+                  <div><Label>Cidade *</Label><Input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} readOnly={!!form.city} className={form.city ? "bg-muted" : ""} /></div>
+                  <div><Label>Estado *</Label><Input required value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} readOnly={!!form.state} className={form.state ? "bg-muted" : ""} /></div>
                 </div>
 
                 <h2 className="text-lg font-semibold">Prescritor ou Médico Responsável</h2>
