@@ -29,6 +29,8 @@ interface HeroBanner {
   image_url: string | null;
   video_url: string | null;
   side_image_url: string | null;
+  bg_color: string | null;
+  bg_gradient: string | null;
   badges: Array<{ icon: string; label: string }>;
 }
 

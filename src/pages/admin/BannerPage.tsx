@@ -37,6 +37,8 @@ interface HeroBanner {
   image_url: string | null;
   video_url: string | null;
   side_image_url: string | null;
+  bg_color: string | null;
+  bg_gradient: string | null;
   badges: Array<{ icon: string; label: string }>;
 }
 
@@ -353,12 +355,14 @@ export default function BannerPage() {
                       {banner.media_type === "video" ? <Video className="h-4 w-4" /> : <Image className="h-4 w-4" />} Mídia de Fundo
                     </h3>
                     <div>
-                      <Label>Tipo</Label>
+                     <Label>Tipo</Label>
                       <Select value={banner.media_type} onValueChange={(v) => updateBanner(banner.id, "media_type", v)}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="image">Imagem</SelectItem>
                           <SelectItem value="video">Vídeo (YouTube)</SelectItem>
+                          <SelectItem value="color">Cor Sólida</SelectItem>
+                          <SelectItem value="gradient">Degradê</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -370,12 +374,55 @@ export default function BannerPage() {
                           <img src={banner.image_url} alt="Preview" className="mt-2 h-24 w-full object-cover rounded-md border" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                         )}
                       </div>
-                    ) : (
+                    ) : banner.media_type === "video" ? (
                       <div>
                         <Label>URL do YouTube</Label>
                         <Input value={banner.video_url || ""} onChange={(e) => updateBanner(banner.id, "video_url", e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />
                       </div>
-                    )}
+                    ) : banner.media_type === "color" ? (
+                      <div>
+                        <Label>Cor de Fundo</Label>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="color"
+                            value={banner.bg_color || "#1a1a2e"}
+                            onChange={(e) => updateBanner(banner.id, "bg_color", e.target.value)}
+                            className="h-10 w-14 rounded border cursor-pointer"
+                          />
+                          <Input
+                            value={banner.bg_color || "#1a1a2e"}
+                            onChange={(e) => updateBanner(banner.id, "bg_color", e.target.value)}
+                            placeholder="#1a1a2e"
+                            className="flex-1"
+                          />
+                        </div>
+                        <div className="mt-2 h-16 rounded-md border" style={{ backgroundColor: banner.bg_color || "#1a1a2e" }} />
+                      </div>
+                    ) : banner.media_type === "gradient" ? (
+                      <div className="space-y-3">
+                        <Label>Degradê (CSS Gradient)</Label>
+                        <Input
+                          value={banner.bg_gradient || "linear-gradient(135deg, #1a1a2e 0%, #2d1b69 50%, #0f3460 100%)"}
+                          onChange={(e) => updateBanner(banner.id, "bg_gradient", e.target.value)}
+                          placeholder="linear-gradient(135deg, #1a1a2e 0%, #2d1b69 50%, #0f3460 100%)"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button type="button" variant="outline" size="sm" className="text-xs" onClick={() => updateBanner(banner.id, "bg_gradient", "linear-gradient(135deg, #1a1a2e 0%, #2d1b69 50%, #0f3460 100%)")}>
+                            Roxo/Azul
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" className="text-xs" onClick={() => updateBanner(banner.id, "bg_gradient", "linear-gradient(135deg, #0c0c1d 0%, #1b4332 50%, #081c15 100%)")}>
+                            Verde Escuro
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" className="text-xs" onClick={() => updateBanner(banner.id, "bg_gradient", "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0ea5e9 100%)")}>
+                            Azul Oceano
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" className="text-xs" onClick={() => updateBanner(banner.id, "bg_gradient", "linear-gradient(135deg, #1a1a2e 0%, #831843 50%, #be185d 100%)")}>
+                            Rosa/Magenta
+                          </Button>
+                        </div>
+                        <div className="h-16 rounded-md border" style={{ background: banner.bg_gradient || "linear-gradient(135deg, #1a1a2e, #2d1b69, #0f3460)" }} />
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* Imagem Lateral */}
