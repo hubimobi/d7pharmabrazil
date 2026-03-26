@@ -35,6 +35,7 @@ serve(async (req) => {
       installment_count,
       remote_ip,
       shipping_address,
+      coupon_code,
     } = body;
 
     if (!customer_name || !customer_email || !customer_cpf || !billing_type || !value) {
@@ -163,6 +164,7 @@ serve(async (req) => {
       status: paymentData.status === "CONFIRMED" || paymentData.status === "RECEIVED" ? "paid" : "pending",
       shipping_address: shipping_address || {},
       asaas_payment_id: paymentData.id,
+      coupon_code: coupon_code || null,
     }).select("id").single();
 
     if (orderError) {

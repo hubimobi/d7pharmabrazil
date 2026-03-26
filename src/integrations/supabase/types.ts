@@ -277,6 +277,7 @@ export type Database = {
       orders: {
         Row: {
           asaas_payment_id: string | null
+          coupon_code: string | null
           created_at: string
           customer_cpf: string | null
           customer_email: string | null
@@ -293,6 +294,7 @@ export type Database = {
         }
         Insert: {
           asaas_payment_id?: string | null
+          coupon_code?: string | null
           created_at?: string
           customer_cpf?: string | null
           customer_email?: string | null
@@ -309,6 +311,7 @@ export type Database = {
         }
         Update: {
           asaas_payment_id?: string | null
+          coupon_code?: string | null
           created_at?: string
           customer_cpf?: string | null
           customer_email?: string | null

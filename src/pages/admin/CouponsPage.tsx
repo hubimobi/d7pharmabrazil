@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Tag, Truck, Percent, DollarSign } from "lucide-react";
+import { Plus, Pencil, Trash2, Tag, Truck, Percent, DollarSign, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -50,6 +50,28 @@ export default function CouponsPage() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Count completed orders per coupon code
+  const { data: couponOrderCounts } = useQuery({
+    queryKey: ["coupon-order-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("coupon_code, status")
+        .not("coupon_code", "is", null);
+      if (error) throw error;
+      const counts: Record<string, { total: number; paid: number }> = {};
+      (data || []).forEach((o: any) => {
+        const code = o.coupon_code;
+        if (!counts[code]) counts[code] = { total: 0, paid: 0 };
+        counts[code].total++;
+        if (o.status === "paid" || o.status === "confirmed" || o.status === "preparing" || o.status === "shipped" || o.status === "delivered") {
+          counts[code].paid++;
+        }
+      });
+      return counts;
     },
   });
 
@@ -292,15 +314,16 @@ export default function CouponsPage() {
                 <TableHead>Desconto</TableHead>
                 <TableHead>Regras</TableHead>
                 <TableHead>Usos</TableHead>
+                <TableHead>Compras Finalizadas</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-24">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !coupons?.length ? (
-                <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Nenhum cupom cadastrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Nenhum cupom cadastrado</TableCell></TableRow>
               ) : (
                 coupons.map((c: any) => {
                   const isExpired = c.expires_at && new Date(c.expires_at) < new Date();
@@ -339,6 +362,17 @@ export default function CouponsPage() {
                       </TableCell>
                       <TableCell className="text-sm">
                         {c.used_count}{c.max_uses ? `/${c.max_uses}` : ""}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <ShoppingCart className="h-3.5 w-3.5 text-green-600" />
+                          <span className="text-sm font-semibold text-green-700">
+                            {couponOrderCounts?.[c.code]?.paid ?? 0}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            / {couponOrderCounts?.[c.code]?.total ?? 0} pedidos
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         {isExpired ? (
