@@ -533,6 +533,7 @@ function WebchatWhatsAppSettings() {
   const [webchatPosition, setWebchatPosition] = useState("right");
   const [webchatDelay, setWebchatDelay] = useState(0);
   const [webchatShowOnScroll, setWebchatShowOnScroll] = useState(false);
+  const [hideChatOnCheckout, setHideChatOnCheckout] = useState(false);
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
   const [whatsappName, setWhatsappName] = useState("Fale com um Especialista");
   const [whatsappMessage, setWhatsappMessage] = useState("Olá! Gostaria de falar com um especialista.");
@@ -547,6 +548,7 @@ function WebchatWhatsAppSettings() {
       setWebchatPosition(settings.webchat_position || "right");
       setWebchatDelay(settings.webchat_delay_seconds || 0);
       setWebchatShowOnScroll(settings.webchat_show_on_scroll ?? false);
+      setHideChatOnCheckout((settings as any).hide_chat_on_checkout ?? false);
       setWhatsappEnabled(settings.whatsapp_button_enabled ?? true);
       setWhatsappName(settings.whatsapp_button_name || "Fale com um Especialista");
       setWhatsappMessage(settings.whatsapp_button_message || "Olá! Gostaria de falar com um especialista.");
@@ -579,6 +581,7 @@ function WebchatWhatsAppSettings() {
       webchat_position: webchatPosition,
       webchat_delay_seconds: webchatDelay,
       webchat_show_on_scroll: webchatShowOnScroll,
+      hide_chat_on_checkout: hideChatOnCheckout,
     });
   };
 
