@@ -36,7 +36,43 @@ export default function PixPaymentResult({
     setTimeout(() => setCopied(false), 3000);
   };
 
-  // Poll for payment confirmation
+  const handleConfirmed = () => {
+    setConfirmed(true);
+    toast.success("Pagamento confirmado! 🎉");
+    onConfirmed?.();
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (orderId) navigate(`/pedido-confirmado/${orderId}`);
+  };
+
+  // Realtime listener for instant webhook confirmation
+  useEffect(() => {
+    if (!orderId || confirmed) return;
+
+    const channel = supabase
+      .channel(`order-${orderId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "orders",
+          filter: `id=eq.${orderId}`,
+        },
+        (payload) => {
+          if (payload.new?.status === "paid") {
+            handleConfirmed();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [orderId, confirmed]);
+
+  // Polling fallback (every 15s)
   useEffect(() => {
     if (!paymentId || confirmed) return;
 
@@ -47,20 +83,14 @@ export default function PixPaymentResult({
         });
         if (error) return;
         if (data?.status === "CONFIRMED" || data?.status === "RECEIVED") {
-          setConfirmed(true);
-          toast.success("Pagamento confirmado! 🎉");
-          onConfirmed?.();
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          if (timeoutRef.current) clearTimeout(timeoutRef.current);
-          if (orderId) navigate(`/pedido-confirmado/${orderId}`);
+          handleConfirmed();
         }
       } catch {
         // silently retry
       }
     };
 
-    intervalRef.current = setInterval(checkStatus, 5000);
-    // Auto-stop after 15 minutes
+    intervalRef.current = setInterval(checkStatus, 15000);
     timeoutRef.current = setTimeout(() => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }, 15 * 60 * 1000);
@@ -69,7 +99,7 @@ export default function PixPaymentResult({
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [paymentId, orderId, confirmed, onConfirmed]);
+  }, [paymentId, orderId, confirmed]);
 
   if (confirmed) {
     return (

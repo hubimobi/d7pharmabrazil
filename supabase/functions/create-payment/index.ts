@@ -162,6 +162,7 @@ serve(async (req) => {
       total: Number(value),
       status: paymentData.status === "CONFIRMED" || paymentData.status === "RECEIVED" ? "paid" : "pending",
       shipping_address: shipping_address || {},
+      asaas_payment_id: paymentData.id,
     }).select("id").single();
 
     if (orderError) {
