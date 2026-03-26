@@ -1,41 +1,31 @@
 
 
-## Por que o Token do Bling Expira
+## Upload de Logo e Favicon via Arquivo
 
-O Bling usa OAuth2 com dois tokens:
-- **Access token**: expira em ~6 horas
-- **Refresh token**: expira em ~30 dias
+### Problema
+Atualmente, logo e favicon são configurados por URL. O correto é permitir upload de arquivo direto para o servidor.
 
-Atualmente, o sistema só renova o token quando um pedido é sincronizado (`bling-sync-order`). Se nenhum pedido for feito por 30 dias, o refresh token expira e é necessário reconectar manualmente.
+### Solução
 
-## Solução: Renovação Automática com Cron Job
+1. **Criar bucket de storage** `store-assets` (público) via migration
+2. **Atualizar `StoreSettingsPage.tsx`** — substituir os inputs de URL por inputs de arquivo (`<input type="file">`) com:
+   - Preview da imagem atual
+   - Botão de upload que envia para o bucket `store-assets`
+   - Após upload, salva a URL pública gerada no campo `logo_url` / `favicon_url`
+   - Botão para remover a imagem
 
-Criar uma edge function agendada (cron) que roda a cada 12 horas para renovar o token automaticamente, garantindo que ele nunca expire.
-
-### Arquivos
+### Detalhes técnicos
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/bling-refresh-token/index.ts` | Criar -- função que verifica se o token expira em menos de 24h e renova proativamente |
-| `supabase/config.toml` | Editar -- adicionar schedule cron a cada 12h |
-| `src/pages/admin/IntegrationsPage.tsx` | Editar -- mostrar quando o token foi renovado pela última vez e próxima expiração |
+| Migration SQL | Criar bucket `store-assets` com política pública de leitura e escrita para admins |
+| `src/pages/admin/StoreSettingsPage.tsx` | Substituir inputs de texto por file upload com preview |
 
-### Lógica da função cron
+### Fluxo de upload
 
-1. Buscar token mais recente da tabela `bling_tokens`
-2. Se `expires_at` é dentro das próximas 24 horas, usar o `refresh_token` para obter novos tokens
-3. Salvar os novos tokens no banco
-4. Se o refresh token falhou (expirado), logar erro para que o admin reconecte
-
-### Config do cron no `config.toml`
-
-```toml
-[functions.bling-refresh-token]
-schedule = "0 */12 * * *"
-verify_jwt = false
-```
-
-### Resolução imediata
-
-Para resolver agora: reconectar o Bling pelo painel admin em `/admin/integracoes` clicando no link de convite novamente. Após a reconexão, o cron manterá o token sempre válido.
+1. Usuário seleciona arquivo (PNG, JPG, SVG, ICO)
+2. Arquivo é enviado para `store-assets/logo.png` ou `store-assets/favicon.png`
+3. URL pública é gerada e salva em `store_settings.logo_url` / `favicon_url`
+4. Preview atualiza imediatamente
+5. Header, Footer e favicon do site usam a URL normalmente (sem mudanças nesses componentes)
 
