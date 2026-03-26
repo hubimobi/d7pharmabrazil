@@ -194,6 +194,40 @@ export default function StoreSettingsPage() {
                 </Button>
               )}
             </div>
+            {/* Horizontal Logo Upload */}
+            <div className="space-y-2">
+              <Label>Logo Horizontal <span className="text-xs text-muted-foreground">(topo do site)</span></Label>
+              <input
+                ref={horizontalLogoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUpload(file, "horizontal_logo");
+                  e.target.value = "";
+                }}
+              />
+              {form.horizontal_logo_url ? (
+                <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30">
+                  <img src={form.horizontal_logo_url} alt="Logo Horizontal" className="h-10 max-w-[160px] object-contain" />
+                  <div className="flex gap-2 ml-auto">
+                    <Button type="button" variant="outline" size="sm" onClick={() => horizontalLogoInputRef.current?.click()} disabled={uploadingHorizontalLogo}>
+                      {uploadingHorizontalLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      Trocar
+                    </Button>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => handleRemoveAsset("horizontal_logo")}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button type="button" variant="outline" className="w-full gap-2" onClick={() => horizontalLogoInputRef.current?.click()} disabled={uploadingHorizontalLogo}>
+                  {uploadingHorizontalLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Enviar Logo Horizontal
+                </Button>
+              )}
+            </div>
             {/* Favicon Upload */}
             <div className="space-y-2">
               <Label>Favicon</Label>
