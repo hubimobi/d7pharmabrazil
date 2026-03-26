@@ -72,6 +72,28 @@ export default function OrdersPage() {
     }
   };
 
+  const handleSyncAll = async () => {
+    if (!orders || orders.length === 0) return;
+    const syncableOrders = orders.filter((o) => ["paid", "shipped", "delivered"].includes(o.status));
+    if (syncableOrders.length === 0) {
+      toast.info("Nenhum pedido com status válido para sincronizar.");
+      return;
+    }
+    setSyncingAll(true);
+    let success = 0;
+    let fail = 0;
+    for (const order of syncableOrders) {
+      try {
+        const { data, error } = await supabase.functions.invoke("bling-sync-order", {
+          body: { order_id: order.id },
+        });
+        if (error || data?.error) { fail++; } else { success++; }
+      } catch { fail++; }
+    }
+    setSyncingAll(false);
+    toast.success(`Sincronização concluída: ${success} ok, ${fail} erros de ${syncableOrders.length} pedidos.`);
+  };
+
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     setUpdatingStatus(true);
     try {
