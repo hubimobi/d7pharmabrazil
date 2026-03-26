@@ -147,7 +147,9 @@ const CheckoutPage = () => {
   });
 
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-  const shipping = freeShipping ? 0 : (selectedShipping?.price ?? (subtotal >= 199 ? 0 : 19.90));
+  const freeShippingMinValue = Number(storeSettings?.free_shipping_min_value) || 499;
+  const qualifiesForFreeShipping = storeSettings?.free_shipping_enabled && subtotal >= freeShippingMinValue;
+  const shipping = freeShipping || qualifiesForFreeShipping ? 0 : (selectedShipping?.price ?? 0);
   const finalTotal = total + shipping;
   const pixTotal = finalTotal * 0.95;
 
