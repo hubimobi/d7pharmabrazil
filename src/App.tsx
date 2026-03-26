@@ -27,11 +27,13 @@ import CouponsPage from "./pages/admin/CouponsPage";
 import BannerPage from "./pages/admin/BannerPage";
 import PopupsPage from "./pages/admin/PopupsPage";
 import LeadsPage from "./pages/admin/LeadsPage";
+import PagesPage from "./pages/admin/PagesPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import CustomersPage from "./pages/admin/CustomersPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import TrackOrderPage from "./pages/TrackOrderPage";
 import PrescritorPage from "./pages/PrescritorPage";
+import StaticPage from "./pages/StaticPage";
 import RecentPurchasePopup from "./components/RecentPurchasePopup";
 import WebchatWidget from "./components/WebchatWidget";
 import PopupBanner from "./components/PopupBanner";
@@ -73,6 +75,7 @@ const App = () => (
               <Route path="/pedido-confirmado/:orderId" element={<OrderConfirmationPage />} />
               <Route path="/acompanhar-pedido" element={<TrackOrderPage />} />
               <Route path="/prescritor" element={<PrescritorPage />} />
+              <Route path="/:slug" element={<StaticPage />} />
               <Route path="/admin" element={<AdminLayout><DashboardPage /></AdminLayout>} />
               <Route path="/admin/representantes" element={<AdminLayout><RepresentativesPage /></AdminLayout>} />
               <Route path="/admin/produtos" element={<AdminLayout><AdminProductsPage /></AdminLayout>} />
@@ -86,6 +89,7 @@ const App = () => (
               <Route path="/admin/banner" element={<AdminLayout><BannerPage /></AdminLayout>} />
               <Route path="/admin/popups" element={<AdminLayout><PopupsPage /></AdminLayout>} />
               <Route path="/admin/leads" element={<AdminLayout><LeadsPage /></AdminLayout>} />
+              <Route path="/admin/paginas" element={<AdminLayout><PagesPage /></AdminLayout>} />
               <Route path="/admin/vendas" element={<AdminLayout><OrdersPage /></AdminLayout>} />
               <Route path="/admin/clientes" element={<AdminLayout><CustomersPage /></AdminLayout>} />
               <Route path="*" element={<NotFound />} />
