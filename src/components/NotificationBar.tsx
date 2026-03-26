@@ -6,7 +6,9 @@ export default function NotificationBar() {
   const { data: settings } = useStoreSettings();
   const [dismissed, setDismissed] = useState(false);
 
-  if (!settings?.notification_bar_enabled || !settings?.notification_bar_text || dismissed) return null;
+  if (!settings?.notification_bar_enabled || dismissed) return null;
+
+  const text = settings.notification_bar_text || "🚚 Frete Grátis para compras acima de R$ 499!";
 
   return (
     <div
@@ -16,7 +18,7 @@ export default function NotificationBar() {
         color: settings.notification_bar_text_color || "#ffffff",
       }}
     >
-      <span className="text-center">{settings.notification_bar_text}</span>
+      <span className="text-center">{text}</span>
       <button
         onClick={() => setDismissed(true)}
         className="absolute right-3 top-1/2 -translate-y-1/2 opacity-70 hover:opacity-100 transition-opacity"

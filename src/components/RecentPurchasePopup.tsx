@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Star, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface RecentOrder {
@@ -18,11 +18,22 @@ const CITIES = [
   "Recife/PE", "Goiânia/GO", "Manaus/AM", "Campinas/SP",
 ];
 
+// Fallback fake purchases when no real orders exist
+const FALLBACK_PURCHASES: RecentOrder[] = [
+  { customer_name: "Ana C.", items: [{ name: "TCF-4 Premium" }], created_at: new Date(Date.now() - 3 * 60000).toISOString() },
+  { customer_name: "Marcos S.", items: [{ name: "Vitamina D3 10.000UI" }], created_at: new Date(Date.now() - 8 * 60000).toISOString() },
+  { customer_name: "Juliana R.", items: [{ name: "Ômega 3 Ultra" }], created_at: new Date(Date.now() - 15 * 60000).toISOString() },
+  { customer_name: "Carlos M.", items: [{ name: "Magnésio Quelado" }], created_at: new Date(Date.now() - 22 * 60000).toISOString() },
+  { customer_name: "Fernanda L.", items: [{ name: "Complexo B Premium" }], created_at: new Date(Date.now() - 35 * 60000).toISOString() },
+];
+
 export default function RecentPurchasePopup() {
   const [visible, setVisible] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith("/admin");
 
   const { data: orders } = useQuery({
     queryKey: ["recent-orders-popup"],
@@ -46,9 +57,11 @@ export default function RecentPurchasePopup() {
     },
     staleTime: 5 * 60 * 1000,
   });
+  // Merge real orders with fallbacks to always have at least 5
+  const displayOrders = [...(orders || []), ...FALLBACK_PURCHASES].slice(0, Math.max(5, orders?.length || 0));
 
   useEffect(() => {
-    if (!orders?.length || dismissed) return;
+    if (!displayOrders.length || dismissed || isAdmin) return;
 
     // Show first popup after 8 seconds
     const initialTimer = setTimeout(() => {
@@ -56,19 +69,17 @@ export default function RecentPurchasePopup() {
     }, 8000);
 
     return () => clearTimeout(initialTimer);
-  }, [orders, dismissed]);
+  }, [displayOrders.length, dismissed, isAdmin]);
 
   useEffect(() => {
-    if (!visible || !orders?.length || dismissed) return;
+    if (!visible || !displayOrders.length || dismissed || isAdmin) return;
 
-    // Auto-hide after 6 seconds
     const hideTimer = setTimeout(() => {
       setVisible(false);
     }, 6000);
 
-    // Show next one after 25 seconds
     const nextTimer = setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % (orders?.length || 1));
+      setCurrentIndex((prev) => (prev + 1) % displayOrders.length);
       setVisible(true);
     }, 25000);
 
@@ -76,11 +87,11 @@ export default function RecentPurchasePopup() {
       clearTimeout(hideTimer);
       clearTimeout(nextTimer);
     };
-  }, [visible, currentIndex, orders, dismissed]);
+  }, [visible, currentIndex, displayOrders.length, dismissed, isAdmin]);
 
-  if (!orders?.length || dismissed) return null;
+  if (!displayOrders.length || dismissed || isAdmin) return null;
 
-  const order = orders[currentIndex % orders.length];
+  const order = displayOrders[currentIndex % displayOrders.length];
   const firstName = order.customer_name?.split(" ")[0] || "Cliente";
   const city = CITIES[currentIndex % CITIES.length];
   const orderItems = Array.isArray(order.items) ? order.items : [];
