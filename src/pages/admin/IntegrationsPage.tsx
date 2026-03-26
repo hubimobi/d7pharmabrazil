@@ -371,6 +371,9 @@ export default function IntegrationsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Meta / Instagram Shopping */}
+        <MetaFeedCard />
       </div>
 
       {/* Manual Bling Sync */}
