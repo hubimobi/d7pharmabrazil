@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Star, ShoppingCart, Zap } from "lucide-react";
+import { Star, ShoppingCart, Zap, Eye } from "lucide-react";
 import CountdownTimer from "@/components/CountdownTimer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,13 +24,18 @@ const ProductCard = ({ product }: { product: Product }) => {
           Últimas {product.stock} unidades!
         </span>
       )}
-      <Link to={`/produto/${product.slug}`} className="overflow-hidden bg-muted">
+      <Link to={`/produto/${product.slug}`} className="relative block aspect-square overflow-hidden bg-muted">
         <img
           src={product.image}
           alt={product.name}
-          className="mx-auto h-56 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+          <span className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-foreground shadow">
+            <Eye className="h-4 w-4" /> Ver Mais
+          </span>
+        </div>
       </Link>
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-center gap-1">
