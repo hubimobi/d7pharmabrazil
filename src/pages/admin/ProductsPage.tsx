@@ -22,6 +22,7 @@ interface ProdForm {
   weight: string; height: string; width: string; length: string;
   group_name: string; manufacturer: string;
   sku: string; ncm: string; gtin: string; unit: string;
+  show_countdown: boolean;
 }
 
 const emptyForm: ProdForm = {
@@ -31,6 +32,7 @@ const emptyForm: ProdForm = {
   weight: "0.3", height: "5", width: "15", length: "20",
   group_name: "", manufacturer: "",
   sku: "", ncm: "", gtin: "", unit: "UN",
+  show_countdown: true,
 };
 
 interface Testimonial {
@@ -91,6 +93,7 @@ export default function ProductsPage() {
         short_description: form.short_description, description: form.description,
         price: parseFloat(form.price), original_price: parseFloat(form.original_price),
         badge: form.badge || null, stock: parseInt(form.stock) || 0, benefits,
+        show_countdown: form.show_countdown,
         weight: parseFloat(form.weight) || 0.3,
         height: parseFloat(form.height) || 5,
         width: parseFloat(form.width) || 15,
@@ -172,6 +175,7 @@ export default function ProductsPage() {
       ncm: (p as any).ncm ?? "",
       gtin: (p as any).gtin ?? "",
       unit: (p as any).unit ?? "UN",
+      show_countdown: (p as any).show_countdown !== false,
     });
 
     // Load testimonials
@@ -258,6 +262,10 @@ export default function ProductsPage() {
                     <div className="space-y-2"><Label>Estoque</Label><Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
                   </div>
                   <div className="space-y-2"><Label>Badge</Label><Input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="ex: Mais Vendido" /></div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <input type="checkbox" id="show_countdown" checked={form.show_countdown} onChange={(e) => setForm({ ...form, show_countdown: e.target.checked })} className="h-4 w-4 rounded border-border" />
+                    <Label htmlFor="show_countdown">Exibir contador de promoção</Label>
+                  </div>
                   <div className="space-y-2"><Label>Benefícios (um por linha)</Label><Textarea value={form.benefits} onChange={(e) => setForm({ ...form, benefits: e.target.value })} rows={4} /></div>
                 </TabsContent>
 
