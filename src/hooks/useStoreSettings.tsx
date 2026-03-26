@@ -43,7 +43,7 @@ export interface StoreSettings {
   webchat_position: string;
   webchat_delay_seconds: number;
   webchat_show_on_scroll: boolean;
-  // Hero media
+  // Hero media (legacy, kept for compatibility)
   hero_media_type: string;
   hero_video_url: string;
   hero_badges: HeroBadge[];
@@ -51,6 +51,10 @@ export interface StoreSettings {
   hero_btn1_hover_color: string;
   hero_btn2_bg_color: string;
   hero_btn2_hover_color: string;
+  // Carousel settings
+  hero_carousel_enabled: boolean;
+  hero_carousel_effect: string;
+  hero_carousel_interval: number;
   // Shipping
   free_shipping_enabled: boolean;
   free_shipping_min_value: number;
