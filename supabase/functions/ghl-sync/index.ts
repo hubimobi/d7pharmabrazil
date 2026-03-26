@@ -184,6 +184,11 @@ serve(async (req) => {
       );
     }
 
+    // Supabase client for logging
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
     // Build tags
     const tags: string[] = [...(payload.tags || [])];
     if (payload.items?.length) {
@@ -203,6 +208,13 @@ serve(async (req) => {
       tags
     );
 
+    await supabaseAdmin.from("integration_logs").insert({
+      integration: "ghl",
+      action: "contact_synced",
+      status: "success",
+      details: `Contato sincronizado: ${payload.customer_name} (${payload.customer_email}). Tags: ${tags.join(", ")}`,
+    });
+
     let opportunity = null;
 
     // 2. Create opportunity if order data provided
@@ -216,8 +228,23 @@ serve(async (req) => {
           payload.order_total,
           payload.items
         );
+
+        if (opportunity) {
+          await supabaseAdmin.from("integration_logs").insert({
+            integration: "ghl",
+            action: "opportunity_created",
+            status: "success",
+            details: `Oportunidade criada para pedido #${payload.order_id.slice(0, 8)}, valor R$ ${payload.order_total.toFixed(2)}`,
+          });
+        }
       } catch (err) {
         console.error("Opportunity creation failed (non-fatal):", err);
+        await supabaseAdmin.from("integration_logs").insert({
+          integration: "ghl",
+          action: "opportunity_error",
+          status: "error",
+          details: `Erro ao criar oportunidade: ${err.message}`,
+        });
       }
     }
 
@@ -232,6 +259,19 @@ serve(async (req) => {
     );
   } catch (err) {
     console.error("ghl-sync error:", err);
+
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const sb = createClient(supabaseUrl, supabaseKey);
+      await sb.from("integration_logs").insert({
+        integration: "ghl",
+        action: "sync_error",
+        status: "error",
+        details: err.message,
+      });
+    } catch (_) {}
+
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

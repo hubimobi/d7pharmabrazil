@@ -171,8 +171,23 @@ serve(async (req) => {
       console.error("Order save error:", orderError);
     }
 
+    // Log payment created
+    await supabaseAdmin.from("integration_logs").insert({
+      integration: "asaas",
+      action: "payment_created",
+      status: "success",
+      details: `Pagamento ${billing_type} criado. Asaas ID: ${paymentData.id}, Status: ${paymentData.status}, Pedido: ${order?.id || "erro ao salvar"}, Valor: R$ ${Number(value).toFixed(2)}`,
+    });
+
     // If payment was instantly confirmed (credit card), sync with Bling
     if (order?.id && (paymentData.status === "CONFIRMED" || paymentData.status === "RECEIVED")) {
+      await supabaseAdmin.from("integration_logs").insert({
+        integration: "asaas",
+        action: "payment_instant_confirmed",
+        status: "success",
+        details: `Cartão aprovado instantaneamente. Pedido ${order.id} marcado como "paid".`,
+      });
+
       try {
         await fetch(`${supabaseUrl}/functions/v1/bling-sync-order`, {
           method: "POST",
@@ -202,6 +217,20 @@ serve(async (req) => {
   } catch (error: unknown) {
     console.error("Payment error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
+
+    // Try to log the error
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const sb = createClient(supabaseUrl, supabaseKey);
+      await sb.from("integration_logs").insert({
+        integration: "asaas",
+        action: "payment_creation_error",
+        status: "error",
+        details: message,
+      });
+    } catch (_) {}
+
     return new Response(
       JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

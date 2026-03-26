@@ -28,6 +28,10 @@ serve(async (req) => {
       throw new Error("ASAAS_API_KEY not configured");
     }
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     // Query Asaas for payment status
     const res = await fetch(`${ASAAS_API}/payments/${payment_id}`, {
       headers: { access_token: asaasKey },
@@ -35,6 +39,12 @@ serve(async (req) => {
 
     if (!res.ok) {
       const errorText = await res.text();
+      await supabase.from("integration_logs").insert({
+        integration: "asaas",
+        action: "check_payment_status",
+        status: "error",
+        details: `Erro ao consultar pagamento ${payment_id}: ${errorText}`,
+      });
       throw new Error(`Asaas API error [${res.status}]: ${errorText}`);
     }
 
@@ -43,10 +53,6 @@ serve(async (req) => {
 
     // If confirmed/received, update order status in DB and sync with Bling
     if (order_id && (status === "CONFIRMED" || status === "RECEIVED")) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
       const { data: updatedOrder } = await supabase
         .from("orders")
         .update({ status: "paid" })
@@ -57,6 +63,13 @@ serve(async (req) => {
 
       // If order was actually updated (was pending), sync with Bling
       if (updatedOrder) {
+        await supabase.from("integration_logs").insert({
+          integration: "asaas",
+          action: "payment_confirmed_polling",
+          status: "success",
+          details: `Pagamento ${payment_id} confirmado via polling. Pedido ${order_id} atualizado para "paid".`,
+        });
+
         try {
           await fetch(`${supabaseUrl}/functions/v1/bling-sync-order`, {
             method: "POST",
@@ -78,6 +91,19 @@ serve(async (req) => {
     });
   } catch (err) {
     console.error("check-payment-status error:", err);
+
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const sb = createClient(supabaseUrl, supabaseKey);
+      await sb.from("integration_logs").insert({
+        integration: "asaas",
+        action: "check_payment_error",
+        status: "error",
+        details: err.message,
+      });
+    } catch (_) {}
+
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
