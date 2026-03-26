@@ -98,7 +98,11 @@ export default function DoctorsPage() {
             discount_type: "percent",
             discount_value: 10,
             active: true,
-          });
+            doctor_id: inserted.id,
+            representative_id: repIdVal,
+          } as any);
+
+          return couponCode;
         }
 
         // Create auth user for prescriber if email provided
@@ -107,13 +111,18 @@ export default function DoctorsPage() {
           // For now just set up the record
         }
       }
+      return null;
     },
-    onSuccess: () => {
+    onSuccess: (couponCode) => {
       qc.invalidateQueries({ queryKey: ["doctors"] });
       setOpen(false);
+      if (couponCode && !editId) {
+        setSuccessCoupon({ code: couponCode, name: form.name });
+      } else {
+        toast({ title: editId ? "Prescritor atualizado" : "Prescritor cadastrado!" });
+      }
       setForm(emptyForm);
       setEditId(null);
-      toast({ title: editId ? "Prescritor atualizado" : "Prescritor cadastrado com cupom automático!" });
     },
     onError: (err: any) => toast({ title: "Erro ao salvar", description: err?.message, variant: "destructive" }),
   });
