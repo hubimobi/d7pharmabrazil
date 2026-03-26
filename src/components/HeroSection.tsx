@@ -4,7 +4,6 @@ import { Shield, Truck, Lock, Award, FlaskConical, ShieldCheck, TrendingUp, Star
 import { Button } from "@/components/ui/button";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { useMemo, useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
