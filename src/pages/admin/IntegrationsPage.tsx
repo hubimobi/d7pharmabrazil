@@ -373,6 +373,9 @@ export default function IntegrationsPage() {
         </Card>
       </div>
 
+      {/* Manual Bling Sync */}
+      <ManualBlingSync />
+
       {/* Webchat & WhatsApp Section */}
       <WebchatWhatsAppSettings />
 
