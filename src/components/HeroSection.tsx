@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Truck, Lock, Award, FlaskConical, ShieldCheck, TrendingUp, Star, Heart, Zap, CheckCircle } from "lucide-react";
+import { Shield, Truck, Lock, Award, FlaskConical, ShieldCheck, TrendingUp, Star, Heart, Zap, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
-import heroBg from "@/assets/hero-bg.jpg";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -109,18 +109,15 @@ const HeroSection = () => {
     return { backgroundColor: banner.btn2_bg_color, borderColor: banner.btn2_bg_color, color: "#ffffff" } as React.CSSProperties;
   }, [banner?.btn2_bg_color]);
 
-  // Fallback if no banners
+  // Fallback: loading state
   if (!banner) {
     return (
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0">
-          <img src={heroBg} alt="Banner" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/90 via-primary/70 to-primary/40" />
-        </div>
-        <div className="container relative py-20 md:py-32">
-          <h1 className="text-3xl font-extrabold leading-tight text-primary-foreground md:text-5xl">
-            {settings?.hero_title || "Suplementos de Alta Performance"}
-          </h1>
+      <section className="relative overflow-hidden bg-primary/90">
+        <div className="container relative py-20 md:py-32 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3 text-primary-foreground">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="text-sm font-medium">Carregando...</span>
+          </div>
         </div>
       </section>
     );
@@ -128,7 +125,7 @@ const HeroSection = () => {
 
   const variants = effectVariants[effect as keyof typeof effectVariants] || effectVariants.fade;
   const youtubeId = banner.media_type === "video" && banner.video_url ? extractYoutubeId(banner.video_url) : null;
-  const bgImage = banner.image_url || heroBg;
+  const bgImage = banner.image_url || "";
   const badges = (banner.badges || []).slice(0, 3);
 
   return (
