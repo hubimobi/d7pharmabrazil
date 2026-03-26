@@ -431,3 +431,73 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+function AdminShippingSimulator({ form }: { form: ProdForm }) {
+  const [cep, setCep] = useState("");
+  const [qty, setQty] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<any[]>([]);
+
+  const formatCep = (v: string) => {
+    const d = v.replace(/\D/g, "").slice(0, 8);
+    return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+  };
+
+  const simulate = async () => {
+    const clean = cep.replace(/\D/g, "");
+    if (clean.length !== 8) return;
+    setLoading(true);
+    setResults([]);
+    try {
+      const { data, error } = await supabase.functions.invoke("calculate-shipping", {
+        body: {
+          cep_destino: clean,
+          produtos: [{
+            price: parseFloat(form.price) || 0,
+            quantity: qty,
+            weight: parseFloat(form.weight) || 0.3,
+            height: parseFloat(form.height) || 5,
+            width: parseFloat(form.width) || 15,
+            length: parseFloat(form.length) || 20,
+          }],
+        },
+      });
+      if (!error && data?.options) setResults(data.options);
+    } catch { /* ignore */ }
+    setLoading(false);
+  };
+
+  return (
+    <div className="mt-4 rounded-lg border border-dashed border-border p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Truck className="h-4 w-4 text-primary" />
+        <span className="text-sm font-semibold">Simular Frete</span>
+      </div>
+      <div className="flex items-end gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs">CEP destino</Label>
+          <Input placeholder="00000-000" value={cep} onChange={(e) => setCep(formatCep(e.target.value))} className="w-36" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Qtd</Label>
+          <Input type="number" min={1} max={10} value={qty} onChange={(e) => setQty(Number(e.target.value) || 1)} className="w-20" />
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={simulate} disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Calcular"}
+        </Button>
+      </div>
+      {results.length > 0 && (
+        <div className="space-y-1">
+          {results.map((r: any) => (
+            <div key={r.id} className="flex items-center justify-between rounded border border-border px-3 py-2 text-sm">
+              <span>{r.company} — {r.name}</span>
+              <span className="font-semibold text-primary">
+                {r.price === 0 ? "Grátis" : `R$ ${r.price.toFixed(2).replace(".", ",")}`} · {r.delivery_time}d
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
