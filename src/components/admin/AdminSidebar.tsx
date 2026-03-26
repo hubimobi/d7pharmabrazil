@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Stethoscope, BarChart3, LogOut, Package, DollarSign, Store, Plug, ShoppingCart, Tag, ImageIcon, Megaphone } from "lucide-react";
+import { LayoutDashboard, Users, Stethoscope, BarChart3, LogOut, Package, DollarSign, Store, Plug, ShoppingCart, Tag, ImageIcon, Megaphone, ShoppingBag, Contact } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 
 const adminItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
+  { title: "Vendas", url: "/admin/vendas", icon: ShoppingBag },
+  { title: "Clientes", url: "/admin/clientes", icon: Contact },
   { title: "Produtos", url: "/admin/produtos", icon: Package },
   { title: "Representantes", url: "/admin/representantes", icon: Users },
   { title: "Prescritores", url: "/admin/prescritores", icon: Stethoscope },
