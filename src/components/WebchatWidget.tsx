@@ -4,7 +4,11 @@ import { useStoreSettings } from "@/hooks/useStoreSettings";
 
 export default function WebchatWidget() {
   const { data: settings } = useStoreSettings();
+  const location = useLocation();
   const [visible, setVisible] = useState(false);
+
+  const isCheckout = location.pathname === "/checkout";
+  const hideOnCheckout = settings?.hide_chat_on_checkout && isCheckout;
 
   const delaySeconds = settings?.webchat_delay_seconds || 0;
   const showOnScroll = settings?.webchat_show_on_scroll ?? false;
