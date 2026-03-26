@@ -141,7 +141,9 @@ const ProductDetail = () => {
                 <span className="text-lg text-muted-foreground line-through">R$ {product.originalPrice.toFixed(2).replace(".", ",")}</span>
                 <Badge variant="secondary" className="bg-success/10 text-success">-{discountPercent}%</Badge>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">ou 3x de R$ {(product.price / 3).toFixed(2).replace(".", ",")} sem juros</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                ou até {product.price >= 500 ? "12" : product.price >= 200 ? "6" : "3"}x de R$ {(product.price / (product.price >= 500 ? 12 : product.price >= 200 ? 6 : 3)).toFixed(2).replace(".", ",")} {(product.price >= 500 ? 12 : product.price >= 200 ? 6 : 3) <= 3 ? "sem juros" : ""}
+              </p>
               <p className="mt-1 text-sm font-medium text-success">💰 R$ {(product.price * 0.95).toFixed(2).replace(".", ",")} no Pix (5% off)</p>
             </div>
 
