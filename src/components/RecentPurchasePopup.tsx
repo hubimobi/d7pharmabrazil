@@ -32,6 +32,8 @@ export default function RecentPurchasePopup() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith("/admin");
 
   const { data: orders } = useQuery({
     queryKey: ["recent-orders-popup"],
