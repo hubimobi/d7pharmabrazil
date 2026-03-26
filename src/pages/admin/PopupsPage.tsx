@@ -78,25 +78,8 @@ export default function PopupsPage() {
     });
   };
 
-  const exportCSV = () => {
-    if (!leads?.length) return;
-    const rows = [
-      ["Nome", "E-mail", "Fonte", "Data"],
-      ...leads.map((l) => [
-        l.name || "",
-        l.email,
-        l.source || "",
-        new Date(l.created_at || "").toLocaleDateString("pt-BR"),
-      ]),
-    ];
-    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "leads-popup.csv";
-    a.click();
-  };
+
+
 
   if (loadingSettings || !form) {
     return (
