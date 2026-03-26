@@ -432,7 +432,7 @@ const CheckoutPage = () => {
 
                 <CartRecommendations cartItems={items} />
 
-                <Button className="w-full bg-primary hover:bg-primary/90" size="lg" onClick={() => setStep(2)}>Passo 2 — Seus Dados</Button>
+                <Button className="w-full bg-primary hover:bg-primary/90" size="lg" onClick={() => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Passo 2 — Seus Dados</Button>
               </div>
             )}
 
@@ -573,7 +573,7 @@ const CheckoutPage = () => {
                 <div className="flex gap-3">
                   <Button type="button" variant="outline" onClick={() => setStep(1)}>Voltar</Button>
                   <Button type="submit" className="flex-1 bg-success hover:bg-success/90 text-success-foreground" size="lg" disabled={isSubmitting}>
-                    {isSubmitting ? "Processando pagamento..." : form.paymentMethod === "pix" ? `💰 Pagar via Pix — R$ ${pixTotal.toFixed(2).replace(".", ",")}` : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
+                    {isSubmitting ? "Processando pagamento..." : form.paymentMethod === "pix" ? `💰 Pagar via Pix — De R$ ${finalTotal.toFixed(2).replace(".", ",")} por R$ ${pixTotal.toFixed(2).replace(".", ",")}` : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
                   </Button>
                 </div>
               </form>
