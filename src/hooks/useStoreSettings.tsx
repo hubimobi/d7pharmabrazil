@@ -1,6 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface HeroBadge {
+  icon: string;
+  label: string;
+}
+
 export interface StoreSettings {
   id: string;
   store_name: string;
@@ -38,6 +43,14 @@ export interface StoreSettings {
   webchat_position: string;
   webchat_delay_seconds: number;
   webchat_show_on_scroll: boolean;
+  // Hero media
+  hero_media_type: string;
+  hero_video_url: string;
+  hero_badges: HeroBadge[];
+  hero_btn1_bg_color: string;
+  hero_btn1_hover_color: string;
+  hero_btn2_bg_color: string;
+  hero_btn2_hover_color: string;
   // Shipping
   free_shipping_enabled: boolean;
   free_shipping_min_value: number;

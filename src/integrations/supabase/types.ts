@@ -604,13 +604,20 @@ export type Database = {
           free_shipping_enabled: boolean | null
           free_shipping_min_value: number | null
           free_shipping_regions: string | null
+          hero_badges: Json | null
+          hero_btn1_bg_color: string | null
+          hero_btn1_hover_color: string | null
+          hero_btn2_bg_color: string | null
+          hero_btn2_hover_color: string | null
           hero_button_link: string | null
           hero_button_text: string | null
           hero_button2_link: string | null
           hero_button2_text: string | null
           hero_image_url: string | null
+          hero_media_type: string | null
           hero_subtitle: string | null
           hero_title: string | null
+          hero_video_url: string | null
           id: string
           instagram: string | null
           logo_url: string | null
@@ -658,13 +665,20 @@ export type Database = {
           free_shipping_enabled?: boolean | null
           free_shipping_min_value?: number | null
           free_shipping_regions?: string | null
+          hero_badges?: Json | null
+          hero_btn1_bg_color?: string | null
+          hero_btn1_hover_color?: string | null
+          hero_btn2_bg_color?: string | null
+          hero_btn2_hover_color?: string | null
           hero_button_link?: string | null
           hero_button_text?: string | null
           hero_button2_link?: string | null
           hero_button2_text?: string | null
           hero_image_url?: string | null
+          hero_media_type?: string | null
           hero_subtitle?: string | null
           hero_title?: string | null
+          hero_video_url?: string | null
           id?: string
           instagram?: string | null
           logo_url?: string | null
@@ -712,13 +726,20 @@ export type Database = {
           free_shipping_enabled?: boolean | null
           free_shipping_min_value?: number | null
           free_shipping_regions?: string | null
+          hero_badges?: Json | null
+          hero_btn1_bg_color?: string | null
+          hero_btn1_hover_color?: string | null
+          hero_btn2_bg_color?: string | null
+          hero_btn2_hover_color?: string | null
           hero_button_link?: string | null
           hero_button_text?: string | null
           hero_button2_link?: string | null
           hero_button2_text?: string | null
           hero_image_url?: string | null
+          hero_media_type?: string | null
           hero_subtitle?: string | null
           hero_title?: string | null
+          hero_video_url?: string | null
           id?: string
           instagram?: string | null
           logo_url?: string | null
