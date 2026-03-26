@@ -33,8 +33,10 @@ export default function StoreSettingsPage() {
   const { data: allProducts } = useProducts();
   const [form, setForm] = useState<Partial<StoreSettings> | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingHorizontalLogo, setUploadingHorizontalLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const horizontalLogoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
 
   const { data: settings, isLoading } = useQuery({
