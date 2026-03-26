@@ -153,6 +153,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         coupon_id: data.id,
       });
 
+      // Reset combo discount — no stacking discounts
+      setComboDiscount(0);
+
       // DO NOT increment used_count here - will be done after payment confirmation
       toast.success("Cupom aplicado com sucesso!");
       return true;
