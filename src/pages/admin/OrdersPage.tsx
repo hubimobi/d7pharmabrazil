@@ -217,6 +217,8 @@ export default function OrdersPage() {
               <TableRow>
                 <TableHead>Pedido</TableHead>
                 <TableHead>Cliente</TableHead>
+                <TableHead>Fatura Asaas</TableHead>
+                <TableHead>Pedido Bling</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Data</TableHead>
