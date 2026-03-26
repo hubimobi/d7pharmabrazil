@@ -64,7 +64,6 @@ const CheckoutPage = () => {
           neighborhood: data.bairro || prev.neighborhood,
           city: data.localidade || prev.city,
           state: data.uf || prev.state,
-          complement: data.complemento || prev.complement,
         }));
       }
     } catch { /* ignore */ }
@@ -417,7 +416,7 @@ const CheckoutPage = () => {
                 <div className="flex gap-2">
                   <Input placeholder="Cupom de desconto" value={couponInput} onChange={(e) => setCouponInput(e.target.value)} className="max-w-xs" />
                   <Button variant="outline" size="sm" className="gap-1" onClick={() => applyCoupon(couponInput)}>
-                    <Tag className="h-4 w-4" /> Aplicar
+                    <Tag className="h-4 w-4" /> {coupon ? "Reaplicar" : "Aplicar"}
                   </Button>
                 </div>
 
@@ -596,7 +595,7 @@ const CheckoutPage = () => {
                   {discount > 0 && (
                     <div className="flex justify-between text-success"><span>Desconto ({coupon})</span><span>-R$ {discount.toFixed(2).replace(".", ",")}</span></div>
                   )}
-                  {comboDiscount > 0 && (
+                  {comboDiscount > 0 && !coupon && (
                     <div className="flex justify-between text-success"><span>Desconto Combo</span><span>-R$ {comboDiscount.toFixed(2).replace(".", ",")}</span></div>
                   )}
                   <div className="flex justify-between">
@@ -617,7 +616,10 @@ const CheckoutPage = () => {
                     <span className="text-primary">R$ {finalTotal.toFixed(2).replace(".", ",")}</span>
                   </div>
                   {form.paymentMethod === "pix" && (
-                    <p className="text-xs text-success">No Pix: R$ {pixTotal.toFixed(2).replace(".", ",")}</p>
+                    <div className="mt-2 rounded-lg bg-success/10 border border-success/30 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Pagando no Pix você economiza 5%!</p>
+                      <p className="text-xl font-bold text-success">💰 R$ {pixTotal.toFixed(2).replace(".", ",")}</p>
+                    </div>
                   )}
                 </div>
               </div>
