@@ -140,7 +140,11 @@ const HeroSection = () => {
           transition={variants.transition}
           className="absolute inset-0"
         >
-          {youtubeId ? (
+          {banner.media_type === "color" ? (
+            <div className="absolute inset-0" style={{ backgroundColor: banner.bg_color || "#1a1a2e" }} />
+          ) : banner.media_type === "gradient" ? (
+            <div className="absolute inset-0" style={{ background: banner.bg_gradient || "linear-gradient(135deg, #1a1a2e, #2d1b69, #0f3460)" }} />
+          ) : youtubeId ? (
             <>
               <iframe
                 src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1`}
