@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, CheckCircle, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface DocForm {
@@ -31,6 +31,7 @@ export default function DoctorsPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<DocForm>(emptyForm);
+  const [successCoupon, setSuccessCoupon] = useState<{ code: string; name: string } | null>(null);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const qc = useQueryClient();
