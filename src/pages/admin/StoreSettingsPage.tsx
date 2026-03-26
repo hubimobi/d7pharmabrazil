@@ -104,6 +104,9 @@ export default function StoreSettingsPage() {
     mutation.mutate(values);
   };
 
+  return (
+    <div>
+      <div className="mb-6 flex items-center gap-3">
         <Store className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold">Configurações da Loja</h1>
       </div>
