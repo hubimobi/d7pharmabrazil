@@ -1,10 +1,10 @@
-import { ReactNode, useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { ReactNode, useEffect, useState, useMemo } from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "./AdminSidebar";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, X } from "lucide-react";
+import { Bell, X, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -21,9 +21,40 @@ interface AdminNotification {
   created_at: string;
 }
 
+const routeTitleMap: Record<string, string> = {
+  "/admin": "Dashboard",
+  "/admin/vendas": "Vendas",
+  "/admin/clientes": "Clientes",
+  "/admin/produtos": "Produtos",
+  "/admin/representantes": "Representantes",
+  "/admin/prescritores": "Prescritores",
+  "/admin/comissoes": "Cashback",
+  "/admin/recuperacao": "Recuperação",
+  "/admin/cupons": "Cupons",
+  "/admin/relatorios": "Relatórios",
+  "/admin/banner": "Banner",
+  "/admin/popups": "PopUps & Barra",
+  "/admin/leads": "Leads",
+  "/admin/paginas": "Páginas",
+  "/admin/configuracoes": "Configurações",
+  "/admin/integracoes": "Integrações",
+};
+
 export function AdminLayout({ children }: { children: ReactNode }) {
   const { user, loading, isAdmin, isRepresentative } = useAuth();
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const location = useLocation();
+
+  const pageTitle = useMemo(() => {
+    return routeTitleMap[location.pathname] || "Painel";
+  }, [location.pathname]);
+
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Bom dia";
+    if (h < 18) return "Boa tarde";
+    return "Boa noite";
+  }, []);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -71,57 +102,69 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       <div className="min-h-screen flex w-full">
         <AdminSidebar />
         <div className="flex-1 flex flex-col">
-          <header className="h-14 flex items-center border-b px-4 bg-background justify-between">
-            <div className="flex items-center">
-              <SidebarTrigger className="mr-4" />
-              <h1 className="text-lg font-semibold text-foreground">Painel D7 Pharma</h1>
+          <header className="h-14 flex items-center shadow-sm px-4 bg-background justify-between sticky top-0 z-10">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger />
+              <div className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span>D7 Pharma</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+                <span className="text-foreground font-medium">{pageTitle}</span>
+              </div>
+              <span className="sm:hidden text-sm font-semibold text-foreground">{pageTitle}</span>
             </div>
-            {isAdmin && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="end">
-                  <div className="p-3 border-b font-semibold text-sm">Notificações</div>
-                  {notifications.length === 0 ? (
-                    <div className="p-4 text-sm text-muted-foreground text-center">
-                      Nenhuma notificação
-                    </div>
-                  ) : (
-                    <div className="max-h-64 overflow-auto">
-                      {notifications.map((n) => (
-                        <div key={n.id} className="p-3 border-b last:border-0 flex gap-2">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{n.title}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {new Date(n.created_at).toLocaleString("pt-BR")}
-                            </p>
+
+            <div className="flex items-center gap-3">
+              <span className="hidden md:block text-sm text-muted-foreground">
+                {greeting}{user?.email ? `, ${user.email.split("@")[0]}` : ""}
+              </span>
+
+              {isAdmin && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative h-9 w-9">
+                      <Bell className="h-4 w-4" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="end">
+                    <div className="p-3 border-b font-semibold text-sm">Notificações</div>
+                    {notifications.length === 0 ? (
+                      <div className="p-4 text-sm text-muted-foreground text-center">
+                        Nenhuma notificação
+                      </div>
+                    ) : (
+                      <div className="max-h-64 overflow-auto">
+                        {notifications.map((n) => (
+                          <div key={n.id} className="p-3 border-b last:border-0 flex gap-2">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{n.title}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(n.created_at).toLocaleString("pt-BR")}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 shrink-0"
+                              onClick={() => markAsRead(n.id)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 shrink-0"
-                            onClick={() => markAsRead(n.id)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </PopoverContent>
-              </Popover>
-            )}
+                        ))}
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
           </header>
-          <main className="flex-1 p-4 md:p-6 overflow-auto bg-muted/20">
+          <main className="flex-1 p-4 md:p-6 overflow-auto bg-muted/30">
             {children}
           </main>
         </div>
