@@ -432,7 +432,7 @@ const CheckoutPage = () => {
 
                 <CartRecommendations cartItems={items} />
 
-                <Button className="w-full" size="lg" onClick={() => setStep(2)}>Continuar para Dados</Button>
+                <Button className="w-full bg-primary hover:bg-primary/90" size="lg" onClick={() => setStep(2)}>Passo 2 — Seus Dados</Button>
               </div>
             )}
 
@@ -572,8 +572,8 @@ const CheckoutPage = () => {
 
                 <div className="flex gap-3">
                   <Button type="button" variant="outline" onClick={() => setStep(1)}>Voltar</Button>
-                  <Button type="submit" className="flex-1" size="lg" disabled={isSubmitting}>
-                    {isSubmitting ? "Processando pagamento..." : form.paymentMethod === "pix" ? `Gerar Pix — R$ ${pixTotal.toFixed(2).replace(".", ",")}` : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
+                  <Button type="submit" className="flex-1 bg-success hover:bg-success/90 text-success-foreground" size="lg" disabled={isSubmitting}>
+                    {isSubmitting ? "Processando pagamento..." : form.paymentMethod === "pix" ? `💰 Pagar via Pix — R$ ${pixTotal.toFixed(2).replace(".", ",")}` : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
                   </Button>
                 </div>
               </form>
@@ -616,9 +616,10 @@ const CheckoutPage = () => {
                     <span className="text-primary">R$ {finalTotal.toFixed(2).replace(".", ",")}</span>
                   </div>
                   {form.paymentMethod === "pix" && (
-                    <div className="mt-2 rounded-lg bg-success/10 border border-success/30 p-3 text-center">
-                      <p className="text-xs text-muted-foreground">Pagando no Pix você economiza 5%!</p>
-                      <p className="text-xl font-bold text-success">💰 R$ {pixTotal.toFixed(2).replace(".", ",")}</p>
+                    <div className="mt-3 rounded-xl bg-success/15 border-2 border-success/40 p-4 text-center shadow-md">
+                      <p className="text-xs font-medium text-success uppercase tracking-wide">🎉 Economize 5% no Pix!</p>
+                      <p className="text-3xl font-extrabold text-success mt-1">R$ {pixTotal.toFixed(2).replace(".", ",")}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Pagamento instantâneo • Aprovação imediata</p>
                     </div>
                   )}
                 </div>
@@ -664,7 +665,7 @@ const CheckoutPage = () => {
       {step <= 2 && <div className="h-20 md:hidden" />}
 
       <Footer />
-      <WhatsAppButton />
+      {!storeSettings?.hide_chat_on_checkout && <WhatsAppButton />}
     </div>
   );
 };
