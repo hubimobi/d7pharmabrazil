@@ -159,6 +159,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "commissions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "commissions_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -238,6 +245,13 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupons_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
             referencedColumns: ["id"]
           },
           {
@@ -487,6 +501,13 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
             referencedColumns: ["id"]
           },
         ]
@@ -969,7 +990,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      doctors_public: {
+        Row: {
+          active: boolean | null
+          city: string | null
+          id: string | null
+          name: string | null
+          specialty: string | null
+          state: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          city?: string | null
+          id?: string | null
+          name?: string | null
+          specialty?: string | null
+          state?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          city?: string | null
+          id?: string | null
+          name?: string | null
+          specialty?: string | null
+          state?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_doctor_id: { Args: never; Returns: string }
