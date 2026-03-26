@@ -159,6 +159,7 @@ export default function ProductsPage() {
     setForm(emptyForm); setEditId(null); setImageFile(null);
     setExtraFiles([]); setExistingExtras([]); setTestimonials([]);
     setNewTestimonial({ author_name: "", content: "", rating: 5 });
+    setImagePreview(null);
   };
 
   const openEdit = async (p: NonNullable<typeof products>[number]) => {
