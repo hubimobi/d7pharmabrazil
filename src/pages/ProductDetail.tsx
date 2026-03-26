@@ -226,6 +226,7 @@ const ProductDetail = () => {
                 )}
               </div>
             )}
+          </div>
         </div>
 
         {/* Depoimentos */}
