@@ -107,22 +107,16 @@ export default function DoctorsPage() {
             representative_id: repIdVal,
           } as any);
 
-          return couponCode;
-        }
-
-        // Create auth user for prescriber if email provided
-        if (form.email) {
-          // We'll create the user via edge function or admin API later
-          // For now just set up the record
+          return { couponCode, doctorId: inserted.id, email: form.email };
         }
       }
       return null;
     },
-    onSuccess: (couponCode) => {
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ["doctors"] });
       setOpen(false);
-      if (couponCode && !editId) {
-        setSuccessCoupon({ code: couponCode, name: form.name });
+      if (result?.couponCode && !editId) {
+        setSuccessCoupon({ code: result.couponCode, name: form.name, doctorId: result.doctorId, email: result.email });
       } else {
         toast({ title: editId ? "Prescritor atualizado" : "Prescritor cadastrado!" });
       }
