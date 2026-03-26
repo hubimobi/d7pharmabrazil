@@ -233,7 +233,9 @@ export default function DoctorsPage() {
             <CheckCircle className="h-12 w-12 text-primary" />
             <h2 className="text-xl font-bold">Cadastro de Prescritor Criado!</h2>
             <p className="text-muted-foreground">
-              O cupom de <span className="font-bold text-primary">10% de Desconto</span> do prescritor <span className="font-semibold">{successCoupon?.name}</span> é:
+              O cupom de <span className="font-bold text-primary">10% de Desconto</span>
+              <br />
+              do prescritor <span className="font-semibold">{successCoupon?.name}</span> é:
             </p>
             <div className="flex items-center gap-2 rounded-lg border-2 border-primary bg-primary/5 px-6 py-3">
               <span className="text-xl font-mono font-bold text-primary">{successCoupon?.code}</span>
