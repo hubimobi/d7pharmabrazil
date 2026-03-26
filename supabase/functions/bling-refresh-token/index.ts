@@ -54,6 +54,38 @@ serve(async () => {
 
     if (!res.ok || !data.access_token) {
       console.error("Falha ao renovar token do Bling:", data);
+      
+      // Notify admin via email
+      try {
+        const { data: settings } = await supabase
+          .from("store_settings")
+          .select("email, store_name")
+          .limit(1)
+          .single();
+        
+        if (settings?.email) {
+          const adminEmail = settings.email;
+          const storeName = settings.store_name || "Loja";
+          
+          // Send notification via Supabase Edge Function or direct email
+          await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "bling-token-alert",
+              recipientEmail: adminEmail,
+              idempotencyKey: `bling-token-fail-${new Date().toISOString().slice(0, 10)}`,
+              templateData: {
+                storeName,
+                errorDetails: JSON.stringify(data),
+                date: new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
+              },
+            },
+          });
+          console.log("Email de alerta enviado para:", adminEmail);
+        }
+      } catch (emailErr) {
+        console.error("Falha ao enviar email de alerta:", emailErr);
+      }
+      
       return new Response(
         JSON.stringify({ error: "Token refresh failed", details: data }),
         { status: 500 }
