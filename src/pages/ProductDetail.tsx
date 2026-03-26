@@ -261,6 +261,9 @@ const ProductDetail = () => {
             </div>
           </section>
         )}
+
+        {/* Related Products */}
+        <RelatedProducts currentProductId={product.id} />
       </main>
 
       {/* Fixed mobile bottom bar */}
