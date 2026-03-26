@@ -230,6 +230,9 @@ const CheckoutPage = () => {
               payload={paymentResult.pix.payload}
               expirationDate={paymentResult.pix.expirationDate}
               total={pixTotal}
+              paymentId={paymentResult.payment_id}
+              orderId={paymentResult.order_id}
+              onConfirmed={() => clearCart()}
             />
           ) : (
             <div className="flex flex-col items-center space-y-4 rounded-lg border border-border bg-card p-6 text-center">
