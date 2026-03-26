@@ -46,7 +46,7 @@ export default function CouponsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("coupons")
-        .select("*, products(name)")
+        .select("*, products(name), doctors(name), representatives(name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
