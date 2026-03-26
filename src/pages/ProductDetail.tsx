@@ -213,7 +213,19 @@ const ProductDetail = () => {
                 ))}
               </div>
             </div>
-          </div>
+
+            {/* Descrição completa do produto */}
+            {product.description && (
+              <div className="mt-8">
+                <h2 className="text-lg font-bold text-foreground mb-3">Descrição do Produto</h2>
+                {product.description.startsWith("<") ? (
+                  <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold [&_hr]:my-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-foreground [&_a]:text-primary [&_a]:underline"
+                    dangerouslySetInnerHTML={{ __html: product.description }} />
+                ) : (
+                  <p className="text-muted-foreground">{product.description}</p>
+                )}
+              </div>
+            )}
         </div>
 
         {/* Depoimentos */}
