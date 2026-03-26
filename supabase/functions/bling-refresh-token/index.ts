@@ -55,7 +55,7 @@ serve(async () => {
     if (!res.ok || !data.access_token) {
       console.error("Falha ao renovar token do Bling:", data);
       
-      // Notify admin via email
+      // Store alert notification for admin
       try {
         const { data: settings } = await supabase
           .from("store_settings")
@@ -63,27 +63,17 @@ serve(async () => {
           .limit(1)
           .single();
         
-        if (settings?.email) {
-          const adminEmail = settings.email;
-          const storeName = settings.store_name || "Loja";
-          
-          // Send notification via Supabase Edge Function or direct email
-          await supabase.functions.invoke("send-transactional-email", {
-            body: {
-              templateName: "bling-token-alert",
-              recipientEmail: adminEmail,
-              idempotencyKey: `bling-token-fail-${new Date().toISOString().slice(0, 10)}`,
-              templateData: {
-                storeName,
-                errorDetails: JSON.stringify(data),
-                date: new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
-              },
-            },
-          });
-          console.log("Email de alerta enviado para:", adminEmail);
-        }
-      } catch (emailErr) {
-        console.error("Falha ao enviar email de alerta:", emailErr);
+        // Insert admin notification
+        await supabase.from("admin_notifications").insert({
+          type: "bling_token_expired",
+          title: "Token do Bling expirado",
+          message: `A renovação automática do token do Bling falhou. Reconecte o Bling em Integrações. Erro: ${JSON.stringify(data).slice(0, 200)}`,
+          read: false,
+        });
+        
+        console.log("Notificação de alerta criada para o admin");
+      } catch (notifErr) {
+        console.error("Falha ao criar notificação:", notifErr);
       }
       
       return new Response(
