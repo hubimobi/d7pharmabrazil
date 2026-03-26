@@ -27,13 +27,9 @@ export default function RecentPurchasePopup() {
   const { data: orders } = useQuery({
     queryKey: ["recent-orders-popup"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("customer_name, items, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
+      const { data, error } = await supabase.functions.invoke("recent-orders");
       if (error) throw error;
-      return data as unknown as RecentOrder[];
+      return (data?.orders || []) as RecentOrder[];
     },
     staleTime: 5 * 60 * 1000,
   });
