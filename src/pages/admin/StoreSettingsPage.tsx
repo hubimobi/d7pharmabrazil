@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload, Trash2, Award, Plus, X, FlaskConical, ShieldCheck, TrendingUp, Heart, Star, Zap, Clock, Eye, Gift, ThumbsUp, CheckCircle, Sparkles } from "lucide-react";
+import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload, Trash2, Award, Plus, X, FlaskConical, ShieldCheck, TrendingUp, Heart, Star, Zap, Clock, Eye, Gift, ThumbsUp, CheckCircle, Sparkles, Flame } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
+import { useProducts } from "@/hooks/useProducts";
 
 const benefitIconOptions = [
   { value: "FlaskConical", label: "Farmácia", Icon: FlaskConical },
@@ -29,6 +30,7 @@ const benefitIconOptions = [
 
 export default function StoreSettingsPage() {
   const queryClient = useQueryClient();
+  const { data: allProducts } = useProducts();
   const [form, setForm] = useState<Partial<StoreSettings> | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);

@@ -76,6 +76,12 @@ export interface StoreSettings {
   benefits_title: string;
   benefits_subtitle: string;
   benefits_items: Array<{ icon: string; title: string; desc: string }>;
+  // Combo offer
+  combo_offer_enabled: boolean;
+  combo_offer_products: string[];
+  combo_offer_discount: number;
+  combo_offer_free_shipping: boolean;
+  combo_offer_label: string;
 }
 
 export function useStoreSettings() {
