@@ -50,6 +50,26 @@ const CheckoutPage = () => {
     doctor: "", paymentMethod: "pix" as "pix" | "card",
   });
   const abandonmentSaved = useRef(false);
+  const [cepLoading, setCepLoading] = useState(false);
+
+  const fetchAddress = useCallback(async (cep: string) => {
+    setCepLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setForm((prev) => ({
+          ...prev,
+          street: data.logradouro || prev.street,
+          neighborhood: data.bairro || prev.neighborhood,
+          city: data.localidade || prev.city,
+          state: data.uf || prev.state,
+          complement: data.complemento || prev.complement,
+        }));
+      }
+    } catch { /* ignore */ }
+    setCepLoading(false);
+  }, []);
 
   // Scroll to top when checkout page mounts
   useEffect(() => {
