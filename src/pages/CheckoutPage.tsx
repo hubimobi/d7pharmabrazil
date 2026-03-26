@@ -128,7 +128,7 @@ const CheckoutPage = () => {
     queryKey: ["active-doctors"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("doctors")
+        .from("doctors_public" as any)
         .select("id, name, specialty, city, state")
         .eq("active", true)
         .order("name");
