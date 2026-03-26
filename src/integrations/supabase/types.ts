@@ -796,6 +796,7 @@ export type Database = {
           hero_subtitle: string | null
           hero_title: string | null
           hero_video_url: string | null
+          hide_chat_on_checkout: boolean | null
           horizontal_logo_url: string | null
           id: string
           instagram: string | null
@@ -869,6 +870,7 @@ export type Database = {
           hero_subtitle?: string | null
           hero_title?: string | null
           hero_video_url?: string | null
+          hide_chat_on_checkout?: boolean | null
           horizontal_logo_url?: string | null
           id?: string
           instagram?: string | null
@@ -942,6 +944,7 @@ export type Database = {
           hero_subtitle?: string | null
           hero_title?: string | null
           hero_video_url?: string | null
+          hide_chat_on_checkout?: boolean | null
           horizontal_logo_url?: string | null
           id?: string
           instagram?: string | null
