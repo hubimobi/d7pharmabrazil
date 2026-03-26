@@ -32,9 +32,13 @@ export default function DoctorsPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<DocForm>(emptyForm);
-  const [successCoupon, setSuccessCoupon] = useState<{ code: string; name: string } | null>(null);
+  const [successCoupon, setSuccessCoupon] = useState<{ code: string; name: string; doctorId: string; email: string } | null>(null);
+  const [createUserNow, setCreateUserNow] = useState(true);
+  const [userPassword, setUserPassword] = useState("");
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [userCreationDialog, setUserCreationDialog] = useState<{ doctorId: string; email: string; name: string } | null>(null);
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { isAdmin, session } = useAuth();
   const qc = useQueryClient();
 
   const { data: reps } = useQuery({
