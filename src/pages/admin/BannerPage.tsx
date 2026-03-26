@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Image, Type, Link2, Save, Loader2, Eye, Video, Plus, Trash2, Palette, GripVertical, Upload, Settings, ChevronDown, ChevronUp, Shield, Lock, Truck, Award, FlaskConical, ShieldCheck, TrendingUp, Star, Heart, Zap, CheckCircle, Crop, Eraser } from "lucide-react";
+import { CropImageDialog } from "@/components/admin/CropImageDialog";
 
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Shield, Lock, Truck, Award, FlaskConical, ShieldCheck, TrendingUp, Star, Heart, Zap, CheckCircle,
@@ -48,6 +49,50 @@ export default function BannerPage() {
   const [carouselEnabled, setCarouselEnabled] = useState(true);
   const sideImageRef = useRef<HTMLInputElement>(null);
   const [uploadingSideImage, setUploadingSideImage] = useState<string | null>(null);
+  const [cropDialog, setCropDialog] = useState<{ bannerId: string; imageUrl: string } | null>(null);
+  const [removingBg, setRemovingBg] = useState<string | null>(null);
+
+  const handleCropComplete = useCallback(async (blob: Blob, bannerId: string) => {
+    try {
+      const filePath = `banner-side-${bannerId}-cropped.png`;
+      await supabase.storage.from("store-assets").remove([filePath]);
+      const { error } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(filePath);
+      updateBanner(bannerId, "side_image_url", urlData.publicUrl + "?t=" + Date.now());
+      toast.success("Imagem recortada com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao salvar recorte: " + err.message);
+    }
+  }, []);
+
+  const handleRemoveBg = useCallback(async (bannerId: string, imageUrl: string) => {
+    setRemovingBg(bannerId);
+    try {
+      const { data, error } = await supabase.functions.invoke("remove-background", {
+        body: { image_url: imageUrl },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const binary = atob(data.image_base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "image/png" });
+
+      const filePath = `banner-side-${bannerId}-nobg.png`;
+      await supabase.storage.from("store-assets").remove([filePath]);
+      const { error: uploadError } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(filePath);
+      updateBanner(bannerId, "side_image_url", urlData.publicUrl + "?t=" + Date.now());
+      toast.success("Fundo removido com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao remover fundo: " + err.message);
+    } finally {
+      setRemovingBg(null);
+    }
+  }, []);
 
   const { data: banners, isLoading } = useQuery({
     queryKey: ["hero-banners"],
@@ -364,14 +409,13 @@ export default function BannerPage() {
                         </div>
                         <div className="flex gap-2">
                           <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => {
-                            toast.info("Para recortar a imagem, utilize um editor de imagem externo e reenvie o arquivo recortado.");
+                            setCropDialog({ bannerId: banner.id, imageUrl: banner.side_image_url! });
                           }}>
                             <Crop className="h-4 w-4" /> Recortar
                           </Button>
-                          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => {
-                            toast.info("Para remover o fundo, utilize uma ferramenta como remove.bg e reenvie a imagem.");
-                          }}>
-                            <Eraser className="h-4 w-4" /> Remover Fundo
+                          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => handleRemoveBg(banner.id, banner.side_image_url!)} disabled={removingBg === banner.id}>
+                            {removingBg === banner.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eraser className="h-4 w-4" />}
+                            {removingBg === banner.id ? "Processando..." : "Remover Fundo"}
                           </Button>
                         </div>
                       </div>
@@ -519,6 +563,16 @@ export default function BannerPage() {
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">Máximo de 5 banners. {localBanners.length}/5 utilizados.</p>
+
+      {/* Crop Dialog */}
+      {cropDialog && (
+        <CropImageDialog
+          open={!!cropDialog}
+          onOpenChange={(open) => { if (!open) setCropDialog(null); }}
+          imageUrl={cropDialog.imageUrl}
+          onCropComplete={(blob) => handleCropComplete(blob, cropDialog.bannerId)}
+        />
+      )}
     </div>
   );
 }
