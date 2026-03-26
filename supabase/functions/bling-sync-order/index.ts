@@ -113,7 +113,7 @@ serve(async (req) => {
   }
 
   try {
-    const { order_id } = await req.json();
+    const { order_id, force } = await req.json();
     if (!order_id) {
       return new Response(JSON.stringify({ error: "order_id obrigatório" }), {
         status: 400,
@@ -140,6 +140,30 @@ serve(async (req) => {
     }
 
     const accessToken = await getValidToken(supabase);
+    const orderRef = order.id.slice(0, 8);
+
+    // Check if order already exists in Bling by searching observations
+    if (!force) {
+      try {
+        const searchRes = await fetch(
+          `${BLING_API}/pedidos/vendas?pesquisa=${encodeURIComponent(orderRef)}&limite=5`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        const searchData = await searchRes.json();
+        if (searchRes.ok && searchData.data && searchData.data.length > 0) {
+          await supabase.from("integration_logs").insert({
+            integration: "bling", action: "sync_order", status: "success",
+            details: `Pedido ${orderRef} já existe no Bling (ID: ${searchData.data[0].id}). Pulando.`
+          });
+          return new Response(
+            JSON.stringify({ success: true, already_exists: true, bling_id: searchData.data[0].id }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } catch (e) {
+        console.log("Bling search failed, proceeding with sync:", e.message);
+      }
+    }
 
     // Find or create contact in Bling
     const contactId = await findOrCreateContact(
@@ -174,11 +198,9 @@ serve(async (req) => {
     const blingPayload = {
       numero: 0,
       data: new Date(order.created_at).toISOString().split("T")[0],
-      contato: {
-        id: contactId,
-      },
+      contato: { id: contactId },
       itens: blingItems,
-      observacoes: `Pedido loja online #${order.id.slice(0, 8)}`,
+      observacoes: `Pedido loja online #${orderRef}`,
     };
 
     console.log("Sending to Bling:", JSON.stringify(blingPayload));
@@ -196,14 +218,14 @@ serve(async (req) => {
 
     if (!blingRes.ok) {
       console.error("Bling sync error:", blingData);
-      await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "error", details: `Pedido ${order_id.slice(0, 8)}: ${JSON.stringify(blingData).slice(0, 300)}` });
+      await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "error", details: `Pedido ${orderRef}: ${JSON.stringify(blingData).slice(0, 300)}` });
       return new Response(
         JSON.stringify({ error: "Erro ao enviar pedido ao Bling", details: blingData }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "success", details: `Pedido ${order_id.slice(0, 8)} sincronizado. Bling ID: ${blingData?.data?.id || 'N/A'}` });
+    await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "success", details: `Pedido ${orderRef} sincronizado. Bling ID: ${blingData?.data?.id || 'N/A'}` });
 
     return new Response(
       JSON.stringify({ success: true, bling_order: blingData }),
