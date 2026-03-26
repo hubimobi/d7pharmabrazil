@@ -213,7 +213,38 @@ export default function DoctorsPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+      </div>
+
+      {/* Success coupon dialog */}
+      <Dialog open={!!successCoupon} onOpenChange={(v) => { if (!v) setSuccessCoupon(null); }}>
+        <DialogContent className="max-w-md text-center">
+          <div className="flex flex-col items-center gap-4 py-4">
+            <CheckCircle className="h-12 w-12 text-green-500" />
+            <h2 className="text-xl font-bold">Cadastro de Prescritor Criado!</h2>
+            <p className="text-muted-foreground">
+              O cupom de <span className="font-bold text-primary">10% de Desconto</span> do prescritor <span className="font-semibold">{successCoupon?.name}</span> é:
+            </p>
+            <div className="flex items-center gap-2 rounded-lg border-2 border-primary bg-primary/5 px-6 py-3">
+              <span className="text-xl font-mono font-bold text-primary">{successCoupon?.code}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  navigator.clipboard.writeText(successCoupon?.code || "");
+                  toast({ title: "Cupom copiado!" });
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Em cada venda, o comprador ganha <span className="font-semibold">10% de desconto</span> e o Prescritor recebe <span className="font-semibold">20% de Cashback</span> sobre o valor dos produtos (sem o frete).
+            </p>
+            <Button onClick={() => setSuccessCoupon(null)} className="mt-2">Entendido</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
               )}
               <Button type="submit" className="w-full" disabled={save.isPending}>
                 {save.isPending ? "Salvando..." : "Salvar"}
