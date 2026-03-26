@@ -337,6 +337,11 @@ export default function CouponsPage() {
                           <span className="font-mono font-bold text-sm">{c.code}</span>
                         </div>
                         {c.description && <p className="text-xs text-muted-foreground mt-0.5">{c.description}</p>}
+                        {((c as any).representatives?.name || (c as any).doctors?.name) && (
+                          <p className="text-xs text-primary/80 mt-0.5 italic">
+                            Cupom vinculado ao Representante <span className="font-semibold">{(c as any).representatives?.name || "—"}</span> e Prescritor <span className="font-semibold">{(c as any).doctors?.name || "—"}</span>
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
