@@ -10,12 +10,13 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Image, Type, Link2, Save, Loader2, Eye, Video, Plus, Trash2, Palette, GripVertical, Upload, Settings, ChevronDown, ChevronUp } from "lucide-react";
+import { Image, Type, Link2, Save, Loader2, Eye, Video, Plus, Trash2, Palette, GripVertical, Upload, Settings, ChevronDown, ChevronUp, Shield, Lock, Truck, Award, FlaskConical, ShieldCheck, TrendingUp, Star, Heart, Zap, CheckCircle, Crop, Eraser } from "lucide-react";
 
-const ICON_OPTIONS = [
-  "Shield", "Lock", "Truck", "Award", "FlaskConical", "ShieldCheck",
-  "TrendingUp", "Star", "Heart", "Zap", "CheckCircle",
-];
+const ICON_MAP: Record<string, React.ComponentType<any>> = {
+  Shield, Lock, Truck, Award, FlaskConical, ShieldCheck, TrendingUp, Star, Heart, Zap, CheckCircle,
+};
+
+const ICON_OPTIONS = Object.keys(ICON_MAP);
 
 interface HeroBanner {
   id: string;
@@ -348,15 +349,29 @@ export default function BannerPage() {
                       }}
                     />
                     {banner.side_image_url ? (
-                      <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
-                        <img src={banner.side_image_url} alt="Lateral" className="h-20 object-contain" />
-                        <div className="flex gap-2 ml-auto">
-                          <Button type="button" variant="outline" size="sm" onClick={() => sideImageRef.current?.click()} disabled={uploadingSideImage === banner.id}>
-                            {uploadingSideImage === banner.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                            Trocar
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                          <img src={banner.side_image_url} alt="Lateral" className="h-20 object-contain" />
+                          <div className="flex flex-col gap-2 ml-auto">
+                            <Button type="button" variant="outline" size="sm" onClick={() => sideImageRef.current?.click()} disabled={uploadingSideImage === banner.id}>
+                              {uploadingSideImage === banner.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                              Trocar
+                            </Button>
+                            <Button type="button" variant="destructive" size="sm" onClick={() => updateBanner(banner.id, "side_image_url", null)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => {
+                            toast.info("Para recortar a imagem, utilize um editor de imagem externo e reenvie o arquivo recortado.");
+                          }}>
+                            <Crop className="h-4 w-4" /> Recortar
                           </Button>
-                          <Button type="button" variant="destructive" size="sm" onClick={() => updateBanner(banner.id, "side_image_url", null)}>
-                            <Trash2 className="h-4 w-4" />
+                          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => {
+                            toast.info("Para remover o fundo, utilize uma ferramenta como remove.bg e reenvie a imagem.");
+                          }}>
+                            <Eraser className="h-4 w-4" /> Remover Fundo
                           </Button>
                         </div>
                       </div>
@@ -378,9 +393,20 @@ export default function BannerPage() {
                           newBadges[i] = { ...newBadges[i], icon: v };
                           updateBanner(banner.id, "badges", newBadges);
                         }}>
-                          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="w-44">
+                            <SelectValue>
+                              {(() => { const IC = ICON_MAP[badge.icon]; return IC ? <span className="flex items-center gap-2"><IC className="h-4 w-4" />{badge.icon}</span> : badge.icon; })()}
+                            </SelectValue>
+                          </SelectTrigger>
                           <SelectContent>
-                            {ICON_OPTIONS.map((ic) => <SelectItem key={ic} value={ic}>{ic}</SelectItem>)}
+                            {ICON_OPTIONS.map((ic) => {
+                              const IC = ICON_MAP[ic];
+                              return (
+                                <SelectItem key={ic} value={ic}>
+                                  <span className="flex items-center gap-2"><IC className="h-4 w-4" />{ic}</span>
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                         <Input
