@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard } from "lucide-react";
+import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard, Share2, Copy, MessageCircle } from "lucide-react";
 import CountdownTimer from "@/components/CountdownTimer";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -80,13 +80,11 @@ const ProductDetail = () => {
         <div className="grid gap-8 md:grid-cols-2">
           {/* Image Gallery */}
           <div className="space-y-3">
-            <div className="flex items-center justify-center rounded-lg bg-muted p-8 min-h-[320px]">
+            <div className="aspect-square overflow-hidden rounded-lg bg-muted">
               <img
                 src={selectedImage || product.image}
                 alt={product.name}
-                className="max-h-80 w-auto object-contain transition-opacity duration-200"
-                width={320}
-                height={320}
+                className="h-full w-full object-cover transition-opacity duration-200"
               />
             </div>
             {product.extraImages.length > 0 && (
