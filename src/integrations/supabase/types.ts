@@ -1395,6 +1395,7 @@ export type Database = {
           hero_video_url: string | null
           hide_chat_on_checkout: boolean | null
           horizontal_logo_url: string | null
+          hotjar_id: string | null
           id: string
           instagram: string | null
           logo_url: string | null
@@ -1499,6 +1500,7 @@ export type Database = {
           hero_video_url?: string | null
           hide_chat_on_checkout?: boolean | null
           horizontal_logo_url?: string | null
+          hotjar_id?: string | null
           id?: string
           instagram?: string | null
           logo_url?: string | null
@@ -1603,6 +1605,7 @@ export type Database = {
           hero_video_url?: string | null
           hide_chat_on_checkout?: boolean | null
           horizontal_logo_url?: string | null
+          hotjar_id?: string | null
           id?: string
           instagram?: string | null
           logo_url?: string | null
