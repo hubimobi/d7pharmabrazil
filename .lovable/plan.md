@@ -1,100 +1,116 @@
 
 
-## Modernização Visual — Inspirado em Airbnb + Mercado Livre
+## Plano: Cashback Avançado + Gestão de Usuários Multi-tenant
 
-### Filosofia
-
-**Airbnb**: espaço branco generoso, cards sem bordas visíveis (shadow sutil), tipografia limpa, transições suaves, foco total no conteúdo visual.
-
-**Mercado Livre**: hierarquia de preço agressiva, badges de desconto em destaque, frete grátis como elemento visual forte, confiança via selos, compra rápida em 1 clique.
-
-**Objetivo**: mesclar a leveza e elegância do Airbnb com a praticidade e urgência de conversão do Mercado Livre.
+Este é um projeto grande com 3 blocos principais. Vou detalhar cada um.
 
 ---
 
-### Mudanças Propostas
+### Bloco 1 — Cashback com Comissões de Prescritores e Pagamentos
 
-#### 1. Cards de Produto — Estilo Airbnb
+**O que muda na página Cashback (`CommissionsPage.tsx`):**
 
-**Atual**: borda visível `border-border`, shadow-sm, hover overlay escuro com "Ver Mais"
-**Novo**:
-- Remover borda visível — usar apenas `shadow-sm` e `hover:shadow-lg` (estilo Airbnb)
-- Cantos mais arredondados: `rounded-xl` ao invés de `rounded-lg`
-- Hover: ao invés de overlay escuro, apenas escalar a imagem + elevar shadow (mais limpo)
-- Badge de desconto: pill verde grande no canto (`-12% OFF`) estilo Mercado Livre
-- Preço Pix destacado: adicionar label "no Pix" em verde ao lado do preço principal
-- Frete grátis: badge verde "Frete Grátis" abaixo do preço quando aplicável
+- Adicionar tabs: "Por Representante" e "Por Prescritor" para visualizar comissões agrupadas
+- Filtro por prescritor individual (dropdown com lista de prescritores)
+- Botão "Gerar Pagamentos" que abre tela de conferência:
+  - Baseia-se no **mês anterior** (não o vigente)
+  - Considera apenas pedidos com status `paid` (exclui cancelados/devolvidos)
+  - Lista cada prescritor com valor total, permite aprovar individualmente ou todos
+  - Envia ordem de pagamento via Edge Function `pay-commissions` (já existe, adaptar para prescritores também)
+- Apenas usuários com role **FINANCEIRO** podem ver/usar o botão de pagamento
 
-#### 2. Header — Mais Limpo
-
-**Atual**: borda inferior + backdrop-blur
-**Novo**:
-- Remover `border-b`, usar apenas shadow sutil `shadow-sm` (Airbnb style)
-- Carrinho: mostrar mini-preview do valor total ao lado do ícone
-- Search: adicionar campo de busca inline no header (estilo Mercado Livre) — mobile: ícone que expande
-
-#### 3. Seção de Benefícios — Cards Flutuantes
-
-**Atual**: grid de cards com fundo `bg-card` e shadow-sm sobre fundo `bg-muted`
-**Novo**:
-- Fundo da seção: branco puro (sem `bg-muted`) — menos poluição visual
-- Cards: ícone + texto sem borda/fundo, layout horizontal (ícone à esquerda, texto à direita)
-- Inspiração Airbnb: limpo, sem caixas dentro de caixas
-
-#### 4. Seção "Todos os Produtos" — Filtro Superior Horizontal
-
-**Atual**: Select dropdown para filtro de grupo
-**Novo**:
-- Chips/pills horizontais scrolláveis (estilo Airbnb categorias) ao invés de dropdown
-- Active chip com fundo `primary`, demais outline
-- Sticky abaixo do header no scroll (como filtros do Mercado Livre)
-
-#### 5. CSS Global — Transições e Suavidade
-
-- Adicionar `scroll-behavior: smooth` ao html
-- Transições globais em links e botões: `transition-all duration-200`
-- Bordas mais suaves: aumentar `--radius` de `0.5rem` para `0.75rem`
-- Border color mais sutil: `--border` de `210 20% 90%` para `210 15% 93%` (quase invisível)
-
-#### 6. Footer — Mais Moderno
-
-**Atual**: grid 4 colunas, fundo `bg-card`
-**Novo**:
-- Fundo escuro (`bg-foreground text-background`) — contraste forte como Mercado Livre
-- Links com hover mais suave (opacity transition)
-- Selos de segurança visuais (ícones Lock, Shield) na base
-
-#### 7. Seção Garantia e CTA Final — Mais Impactante
-
-**Atual**: gradient trust com ícones em linha
-**Novo (Garantia)**:
-- Layout com card central grande + número "30" em destaque (dias de garantia)
-- Ícone de escudo animado sutilmente
-
-**Novo (CTA Final)**:
-- Full-width com gradiente mais vibrante
-- Botão CTA maior com animação de hover scale
-
-#### 8. ProductDetail — Galeria Airbnb Style
-
-- Thumbnails na lateral (desktop) com transição suave ao trocar
-- Botão "Comprar" fixo no bottom mobile com preço visível (sticky bar)
-- Seção de avaliações com estrelas visuais maiores
+**Edge Function `pay-commissions`:**
+- Adaptar para aceitar `type: "representative" | "prescriber"` e `pix` do prescritor (campo já existe na tabela `doctors`)
 
 ---
 
-### Detalhes Tecnicos
+### Bloco 2 — Nova Hierarquia de Roles
 
-**Arquivos modificados:**
-- `src/index.css` — border radius, scroll-behavior, transições globais, border color
-- `src/components/ProductCard.tsx` — cards sem borda, rounded-xl, badge desconto pill, hover limpo
-- `src/components/Header.tsx` — shadow ao invés de border-b, campo de busca
-- `src/components/BenefitsSection.tsx` — layout horizontal, sem bg-muted
-- `src/components/AllProducts.tsx` — chips de filtro ao invés de dropdown
-- `src/components/Footer.tsx` — fundo escuro, selos de segurança
-- `src/components/GuaranteeSection.tsx` — card central com destaque "30 dias"
-- `src/components/FinalCTA.tsx` — botão maior, gradiente mais vibrante
-- `src/pages/ProductDetail.tsx` — galeria lateral, sticky buy bar refinada
+**Migração de banco de dados:**
 
-Sem mudancas de banco de dados ou rotas.
+```sql
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'super_admin';
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'suporte';
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'administrador';
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'gestor';
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'financeiro';
+```
+
+Hierarquia: `SUPER ADMIN > SUPORTE > ADMINISTRADOR > GESTOR > FINANCEIRO > REPRESENTANTE > PRESCRITOR`
+
+**Nova tabela `tenants` (multi-tenant):**
+
+```sql
+CREATE TABLE public.tenants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  settings JSONB DEFAULT '{}'
+);
+```
+
+**Nova tabela `tenant_users`:**
+
+```sql
+CREATE TABLE public.tenant_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(tenant_id, user_id)
+);
+```
+
+- Adicionar coluna `tenant_id` nas tabelas principais: `orders`, `products`, `doctors`, `representatives`, `commissions`, `store_settings`, etc.
+- RLS policies com `tenant_id` para isolamento
+- SUPER ADMIN bypassa filtro de tenant
+
+**`useAuth.tsx`:**
+- Expor `roles` completas, adicionar helpers: `isFinanceiro`, `isSuperAdmin`, `isGestor`, etc.
+
+---
+
+### Bloco 3 — Painel de Cadastro de Usuários
+
+**Nova página `/admin/usuarios` (`UsersPage.tsx`):**
+
+- Listagem de todos os usuários do tenant com suas roles
+- Cadastro: nome, email, senha, role (dropdown com hierarquia)
+- Edição de role
+- Ativação/desativação
+- SUPER ADMIN vê todos os tenants e pode trocar entre eles
+- Sidebar: novo item "Usuários" na seção Sistema (apenas admin+)
+
+**Nova rota em `App.tsx`:**
+```
+/admin/usuarios → UsersPage
+```
+
+---
+
+### Arquivos modificados
+
+| Arquivo | Ação |
+|---|---|
+| `supabase/migrations/xxx.sql` | Novos roles, tabelas `tenants`, `tenant_users`, coluna `tenant_id` |
+| `src/hooks/useAuth.tsx` | Novos helpers de role |
+| `src/pages/admin/CommissionsPage.tsx` | Tabs rep/prescritor, pagamento em lote |
+| `supabase/functions/pay-commissions/index.ts` | Suporte a pagamento de prescritores |
+| `src/pages/admin/UsersPage.tsx` | **Novo** — CRUD de usuários |
+| `supabase/functions/create-tenant-user/index.ts` | **Novo** — criar usuário com role |
+| `src/components/admin/AdminSidebar.tsx` | Item "Usuários" |
+| `src/App.tsx` | Rota `/admin/usuarios` |
+
+---
+
+### Consideração importante sobre Multi-tenant
+
+Adicionar `tenant_id` a todas as tabelas existentes é uma mudança estrutural significativa. Para evitar quebrar funcionalidades existentes, proponho:
+
+1. **Fase 1 (agora):** Criar tabelas `tenants` e `tenant_users`, novos roles, painel de usuários, e cashback avançado. O `tenant_id` será opcional (nullable) nas tabelas, permitindo migração gradual.
+2. **Fase 2 (próxima iteração):** Aplicar RLS por tenant e criar o painel SUPER ADMIN de troca de tenant.
+
+Isso permite usar o sistema imediatamente sem risco de quebra.
 
