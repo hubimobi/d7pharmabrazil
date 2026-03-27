@@ -345,13 +345,43 @@ export default function AIAgentsPage() {
             {form.channels.includes("admin") && (
               <div className="space-y-3">
                 <Label>Painéis Permitidos (Painel Interno)</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {ADMIN_PANELS.map((p) => (
-                    <label key={p.id} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-sm transition-colors ${form.allowed_panels.includes(p.id) ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"}`}>
-                      <Checkbox checked={form.allowed_panels.includes(p.id)} onCheckedChange={() => togglePanel(p.id)} />
-                      {p.label}
-                    </label>
-                  ))}
+                <p className="text-xs text-muted-foreground">Selecione quais áreas do painel o agente pode acessar como fonte de dados. Painéis de configuração do sistema não estão disponíveis.</p>
+                <div className="flex gap-2 mb-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setForm(prev => ({ ...prev, allowed_panels: ADMIN_PANELS.map(p => p.id) }))}>Marcar Todos</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setForm(prev => ({ ...prev, allowed_panels: [] }))}>Desmarcar Todos</Button>
+                </div>
+                <div className="space-y-4">
+                  {PANEL_GROUPS.map((group) => {
+                    const groupPanels = ADMIN_PANELS.filter((p) => p.group === group);
+                    const allChecked = groupPanels.every((p) => form.allowed_panels.includes(p.id));
+                    const someChecked = groupPanels.some((p) => form.allowed_panels.includes(p.id));
+                    return (
+                      <div key={group} className="rounded-lg border border-border p-3 space-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={allChecked}
+                            className={someChecked && !allChecked ? "opacity-60" : ""}
+                            onCheckedChange={() => {
+                              if (allChecked) {
+                                setForm(prev => ({ ...prev, allowed_panels: prev.allowed_panels.filter(id => !groupPanels.some(p => p.id === id)) }));
+                              } else {
+                                setForm(prev => ({ ...prev, allowed_panels: [...new Set([...prev.allowed_panels, ...groupPanels.map(p => p.id)])] }));
+                              }
+                            }}
+                          />
+                          <span className="text-sm font-semibold">{group}</span>
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pl-6">
+                          {groupPanels.map((p) => (
+                            <label key={p.id} className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm transition-colors ${form.allowed_panels.includes(p.id) ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                              <Checkbox checked={form.allowed_panels.includes(p.id)} onCheckedChange={() => togglePanel(p.id)} />
+                              {p.label}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
