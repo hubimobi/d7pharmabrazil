@@ -92,7 +92,15 @@ export interface StoreSettings {
   design_footer_color: string;
   design_bg_color: string;
   design_icon_style: string;
-}
+  // Sales popup
+  sales_popup_enabled: boolean;
+  sales_popup_position: string;
+  sales_popup_button_color: string;
+  sales_popup_interval_min: number;
+  sales_popup_interval_max: number;
+  sales_popup_burst_count: number;
+  sales_popup_include_real_orders: boolean;
+  sales_popup_custom_entries: Array<{ customer_name: string; product_name: string; city: string }>;
 
 export function useStoreSettings() {
   return useQuery({

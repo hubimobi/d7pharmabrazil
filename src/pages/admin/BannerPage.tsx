@@ -672,6 +672,9 @@ export default function BannerPage() {
       </div>
       <p className="text-xs text-muted-foreground">Máximo de 5 banners. {localBanners.length}/5 utilizados.</p>
 
+      {/* Popup de Vendas Recentes */}
+      <SalesPopupSettings settings={settings} />
+
       {/* Crop Dialog */}
       {cropDialog && (
         <CropImageDialog
