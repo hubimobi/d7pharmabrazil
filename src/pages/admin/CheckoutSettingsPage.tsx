@@ -26,6 +26,7 @@ export default function CheckoutSettingsPage() {
   const [boletoEnabled, setBoletoEnabled] = useState(false);
   const [metaPixelId, setMetaPixelId] = useState("");
   const [gtmId, setGtmId] = useState("");
+  const [hotjarId, setHotjarId] = useState("");
   const [maxInstallments, setMaxInstallments] = useState(3);
 
   // Frete
