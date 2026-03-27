@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +27,7 @@ const emptyForm: RepForm = { name: "", email: "", phone: "", region: "", pix: ""
 
 export default function RepresentativesPage() {
   const [open, setOpen] = useState(false);
+  const { canDelete } = useAuth();
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<RepForm>(emptyForm);
   const [deleteDialog, setDeleteDialog] = useState<{ id: string; name: string } | null>(null);
@@ -286,9 +288,11 @@ export default function RepresentativesPage() {
                         <Button variant="ghost" size="icon" onClick={() => openEdit(rep)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteDialog({ id: rep.id, name: rep.name })}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        {canDelete && (
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteDialog({ id: rep.id, name: rep.name })}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

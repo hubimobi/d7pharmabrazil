@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProducts } from "@/hooks/useProducts";
@@ -21,6 +22,7 @@ function generateCode(length = 6): string {
 }
 
 export default function LinksPage() {
+  const { canDelete } = useAuth();
   const qc = useQueryClient();
   const { data: products } = useProducts();
   const [open, setOpen] = useState(false);
@@ -305,9 +307,11 @@ export default function LinksPage() {
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copyWithMessage(l.code, getProductName(l.product_id))} title="Copiar com mensagem">
                             <ExternalLink className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteLink.mutate(l.id)} title="Excluir">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {canDelete && (
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteLink.mutate(l.id)} title="Excluir">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

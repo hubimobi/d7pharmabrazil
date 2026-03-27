@@ -17,6 +17,7 @@ interface AuthContextType {
   isSuporte: boolean;
   isRepresentative: boolean;
   isPrescriber: boolean;
+  canDelete: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -79,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasRole = (r: AppRole) => roles.includes(r);
   const hasAnyAdminRole = ADMIN_LIKE_ROLES.some((r) => roles.includes(r));
+  const canDelete = hasRole("super_admin" as AppRole) || hasRole("admin" as AppRole) || hasRole("administrador" as AppRole);
 
   return (
     <AuthContext.Provider
@@ -91,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isFinanceiro: hasRole("financeiro" as AppRole) || hasRole("super_admin" as AppRole),
         isGestor: hasRole("gestor" as AppRole) || hasRole("super_admin" as AppRole),
         isAdministrador: hasRole("administrador" as AppRole) || hasRole("super_admin" as AppRole),
+        canDelete,
         isSuporte: hasRole("suporte" as AppRole) || hasRole("super_admin" as AppRole),
         isRepresentative: hasRole("representative" as AppRole),
         isPrescriber: hasRole("prescriber" as AppRole),

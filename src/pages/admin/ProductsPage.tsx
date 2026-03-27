@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ interface FaqItem {
 }
 
 export default function ProductsPage() {
+  const { canDelete } = useAuth();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<ProdForm>(emptyForm);
@@ -658,29 +660,33 @@ export default function ProductsPage() {
                             {p.active ? <PowerOff className="h-4 w-4 mr-2" /> : <Power className="h-4 w-4 mr-2" />}
                             {p.active ? "Desativar" : "Ativar"}
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                                <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                              </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Excluir produto</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir <strong>{p.name}</strong>? Esta ação não pode ser desfeita. Todos os depoimentos e FAQs vinculados também serão removidos.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteProduct.mutate(p.id)}>
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </DropdownMenuContent>
+                          {canDelete && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Excluir produto</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja excluir <strong>{p.name}</strong>? Esta ação não pode ser desfeita. Todos os depoimentos e FAQs vinculados também serão removidos.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteProduct.mutate(p.id)}>
+                                      Excluir
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </>
+                            )}
+                          </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>

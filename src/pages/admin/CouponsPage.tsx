@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ const emptyForm: CouponForm = {
 };
 
 export default function CouponsPage() {
+  const { canDelete } = useAuth();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<CouponForm>(emptyForm);
@@ -400,9 +402,11 @@ export default function CouponsPage() {
                           <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteCoupon.mutate(c.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          {canDelete && (
+                            <Button variant="ghost" size="icon" onClick={() => deleteCoupon.mutate(c.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
