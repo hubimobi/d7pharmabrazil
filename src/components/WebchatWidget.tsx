@@ -48,7 +48,7 @@ export default function WebchatWidget() {
   }, [settings?.webchat_enabled, settings?.webchat_script, delaySeconds, showOnScroll]);
 
   useEffect(() => {
-    if (!visible || !settings?.webchat_enabled || !settings?.webchat_script || hideOnCheckout) return;
+    if (!visible || !settings?.webchat_enabled || !settings?.webchat_script || hideOnCheckout || shouldHide) return;
 
     const container = document.createElement("div");
     container.id = "webchat-widget-container";
