@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://d7pharmabrazil.lovable.app/sitemap.xml
