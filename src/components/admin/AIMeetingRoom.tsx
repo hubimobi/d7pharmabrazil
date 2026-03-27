@@ -119,7 +119,7 @@ export default function AIMeetingRoom() {
           },
           body: JSON.stringify({
             agent_id: agentId,
-            messages: updatedMessages.map((m) => ({
+            messages: updatedMessages.map((m: any) => ({
               role: m.role === "user" ? "user" : "assistant",
               content: m.agent_name ? `[${m.agent_name}]: ${m.content}` : m.content,
             })),
