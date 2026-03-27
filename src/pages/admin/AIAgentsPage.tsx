@@ -301,10 +301,10 @@ export default function AIAgentsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Modelo de IA</Label>
-                <Select value={availableModels.some(m => m.value === form.model) ? form.model : ""} onValueChange={(v) => setForm({ ...form, model: v })}>
+                <Select value={availableModels.some(m => m.value === form.model) ? form.model : "__default__"} onValueChange={(v) => setForm({ ...form, model: v === "__default__" ? "" : v })}>
                   <SelectTrigger><SelectValue placeholder="Usar padrão do sistema" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Padrão do sistema ({availableModels[0]?.label})</SelectItem>
+                    <SelectItem value="__default__">Padrão do sistema ({availableModels[0]?.label})</SelectItem>
                     {availableModels.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
