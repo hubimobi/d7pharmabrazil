@@ -61,15 +61,27 @@ const CHANNELS = [
 ];
 
 const ADMIN_PANELS = [
-  { id: "vendas", label: "Vendas" },
-  { id: "clientes", label: "Clientes" },
-  { id: "produtos", label: "Produtos" },
-  { id: "prescritores", label: "Prescritores" },
-  { id: "comissoes", label: "Comissões" },
-  { id: "relatorios", label: "Relatórios" },
-  { id: "estoque", label: "Estoque" },
-  { id: "cupons", label: "Cupons" },
+  { id: "dashboard", label: "Dashboard", group: "Geral" },
+  { id: "vendas", label: "Vendas", group: "Vendas" },
+  { id: "clientes", label: "Clientes", group: "Vendas" },
+  { id: "comissoes", label: "Comissões", group: "Vendas" },
+  { id: "recuperacao", label: "Recuperação de Vendas", group: "Vendas" },
+  { id: "checkout", label: "Checkout", group: "Vendas" },
+  { id: "produtos", label: "Produtos", group: "Catálogo" },
+  { id: "cupons", label: "Cupons", group: "Catálogo" },
+  { id: "estoque", label: "Estoque", group: "Catálogo" },
+  { id: "banners", label: "Banners", group: "Marketing" },
+  { id: "popups", label: "PopUps", group: "Marketing" },
+  { id: "leads", label: "Leads", group: "Marketing" },
+  { id: "paginas", label: "Páginas", group: "Marketing" },
+  { id: "links", label: "Links Inteligentes", group: "Marketing" },
+  { id: "prescritores", label: "Prescritores", group: "Prescritores" },
+  { id: "representantes", label: "Representantes", group: "Prescritores" },
+  { id: "cashback", label: "Cashback / Financeiro", group: "Financeiro" },
+  { id: "relatorios", label: "Relatórios", group: "Financeiro" },
 ];
+
+const PANEL_GROUPS = [...new Set(ADMIN_PANELS.map((p) => p.group))];
 
 interface AIAgent {
   id: string;
