@@ -129,13 +129,13 @@ export default function RecentPurchasePopup() {
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ x: -100, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -100, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className="fixed bottom-20 left-4 z-50 max-w-xs"
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 80, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          className="fixed bottom-6 left-6 z-50 w-[340px] sm:w-[380px]"
         >
-          <div className="relative overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+          <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
             {/* Close button */}
             <button
               onClick={(e) => {
@@ -143,53 +143,66 @@ export default function RecentPurchasePopup() {
                 setVisible(false);
                 setDismissed(true);
               }}
-              className="absolute right-2 top-2 rounded-full p-0.5 text-muted-foreground hover:text-foreground transition z-10"
+              className="absolute right-3 top-3 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition z-10"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </button>
 
-            <div className="flex items-center gap-3 p-3 cursor-pointer" onClick={handleClick}>
+            {/* Alert badge */}
+            <div className="flex items-center gap-1.5 px-4 pt-3 pb-1">
+              <div className="flex items-center justify-center h-5 w-5 rounded-full bg-primary/10">
+                <Bell className="h-3 w-3 text-primary" />
+              </div>
+              <span className="text-[11px] font-medium text-primary uppercase tracking-wide">Compra recente</span>
+            </div>
+
+            <div className="flex items-center gap-4 px-4 pb-4 pt-1 cursor-pointer" onClick={handleClick}>
               {/* Product Image */}
-              <div className="flex-shrink-0 h-14 w-14 rounded-lg bg-muted overflow-hidden">
+              <div className="flex-shrink-0 h-[72px] w-[72px] rounded-xl bg-muted overflow-hidden border border-border">
                 <img
                   src={productImage}
                   alt={productName}
-                  className="h-full w-full object-contain p-1"
+                  className="h-full w-full object-contain p-1.5"
                 />
               </div>
 
               <div className="flex-1 min-w-0">
-                {/* Customer info */}
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">{firstName}</span> comprou de{" "}
-                  <span className="font-medium">{city}</span>
+                {/* Customer name */}
+                <p className="text-sm text-foreground">
+                  <span className="font-bold">{firstName}</span>{" "}
+                  <span className="text-muted-foreground">comprou</span>
+                </p>
+
+                {/* City */}
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  📍 {city}
                 </p>
 
                 {/* Product name */}
-                <p className="text-sm font-medium text-foreground truncate mt-0.5">
+                <p className="text-sm font-semibold text-foreground truncate mt-1">
                   {productName}
                 </p>
 
-                {/* Stars */}
-                <div className="flex items-center gap-1 mt-0.5">
+                {/* Stars + time */}
+                <div className="flex items-center gap-2 mt-1">
                   <div className="flex">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="h-3 w-3 fill-warning text-warning" />
+                      <Star key={i} className="h-3.5 w-3.5 fill-warning text-warning" />
                     ))}
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{timeLabel}</span>
+                  <span className="text-[11px] text-muted-foreground">{timeLabel}</span>
                 </div>
 
                 {/* CTA */}
-                <p className="text-xs font-semibold text-primary mt-1 hover:underline">
+                <p className="text-xs font-bold text-primary mt-1.5 hover:underline">
                   Eu quero também →
                 </p>
               </div>
             </div>
 
-            {/* Subtle progress bar */}
+            {/* Progress bar */}
             <motion.div
-              className="h-0.5 bg-primary"
+              className="h-1 bg-primary/80 rounded-b-2xl"
               initial={{ width: "100%" }}
               animate={{ width: "0%" }}
               transition={{ duration: 6, ease: "linear" }}
