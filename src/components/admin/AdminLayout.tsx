@@ -45,6 +45,13 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const { user, loading, isAdmin, isRepresentative } = useAuth();
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const location = useLocation();
+  const { theme, setTheme } = useAdminTheme();
+
+  const themeOptions: { value: AdminTheme; label: string; icon: React.ReactNode }[] = [
+    { value: "dark", label: "Escuro", icon: <Moon className="h-4 w-4" /> },
+    { value: "light", label: "Claro", icon: <Sun className="h-4 w-4" /> },
+    { value: "company", label: "Empresa", icon: <Palette className="h-4 w-4" /> },
+  ];
 
   const pageTitle = useMemo(() => {
     return routeTitleMap[location.pathname] || "Painel";
