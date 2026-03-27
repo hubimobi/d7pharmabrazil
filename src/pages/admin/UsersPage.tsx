@@ -19,8 +19,8 @@ import { toast } from "sonner";
 const ROLE_OPTIONS = [
   { value: "super_admin", label: "Super Admin" },
   { value: "suporte", label: "Suporte" },
-  { value: "administrador", label: "Administrador" },
-  { value: "admin", label: "Admin" },
+  { value: "administrador", label: "Super Admin" },
+  { value: "admin", label: "Administrador" },
   { value: "gestor", label: "Gestor" },
   { value: "financeiro", label: "Financeiro" },
   { value: "representative", label: "Representante" },
@@ -163,6 +163,8 @@ export default function UsersPage() {
           user_id: editUser.user_id,
           full_name: editForm.full_name,
           role: editForm.role,
+          phone: editForm.phone,
+          email: editForm.email !== editUser.email ? editForm.email : undefined,
           representative_id: editForm.role === "prescriber" ? editForm.representative_id : undefined,
         },
       });
@@ -450,11 +452,15 @@ export default function UsersPage() {
               </div>
               <div>
                 <Label>Email</Label>
-                <Input value={editForm.email} readOnly disabled className="bg-muted" />
+                {isSuperAdmin ? (
+                  <Input value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} />
+                ) : (
+                  <Input value={editForm.email} readOnly disabled className="bg-muted" />
+                )}
               </div>
               <div>
                 <Label>Telefone</Label>
-                <Input value={editForm.phone} readOnly disabled className="bg-muted" />
+                <Input value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} placeholder="(00) 00000-0000" />
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">ID: {editUser.user_id}</Label>
