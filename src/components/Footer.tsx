@@ -58,9 +58,8 @@ const Footer = () => {
 
   return (
     <footer
-      className="text-background/80 py-10 md:py-14"
-      style={footerColor ? { backgroundColor: footerColor, color: "#ffffffcc" } : undefined}
-      {...(!footerColor ? { className: "bg-foreground text-background/80 py-10 md:py-14" } : {})}
+      className="text-white/80 py-10 md:py-14"
+      style={{ backgroundColor: footerColor || "hsl(var(--foreground))" }}
     >
       <div className="container">
         <div className="grid grid-cols-2 md:grid-cols-[1.2fr_1fr_1fr_1fr] gap-6 md:gap-8">
