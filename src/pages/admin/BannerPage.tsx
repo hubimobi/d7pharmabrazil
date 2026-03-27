@@ -14,6 +14,7 @@ import { Image, Type, Link2, Save, Loader2, Eye, Video, Plus, Trash2, Palette, G
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
 import { useProducts } from "@/hooks/useProducts";
 import { Package } from "lucide-react";
+import { SalesPopupSettings } from "@/components/admin/SalesPopupSettings";
 
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Shield, Lock, Truck, Award, FlaskConical, ShieldCheck, TrendingUp, Star, Heart, Zap, CheckCircle,
