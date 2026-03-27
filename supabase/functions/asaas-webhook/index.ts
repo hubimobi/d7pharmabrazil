@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, asaas-access-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -12,13 +12,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Handle GET/HEAD requests (browser access)
   if (req.method === "GET" || req.method === "HEAD") {
     return new Response(JSON.stringify({ status: "Webhook ativo" }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
   try {
     let body: any;
@@ -36,11 +39,13 @@ serve(async (req) => {
     const event = body.event;
     const payment = body.payment;
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-
     if (!event || !payment) {
+      await supabaseAdmin.from("integration_logs").insert({
+        integration: "asaas",
+        action: "webhook_invalid_payload",
+        status: "error",
+        details: `Payload inválido: ${JSON.stringify(body).slice(0, 500)}`,
+      });
       return new Response(JSON.stringify({ error: "Invalid payload" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -52,15 +57,8 @@ serve(async (req) => {
       integration: "asaas",
       action: "webhook_received",
       status: "success",
-      details: `Evento: ${event}, Payment ID: ${payment?.id || "N/A"}`,
+      details: `Evento: ${event}, Payment ID: ${payment?.id || "N/A"}, Status: ${payment?.status || "N/A"}`,
     });
-
-    if (event !== "PAYMENT_CONFIRMED" && event !== "PAYMENT_RECEIVED") {
-      return new Response(JSON.stringify({ ok: true, message: "Event ignored" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const asaasPaymentId = payment.id;
     if (!asaasPaymentId) {
@@ -70,70 +68,115 @@ serve(async (req) => {
       });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from("orders")
-      .update({ status: "paid" })
-      .eq("asaas_payment_id", asaasPaymentId)
-      .eq("status", "pending")
-      .select("id")
-      .maybeSingle();
+    // Handle payment confirmed/received → mark as paid
+    if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
+      const { data, error } = await supabaseAdmin
+        .from("orders")
+        .update({ status: "paid" })
+        .eq("asaas_payment_id", asaasPaymentId)
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
 
-    if (error) {
-      console.error("Error updating order:", error);
+      if (error) {
+        console.error("Error updating order to paid:", error);
+        await supabaseAdmin.from("integration_logs").insert({
+          integration: "asaas",
+          action: "webhook_update_order",
+          status: "error",
+          details: `Erro ao atualizar pedido (payment: ${asaasPaymentId}): ${error.message}`,
+        });
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log("Order updated to paid:", data?.id || "no matching order");
+
       await supabaseAdmin.from("integration_logs").insert({
         integration: "asaas",
-        action: "webhook_update_order",
-        status: "error",
-        details: `Erro ao atualizar pedido (payment: ${asaasPaymentId}): ${error.message}`,
+        action: "payment_confirmed",
+        status: "success",
+        details: `Pagamento confirmado via webhook. Payment: ${asaasPaymentId}, Pedido: ${data?.id || "não encontrado"}`,
       });
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
+
+      // Auto-sync to Bling
+      if (data?.id) {
+        try {
+          const blingRes = await fetch(`${supabaseUrl}/functions/v1/bling-sync-order`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({ order_id: data.id }),
+          });
+          const blingData = await blingRes.json();
+          console.log("Bling auto-sync result:", JSON.stringify(blingData));
+        } catch (blingErr) {
+          console.error("Bling auto-sync error (non-fatal):", blingErr);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, order_id: data?.id || null }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Handle overdue → mark as overdue
+    if (event === "PAYMENT_OVERDUE") {
+      await supabaseAdmin
+        .from("orders")
+        .update({ status: "overdue" })
+        .eq("asaas_payment_id", asaasPaymentId)
+        .eq("status", "pending");
+
+      await supabaseAdmin.from("integration_logs").insert({
+        integration: "asaas",
+        action: "payment_overdue",
+        status: "success",
+        details: `Pagamento vencido. Payment: ${asaasPaymentId}`,
+      });
+
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("Order updated:", data?.id || "no matching order found");
+    // Handle refunded → mark as cancelled
+    if (event === "PAYMENT_REFUNDED") {
+      await supabaseAdmin
+        .from("orders")
+        .update({ status: "cancelled" })
+        .eq("asaas_payment_id", asaasPaymentId);
 
-    // Log payment confirmed
-    await supabaseAdmin.from("integration_logs").insert({
-      integration: "asaas",
-      action: "payment_confirmed",
-      status: "success",
-      details: `Pagamento confirmado via webhook. Payment: ${asaasPaymentId}, Pedido: ${data?.id || "não encontrado"}`,
-    });
+      await supabaseAdmin.from("integration_logs").insert({
+        integration: "asaas",
+        action: "payment_refunded",
+        status: "success",
+        details: `Pagamento estornado. Payment: ${asaasPaymentId}`,
+      });
 
-    // Auto-sync to Bling when order is paid
-    if (data?.id) {
-      try {
-        const blingRes = await fetch(`${supabaseUrl}/functions/v1/bling-sync-order`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-          body: JSON.stringify({ order_id: data.id }),
-        });
-        const blingData = await blingRes.json();
-        console.log("Bling auto-sync result:", JSON.stringify(blingData));
-      } catch (blingErr) {
-        console.error("Bling auto-sync error (non-fatal):", blingErr);
-      }
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    return new Response(
-      JSON.stringify({ ok: true, order_id: data?.id || null }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    // Other events — just acknowledge
+    return new Response(JSON.stringify({ ok: true, message: `Event ${event} acknowledged` }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error: unknown) {
     console.error("Webhook error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
 
-    // Try to log the error
     try {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const sb = createClient(supabaseUrl, supabaseKey);
-      await sb.from("integration_logs").insert({
+      await supabaseAdmin.from("integration_logs").insert({
         integration: "asaas",
         action: "webhook_error",
         status: "error",

@@ -72,25 +72,33 @@ export default function PixPaymentResult({
     };
   }, [orderId, confirmed]);
 
-  // Polling fallback (every 15s)
+  const [manualChecking, setManualChecking] = useState(false);
+
+  const checkPaymentNow = async () => {
+    if (!paymentId) return;
+    setManualChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("check-payment-status", {
+        body: { payment_id: paymentId, order_id: orderId },
+      });
+      if (!error && (data?.status === "CONFIRMED" || data?.status === "RECEIVED")) {
+        handleConfirmed();
+      }
+    } catch {
+      // silently retry
+    } finally {
+      setManualChecking(false);
+    }
+  };
+
+  // Polling fallback (every 10s, first check immediate)
   useEffect(() => {
     if (!paymentId || confirmed) return;
 
-    const checkStatus = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke("check-payment-status", {
-          body: { payment_id: paymentId, order_id: orderId },
-        });
-        if (error) return;
-        if (data?.status === "CONFIRMED" || data?.status === "RECEIVED") {
-          handleConfirmed();
-        }
-      } catch {
-        // silently retry
-      }
-    };
+    // Immediate first check
+    checkPaymentNow();
 
-    intervalRef.current = setInterval(checkStatus, 15000);
+    intervalRef.current = setInterval(checkPaymentNow, 10000);
     timeoutRef.current = setTimeout(() => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }, 15 * 60 * 1000);
@@ -156,9 +164,21 @@ export default function PixPaymentResult({
       </div>
 
       {paymentId && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Aguardando confirmação do pagamento...
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Aguardando confirmação do pagamento...
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={checkPaymentNow}
+            disabled={manualChecking}
+            className="gap-1"
+          >
+            {manualChecking ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
+            Verificar pagamento
+          </Button>
         </div>
       )}
 
