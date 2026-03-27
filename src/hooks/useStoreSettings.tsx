@@ -12,6 +12,7 @@ export interface StoreSettings {
   cnpj: string;
   email: string;
   whatsapp: string;
+  whatsapp_support: string;
   address_street: string;
   address_number: string;
   address_complement: string;
