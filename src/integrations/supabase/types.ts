@@ -526,6 +526,77 @@ export type Database = {
         }
         Relationships: []
       }
+      link_clicks: {
+        Row: {
+          clicked_at: string
+          device_type: string | null
+          id: string
+          referrer: string | null
+          short_link_id: string
+        }
+        Insert: {
+          clicked_at?: string
+          device_type?: string | null
+          id?: string
+          referrer?: string | null
+          short_link_id: string
+        }
+        Update: {
+          clicked_at?: string
+          device_type?: string | null
+          id?: string
+          referrer?: string | null
+          short_link_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "link_clicks_short_link_id_fkey"
+            columns: ["short_link_id"]
+            isOneToOne: false
+            referencedRelation: "short_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      link_conversions: {
+        Row: {
+          converted_at: string
+          id: string
+          order_id: string | null
+          order_total: number
+          short_link_id: string
+        }
+        Insert: {
+          converted_at?: string
+          id?: string
+          order_id?: string | null
+          order_total?: number
+          short_link_id: string
+        }
+        Update: {
+          converted_at?: string
+          id?: string
+          order_id?: string | null
+          order_total?: number
+          short_link_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "link_conversions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "link_conversions_short_link_id_fkey"
+            columns: ["short_link_id"]
+            isOneToOne: false
+            referencedRelation: "short_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manufacturers: {
         Row: {
           created_at: string
@@ -936,6 +1007,59 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      short_links: {
+        Row: {
+          active: boolean
+          clicks_count: number
+          code: string
+          conversions_count: number
+          created_at: string
+          id: string
+          product_id: string | null
+          target_url: string
+          user_id: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          active?: boolean
+          clicks_count?: number
+          code: string
+          conversions_count?: number
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          target_url: string
+          user_id: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          active?: boolean
+          clicks_count?: number
+          code?: string
+          conversions_count?: number
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          target_url?: string
+          user_id?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "short_links_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -1440,6 +1564,11 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_link_clicks: { Args: { link_id: string }; Returns: undefined }
+      increment_link_conversions: {
+        Args: { link_id: string }
+        Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
     }
