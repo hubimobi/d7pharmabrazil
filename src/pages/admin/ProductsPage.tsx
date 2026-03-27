@@ -188,6 +188,22 @@ export default function ProductsPage() {
     },
   });
 
+  const deleteProduct = useMutation({
+    mutationFn: async (id: string) => {
+      // Delete related data first
+      await supabase.from("product_testimonials").delete().eq("product_id", id);
+      await supabase.from("product_faqs").delete().eq("product_id", id);
+      const { error } = await supabase.from("products").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      toast({ title: "Produto excluído com sucesso" });
+    },
+    onError: () => toast({ title: "Erro ao excluir produto", variant: "destructive" }),
+  });
+
   const resetForm = () => {
     setForm(emptyForm); setEditId(null); setImageFile(null);
     setExtraFiles([]); setExistingExtras([]); setTestimonials([]);
