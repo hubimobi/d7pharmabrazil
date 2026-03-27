@@ -379,7 +379,7 @@ const CheckoutPage = () => {
                 ))}
 
                 {/* Free shipping progress bar */}
-                {storeSettings?.free_shipping_enabled && (() => {
+                {(storeSettings as any)?.checkout_show_free_shipping_bar !== false && storeSettings?.free_shipping_enabled && (() => {
                   const minValue = freeShippingMinValue;
                   const subtotalValue = subtotal;
                   const remaining = Math.max(0, minValue - subtotalValue);
@@ -421,7 +421,7 @@ const CheckoutPage = () => {
                   onSelectOption={setSelectedShipping}
                 />
 
-                <ComboUpsell />
+                {(storeSettings as any)?.checkout_show_combo !== false && <ComboUpsell />}
 
                 <Button className="w-full bg-primary hover:bg-primary/90" size="lg" onClick={() => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Passo 2 — Seus Dados</Button>
               </div>
@@ -615,15 +615,19 @@ const CheckoutPage = () => {
                   )}
                 </div>
               </div>
-              <div className="mt-4">
-                <CheckoutUrgency
-                  reviewsCount={items.reduce((sum, i) => sum + (i.product.reviews || 0), 0)}
-                  firstBenefit={items[0]?.product?.benefits?.[0]}
-                />
-              </div>
-              <div className="mt-4">
-                <CartRecommendations cartItems={items} />
-              </div>
+              {(storeSettings as any)?.checkout_show_urgency !== false && (
+                <div className="mt-4">
+                  <CheckoutUrgency
+                    reviewsCount={items.reduce((sum, i) => sum + (i.product.reviews || 0), 0)}
+                    firstBenefit={items[0]?.product?.benefits?.[0]}
+                  />
+                </div>
+              )}
+              {(storeSettings as any)?.checkout_show_recommendations !== false && (
+                <div className="mt-4">
+                  <CartRecommendations cartItems={items} />
+                </div>
+              )}
             </div>
           )}
         </div>
