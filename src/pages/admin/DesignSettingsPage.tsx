@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Palette, Save, Loader2, FlaskConical, Truck, ShieldCheck, TrendingUp, Wand2 } from "lucide-react";
+import { Palette, Save, Loader2, FlaskConical, Truck, ShieldCheck, TrendingUp, Wand2, Sun, Moon, Building2 } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
+import { useAdminTheme, type AdminTheme } from "@/hooks/useAdminTheme";
 
 const FONT_OPTIONS = [
   { value: "Inter", label: "Inter (Moderno)" },
@@ -122,6 +123,9 @@ export default function DesignSettingsPage() {
   const [form, setForm] = useState<Partial<StoreSettings> | null>(null);
   const [extractedColors, setExtractedColors] = useState<string[]>([]);
   const [extracting, setExtracting] = useState(false);
+  const [panelExtractedColors, setPanelExtractedColors] = useState<string[]>([]);
+  const [panelExtracting, setPanelExtracting] = useState(false);
+  const { theme: adminTheme, setTheme: setAdminTheme } = useAdminTheme();
 
   const update = useCallback((field: keyof StoreSettings, value: any) =>
     setForm((prev) => (prev ? { ...prev, [field]: value } : prev)), []);
@@ -208,6 +212,30 @@ export default function DesignSettingsPage() {
   const bgGradient = (form as any).design_bg_gradient || "";
   const footerGradient = (form as any).design_footer_gradient || "";
 
+  const handlePanelExtractColors = async () => {
+    const logoUrl = form?.logo_url || settings?.logo_url;
+    if (!logoUrl) {
+      toast.error("Nenhuma logo cadastrada. Cadastre uma logo primeiro.");
+      return;
+    }
+    setPanelExtracting(true);
+    try {
+      const colors = await extractColorsFromImage(logoUrl);
+      setPanelExtractedColors(colors);
+      toast.success(`${colors.length} cores extraídas da logo!`);
+    } catch {
+      toast.error("Erro ao analisar a logo.");
+    } finally {
+      setPanelExtracting(false);
+    }
+  };
+
+  const ADMIN_THEMES: { value: AdminTheme; label: string; desc: string; icon: React.ReactNode }[] = [
+    { value: "light", label: "Claro", desc: "Fundo branco com texto escuro", icon: <Sun className="h-5 w-5" /> },
+    { value: "dark", label: "Escuro", desc: "Fundo escuro com texto claro", icon: <Moon className="h-5 w-5" /> },
+    { value: "company", label: "Empresa", desc: "Usa as cores da sua marca", icon: <Building2 className="h-5 w-5" /> },
+  ];
+
   return (
     <div>
       <div className="mb-6 flex items-center gap-3">
@@ -216,6 +244,87 @@ export default function DesignSettingsPage() {
       </div>
 
       <form onSubmit={handleSave} className="max-w-2xl space-y-6">
+        {/* Tema do Painel Admin */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Tema do Painel Administrativo</h2>
+            <p className="text-sm text-muted-foreground">Escolha o padrão de cores do painel de administração.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {ADMIN_THEMES.map((t) => (
+              <label
+                key={t.value}
+                className={`flex flex-col items-center gap-2 rounded-xl border p-4 cursor-pointer transition-all text-center ${
+                  adminTheme === t.value
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border hover:border-primary/30"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="admin_theme"
+                  value={t.value}
+                  checked={adminTheme === t.value}
+                  onChange={() => setAdminTheme(t.value)}
+                  className="sr-only"
+                />
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                  adminTheme === t.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                }`}>
+                  {t.icon}
+                </div>
+                <p className="font-semibold text-sm">{t.label}</p>
+                <p className="text-xs text-muted-foreground">{t.desc}</p>
+              </label>
+            ))}
+          </div>
+
+          {adminTheme === "company" && (
+            <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Cores da Empresa</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePanelExtractColors}
+                  disabled={panelExtracting}
+                  className="gap-2"
+                >
+                  {panelExtracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                  Extrair da Logo
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                No modo Empresa, o painel usará as cores de título e navegação configuradas abaixo. 
+                Use "Extrair da Logo" para sugerir cores automaticamente.
+              </p>
+              {panelExtractedColors.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium">Clique numa cor para aplicar:</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {panelExtractedColors.map((color, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className="h-8 w-8 rounded-lg border-2 border-border cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                        style={{ backgroundColor: color }}
+                        title={`Aplicar ${color} como cor principal`}
+                        onClick={() => {
+                          update("design_title_color", color);
+                          if (panelExtractedColors[i + 1]) {
+                            update("design_nav_color" as any, panelExtractedColors[i + 1]);
+                          }
+                          toast.success(`Cor ${color} aplicada ao tema Empresa!`);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         {/* Cores */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <div className="flex items-center justify-between">
