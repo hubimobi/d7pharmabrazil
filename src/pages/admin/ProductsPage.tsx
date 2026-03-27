@@ -219,6 +219,13 @@ export default function ProductsPage() {
       id: t.id, author_name: t.author_name, content: t.content, rating: t.rating,
     })));
 
+    // Load FAQs
+    const { data: faqData } = await supabase.from("product_faqs")
+      .select("*").eq("product_id", p.id).order("sort_order");
+    setFaqs((faqData ?? []).map((f: any) => ({
+      id: f.id, question: f.question, answer: f.answer,
+    })));
+
     setOpen(true);
   };
 
