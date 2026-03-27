@@ -93,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isFinanceiro: hasRole("financeiro" as AppRole) || hasRole("super_admin" as AppRole),
         isGestor: hasRole("gestor" as AppRole) || hasRole("super_admin" as AppRole),
         isAdministrador: hasRole("administrador" as AppRole) || hasRole("super_admin" as AppRole),
+        canDelete,
         isSuporte: hasRole("suporte" as AppRole) || hasRole("super_admin" as AppRole),
         isRepresentative: hasRole("representative" as AppRole),
         isPrescriber: hasRole("prescriber" as AppRole),
