@@ -220,7 +220,7 @@ const ProductDetail = () => {
           </div>
 
           {/* RIGHT: Product info + Purchase — side by side on desktop */}
-          <div className="order-2 lg:order-none lg:w-[45%] lg:max-w-[480px]">
+          <div className="order-2 lg:order-none lg:w-[45%] lg:max-w-[480px] lg:self-start lg:sticky lg:top-4">
             {product.badge && <Badge className="mb-3 bg-secondary text-secondary-foreground">{product.badge}</Badge>}
             <div className="flex items-start justify-between gap-2">
               <h1 className="text-2xl font-bold text-foreground lg:text-3xl">{product.name}</h1>
