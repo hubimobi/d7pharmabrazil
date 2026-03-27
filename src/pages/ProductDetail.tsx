@@ -151,15 +151,17 @@ const ProductDetail = () => {
           <ArrowLeft className="h-4 w-4" /> Voltar aos Produtos
         </Link>
 
-        <div className="flex flex-col md:grid md:grid-cols-2 gap-8">
-          {/* Images — order-1 on mobile */}
-          <div className="order-1 md:order-none space-y-3">
+        {/* Desktop: 3-area layout like Mercado Livre */}
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+          {/* LEFT: Thumbnails + Main Image + Description (desktop) */}
+          <div className="order-1 lg:order-none lg:flex-1 lg:max-w-[55%]">
             <div className="flex gap-3">
+              {/* Vertical thumbnails - desktop */}
               {product.extraImages.length > 0 && (
-                <div className="hidden md:flex flex-col gap-2">
+                <div className="hidden lg:flex flex-col gap-2 flex-shrink-0">
                   <button
                     onClick={() => setSelectedImage(null)}
-                    className={`flex-shrink-0 rounded-lg border-2 overflow-hidden transition-all ${
+                    className={`rounded-lg border-2 overflow-hidden transition-all ${
                       !selectedImage ? "border-primary ring-1 ring-primary/30" : "border-transparent hover:border-primary/30"
                     }`}
                   >
@@ -169,7 +171,7 @@ const ProductDetail = () => {
                     <button
                       key={i}
                       onClick={() => setSelectedImage(img)}
-                      className={`flex-shrink-0 rounded-lg border-2 overflow-hidden transition-all ${
+                      className={`rounded-lg border-2 overflow-hidden transition-all ${
                         selectedImage === img ? "border-primary ring-1 ring-primary/30" : "border-transparent hover:border-primary/30"
                       }`}
                     >
@@ -178,6 +180,7 @@ const ProductDetail = () => {
                   ))}
                 </div>
               )}
+              {/* Main image */}
               <div className="flex-1 aspect-square overflow-hidden rounded-xl bg-muted">
                 <img
                   src={selectedImage || product.image}
@@ -186,8 +189,10 @@ const ProductDetail = () => {
                 />
               </div>
             </div>
+
+            {/* Horizontal thumbnails - mobile */}
             {product.extraImages.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto pb-1 md:hidden">
+              <div className="flex gap-2 overflow-x-auto pb-1 mt-3 lg:hidden">
                 <button
                   onClick={() => setSelectedImage(null)}
                   className={`flex-shrink-0 rounded-lg border-2 overflow-hidden transition ${
@@ -210,15 +215,15 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Desktop-only description (under images) */}
-            {product.description && <DescriptionBlock className="hidden md:block mt-4" />}
+            {/* Description below images - desktop only */}
+            {product.description && <DescriptionBlock className="hidden lg:block mt-6" />}
           </div>
 
-          {/* Right column: Purchase info — order-2 on mobile */}
-          <div className="order-2 md:order-none">
+          {/* RIGHT: Product info + Purchase — side by side on desktop */}
+          <div className="order-2 lg:order-none lg:w-[45%] lg:max-w-[480px]">
             {product.badge && <Badge className="mb-3 bg-secondary text-secondary-foreground">{product.badge}</Badge>}
             <div className="flex items-start justify-between gap-2">
-              <h1 className="text-2xl font-bold text-foreground md:text-3xl">{product.name}</h1>
+              <h1 className="text-2xl font-bold text-foreground lg:text-3xl">{product.name}</h1>
               <div className="flex gap-1 flex-shrink-0 pt-1">
                 <button
                   onClick={() => {
@@ -330,7 +335,7 @@ const ProductDetail = () => {
               <span className="text-xs text-muted-foreground">Aceitamos:</span>
               <div className="flex flex-wrap items-center gap-1.5 mt-1">
                 {["Visa", "Mastercard", "Elo", "Amex", "Pix"].map((flag) => (
-                  <span key={flag} className="inline-flex items-center gap-1 rounded-lg bg-muted px-2 py-1 text-2xs md:text-xs font-medium text-muted-foreground">
+                  <span key={flag} className="inline-flex items-center gap-1 rounded-lg bg-muted px-2 py-1 text-2xs lg:text-xs font-medium text-muted-foreground">
                     <CreditCard className="h-3 w-3" /> {flag}
                   </span>
                 ))}
@@ -338,7 +343,7 @@ const ProductDetail = () => {
             </div>
 
             {faqs && faqs.length > 0 && (
-              <div className="mt-6 rounded-xl bg-muted/50 p-4 md:p-5">
+              <div className="mt-6 rounded-xl bg-muted/50 p-4 lg:p-5">
                 <h2 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
                   <HelpCircle className="h-5 w-5 text-primary" /> Perguntas Frequentes
                 </h2>
@@ -357,8 +362,8 @@ const ProductDetail = () => {
             <ProductQA product={product} faqs={faqs as any} />
           </div>
 
-          {/* Mobile-only description — order-3 (after purchase section) */}
-          {product.description && <DescriptionBlock className="order-3 md:hidden" />}
+          {/* Mobile-only description — after purchase section */}
+          {product.description && <DescriptionBlock className="order-3 lg:hidden" />}
         </div>
 
         {/* Depoimentos */}
