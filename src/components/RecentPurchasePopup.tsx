@@ -40,6 +40,7 @@ export default function RecentPurchasePopup() {
   const phase = useRef<"idle" | "burst" | "recurring">("idle");
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
+  const isPublicStorefront = ["/", "/produtos"].includes(location.pathname) || location.pathname.startsWith("/produto/");
   const { addItem } = useCart();
   const { data: popupSettings } = useStoreSettings();
 
@@ -92,14 +93,14 @@ export default function RecentPurchasePopup() {
   const displayOrders = [...realOrders, ...customOrders, ...FALLBACK_PURCHASES].slice(0, Math.max(5, realOrders.length + customOrders.length));
 
   const showNext = useCallback(() => {
-    if (dismissed || isAdmin || !displayOrders.length || !popupEnabled) return;
+    if (dismissed || !isPublicStorefront || !displayOrders.length || !popupEnabled) return;
     setCurrentIndex((prev) => (prev + 1) % displayOrders.length);
     setVisible(true);
-  }, [dismissed, isAdmin, displayOrders.length, popupEnabled]);
+  }, [dismissed, isPublicStorefront, displayOrders.length, popupEnabled]);
 
   // Phase controller
   useEffect(() => {
-    if (!displayOrders.length || dismissed || isAdmin || !popupEnabled) return;
+    if (!displayOrders.length || dismissed || !isPublicStorefront || !popupEnabled) return;
     let timeouts: ReturnType<typeof setTimeout>[] = [];
     if (phase.current === "idle") {
       phase.current = "burst";
