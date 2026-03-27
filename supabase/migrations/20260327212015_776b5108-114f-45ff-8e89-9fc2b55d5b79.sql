@@ -1,0 +1,1 @@
+UPDATE public.orders SET status = 'paid' WHERE id = '48806e93-870f-4f23-821c-bb3f2e45a866' AND status = 'pending';
