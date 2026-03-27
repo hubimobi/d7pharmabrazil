@@ -291,6 +291,15 @@ export default function CheckoutSettingsPage() {
               <a href="https://tagmanager.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary underline">Google Tag Manager</a>
             </p>
           </div>
+          <div>
+            <Label>Hotjar Site ID</Label>
+            <Input value={hotjarId} onChange={(e) => setHotjarId(e.target.value)} placeholder="Ex: 1234567" className="mt-1 font-mono text-sm" />
+            <p className="text-xs text-muted-foreground mt-1">
+              Encontre seu Site ID em{" "}
+              <a href="https://insights.hotjar.com/settings/sites" target="_blank" rel="noopener noreferrer" className="text-primary underline">Hotjar → Settings → Sites</a>
+              {" "}— mapa de calor, gravações e insights de comportamento.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
