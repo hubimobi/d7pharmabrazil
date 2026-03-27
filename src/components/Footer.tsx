@@ -95,9 +95,32 @@ const Footer = () => {
             </div>
           </div>
         </div>
-        <div className="mt-8 md:mt-10 border-t border-background/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+
+        {/* Social icons centered row */}
+        {socials.length > 0 && (
+          <div className="mt-8 border-t border-background/10 pt-6 flex justify-center gap-4">
+            {socials.map((s) => {
+              const Icon = socialIcons[s.label];
+              return (
+                <a
+                  key={s.label}
+                  href={s.url!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-background/10 text-background/70 hover:bg-background/20 hover:text-background transition"
+                  title={s.label}
+                >
+                  {Icon ? <Icon /> : s.label}
+                </a>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Security + copyright */}
+        <div className="mt-6 border-t border-background/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 text-sm opacity-60">
-            <span className="flex items-center gap-1"><Lock className="h-3.5 w-3.5" /> Pagamento Seguro</span>
+            <span className="flex items-center gap-1"><Lock className="h-3.5 w-3.5" /> 100% Seguro</span>
             <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Dados Protegidos</span>
           </div>
           <p className="text-[13px] opacity-50">
