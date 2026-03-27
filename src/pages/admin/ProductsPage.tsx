@@ -26,6 +26,7 @@ interface ProdForm {
   group_name: string; manufacturer: string;
   sku: string; ncm: string; gtin: string; unit: string;
   show_countdown: boolean;
+  featured: boolean;
 }
 
 const emptyForm: ProdForm = {
@@ -36,6 +37,7 @@ const emptyForm: ProdForm = {
   group_name: "", manufacturer: "",
   sku: "", ncm: "", gtin: "", unit: "UN",
   show_countdown: true,
+  featured: false,
 };
 
 interface Testimonial {
