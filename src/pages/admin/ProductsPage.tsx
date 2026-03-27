@@ -103,6 +103,7 @@ export default function ProductsPage() {
         price: parseFloat(form.price), original_price: parseFloat(form.original_price),
         badge: form.badge || null, stock: parseInt(form.stock) || 0, benefits,
         show_countdown: form.show_countdown,
+        featured: form.featured,
         weight: parseFloat(form.weight) || 0.3,
         height: parseFloat(form.height) || 5,
         width: parseFloat(form.width) || 15,
@@ -282,6 +283,13 @@ export default function ProductsPage() {
                       <p className="text-xs text-muted-foreground">Exibir cronômetro de promoção no produto</p>
                     </div>
                     <Switch id="show_countdown" checked={form.show_countdown} onCheckedChange={(checked) => setForm({ ...form, show_countdown: checked })} />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                    <div>
+                      <Label htmlFor="featured" className="font-medium">Produto Destaque</Label>
+                      <p className="text-xs text-muted-foreground">Exibir no carrossel de destaques da home</p>
+                    </div>
+                    <Switch id="featured" checked={form.featured} onCheckedChange={(checked) => setForm({ ...form, featured: checked })} />
                   </div>
                   <div className="space-y-2"><Label>Benefícios (um por linha)</Label><Textarea value={form.benefits} onChange={(e) => setForm({ ...form, benefits: e.target.value })} rows={4} /></div>
                 </TabsContent>
