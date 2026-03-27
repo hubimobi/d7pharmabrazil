@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Stethoscope, BarChart3, LogOut, Package, DollarSign, Store, Plug, ShoppingCart, Tag, ImageIcon, Megaphone, ShoppingBag, Contact, Mail, FileText, Palette, Settings2, Sparkles, UserCog } from "lucide-react";
+import { LayoutDashboard, Users, Stethoscope, BarChart3, LogOut, Package, DollarSign, Store, Plug, ShoppingCart, Tag, ImageIcon, Megaphone, ShoppingBag, Contact, Mail, FileText, Palette, Settings2, Sparkles, UserCog, Link2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -55,6 +55,7 @@ const adminSections: MenuSection[] = [
       { title: "Banner", url: "/admin/banner", icon: ImageIcon },
       { title: "PopUps", url: "/admin/popups", icon: Megaphone },
       { title: "Leads", url: "/admin/leads", icon: Mail },
+      { title: "Links", url: "/admin/links", icon: Link2 },
     ],
   },
   {
