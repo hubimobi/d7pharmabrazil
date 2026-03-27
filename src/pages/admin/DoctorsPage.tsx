@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,9 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, CheckCircle, Copy } from "lucide-react";
+import { Plus, Pencil, CheckCircle, Copy, Tag } from "lucide-react";
 import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
 
 interface DocForm {
   name: string;
@@ -28,15 +27,48 @@ interface DocForm {
 
 const emptyForm: DocForm = { name: "", crm: "", specialty: "", city: "", state: "", representative_id: "", email: "", cpf: "", pix: "" };
 
+const STATES = [
+  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA",
+  "PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
+];
+
+const CITIES_BY_STATE: Record<string, string[]> = {
+  SP: ["São Paulo","Campinas","Santos","Ribeirão Preto","São José dos Campos","Sorocaba","Osasco","Guarulhos","São Bernardo do Campo","Santo André","Bauru","Piracicaba","Jundiaí","Franca","Marília"],
+  RJ: ["Rio de Janeiro","Niterói","Petrópolis","Volta Redonda","Campos dos Goytacazes","Nova Iguaçu","Duque de Caxias","São Gonçalo","Macaé","Angra dos Reis"],
+  MG: ["Belo Horizonte","Uberlândia","Contagem","Juiz de Fora","Betim","Montes Claros","Uberaba","Governador Valadares","Ipatinga","Poços de Caldas"],
+  RS: ["Porto Alegre","Caxias do Sul","Pelotas","Canoas","Santa Maria","Novo Hamburgo","Passo Fundo","São Leopoldo","Rio Grande","Gravataí"],
+  PR: ["Curitiba","Londrina","Maringá","Ponta Grossa","Cascavel","Foz do Iguaçu","São José dos Pinhais","Colombo","Guarapuava","Paranaguá"],
+  SC: ["Florianópolis","Joinville","Blumenau","Chapecó","Criciúma","Itajaí","Jaraguá do Sul","Lages","Balneário Camboriú","São José"],
+  BA: ["Salvador","Feira de Santana","Vitória da Conquista","Camaçari","Itabuna","Lauro de Freitas","Ilhéus","Juazeiro","Teixeira de Freitas","Barreiras"],
+  PE: ["Recife","Jaboatão dos Guararapes","Olinda","Caruaru","Petrolina","Paulista","Cabo de Santo Agostinho","Camaragibe","Garanhuns","Vitória de Santo Antão"],
+  CE: ["Fortaleza","Caucaia","Juazeiro do Norte","Maracanaú","Sobral","Crato","Itapipoca","Maranguape","Iguatu","Quixadá"],
+  GO: ["Goiânia","Aparecida de Goiânia","Anápolis","Rio Verde","Luziânia","Águas Lindas de Goiás","Valparaíso de Goiás","Trindade","Formosa","Itumbiara"],
+  PA: ["Belém","Ananindeua","Santarém","Marabá","Castanhal","Parauapebas","Abaetetuba","Cametá","Marituba","Bragança"],
+  MA: ["São Luís","Imperatriz","São José de Ribamar","Timon","Caxias","Codó","Paço do Lumiar","Açailândia","Bacabal","Santa Inês"],
+  AM: ["Manaus","Parintins","Itacoatiara","Manacapuru","Coari","Tefé","Tabatinga","Maués","Iranduba","Humaitá"],
+  ES: ["Vitória","Vila Velha","Serra","Cariacica","Cachoeiro de Itapemirim","Linhares","Colatina","Guarapari","São Mateus","Aracruz"],
+  DF: ["Brasília","Ceilândia","Taguatinga","Samambaia","Plano Piloto","Águas Claras","Recanto das Emas","Gama","Guará","Santa Maria"],
+  MT: ["Cuiabá","Várzea Grande","Rondonópolis","Sinop","Tangará da Serra","Cáceres","Sorriso","Lucas do Rio Verde","Primavera do Leste","Barra do Garças"],
+  MS: ["Campo Grande","Dourados","Três Lagoas","Corumbá","Ponta Porã","Naviraí","Nova Andradina","Aquidauana","Sidrolândia","Maracaju"],
+  PB: ["João Pessoa","Campina Grande","Santa Rita","Patos","Bayeux","Sousa","Cabedelo","Cajazeiras","Guarabira","Sapé"],
+  RN: ["Natal","Mossoró","Parnamirim","São Gonçalo do Amarante","Macaíba","Ceará-Mirim","Caicó","Açu","Currais Novos","São José de Mipibu"],
+  PI: ["Teresina","Parnaíba","Picos","Piripiri","Floriano","Campo Maior","Barras","União","Altos","José de Freitas"],
+  AL: ["Maceió","Arapiraca","Rio Largo","Palmeira dos Índios","União dos Palmares","Penedo","São Miguel dos Campos","Santana do Ipanema","Delmiro Gouveia","Coruripe"],
+  SE: ["Aracaju","Nossa Senhora do Socorro","Lagarto","Itabaiana","São Cristóvão","Estância","Tobias Barreto","Simão Dias","Itabaianinha","Capela"],
+  RO: ["Porto Velho","Ji-Paraná","Ariquemes","Vilhena","Cacoal","Rolim de Moura","Jaru","Guajará-Mirim","Ouro Preto do Oeste","Buritis"],
+  TO: ["Palmas","Araguaína","Gurupi","Porto Nacional","Paraíso do Tocantins","Colinas do Tocantins","Guaraí","Tocantinópolis","Dianópolis","Miracema do Tocantins"],
+  AC: ["Rio Branco","Cruzeiro do Sul","Sena Madureira","Tarauacá","Feijó","Brasiléia","Senador Guiomard","Plácido de Castro","Xapuri","Epitaciolândia"],
+  AP: ["Macapá","Santana","Laranjal do Jari","Oiapoque","Mazagão","Porto Grande","Tartarugalzinho","Pedra Branca do Amapari","Vitória do Jari","Calçoene"],
+  RR: ["Boa Vista","Rorainópolis","Caracaraí","Alto Alegre","Pacaraima","Cantá","Bonfim","Uiramutã","São João da Baliza","Caroebe"],
+};
+
 export default function DoctorsPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<DocForm>(emptyForm);
   const [successCoupon, setSuccessCoupon] = useState<{ code: string; name: string; doctorId: string; email: string } | null>(null);
-  const [createUserNow, setCreateUserNow] = useState(true);
-  const [userPassword, setUserPassword] = useState("");
-  const [creatingUser, setCreatingUser] = useState(false);
-  const [userCreationDialog, setUserCreationDialog] = useState<{ doctorId: string; email: string; name: string } | null>(null);
+  const [linkedCoupon, setLinkedCoupon] = useState<string | null>(null);
+  const [citySearch, setCitySearch] = useState("");
   const { isAdmin, session } = useAuth();
   const qc = useQueryClient();
 
@@ -61,12 +93,19 @@ export default function DoctorsPage() {
   const { data: doctors, isLoading } = useQuery({
     queryKey: ["doctors"],
     queryFn: async () => {
-      const q = supabase.from("doctors").select("*, representatives(name)").order("created_at", { ascending: false });
-      const { data, error } = await q;
+      const { data, error } = await supabase.from("doctors").select("*, representatives(name)").order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
+
+  const availableCities = useMemo(() => {
+    if (!form.state) return [];
+    const list = CITIES_BY_STATE[form.state] ?? [];
+    if (!citySearch) return list;
+    const q = citySearch.toLowerCase();
+    return list.filter((c) => c.toLowerCase().includes(q));
+  }, [form.state, citySearch]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -87,20 +126,12 @@ export default function DoctorsPage() {
         const { error } = await supabase.from("doctors").update(payload).eq("id", editId);
         if (error) throw error;
       } else {
-        // Create prescriber
         const { data: inserted, error } = await supabase.from("doctors").insert(payload).select().single();
         if (error) throw error;
 
-        // Auto-create coupon for prescriber
         if (inserted) {
-          // Generate coupon: initials of prescriber name + random digit + sequential number
-          const initials = form.name
-            .split(/\s+/)
-            .filter(Boolean)
-            .map(w => w[0].toUpperCase())
-            .join("");
+          const initials = form.name.split(/\s+/).filter(Boolean).map(w => w[0].toUpperCase()).join("");
           const randomDigit = Math.floor(Math.random() * 10);
-          // Count existing doctors for sequential number
           const { count } = await supabase.from("doctors").select("id", { count: "exact", head: true });
           const seq = count ?? 1;
           const couponCode = `${initials}${randomDigit}R${seq}`;
@@ -129,6 +160,8 @@ export default function DoctorsPage() {
       }
       setForm(emptyForm);
       setEditId(null);
+      setLinkedCoupon(null);
+      setCitySearch("");
     },
     onError: (err: any) => toast.error(`Erro ao salvar: ${err?.message}`),
   });
@@ -141,7 +174,7 @@ export default function DoctorsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["doctors"] }),
   });
 
-  const openEdit = (doc: NonNullable<typeof doctors>[number]) => {
+  const openEdit = async (doc: NonNullable<typeof doctors>[number]) => {
     setEditId(doc.id);
     setForm({
       name: doc.name,
@@ -154,6 +187,16 @@ export default function DoctorsPage() {
       cpf: (doc as any).cpf ?? "",
       pix: (doc as any).pix ?? "",
     });
+    setCitySearch("");
+    // Fetch linked coupon
+    const { data: coupon } = await supabase
+      .from("coupons")
+      .select("code")
+      .eq("doctor_id", doc.id)
+      .eq("active", true)
+      .limit(1)
+      .maybeSingle();
+    setLinkedCoupon(coupon?.code ?? null);
     setOpen(true);
   };
 
@@ -164,7 +207,7 @@ export default function DoctorsPage() {
           <h2 className="text-2xl font-bold">Prescritores</h2>
           <p className="text-sm text-muted-foreground mt-1">Cadastre e gerencie prescritores e cupons</p>
         </div>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditId(null); setForm(emptyForm); } }}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditId(null); setForm(emptyForm); setLinkedCoupon(null); setCitySearch(""); } }}>
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" />Novo Prescritor</Button>
           </DialogTrigger>
@@ -172,6 +215,27 @@ export default function DoctorsPage() {
             <DialogHeader>
               <DialogTitle>{editId ? "Editar" : "Novo"} Prescritor</DialogTitle>
             </DialogHeader>
+
+            {/* Linked coupon badge on edit */}
+            {editId && linkedCoupon && (
+              <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2">
+                <Tag className="h-4 w-4 text-primary" />
+                <span className="text-sm text-muted-foreground">Cupom vinculado:</span>
+                <span className="font-mono font-bold text-primary">{linkedCoupon}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 ml-auto"
+                  onClick={() => {
+                    navigator.clipboard.writeText(linkedCoupon);
+                    toast.success("Cupom copiado!");
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
               <div className="space-y-2">
                 <Label>Nome *</Label>
@@ -203,12 +267,41 @@ export default function DoctorsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Cidade</Label>
-                  <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                  <Label>Estado</Label>
+                  <Select value={form.state} onValueChange={(v) => setForm({ ...form, state: v, city: "" })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>
+                    <SelectContent>
+                      {STATES.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Estado</Label>
-                  <Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} />
+                  <Label>Cidade</Label>
+                  {form.state ? (
+                    <div className="space-y-1">
+                      <Input
+                        placeholder="Buscar cidade..."
+                        value={citySearch}
+                        onChange={(e) => setCitySearch(e.target.value)}
+                        className="h-8 text-xs"
+                      />
+                      <Select value={form.city} onValueChange={(v) => { setForm({ ...form, city: v }); setCitySearch(""); }}>
+                        <SelectTrigger><SelectValue placeholder="Selecione a cidade" /></SelectTrigger>
+                        <SelectContent className="max-h-48">
+                          {availableCities.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                          {availableCities.length === 0 && (
+                            <div className="px-2 py-1.5 text-xs text-muted-foreground">Nenhuma cidade encontrada</div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <Input disabled placeholder="Selecione o estado primeiro" />
+                  )}
                 </div>
               </div>
               {isAdmin && (
