@@ -149,6 +149,8 @@ export default function AIAgentsPage() {
     return "google/gemini-3-flash-preview";
   })();
 
+  const [agentKbIds, setAgentKbIds] = useState<string[]>([]);
+
   const toggleMut = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
       const { error } = await supabase.from("ai_agents" as any).update({ active } as any).eq("id", id);
