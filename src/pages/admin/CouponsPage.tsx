@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Tag, Truck, Percent, DollarSign, ShoppingCart } from "lucide-react";
+import { Plus, Pencil, Trash2, Tag, Truck, Percent, DollarSign, ShoppingCart, Eye } from "lucide-react";
+import { CouponOrdersDialog } from "@/components/admin/CouponOrdersDialog";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
