@@ -612,6 +612,7 @@ export type Database = {
           created_at: string
           description: string
           extra_images: Json
+          featured: boolean
           group_name: string | null
           gtin: string | null
           height: number
@@ -642,6 +643,7 @@ export type Database = {
           created_at?: string
           description?: string
           extra_images?: Json
+          featured?: boolean
           group_name?: string | null
           gtin?: string | null
           height?: number
@@ -672,6 +674,7 @@ export type Database = {
           created_at?: string
           description?: string
           extra_images?: Json
+          featured?: boolean
           group_name?: string | null
           gtin?: string | null
           height?: number
