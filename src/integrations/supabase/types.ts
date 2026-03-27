@@ -276,6 +276,27 @@ export type Database = {
           },
         ]
       }
+      customer_tags: {
+        Row: {
+          created_at: string
+          customer_email: string
+          id: string
+          tag: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email: string
+          id?: string
+          tag: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string
+          id?: string
+          tag?: string
+        }
+        Relationships: []
+      }
       doctors: {
         Row: {
           active: boolean
