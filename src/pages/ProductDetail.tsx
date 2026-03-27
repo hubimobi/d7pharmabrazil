@@ -17,6 +17,7 @@ import SEOHead from "@/components/SEOHead";
 import { useState } from "react";
 import UpsellDialog from "@/components/UpsellDialog";
 import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
+import ProductQA from "@/components/ProductQA";
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -90,7 +91,6 @@ const ProductDetail = () => {
   const seoKeywords = product.seoKeywords || "";
   const productUrl = `https://d7pharmabrazil.lovable.app/produto/${product.slug}`;
 
-  // JSON-LD structured data
   const jsonLd = {
     "@context": "https://schema.org/",
     "@type": "Product",
@@ -114,6 +114,26 @@ const ProductDetail = () => {
     },
   };
 
+  const DescriptionBlock = ({ className = "" }: { className?: string }) => (
+    <div className={`rounded-xl bg-muted/50 p-4 md:p-5 ${className}`}>
+      <h2 className="text-lg font-bold text-foreground mb-3">Descrição do Produto</h2>
+      <div className={`relative overflow-hidden transition-all duration-300 ${!descExpanded ? "max-h-48" : ""}`}>
+        {product.description.startsWith("<") ? (
+          <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold [&_hr]:my-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-foreground [&_a]:text-primary [&_a]:underline"
+            dangerouslySetInnerHTML={{ __html: product.description }} />
+        ) : (
+          <p className="text-muted-foreground">{product.description}</p>
+        )}
+        {!descExpanded && (
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-muted/50 to-transparent" />
+        )}
+      </div>
+      <Button variant="ghost" size="sm" className="mt-2 gap-1 text-primary" onClick={() => setDescExpanded(!descExpanded)}>
+        {descExpanded ? <><ChevronUp className="h-4 w-4" /> Ver menos</> : <><ChevronDown className="h-4 w-4" /> Ver mais</>}
+      </Button>
+    </div>
+  );
+
   return (
     <div className="min-h-screen">
       <SEOHead
@@ -131,11 +151,10 @@ const ProductDetail = () => {
           <ArrowLeft className="h-4 w-4" /> Voltar aos Produtos
         </Link>
 
-        <div className="grid gap-8 md:grid-cols-2">
-          {/* Left column: Images + Description */}
-          <div className="space-y-3">
+        <div className="flex flex-col md:grid md:grid-cols-2 gap-8">
+          {/* Images — order-1 on mobile */}
+          <div className="order-1 md:order-none space-y-3">
             <div className="flex gap-3">
-              {/* Lateral thumbnails (desktop) */}
               {product.extraImages.length > 0 && (
                 <div className="hidden md:flex flex-col gap-2">
                   <button
@@ -167,7 +186,6 @@ const ProductDetail = () => {
                 />
               </div>
             </div>
-            {/* Mobile horizontal thumbnails */}
             {product.extraImages.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-1 md:hidden">
                 <button
@@ -192,30 +210,12 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Descrição do produto - abaixo das fotos */}
-            {product.description && (
-              <div className="mt-4 rounded-xl bg-muted/50 p-4 md:p-5">
-                <h2 className="text-lg font-bold text-foreground mb-3">Descrição do Produto</h2>
-                <div className={`relative overflow-hidden transition-all duration-300 ${!descExpanded ? "max-h-48" : ""}`}>
-                  {product.description.startsWith("<") ? (
-                    <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold [&_hr]:my-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-foreground [&_a]:text-primary [&_a]:underline"
-                      dangerouslySetInnerHTML={{ __html: product.description }} />
-                  ) : (
-                    <p className="text-muted-foreground">{product.description}</p>
-                  )}
-                  {!descExpanded && (
-                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-muted/50 to-transparent" />
-                  )}
-                </div>
-                <Button variant="ghost" size="sm" className="mt-2 gap-1 text-primary" onClick={() => setDescExpanded(!descExpanded)}>
-                  {descExpanded ? <><ChevronUp className="h-4 w-4" /> Ver menos</> : <><ChevronDown className="h-4 w-4" /> Ver mais</>}
-                </Button>
-              </div>
-            )}
+            {/* Desktop-only description (under images) */}
+            {product.description && <DescriptionBlock className="hidden md:block mt-4" />}
           </div>
 
-          {/* Right column: Product info */}
-          <div>
+          {/* Right column: Purchase info — order-2 on mobile */}
+          <div className="order-2 md:order-none">
             {product.badge && <Badge className="mb-3 bg-secondary text-secondary-foreground">{product.badge}</Badge>}
             <div className="flex items-start justify-between gap-2">
               <h1 className="text-2xl font-bold text-foreground md:text-3xl">{product.name}</h1>
@@ -303,7 +303,6 @@ const ProductDetail = () => {
               ))}
             </div>
 
-            {/* Shipping Calculator */}
             <div className="mt-6 rounded-xl bg-muted/50 p-4">
               <ShippingCalculator
                 cep={shippingCep}
@@ -327,7 +326,6 @@ const ProductDetail = () => {
               <span className="flex items-center gap-1">🔒 Pagamento Seguro</span>
             </div>
 
-            {/* Credit Card Flags */}
             <div className="mt-3 px-1">
               <span className="text-xs text-muted-foreground">Aceitamos:</span>
               <div className="flex flex-wrap items-center gap-1.5 mt-1">
@@ -339,7 +337,6 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            {/* FAQ - abaixo de Aceitamos */}
             {faqs && faqs.length > 0 && (
               <div className="mt-6 rounded-xl bg-muted/50 p-4 md:p-5">
                 <h2 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
@@ -355,7 +352,13 @@ const ProductDetail = () => {
                 </Accordion>
               </div>
             )}
+
+            {/* AI Q&A Section */}
+            <ProductQA product={product} faqs={faqs as any} />
           </div>
+
+          {/* Mobile-only description — order-3 (after purchase section) */}
+          {product.description && <DescriptionBlock className="order-3 md:hidden" />}
         </div>
 
         {/* Depoimentos */}
@@ -371,20 +374,12 @@ const ProductDetail = () => {
                 <Card key={t.id} className="relative overflow-hidden border-border/50">
                   <CardContent className="p-6">
                     <Quote className="absolute top-4 right-4 h-8 w-8 text-primary/10" />
-
                     <div className="flex gap-0.5 mb-3">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 ${i < t.rating ? "fill-warning text-warning" : "text-border"}`}
-                        />
+                        <Star key={i} className={`h-4 w-4 ${i < t.rating ? "fill-warning text-warning" : "text-border"}`} />
                       ))}
                     </div>
-
-                    <p className="text-sm text-foreground leading-relaxed mb-4">
-                      "{t.content}"
-                    </p>
-
+                    <p className="text-sm text-foreground leading-relaxed mb-4">"{t.content}"</p>
                     <div className="flex items-center gap-3 pt-3 border-t border-border/50">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
                         {t.author_name.charAt(0).toUpperCase()}
@@ -401,7 +396,6 @@ const ProductDetail = () => {
           </section>
         )}
 
-        {/* Related Products */}
         <RelatedProducts currentProductId={product.id} />
       </main>
 
