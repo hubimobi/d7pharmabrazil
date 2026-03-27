@@ -27,8 +27,12 @@ export default function DesignTokenApplier() {
       root.style.setProperty("--font-sans", `"${settings.design_font}", ui-sans-serif, system-ui, sans-serif`);
     }
 
-    // Background color
-    if (settings.design_bg_color && settings.design_bg_color !== "#ffffff") {
+    // Background color / gradient
+    const bgGradient = (settings as any).design_bg_gradient;
+    if (bgGradient) {
+      root.style.setProperty("--design-bg-gradient", bgGradient);
+      document.body.style.background = bgGradient;
+    } else if (settings.design_bg_color && settings.design_bg_color !== "#ffffff") {
       root.style.setProperty("--design-bg", settings.design_bg_color);
       document.body.style.backgroundColor = settings.design_bg_color;
     }
@@ -43,13 +47,28 @@ export default function DesignTokenApplier() {
       root.style.setProperty("--design-text", settings.design_text_color);
     }
 
+    // Nav color
+    const navColor = (settings as any).design_nav_color;
+    if (navColor) {
+      root.style.setProperty("--design-nav", navColor);
+    }
+
+    // Footer gradient
+    const footerGradient = (settings as any).design_footer_gradient;
+    if (footerGradient) {
+      root.style.setProperty("--design-footer-gradient", footerGradient);
+    }
+
     return () => {
-      // Cleanup on unmount
       root.style.removeProperty("--font-sans");
       root.style.removeProperty("--design-bg");
+      root.style.removeProperty("--design-bg-gradient");
       root.style.removeProperty("--design-title");
       root.style.removeProperty("--design-text");
+      root.style.removeProperty("--design-nav");
+      root.style.removeProperty("--design-footer-gradient");
       document.body.style.backgroundColor = "";
+      document.body.style.background = "";
     };
   }, [settings]);
 
