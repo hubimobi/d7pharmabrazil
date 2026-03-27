@@ -171,7 +171,13 @@ export default function RecentPurchasePopup() {
       height: matchedProduct.height,
       width: matchedProduct.width,
       length: matchedProduct.length,
-      unit: matchedProduct.unit,
+      showCountdown: false,
+      featured: false,
+      groupName: "",
+      seoTitle: "",
+      seoDescription: "",
+      seoKeywords: "",
+      sku: "",
       benefits: (matchedProduct.benefits as string[]) || [],
     };
     addItem(p, 1);
