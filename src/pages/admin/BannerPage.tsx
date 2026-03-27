@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Image, Type, Link2, Save, Loader2, Eye, Video, Plus, Trash2, Palette, GripVertical, Upload, Settings, ChevronDown, ChevronUp, Shield, Lock, Truck, Award, FlaskConical, ShieldCheck, TrendingUp, Star, Heart, Zap, CheckCircle, Crop, Eraser } from "lucide-react";
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
+import { useProducts } from "@/hooks/useProducts";
+import { Package } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Shield, Lock, Truck, Award, FlaskConical, ShieldCheck, TrendingUp, Star, Heart, Zap, CheckCircle,
@@ -44,6 +46,8 @@ interface HeroBanner {
 
 export default function BannerPage() {
   const { data: settings, isLoading: settingsLoading } = useStoreSettings();
+  const { data: allProducts } = useProducts();
+
   const qc = useQueryClient();
   const [expandedBanner, setExpandedBanner] = useState<string | null>(null);
   const [carouselEffect, setCarouselEffect] = useState("fade");
@@ -524,6 +528,63 @@ export default function BannerPage() {
                       }} className="gap-1">
                         <Plus className="h-4 w-4" /> Adicionar Selo
                       </Button>
+                    )}
+                  </div>
+
+                  {/* Vincular a Produto */}
+                  <div className="space-y-4 lg:col-span-2">
+                    <h3 className="font-semibold flex items-center gap-2"><Package className="h-4 w-4" /> Vincular a um Produto</h3>
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        checked={!!banner.button_link?.startsWith("/checkout?product=")}
+                        onCheckedChange={(checked) => {
+                          if (!checked) {
+                            updateBanner(banner.id, "button_text", "Comprar Agora");
+                            updateBanner(banner.id, "button_link", "/produtos");
+                            updateBanner(banner.id, "button2_text", "Saiba Mais");
+                            updateBanner(banner.id, "button2_link", "/#beneficios");
+                          }
+                        }}
+                        id={`link-product-${banner.id}`}
+                      />
+                      <Label htmlFor={`link-product-${banner.id}`}>Vincular botões a um produto</Label>
+                    </div>
+                    {allProducts && allProducts.length > 0 && (
+                      <div>
+                        <Label>Selecionar Produto</Label>
+                        <Select
+                          value={
+                            banner.button2_link?.startsWith("/produto/")
+                              ? banner.button2_link.replace("/produto/", "")
+                              : ""
+                          }
+                          onValueChange={(slug) => {
+                            const prod = allProducts.find((p) => p.slug === slug);
+                            if (prod) {
+                              updateBanner(banner.id, "button_text", "Comprar Agora");
+                              updateBanner(banner.id, "button_link", `/checkout?product=${prod.slug}`);
+                              updateBanner(banner.id, "button2_text", "Ver Produto");
+                              updateBanner(banner.id, "button2_link", `/produto/${prod.slug}`);
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Escolha um produto..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {allProducts.map((p) => (
+                              <SelectItem key={p.id} value={p.slug}>
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {banner.button2_link?.startsWith("/produto/") && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Botão 1 → Compra direta · Botão 2 → Página do produto
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
 
