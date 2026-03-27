@@ -152,10 +152,16 @@ const Header = () => {
             <Search className="h-4 w-4" />
           </Button>
 
-          <a href="tel:+5500000000000" className="hidden items-center gap-1 text-[13px] font-medium text-muted-foreground lg:flex">
-            <Phone className="h-3.5 w-3.5" />
-            Fale Conosco
-          </a>
+          {(() => {
+            const supportPhone = ((settings as any)?.whatsapp_support || settings?.whatsapp || "").replace(/\D/g, "");
+            const waUrl = supportPhone ? `https://wa.me/55${supportPhone}?text=${encodeURIComponent("Olá! Preciso de ajuda.")}` : "#";
+            return (
+              <a href={waUrl} target="_blank" rel="noopener noreferrer" className="hidden items-center gap-1 text-[13px] font-medium text-muted-foreground lg:flex hover:text-primary transition-colors">
+                <Phone className="h-3.5 w-3.5" />
+                Fale Conosco
+              </a>
+            );
+          })()}
           <Link to="/checkout">
             <Button variant="ghost" size="sm" className="relative gap-1.5">
               <ShoppingCart className="h-4 w-4" />

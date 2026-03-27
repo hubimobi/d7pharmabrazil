@@ -8,6 +8,7 @@ import AllProducts from "@/components/AllProducts";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import NotificationBar from "@/components/NotificationBar";
+import CookieConsent from "@/components/CookieConsent";
 
 const TestimonialsSection = lazy(() => import("@/components/TestimonialsSection"));
 const GuaranteeSection = lazy(() => import("@/components/GuaranteeSection"));
@@ -33,6 +34,7 @@ const Index = () => (
     </main>
     <Footer />
     <WhatsAppButton />
+    <CookieConsent />
   </div>
 );
 
