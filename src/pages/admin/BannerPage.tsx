@@ -46,6 +46,8 @@ interface HeroBanner {
 
 export default function BannerPage() {
   const { data: settings, isLoading: settingsLoading } = useStoreSettings();
+  const { data: allProducts } = useProducts();
+
   const qc = useQueryClient();
   const [expandedBanner, setExpandedBanner] = useState<string | null>(null);
   const [carouselEffect, setCarouselEffect] = useState("fade");
