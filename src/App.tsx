@@ -33,6 +33,7 @@ import PagesPage from "./pages/admin/PagesPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import CustomersPage from "./pages/admin/CustomersPage";
 import CheckoutSettingsPage from "./pages/admin/CheckoutSettingsPage";
+import AIAgentsPage from "./pages/admin/AIAgentsPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import TrackOrderPage from "./pages/TrackOrderPage";
 import PrescritorPage from "./pages/PrescritorPage";
@@ -105,6 +106,7 @@ const App = () => (
               <Route path="/admin/vendas" element={<AdminLayout><OrdersPage /></AdminLayout>} />
               <Route path="/admin/clientes" element={<AdminLayout><CustomersPage /></AdminLayout>} />
               <Route path="/admin/checkout" element={<AdminLayout><CheckoutSettingsPage /></AdminLayout>} />
+              <Route path="/admin/agentes-ia" element={<AdminLayout><AIAgentsPage /></AdminLayout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
