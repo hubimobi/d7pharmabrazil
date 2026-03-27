@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import CartRecommendations from "@/components/checkout/CartRecommendations";
 import CheckoutUrgency from "@/components/checkout/CheckoutUrgency";
 import ComboUpsell from "@/components/checkout/ComboUpsell";
+import CheckoutMotivation from "@/components/checkout/CheckoutMotivation";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
