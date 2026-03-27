@@ -98,6 +98,12 @@ export default function ComboUpsell() {
         </h3>
       </div>
 
+      <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+        ⚡ Essa promoção pode aparecer apenas desta vez para você, aproveite e pague em{" "}
+        <strong className="text-foreground">10X no Cartão</strong> por apenas mais{" "}
+        <strong className="text-primary">R$ {(discountedTotal / 10).toFixed(2).replace(".", ",")}</strong> na parcela.
+      </p>
+
       <p className="text-sm text-foreground mb-3">
         Leve o combo{" "}
         <strong>{comboProducts.map((p) => p.name).join(" + ")}</strong>{" "}
@@ -160,11 +166,6 @@ export default function ComboUpsell() {
         </Button>
       </div>
 
-      <p className="text-xs text-muted-foreground mt-3 text-center leading-relaxed">
-        ⚡ Essa promoção pode aparecer apenas desta vez para você, aproveite e pague em{" "}
-        <strong className="text-foreground">10X no Cartão</strong> por apenas mais{" "}
-        <strong className="text-primary">R$ {(discountedTotal / 10).toFixed(2).replace(".", ",")}</strong> na parcela.
-      </p>
     </motion.div>
   );
 }
