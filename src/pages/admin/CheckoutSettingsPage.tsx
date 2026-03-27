@@ -34,6 +34,7 @@ export default function CheckoutSettingsPage() {
     setShowFreeShippingBar((settings as any).checkout_show_free_shipping_bar ?? true);
     setMetaPixelId((settings as any).meta_pixel_id || "");
     setGtmId((settings as any).gtm_id || "");
+    setMaxInstallments((settings as any).max_installments ?? 3);
   }, [settings]);
 
   const mutation = useMutation({
@@ -49,6 +50,7 @@ export default function CheckoutSettingsPage() {
           checkout_show_free_shipping_bar: showFreeShippingBar,
           meta_pixel_id: metaPixelId,
           gtm_id: gtmId,
+          max_installments: maxInstallments,
         })
         .eq("id", settings.id);
       if (error) throw error;
