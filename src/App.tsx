@@ -20,6 +20,7 @@ import DoctorsPage from "./pages/admin/DoctorsPage";
 import ReportsPage from "./pages/admin/ReportsPage";
 import AdminProductsPage from "./pages/admin/ProductsPage";
 import CommissionsPage from "./pages/admin/CommissionsPage";
+import RepCommissionsPage from "./pages/admin/RepCommissionsPage";
 import StoreSettingsPage from "./pages/admin/StoreSettingsPage";
 import DesignSettingsPage from "./pages/admin/DesignSettingsPage";
 import IntegrationsPage from "./pages/admin/IntegrationsPage";
