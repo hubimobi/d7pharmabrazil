@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Star, X, Bell } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Star, X, Bell, ShoppingCart } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useCart } from "@/hooks/useCart";
+import { Product } from "@/hooks/useProducts";
 
 interface RecentOrder {
   customer_name: string;
@@ -11,14 +13,12 @@ interface RecentOrder {
   created_at: string;
 }
 
-// Brazilian cities for fallback
 const CITIES = [
   "São Paulo/SP", "Rio de Janeiro/RJ", "Belo Horizonte/MG", "Curitiba/PR",
   "Porto Alegre/RS", "Salvador/BA", "Fortaleza/CE", "Brasília/DF",
   "Recife/PE", "Goiânia/GO", "Manaus/AM", "Campinas/SP",
 ];
 
-// Fallback fake purchases when no real orders exist
 const FALLBACK_PURCHASES: RecentOrder[] = [
   { customer_name: "Ana C.", items: [{ name: "TCF-4 Premium" }], created_at: new Date(Date.now() - 3 * 60000).toISOString() },
   { customer_name: "Marcos S.", items: [{ name: "Vitamina D3 10.000UI" }], created_at: new Date(Date.now() - 8 * 60000).toISOString() },
@@ -27,13 +27,21 @@ const FALLBACK_PURCHASES: RecentOrder[] = [
   { customer_name: "Fernanda L.", items: [{ name: "Complexo B Premium" }], created_at: new Date(Date.now() - 35 * 60000).toISOString() },
 ];
 
+const INITIAL_BURST = 3 + Math.floor(Math.random() * 3); // 3-5
+const DISPLAY_DURATION = 5000; // each popup visible for 5s
+const BURST_GAP = 1500; // gap between burst popups
+const RECURRING_MIN = 10000; // 10s
+const RECURRING_MAX = 15000; // 15s
+
 export default function RecentPurchasePopup() {
   const [visible, setVisible] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState(false);
-  const navigate = useNavigate();
+  const burstCount = useRef(0);
+  const phase = useRef<"idle" | "burst" | "recurring">("idle");
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
+  const { addItem } = useCart();
 
   const { data: orders } = useQuery({
     queryKey: ["recent-orders-popup"],
@@ -50,44 +58,73 @@ export default function RecentPurchasePopup() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, slug, image_url")
+        .select("id, name, slug, image_url, price, original_price, short_description, description, rating, reviews_count, stock, weight, height, width, length, unit, benefits, extra_images, badge")
         .eq("active", true);
       if (error) throw error;
       return data;
     },
     staleTime: 5 * 60 * 1000,
   });
-  // Merge real orders with fallbacks to always have at least 5
+
   const displayOrders = [...(orders || []), ...FALLBACK_PURCHASES].slice(0, Math.max(5, orders?.length || 0));
 
+  const showNext = useCallback(() => {
+    if (dismissed || isAdmin || !displayOrders.length) return;
+    setCurrentIndex((prev) => (prev + 1) % displayOrders.length);
+    setVisible(true);
+  }, [dismissed, isAdmin, displayOrders.length]);
+
+  // Phase controller
   useEffect(() => {
     if (!displayOrders.length || dismissed || isAdmin) return;
 
-    // Show first popup after 8 seconds
-    const initialTimer = setTimeout(() => {
-      setVisible(true);
-    }, 8000);
+    let timeouts: ReturnType<typeof setTimeout>[] = [];
 
-    return () => clearTimeout(initialTimer);
+    if (phase.current === "idle") {
+      // Start burst after 5s
+      phase.current = "burst";
+      burstCount.current = 0;
+      const t = setTimeout(() => {
+        setVisible(true);
+        burstCount.current = 1;
+      }, 5000);
+      timeouts.push(t);
+    }
+
+    return () => timeouts.forEach(clearTimeout);
   }, [displayOrders.length, dismissed, isAdmin]);
 
+  // Handle burst and recurring transitions
   useEffect(() => {
-    if (!visible || !displayOrders.length || dismissed || isAdmin) return;
+    if (!visible || dismissed || isAdmin) return;
 
-    const hideTimer = setTimeout(() => {
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+
+    // Hide current popup after DISPLAY_DURATION
+    const hideT = setTimeout(() => {
       setVisible(false);
-    }, 6000);
+    }, DISPLAY_DURATION);
+    timeouts.push(hideT);
 
-    const nextTimer = setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % displayOrders.length);
-      setVisible(true);
-    }, 25000);
+    // Schedule next popup
+    if (phase.current === "burst" && burstCount.current < INITIAL_BURST) {
+      const nextT = setTimeout(() => {
+        burstCount.current += 1;
+        showNext();
+      }, DISPLAY_DURATION + BURST_GAP);
+      timeouts.push(nextT);
+    } else {
+      // Switch to recurring
+      phase.current = "recurring";
+      const delay = RECURRING_MIN + Math.random() * (RECURRING_MAX - RECURRING_MIN);
+      const nextT = setTimeout(() => {
+        showNext();
+      }, DISPLAY_DURATION + delay);
+      timeouts.push(nextT);
+    }
 
-    return () => {
-      clearTimeout(hideTimer);
-      clearTimeout(nextTimer);
-    };
-  }, [visible, currentIndex, displayOrders.length, dismissed, isAdmin]);
+    return () => timeouts.forEach(clearTimeout);
+  }, [visible, currentIndex, dismissed, isAdmin, showNext]);
 
   if (!displayOrders.length || dismissed || isAdmin) return null;
 
@@ -98,14 +135,11 @@ export default function RecentPurchasePopup() {
   const firstItem = orderItems[0];
   const productName = firstItem?.name || "Produto";
 
-  // Find product image
   const matchedProduct = products?.find(
     (p) => firstItem?.product_id === p.id || p.name === firstItem?.name
   );
   const productImage = matchedProduct?.image_url || "/placeholder.svg";
-  const productSlug = matchedProduct?.slug;
 
-  // Time ago
   const minutesAgo = Math.max(
     2,
     Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60000)
@@ -116,13 +150,38 @@ export default function RecentPurchasePopup() {
       ? `há ${Math.floor(minutesAgo / 60)}h`
       : `há ${Math.floor(minutesAgo / 1440)}d`;
 
-  const handleClick = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!matchedProduct) return;
+    const p: Product = {
+      id: matchedProduct.id,
+      name: matchedProduct.name,
+      slug: matchedProduct.slug,
+      shortDescription: matchedProduct.short_description || "",
+      description: matchedProduct.description || "",
+      price: matchedProduct.price,
+      originalPrice: matchedProduct.original_price,
+      image: matchedProduct.image_url || "/placeholder.svg",
+      extraImages: (matchedProduct.extra_images as string[]) || [],
+      rating: matchedProduct.rating,
+      reviews: matchedProduct.reviews_count,
+      badge: matchedProduct.badge || undefined,
+      stock: matchedProduct.stock,
+      weight: matchedProduct.weight,
+      height: matchedProduct.height,
+      width: matchedProduct.width,
+      length: matchedProduct.length,
+      showCountdown: false,
+      featured: false,
+      groupName: "",
+      seoTitle: "",
+      seoDescription: "",
+      seoKeywords: "",
+      sku: "",
+      benefits: (matchedProduct.benefits as string[]) || [],
+    };
+    addItem(p, 1);
     setVisible(false);
-    if (productSlug) {
-      navigate(`/produto/${productSlug}`);
-    } else {
-      navigate("/produtos");
-    }
   };
 
   return (
@@ -133,7 +192,7 @@ export default function RecentPurchasePopup() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ type: "spring", stiffness: 260, damping: 22 }}
-          className="fixed bottom-6 left-6 z-50 w-[340px] sm:w-[380px]"
+          className="fixed bottom-4 left-4 z-50 w-[340px] sm:w-[380px]"
         >
           <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
             {/* Close button */}
@@ -156,7 +215,7 @@ export default function RecentPurchasePopup() {
               <span className="text-xs font-medium text-primary uppercase tracking-wide">Compra recente</span>
             </div>
 
-            <div className="flex items-center gap-4 px-4 pb-4 pt-1 cursor-pointer" onClick={handleClick}>
+            <div className="flex items-center gap-4 px-4 pb-3 pt-1">
               {/* Product Image */}
               <div className="flex-shrink-0 h-[72px] w-[72px] rounded-xl bg-muted overflow-hidden border border-border">
                 <img
@@ -167,23 +226,12 @@ export default function RecentPurchasePopup() {
               </div>
 
               <div className="flex-1 min-w-0">
-                {/* Customer name */}
                 <p className="text-sm text-foreground">
                   <span className="font-bold">{firstName}</span>{" "}
                   <span className="text-muted-foreground">comprou</span>
                 </p>
-
-                {/* City */}
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  📍 {city}
-                </p>
-
-                {/* Product name */}
-                <p className="text-sm font-semibold text-foreground truncate mt-1">
-                  {productName}
-                </p>
-
-                {/* Stars + time */}
+                <p className="text-xs text-muted-foreground mt-0.5">📍 {city}</p>
+                <p className="text-sm font-semibold text-foreground truncate mt-1">{productName}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -192,12 +240,19 @@ export default function RecentPurchasePopup() {
                   </div>
                   <span className="text-xs text-muted-foreground">{timeLabel}</span>
                 </div>
-
-                {/* CTA */}
-                <p className="text-xs font-bold text-primary mt-1.5 hover:underline">
-                  Eu quero também →
-                </p>
               </div>
+            </div>
+
+            {/* CTA Button */}
+            <div className="px-4 pb-3">
+              <button
+                onClick={handleAddToCart}
+                disabled={!matchedProduct}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 transition-all animate-pulse disabled:opacity-50 disabled:animate-none"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                Eu quero também!
+              </button>
             </div>
 
             {/* Progress bar */}
@@ -205,7 +260,7 @@ export default function RecentPurchasePopup() {
               className="h-1 bg-primary/80 rounded-b-2xl"
               initial={{ width: "100%" }}
               animate={{ width: "0%" }}
-              transition={{ duration: 6, ease: "linear" }}
+              transition={{ duration: DISPLAY_DURATION / 1000, ease: "linear" }}
             />
           </div>
         </motion.div>
