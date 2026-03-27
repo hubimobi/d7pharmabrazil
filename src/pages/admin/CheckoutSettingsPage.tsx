@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { useProducts } from "@/hooks/useProducts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function CheckoutSettingsPage() {
   const { data: settings } = useStoreSettings();
+  const { data: allProducts } = useProducts();
   const qc = useQueryClient();
 
   const [showTestimonials, setShowTestimonials] = useState(true);
@@ -26,18 +28,41 @@ export default function CheckoutSettingsPage() {
   const [gtmId, setGtmId] = useState("");
   const [maxInstallments, setMaxInstallments] = useState(3);
 
+  // Frete
+  const [freeShippingEnabled, setFreeShippingEnabled] = useState(false);
+  const [freeShippingMinValue, setFreeShippingMinValue] = useState(499);
+  const [freeShippingRegions, setFreeShippingRegions] = useState("all");
+
+  // Combo
+  const [comboEnabled, setComboEnabled] = useState(false);
+  const [comboLabel, setComboLabel] = useState("OFERTA EXCLUSIVA PARA VOCÊ");
+  const [comboProducts, setComboProducts] = useState<string[]>([]);
+  const [comboDiscount, setComboDiscount] = useState(17);
+  const [comboFreeShipping, setComboFreeShipping] = useState(true);
+
   useEffect(() => {
     if (!settings) return;
-    setShowTestimonials((settings as any).checkout_show_testimonials ?? true);
-    setShowUrgency((settings as any).checkout_show_urgency ?? true);
-    setShowCombo((settings as any).checkout_show_combo ?? true);
-    setShowRecommendations((settings as any).checkout_show_recommendations ?? true);
-    setShowMotivation((settings as any).checkout_show_motivation ?? true);
-    setShowFreeShippingBar((settings as any).checkout_show_free_shipping_bar ?? true);
-    setBoletoEnabled((settings as any).checkout_boleto_enabled ?? false);
-    setMetaPixelId((settings as any).meta_pixel_id || "");
-    setGtmId((settings as any).gtm_id || "");
-    setMaxInstallments((settings as any).max_installments ?? 3);
+    const s = settings as any;
+    setShowTestimonials(s.checkout_show_testimonials ?? true);
+    setShowUrgency(s.checkout_show_urgency ?? true);
+    setShowCombo(s.checkout_show_combo ?? true);
+    setShowRecommendations(s.checkout_show_recommendations ?? true);
+    setShowMotivation(s.checkout_show_motivation ?? true);
+    setShowFreeShippingBar(s.checkout_show_free_shipping_bar ?? true);
+    setBoletoEnabled(s.checkout_boleto_enabled ?? false);
+    setMetaPixelId(s.meta_pixel_id || "");
+    setGtmId(s.gtm_id || "");
+    setMaxInstallments(s.max_installments ?? 3);
+
+    setFreeShippingEnabled(s.free_shipping_enabled ?? false);
+    setFreeShippingMinValue(s.free_shipping_min_value ?? 499);
+    setFreeShippingRegions(s.free_shipping_regions || "all");
+
+    setComboEnabled(s.combo_offer_enabled ?? false);
+    setComboLabel(s.combo_offer_label || "OFERTA EXCLUSIVA PARA VOCÊ");
+    setComboProducts(s.combo_offer_products || []);
+    setComboDiscount(s.combo_offer_discount ?? 17);
+    setComboFreeShipping(s.combo_offer_free_shipping ?? true);
   }, [settings]);
 
   const mutation = useMutation({
@@ -55,6 +80,14 @@ export default function CheckoutSettingsPage() {
           meta_pixel_id: metaPixelId,
           gtm_id: gtmId,
           max_installments: maxInstallments,
+          free_shipping_enabled: freeShippingEnabled,
+          free_shipping_min_value: freeShippingMinValue,
+          free_shipping_regions: freeShippingRegions,
+          combo_offer_enabled: comboEnabled,
+          combo_offer_label: comboLabel,
+          combo_offer_products: comboProducts,
+          combo_offer_discount: comboDiscount,
+          combo_offer_free_shipping: comboFreeShipping,
         })
         .eq("id", settings.id);
       if (error) throw error;
@@ -62,6 +95,7 @@ export default function CheckoutSettingsPage() {
     onSuccess: () => {
       toast.success("Configurações do checkout salvas!");
       qc.invalidateQueries({ queryKey: ["store-settings"] });
+      qc.invalidateQueries({ queryKey: ["store-settings-admin"] });
     },
     onError: () => toast.error("Erro ao salvar."),
   });
@@ -80,9 +114,110 @@ export default function CheckoutSettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Checkout Inteligente</h1>
-        <p className="text-sm text-muted-foreground mt-1">Ative ou desative as funcionalidades inteligentes do checkout de vendas.</p>
+        <p className="text-sm text-muted-foreground mt-1">Configure frete, combo, conversão e rastreamento do checkout.</p>
       </div>
 
+      {/* Configuração de Frete */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Truck className="h-5 w-5" /> Configuração de Frete
+          </CardTitle>
+          <CardDescription>Configure as regras de frete grátis para o checkout.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Switch checked={freeShippingEnabled} onCheckedChange={setFreeShippingEnabled} id="free-shipping-toggle" />
+            <Label htmlFor="free-shipping-toggle">Frete Grátis Ativo</Label>
+          </div>
+          {freeShippingEnabled && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Valor Mínimo (R$)</Label>
+                <Input type="number" min={0} step={0.01} value={freeShippingMinValue} onChange={(e) => setFreeShippingMinValue(Number(e.target.value))} />
+                <p className="mt-1 text-xs text-muted-foreground">Pedido mínimo para ganhar frete grátis.</p>
+              </div>
+              <div>
+                <Label>Região</Label>
+                <Select value={freeShippingRegions} onValueChange={setFreeShippingRegions}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todo o Brasil</SelectItem>
+                    <SelectItem value="sudeste">Sudeste</SelectItem>
+                    <SelectItem value="sul">Sul</SelectItem>
+                    <SelectItem value="sudeste_sul">Sudeste + Sul</SelectItem>
+                    <SelectItem value="nordeste">Nordeste</SelectItem>
+                    <SelectItem value="centro_oeste">Centro-Oeste</SelectItem>
+                    <SelectItem value="norte">Norte</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">Regiões elegíveis para frete grátis.</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Oferta Combo */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Flame className="h-5 w-5" /> Oferta Combo (Checkout)
+          </CardTitle>
+          <CardDescription>Configure uma oferta combo que aparece no checkout para aumentar o ticket médio.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Switch checked={comboEnabled} onCheckedChange={setComboEnabled} id="combo-toggle" />
+            <Label htmlFor="combo-toggle">Oferta Combo Ativa</Label>
+          </div>
+          {comboEnabled && (
+            <div className="space-y-4">
+              <div>
+                <Label>Título da Oferta</Label>
+                <Input value={comboLabel} onChange={(e) => setComboLabel(e.target.value)} maxLength={80} />
+              </div>
+              <div>
+                <Label>Produtos do Combo (selecione pelo menos 2)</Label>
+                <div className="space-y-2 mt-2">
+                  {(allProducts || []).map((p) => {
+                    const selected = comboProducts.includes(p.id);
+                    return (
+                      <label key={p.id} className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition ${selected ? "border-primary bg-primary/5" : "border-border"}`}>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => {
+                            setComboProducts(selected ? comboProducts.filter(id => id !== p.id) : [...comboProducts, p.id]);
+                          }}
+                          className="rounded"
+                        />
+                        <img src={p.image} alt="" className="h-10 w-10 rounded object-contain" />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium">{p.name}</span>
+                          <span className="text-xs text-muted-foreground ml-2">R$ {p.price.toFixed(2).replace(".", ",")}</span>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>Desconto (%)</Label>
+                  <Input type="number" min={1} max={50} value={comboDiscount} onChange={(e) => setComboDiscount(Number(e.target.value))} />
+                </div>
+                <div className="flex items-center gap-3 pt-6">
+                  <Switch checked={comboFreeShipping} onCheckedChange={setComboFreeShipping} id="combo-free-shipping" />
+                  <Label htmlFor="combo-free-shipping">Frete Grátis no Combo</Label>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Ferramentas de Conversão */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -104,6 +239,7 @@ export default function CheckoutSettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Parcelamento */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -115,9 +251,7 @@ export default function CheckoutSettingsPage() {
           <div className="flex items-center gap-4">
             <Label className="whitespace-nowrap">Parcelas sem juros</Label>
             <Select value={String(maxInstallments)} onValueChange={(v) => setMaxInstallments(Number(v))}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
                   <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
@@ -129,6 +263,7 @@ export default function CheckoutSettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Rastreamento */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -139,32 +274,18 @@ export default function CheckoutSettingsPage() {
         <CardContent className="space-y-4">
           <div>
             <Label>Meta Pixel ID (Facebook/Instagram)</Label>
-            <Input
-              value={metaPixelId}
-              onChange={(e) => setMetaPixelId(e.target.value)}
-              placeholder="Ex: 123456789012345"
-              className="mt-1 font-mono text-sm"
-            />
+            <Input value={metaPixelId} onChange={(e) => setMetaPixelId(e.target.value)} placeholder="Ex: 123456789012345" className="mt-1 font-mono text-sm" />
             <p className="text-xs text-muted-foreground mt-1">
               Encontre seu Pixel ID em{" "}
-              <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                Meta Events Manager
-              </a>
+              <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="text-primary underline">Meta Events Manager</a>
             </p>
           </div>
           <div>
             <Label>Google Tag Manager ID</Label>
-            <Input
-              value={gtmId}
-              onChange={(e) => setGtmId(e.target.value)}
-              placeholder="Ex: GTM-XXXXXXX"
-              className="mt-1 font-mono text-sm"
-            />
+            <Input value={gtmId} onChange={(e) => setGtmId(e.target.value)} placeholder="Ex: GTM-XXXXXXX" className="mt-1 font-mono text-sm" />
             <p className="text-xs text-muted-foreground mt-1">
               Encontre seu GTM ID em{" "}
-              <a href="https://tagmanager.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                Google Tag Manager
-              </a>
+              <a href="https://tagmanager.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary underline">Google Tag Manager</a>
             </p>
           </div>
         </CardContent>
