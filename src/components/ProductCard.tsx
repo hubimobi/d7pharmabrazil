@@ -108,6 +108,7 @@ const ProductCard = ({ product }: { product: Product }) => {
               Compra Rápida
             </Button>
           </div>
+          <p className="mt-1.5 text-center text-2xs md:text-xs text-muted-foreground font-medium">📦 Envio em até 24h úteis</p>
         </div>
       </div>
       <UpsellDialog open={showUpsell} onOpenChange={setShowUpsell} product={product} onAddMore={(extra) => addItem(product, extra)} />
