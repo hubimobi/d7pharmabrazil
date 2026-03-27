@@ -85,9 +85,46 @@ const ProductDetail = () => {
   const discountPercent = Math.round((1 - product.price / product.originalPrice) * 100);
   const displayReviews = product.reviews < 500 ? product.reviews + 500 : product.reviews;
 
+  const seoTitle = product.seoTitle || product.name;
+  const seoDesc = product.seoDescription || product.shortDescription;
+  const seoKeywords = product.seoKeywords || "";
+  const productUrl = `https://d7pharmabrazil.lovable.app/produto/${product.slug}`;
+
+  // JSON-LD structured data
+  const jsonLd = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: product.name,
+    description: product.shortDescription,
+    image: product.image,
+    sku: product.sku || product.slug,
+    brand: { "@type": "Brand", name: "D7 Pharma Brazil" },
+    offers: {
+      "@type": "Offer",
+      url: productUrl,
+      priceCurrency: "BRL",
+      price: product.price.toFixed(2),
+      availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      seller: { "@type": "Organization", name: "D7 Pharma Brazil" },
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: product.rating.toString(),
+      reviewCount: displayReviews.toString(),
+    },
+  };
+
   return (
     <div className="min-h-screen">
-      <SEOHead title={product.name} description={product.shortDescription} />
+      <SEOHead
+        title={seoTitle}
+        description={seoDesc}
+        image={product.image}
+        keywords={seoKeywords}
+        url={productUrl}
+        canonical={productUrl}
+      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Header />
       <main className="container py-8 md:py-16">
         <Link to="/produtos" className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">

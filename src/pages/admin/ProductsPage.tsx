@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus, Link2, Check, Eye, Download, ArrowUpRight, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus, Link2, Check, Eye, Download, ArrowUpRight, RefreshCw, Search } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
@@ -27,6 +27,7 @@ interface ProdForm {
   sku: string; ncm: string; gtin: string; unit: string;
   show_countdown: boolean;
   featured: boolean;
+  seo_title: string; seo_description: string; seo_keywords: string;
 }
 
 const emptyForm: ProdForm = {
@@ -38,6 +39,7 @@ const emptyForm: ProdForm = {
   sku: "", ncm: "", gtin: "", unit: "UN",
   show_countdown: true,
   featured: false,
+  seo_title: "", seo_description: "", seo_keywords: "",
 };
 
 interface Testimonial {
@@ -119,6 +121,9 @@ export default function ProductsPage() {
         group_name: form.group_name, manufacturer: form.manufacturer,
         sku: form.sku, ncm: form.ncm, gtin: form.gtin, unit: form.unit,
         extra_images: uploadedExtras,
+        seo_title: form.seo_title || null,
+        seo_description: form.seo_description || null,
+        seo_keywords: form.seo_keywords || null,
       };
       if (image_url) payload.image_url = image_url;
 
@@ -210,6 +215,9 @@ export default function ProductsPage() {
       unit: (p as any).unit ?? "UN",
       show_countdown: (p as any).show_countdown !== false,
       featured: (p as any).featured === true,
+      seo_title: (p as any).seo_title ?? "",
+      seo_description: (p as any).seo_description ?? "",
+      seo_keywords: (p as any).seo_keywords ?? "",
     });
 
     // Load testimonials
@@ -260,13 +268,14 @@ export default function ProductsPage() {
             <DialogHeader><DialogTitle>{editId ? "Editar" : "Novo"} Produto</DialogTitle></DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
               <Tabs defaultValue="basic">
-                <TabsList className="grid w-full grid-cols-6">
+                <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="basic">Dados</TabsTrigger>
                   <TabsTrigger value="dimensions">Frete</TabsTrigger>
                   <TabsTrigger value="bling">Fiscal/Bling</TabsTrigger>
                   <TabsTrigger value="images">Imagens</TabsTrigger>
                   <TabsTrigger value="testimonials">Depoimentos</TabsTrigger>
                   <TabsTrigger value="faq">FAQ</TabsTrigger>
+                  <TabsTrigger value="seo">SEO</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="basic" className="space-y-4 mt-4">
@@ -512,6 +521,54 @@ export default function ProductsPage() {
                     </Button>
                   </div>
                 </TabsContent>
+                <TabsContent value="seo" className="space-y-4 mt-4">
+                  <p className="text-sm text-muted-foreground">Otimize como seu produto aparece nos mecanismos de busca (Google, Bing, etc).</p>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Título SEO</Label>
+                      <span className={`text-xs ${form.seo_title.length > 60 ? "text-destructive" : form.seo_title.length >= 50 ? "text-success" : "text-muted-foreground"}`}>
+                        {form.seo_title.length}/60
+                      </span>
+                    </div>
+                    <Input value={form.seo_title} onChange={(e) => setForm({ ...form, seo_title: e.target.value })} placeholder={form.name || "Título do produto para SEO"} />
+                    <p className="text-xs text-muted-foreground">Ideal: 50-60 caracteres. Se vazio, usa o nome do produto.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Meta Description</Label>
+                      <span className={`text-xs ${form.seo_description.length > 160 ? "text-destructive" : form.seo_description.length >= 120 ? "text-success" : "text-muted-foreground"}`}>
+                        {form.seo_description.length}/160
+                      </span>
+                    </div>
+                    <Textarea value={form.seo_description} onChange={(e) => setForm({ ...form, seo_description: e.target.value })} placeholder={form.short_description || "Descrição curta para mecanismos de busca"} rows={3} />
+                    <p className="text-xs text-muted-foreground">Ideal: 120-160 caracteres. Se vazio, usa a descrição curta.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Palavras-chave</Label>
+                    <Input value={form.seo_keywords} onChange={(e) => setForm({ ...form, seo_keywords: e.target.value })} placeholder="suplemento, proteína, saúde, etc." />
+                    <p className="text-xs text-muted-foreground">Separadas por vírgula.</p>
+                  </div>
+
+                  {/* Google Preview */}
+                  <div className="rounded-lg border border-border p-4 bg-muted/30">
+                    <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1"><Search className="h-3 w-3" /> Preview no Google</p>
+                    <div className="space-y-1">
+                      <p className="text-[#1a0dab] text-lg leading-tight truncate">
+                        {form.seo_title || form.name || "Título do Produto"} | D7 Pharma Brazil
+                      </p>
+                      <p className="text-[#006621] text-sm truncate">
+                        d7pharmabrazil.lovable.app/produto/{form.slug || "slug-do-produto"}
+                      </p>
+                      <p className="text-sm text-[#545454] line-clamp-2">
+                        {form.seo_description || form.short_description || "Descrição do produto aparecerá aqui nos resultados de busca..."}
+                      </p>
+                    </div>
+                  </div>
+                </TabsContent>
+
               </Tabs>
 
               <Button type="submit" className="w-full" disabled={save.isPending}>
