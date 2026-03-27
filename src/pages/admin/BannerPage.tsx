@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Image, Type, Link2, Save, Loader2, Eye, Video, Plus, Trash2, Palette, GripVertical, Upload, Settings, ChevronDown, ChevronUp, Shield, Lock, Truck, Award, FlaskConical, ShieldCheck, TrendingUp, Star, Heart, Zap, CheckCircle, Crop, Eraser } from "lucide-react";
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
+import { useProducts } from "@/hooks/useProducts";
+import { Package } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Shield, Lock, Truck, Award, FlaskConical, ShieldCheck, TrendingUp, Star, Heart, Zap, CheckCircle,
