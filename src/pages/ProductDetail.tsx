@@ -302,11 +302,11 @@ const ProductDetail = () => {
             </div>
 
             {/* Credit Card Flags */}
-            <div className="mt-3 flex items-center gap-3 px-1">
+            <div className="mt-3 px-1">
               <span className="text-xs text-muted-foreground">Aceitamos:</span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5 mt-1">
                 {["Visa", "Mastercard", "Elo", "Amex", "Pix"].map((flag) => (
-                  <span key={flag} className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-1 text-xs font-medium text-muted-foreground">
+                  <span key={flag} className="inline-flex items-center gap-1 rounded border border-border bg-background px-1.5 py-0.5 text-2xs md:text-xs font-medium text-muted-foreground">
                     <CreditCard className="h-3 w-3" /> {flag}
                   </span>
                 ))}

@@ -41,7 +41,6 @@ const Footer = () => {
     { label: "YouTube", url: settings?.youtube },
   ].filter((s) => s.url);
 
-  // Dynamic favicon
   useEffect(() => {
     if (settings?.favicon_url) {
       let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
@@ -55,10 +54,10 @@ const Footer = () => {
   }, [settings?.favicon_url]);
 
   return (
-    <footer className="border-t border-border bg-card py-12">
+    <footer className="border-t border-border bg-card py-8 md:py-12">
       <div className="container">
-        <div className="grid gap-8 md:grid-cols-[1.2fr_1fr_1fr_1fr]">
-          <div className="flex flex-col">
+        <div className="grid grid-cols-2 md:grid-cols-[1.2fr_1fr_1fr_1fr] gap-6 md:gap-8">
+          <div className="col-span-2 md:col-span-1 flex flex-col">
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt={storeName} className="h-14 w-auto max-w-[180px] object-contain mb-3" />
             ) : (
@@ -68,7 +67,7 @@ const Footer = () => {
               Suplementos de alta performance com qualidade farmacêutica.
             </p>
             {socials.length > 0 && (
-              <div className="mt-4 flex gap-3">
+              <div className="mt-3 flex gap-3">
                 {socials.map((s) => {
                   const Icon = socialIcons[s.label];
                   return (
@@ -89,7 +88,7 @@ const Footer = () => {
           </div>
           <div>
             <h4 className="text-[15px] font-semibold text-foreground">Navegação</h4>
-            <nav className="mt-3 flex flex-col gap-2">
+            <nav className="mt-2 md:mt-3 flex flex-col gap-1.5 md:gap-2">
               <Link to="/" className="text-sm text-muted-foreground hover:text-primary">Início</Link>
               <Link to="/produtos" className="text-sm text-muted-foreground hover:text-primary">Produtos</Link>
               <Link to="/checkout" className="text-sm text-muted-foreground hover:text-primary">Carrinho</Link>
@@ -97,16 +96,16 @@ const Footer = () => {
           </div>
           <div>
             <h4 className="text-[15px] font-semibold text-foreground">Institucional</h4>
-            <nav className="mt-3 flex flex-col gap-2">
+            <nav className="mt-2 md:mt-3 flex flex-col gap-1.5 md:gap-2">
               <Link to="/quem-somos" className="text-sm text-muted-foreground hover:text-primary">Quem Somos</Link>
-              <Link to="/politica-de-privacidade" className="text-sm text-muted-foreground hover:text-primary">Política de Privacidade</Link>
+              <Link to="/politica-de-privacidade" className="text-sm text-muted-foreground hover:text-primary">Privacidade</Link>
               <Link to="/termos-de-uso" className="text-sm text-muted-foreground hover:text-primary">Termos de Uso</Link>
-              <Link to="/trocas-e-devolucoes" className="text-sm text-muted-foreground hover:text-primary">Trocas e Devoluções</Link>
+              <Link to="/trocas-e-devolucoes" className="text-sm text-muted-foreground hover:text-primary">Trocas</Link>
             </nav>
           </div>
-          <div>
+          <div className="col-span-2 md:col-span-1">
             <h4 className="text-[15px] font-semibold text-foreground">Contato</h4>
-            <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
+            <div className="mt-2 md:mt-3 flex flex-col gap-1.5 md:gap-2 text-sm text-muted-foreground">
               <span>{email}</span>
               <span>{whatsapp}</span>
               <span>{city}, {state} - Brasil</span>
@@ -114,8 +113,8 @@ const Footer = () => {
             </div>
           </div>
         </div>
-        <div className="mt-8 border-t border-border pt-6 text-center">
-          <p className="text-[13px] font-semibold text-muted-foreground mb-2">
+        <div className="mt-6 md:mt-8 border-t border-border pt-4 md:pt-6 text-center">
+          <p className="text-[13px] font-semibold text-muted-foreground mb-1">
             🔒 100% Seguro — 100% Transparente — 100% Protegido
           </p>
           <p className="text-[13px] text-muted-foreground">
