@@ -29,7 +29,7 @@ export default function ComboUpsell() {
     staleTime: 5 * 60 * 1000,
   });
 
-  if (!comboSettings?.combo_offer_enabled || !allProducts) return null;
+  if (!comboSettings?.combo_offer_enabled || !allProducts || dismissed) return null;
 
   const comboProductIds: string[] = comboSettings.combo_offer_products || [];
   if (comboProductIds.length < 2) return null;
