@@ -1,15 +1,17 @@
+import { lazy, Suspense } from "react";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import SEOHead from "@/components/SEOHead";
-import BenefitsSection from "@/components/BenefitsSection";
 import FeaturedCarousel from "@/components/FeaturedCarousel";
+import BenefitsSection from "@/components/BenefitsSection";
 import AllProducts from "@/components/AllProducts";
-import TestimonialsSection from "@/components/TestimonialsSection";
-import GuaranteeSection from "@/components/GuaranteeSection";
-import FinalCTA from "@/components/FinalCTA";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import NotificationBar from "@/components/NotificationBar";
+
+const TestimonialsSection = lazy(() => import("@/components/TestimonialsSection"));
+const GuaranteeSection = lazy(() => import("@/components/GuaranteeSection"));
+const FinalCTA = lazy(() => import("@/components/FinalCTA"));
 
 const Index = () => (
   <div className="min-h-screen">
@@ -21,9 +23,11 @@ const Index = () => (
       <FeaturedCarousel />
       <BenefitsSection />
       <AllProducts />
-      <TestimonialsSection />
-      <GuaranteeSection />
-      <FinalCTA />
+      <Suspense fallback={null}>
+        <TestimonialsSection />
+        <GuaranteeSection />
+        <FinalCTA />
+      </Suspense>
     </main>
     <Footer />
     <WhatsAppButton />
