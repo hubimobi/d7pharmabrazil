@@ -94,25 +94,31 @@ export default function UsersPage() {
   const { data: users, isLoading } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const { data: roles, error } = await supabase.from("user_roles").select("id, user_id, role");
-      if (error) throw error;
-      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name, phone");
+      const [rolesRes, profilesRes, authRes] = await Promise.all([
+        supabase.from("user_roles").select("id, user_id, role"),
+        supabase.from("profiles").select("user_id, full_name, phone"),
+        supabase.functions.invoke("create-tenant-user", { body: { action: "list_users" } }),
+      ]);
+      if (rolesRes.error) throw rolesRes.error;
+      const roles = rolesRes.data;
+      const profiles = profilesRes.data;
+      const authUsers: Record<string, { email: string; banned: boolean }> = authRes.data?.users || {};
+
       const profileMap: Record<string, { name: string; phone: string }> = {};
       profiles?.forEach((p) => { profileMap[p.user_id] = { name: p.full_name, phone: p.phone || "" }; });
 
-      // We don't have direct access to auth.users emails from client, so we'll store email info
-      // from the edge function response. For now, show profile data.
       const userMap: Record<string, UserEntry> = {};
       roles?.forEach((r) => {
         if (!userMap[r.user_id]) {
           const profile = profileMap[r.user_id];
+          const auth = authUsers[r.user_id];
           userMap[r.user_id] = {
             user_id: r.user_id,
             roles: [],
             name: profile?.name || "—",
-            email: "",
+            email: auth?.email || "",
             phone: profile?.phone || "",
-            active: true,
+            active: auth ? !auth.banned : true,
           };
         }
         userMap[r.user_id].roles.push(r.role);
