@@ -26,6 +26,7 @@ export default function CheckoutSettingsPage() {
   const [boletoEnabled, setBoletoEnabled] = useState(false);
   const [metaPixelId, setMetaPixelId] = useState("");
   const [gtmId, setGtmId] = useState("");
+  const [hotjarId, setHotjarId] = useState("");
   const [maxInstallments, setMaxInstallments] = useState(3);
 
   // Frete
@@ -52,6 +53,7 @@ export default function CheckoutSettingsPage() {
     setBoletoEnabled(s.checkout_boleto_enabled ?? false);
     setMetaPixelId(s.meta_pixel_id || "");
     setGtmId(s.gtm_id || "");
+    setHotjarId(s.hotjar_id || "");
     setMaxInstallments(s.max_installments ?? 3);
 
     setFreeShippingEnabled(s.free_shipping_enabled ?? false);
@@ -79,6 +81,7 @@ export default function CheckoutSettingsPage() {
           checkout_boleto_enabled: boletoEnabled,
           meta_pixel_id: metaPixelId,
           gtm_id: gtmId,
+          hotjar_id: hotjarId,
           max_installments: maxInstallments,
           free_shipping_enabled: freeShippingEnabled,
           free_shipping_min_value: freeShippingMinValue,
@@ -286,6 +289,15 @@ export default function CheckoutSettingsPage() {
             <p className="text-xs text-muted-foreground mt-1">
               Encontre seu GTM ID em{" "}
               <a href="https://tagmanager.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary underline">Google Tag Manager</a>
+            </p>
+          </div>
+          <div>
+            <Label>Hotjar Site ID</Label>
+            <Input value={hotjarId} onChange={(e) => setHotjarId(e.target.value)} placeholder="Ex: 1234567" className="mt-1 font-mono text-sm" />
+            <p className="text-xs text-muted-foreground mt-1">
+              Encontre seu Site ID em{" "}
+              <a href="https://insights.hotjar.com/settings/sites" target="_blank" rel="noopener noreferrer" className="text-primary underline">Hotjar → Settings → Sites</a>
+              {" "}— mapa de calor, gravações e insights de comportamento.
             </p>
           </div>
         </CardContent>
