@@ -142,13 +142,29 @@ export default function ComboUpsell() {
         </Badge>
       </div>
 
-      <Button
-        onClick={handleAccept}
-        className="w-full gap-2 bg-success hover:bg-success/90 text-success-foreground font-bold text-sm"
-        size="lg"
-      >
-        SIM, QUERO ECONOMIZAR + R$ {totalSavings.toFixed(0)}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          onClick={handleAccept}
+          className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground font-bold text-sm"
+          size="lg"
+        >
+          SIM, QUERO ECONOMIZAR + R$ {totalSavings.toFixed(0)}
+        </Button>
+        <Button
+          onClick={() => setDismissed(true)}
+          variant="secondary"
+          className="shrink-0 text-sm font-medium"
+          size="lg"
+        >
+          Não Agora
+        </Button>
+      </div>
+
+      <p className="text-xs text-muted-foreground mt-3 text-center leading-relaxed">
+        ⚡ Essa promoção pode aparecer apenas desta vez para você, aproveite e pague em{" "}
+        <strong className="text-foreground">10X no Cartão</strong> por apenas mais{" "}
+        <strong className="text-primary">R$ {(discountedTotal / 10).toFixed(2).replace(".", ",")}</strong> na parcela.
+      </p>
     </motion.div>
   );
 }
