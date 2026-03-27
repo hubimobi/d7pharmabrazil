@@ -146,6 +146,19 @@ export default function ProductsPage() {
           const { error } = await supabase.from("product_testimonials").insert(rows);
           if (error) throw error;
         }
+
+        // Save FAQs
+        await supabase.from("product_faqs").delete().eq("product_id", productId);
+        if (faqs.length > 0) {
+          const faqRows = faqs.map((f, i) => ({
+            product_id: productId!,
+            question: f.question,
+            answer: f.answer,
+            sort_order: i,
+          }));
+          const { error: faqErr } = await supabase.from("product_faqs").insert(faqRows);
+          if (faqErr) throw faqErr;
+        }
       }
     },
     onSuccess: () => {
@@ -172,6 +185,7 @@ export default function ProductsPage() {
     setForm(emptyForm); setEditId(null); setImageFile(null);
     setExtraFiles([]); setExistingExtras([]); setTestimonials([]);
     setNewTestimonial({ author_name: "", content: "", rating: 5 });
+    setFaqs([]); setNewFaq({ question: "", answer: "" });
     setImagePreview(null);
   };
 
