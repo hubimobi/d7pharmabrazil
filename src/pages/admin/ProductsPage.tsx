@@ -260,12 +260,13 @@ export default function ProductsPage() {
             <DialogHeader><DialogTitle>{editId ? "Editar" : "Novo"} Produto</DialogTitle></DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
               <Tabs defaultValue="basic">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="basic">Dados</TabsTrigger>
                   <TabsTrigger value="dimensions">Frete</TabsTrigger>
                   <TabsTrigger value="bling">Fiscal/Bling</TabsTrigger>
                   <TabsTrigger value="images">Imagens</TabsTrigger>
                   <TabsTrigger value="testimonials">Depoimentos</TabsTrigger>
+                  <TabsTrigger value="faq">FAQ</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="basic" className="space-y-4 mt-4">
@@ -478,6 +479,35 @@ export default function ProductsPage() {
                     <Textarea placeholder="Texto do depoimento..." value={newTestimonial.content}
                       onChange={(e) => setNewTestimonial({ ...newTestimonial, content: e.target.value })} rows={2} />
                     <Button type="button" variant="outline" size="sm" onClick={addTestimonial}>
+                      <Plus className="h-4 w-4 mr-1" /> Adicionar
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="faq" className="space-y-4 mt-4">
+                  {faqs.map((f, i) => (
+                    <div key={i} className="flex items-start gap-3 rounded-lg border p-3">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{f.question}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{f.answer}</p>
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => setFaqs(faqs.filter((_, j) => j !== i))}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+
+                  <div className="space-y-3 rounded-lg border border-dashed p-4">
+                    <p className="text-sm font-medium">Adicionar Pergunta</p>
+                    <Input placeholder="Pergunta" value={newFaq.question}
+                      onChange={(e) => setNewFaq({ ...newFaq, question: e.target.value })} />
+                    <Textarea placeholder="Resposta..." value={newFaq.answer}
+                      onChange={(e) => setNewFaq({ ...newFaq, answer: e.target.value })} rows={2} />
+                    <Button type="button" variant="outline" size="sm" onClick={() => {
+                      if (!newFaq.question || !newFaq.answer) return;
+                      setFaqs([...faqs, { ...newFaq }]);
+                      setNewFaq({ question: "", answer: "" });
+                    }}>
                       <Plus className="h-4 w-4 mr-1" /> Adicionar
                     </Button>
                   </div>
