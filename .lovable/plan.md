@@ -1,124 +1,80 @@
 
 
-## Reajuste de Fontes e Tipografia — Padrões E-commerce 2026
+## Otimização Mobile, Respiro Visual e Performance — Inspirado no Mercado Livre
 
-### Contexto: Tendencias Tipograficas 2026
+### Problemas Identificados
 
-Os principais e-commerces (Shopee, Amazon, Mercado Livre, Shein) seguem estas convenções:
+**Respiro / Padding:**
+- Container usa `padding: 1rem` (16px) — ok no geral, mas seções internas como `FeaturedCarousel` adicionam `px-8 md:px-12` desnecessário que comprime o conteúdo mobile
+- `ProductCard` e grids usam `gap-6` (24px) que ocupa muito espaço no mobile 375px
+- Seções como `AllProducts`, `BenefitsSection` usam `py-16` no mobile — muito vertical
+- `ProductDetail` fixed top bar (CTA) sobrepõe o header sticky sem spacing
 
-```text
-Mobile-first type scale (2026):
-─────────────────────────────────
-Elemento              Mobile    Desktop
-─────────────────────────────────
-Body text             14px      15-16px
-Small/secondary       12px      13px
-Micro labels          11px      11-12px
-Product title (card)  14px      15px
-Product price         18px      20px
-Section headings      22-24px   28-32px
-Hero headline         28-32px   40-48px
-Buttons               14-15px   15px
-Nav links             14px      15px
-Footer text           13px      14px
-─────────────────────────────────
-```
+**Mobile UX:**
+- Grid de produtos usa `sm:grid-cols-2` — no 375px mostra 1 coluna com cards muito largos
+- Carrossel de destaque com `px-8` comprime demais no mobile
+- Footer 4 colunas empilha bem mas poderia ter grid 2x2 no mobile
+- "Aceitamos" flags no ProductDetail fazem overflow horizontal no mobile
+- Benefícios 4 colunas: ok com `sm:grid-cols-2` mas cards poderiam ser mais compactos
 
-Regras-chave:
-- **Minimo absoluto: 11px** (nada abaixo disso, eliminar text-[9px] e text-[10px])
-- **Body base: 14px mobile / 16px desktop** (usar `text-sm` como minimo util)
-- **Line-height generoso**: 1.5-1.6 para body, 1.2-1.3 para headings
-- **Font-weight**: usar 400 para body, 500 para labels, 600-700 para headings e precos
-
-### Problemas Atuais
-
-1. **text-[9px]** em CountdownTimer (ilegivel no mobile)
-2. **text-[10px]** em: ProductCard (parcelas, stock alert), Header (cart badge), AdminSidebar, DashboardPage badges, CartRecommendations
-3. **text-[11px]** em: RecentPurchasePopup, admin stat cards (OrdersPage, CommissionsPage, DashboardPage)
-4. **text-xs (12px)** usado excessivamente para conteudo que deveria ser 13-14px (descricoes de produto, ratings, footer links, header nav phone)
-5. **Sem escala responsiva** — fontes iguais no mobile e desktop em muitos componentes
-6. **Body base** definido como `text-base` (16px) mas quase tudo usa `text-xs` ou `text-sm`, criando hierarquia fraca
+**Performance:**
+- Framer Motion importado em BenefitsSection e TestimonialsSection para animações simples — overhead desnecessário
+- Imagens sem `width`/`height` attributes causam layout shift
+- Múltiplos `useStoreSettings()` chamados em cada componente (já cached pelo React Query, ok)
+- `HeroSection` importa 12 ícones do Lucide — ok tree-shaked
 
 ### Plano de Ajustes
 
-#### 1. CSS Base (`src/index.css`)
-- Definir `font-size: 15px` no body para mobile, `16px` para desktop via media query
-- Melhorar line-height base para `1.6`
-- Adicionar classe utilitaria `.text-2xs` para os raros casos que precisam 11px
+#### 1. Tailwind Container (`tailwind.config.ts`)
+- Aumentar padding mobile para `1.25rem` (20px) para mais respiro nas bordas
+- Adicionar padding `md: 2rem` para desktop
 
-#### 2. ProductCard (`src/components/ProductCard.tsx`)
-- Parcelas: `text-[10px]` → `text-xs` (12px)
-- Stock alert: `text-[10px]` → `text-[11px]`
-- Rating/reviews: `text-xs` → `text-xs` (manter, ok a 12px)
-- Product name: `text-sm` → `text-sm md:text-base` (14→16 desktop)
-- Price: `text-lg` → `text-lg md:text-xl` (18→20 desktop)
-- Short description: `text-xs` → `text-[13px]`
+#### 2. Home — Seções (`Index.tsx` e componentes)
+- Reduzir `py-16 md:py-24` para `py-10 md:py-20` nas seções para mobile mais compacto
+- `FeaturedCarousel`: remover `px-8 md:px-12`, usar `px-2 md:px-8`
+- `AllProducts`: grid `grid-cols-2 lg:grid-cols-3` com `gap-3 md:gap-6` para 2 colunas no mobile
+- `BenefitsSection`: `grid-cols-2 lg:grid-cols-4` com `gap-3 md:gap-6`, padding `p-4 md:p-6`
+- `TestimonialsSection`: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` com `gap-4 md:gap-6`
+- `GuaranteeSection`: `gap-4 md:gap-6`
+- `FinalCTA`: highlights flex-wrap com `gap-3 md:gap-6`
 
-#### 3. Header (`src/components/Header.tsx`)
-- Cart badge: `text-[10px]` → `text-[11px]`
-- Nav links: `text-sm` → `text-sm md:text-[15px]`
-- Phone: `text-xs` → `text-[13px]`
+#### 3. ProductCard Mobile-first
+- Reduzir padding `p-3 md:p-4`
+- Título `text-xs md:text-sm` em grid de 2 colunas
+- Botões mais compactos no mobile: `size="xs"` ou menor text
+- Ocultar "Compra Rápida" no mobile para simplificar (mantém "Adicionar ao Carrinho")
+- Parcelas: esconder no mobile para limpar visual
 
-#### 4. Footer (`src/components/Footer.tsx`)
-- Links: `text-sm` (14px) → manter (ok)
-- Footer bottom: `text-xs` → `text-[13px]`
-- Section titles: `text-sm font-semibold` → `text-[15px] font-semibold`
+#### 4. ProductDetail Mobile
+- Fixed top bar: adicionar `top-0` com `pt-[60px]` no main para não sobrepor
+- "Aceitamos" flags: `flex-wrap` com itens menores no mobile
+- Quantity selector inline com botões de compra
 
-#### 5. CountdownTimer (`src/components/CountdownTimer.tsx`)
-- Unit label: `text-[9px]` → `text-[11px]`
+#### 5. Footer Mobile
+- Grid `grid-cols-2 md:grid-cols-[1.2fr_1fr_1fr_1fr]` para 2 colunas no mobile
 
-#### 6. RecentPurchasePopup (`src/components/RecentPurchasePopup.tsx`)
-- Header badge: `text-[11px]` → `text-xs`
-- Time label: `text-[11px]` → `text-xs`
+#### 6. Performance — Remover Framer Motion overhead
+- `BenefitsSection`: substituir `motion.div` por CSS `animate-fade-in` com `IntersectionObserver` leve ou simplesmente classes Tailwind `animate-fade-in`
+- `TestimonialsSection`: mesmo — usar CSS animations ao invés de framer-motion
+- Adicionar `width`/`height` em imagens de produto para evitar CLS
+- Lazy load seções abaixo da dobra com `React.lazy` + `Suspense` (TestimonialsSection, GuaranteeSection, FinalCTA)
 
-#### 7. NotificationBar (`src/components/NotificationBar.tsx`)
-- Text: `text-sm` → `text-sm md:text-base` (responsivo)
-
-#### 8. Admin stat cards (DashboardPage, OrdersPage, CommissionsPage)
-- Card title: `text-[11px]` → `text-xs`
-- Trend badge: `text-[10px]` → `text-[11px]`
-
-#### 9. AdminSidebar (`src/components/admin/AdminSidebar.tsx`)
-- Subtitle: `text-[10px]` → `text-[11px]`
-- Section labels: `text-[10px]` → `text-[11px]`
-
-#### 10. CheckoutPage e forms
-- Labels e inputs ja usam `text-sm`/`text-base` — ok
-- Garantir que `text-xs` em helpers suba para `text-[13px]`
-
-#### 11. Sections da Home (Benefits, Testimonials, Guarantee, FinalCTA)
-- Section headings: adicionar `md:text-3xl` ou `md:text-4xl` quando so tiver `text-2xl`
-- Section descriptions: garantir `text-base md:text-lg`
-
-#### 12. ProductDetail page
-- Payment flags: `text-[10px]` → `text-xs`
-- Garantir que descricao use `text-sm md:text-base` com `leading-relaxed`
-
-### Resumo de Impacto
-
-- **Eliminar**: todo uso de `text-[9px]` e `text-[10px]` (subir para 11-12px)
-- **Reduzir**: uso excessivo de `text-xs` em conteudo de leitura (subir para 13px)
-- **Adicionar**: breakpoints responsivos `md:text-*` em headings, precos e body text
-- **Melhorar**: line-height base e hierarquia tipografica
+#### 7. Skeleton Loading (Mercado Livre style)
+- Criar `ProductCardSkeleton` com pulso cinza para estados de loading
+- Usar no `AllProducts` e `FeaturedCarousel` durante loading
 
 ### Arquivos Modificados
-- `src/index.css`
-- `src/components/ProductCard.tsx`
-- `src/components/Header.tsx`
-- `src/components/Footer.tsx`
-- `src/components/CountdownTimer.tsx`
-- `src/components/RecentPurchasePopup.tsx`
-- `src/components/NotificationBar.tsx`
-- `src/components/BenefitsSection.tsx`
-- `src/components/TestimonialsSection.tsx`
-- `src/components/GuaranteeSection.tsx`
-- `src/components/FinalCTA.tsx`
-- `src/components/admin/AdminSidebar.tsx`
-- `src/pages/admin/DashboardPage.tsx`
-- `src/pages/admin/OrdersPage.tsx`
-- `src/pages/admin/CommissionsPage.tsx`
-- `src/pages/ProductDetail.tsx`
-- `src/components/checkout/CartRecommendations.tsx`
+- `tailwind.config.ts` — container padding
+- `src/components/ProductCard.tsx` — mobile compact
+- `src/components/FeaturedCarousel.tsx` — padding e spacing
+- `src/components/AllProducts.tsx` — grid 2 colunas + skeleton
+- `src/components/BenefitsSection.tsx` — remover framer-motion, grid mobile
+- `src/components/TestimonialsSection.tsx` — remover framer-motion, grid mobile
+- `src/components/GuaranteeSection.tsx` — spacing mobile
+- `src/components/FinalCTA.tsx` — spacing mobile
+- `src/components/Footer.tsx` — grid 2 colunas mobile
+- `src/pages/ProductDetail.tsx` — fixed bar spacing, flags wrap
+- `src/pages/Index.tsx` — lazy loading seções
 
-Sem mudancas de banco de dados ou rotas.
+Sem mudanças de banco de dados.
 
