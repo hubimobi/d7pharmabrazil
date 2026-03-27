@@ -521,6 +521,54 @@ export default function ProductsPage() {
                     </Button>
                   </div>
                 </TabsContent>
+                <TabsContent value="seo" className="space-y-4 mt-4">
+                  <p className="text-sm text-muted-foreground">Otimize como seu produto aparece nos mecanismos de busca (Google, Bing, etc).</p>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Título SEO</Label>
+                      <span className={`text-xs ${form.seo_title.length > 60 ? "text-destructive" : form.seo_title.length >= 50 ? "text-success" : "text-muted-foreground"}`}>
+                        {form.seo_title.length}/60
+                      </span>
+                    </div>
+                    <Input value={form.seo_title} onChange={(e) => setForm({ ...form, seo_title: e.target.value })} placeholder={form.name || "Título do produto para SEO"} />
+                    <p className="text-xs text-muted-foreground">Ideal: 50-60 caracteres. Se vazio, usa o nome do produto.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Meta Description</Label>
+                      <span className={`text-xs ${form.seo_description.length > 160 ? "text-destructive" : form.seo_description.length >= 120 ? "text-success" : "text-muted-foreground"}`}>
+                        {form.seo_description.length}/160
+                      </span>
+                    </div>
+                    <Textarea value={form.seo_description} onChange={(e) => setForm({ ...form, seo_description: e.target.value })} placeholder={form.short_description || "Descrição curta para mecanismos de busca"} rows={3} />
+                    <p className="text-xs text-muted-foreground">Ideal: 120-160 caracteres. Se vazio, usa a descrição curta.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Palavras-chave</Label>
+                    <Input value={form.seo_keywords} onChange={(e) => setForm({ ...form, seo_keywords: e.target.value })} placeholder="suplemento, proteína, saúde, etc." />
+                    <p className="text-xs text-muted-foreground">Separadas por vírgula.</p>
+                  </div>
+
+                  {/* Google Preview */}
+                  <div className="rounded-lg border border-border p-4 bg-muted/30">
+                    <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1"><Search className="h-3 w-3" /> Preview no Google</p>
+                    <div className="space-y-1">
+                      <p className="text-[#1a0dab] text-lg leading-tight truncate">
+                        {form.seo_title || form.name || "Título do Produto"} | D7 Pharma Brazil
+                      </p>
+                      <p className="text-[#006621] text-sm truncate">
+                        d7pharmabrazil.lovable.app/produto/{form.slug || "slug-do-produto"}
+                      </p>
+                      <p className="text-sm text-[#545454] line-clamp-2">
+                        {form.seo_description || form.short_description || "Descrição do produto aparecerá aqui nos resultados de busca..."}
+                      </p>
+                    </div>
+                  </div>
+                </TabsContent>
+
               </Tabs>
 
               <Button type="submit" className="w-full" disabled={save.isPending}>
