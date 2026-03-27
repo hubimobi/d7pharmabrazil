@@ -12,6 +12,7 @@ import NotificationBar from "@/components/NotificationBar";
 const TestimonialsSection = lazy(() => import("@/components/TestimonialsSection"));
 const GuaranteeSection = lazy(() => import("@/components/GuaranteeSection"));
 const FinalCTA = lazy(() => import("@/components/FinalCTA"));
+const InstagramFeed = lazy(() => import("@/components/InstagramFeed"));
 
 const Index = () => (
   <div className="min-h-screen">
@@ -27,6 +28,7 @@ const Index = () => (
         <TestimonialsSection />
         <GuaranteeSection />
         <FinalCTA />
+        <InstagramFeed />
       </Suspense>
     </main>
     <Footer />
