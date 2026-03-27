@@ -301,10 +301,14 @@ export default function AIAgentsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Modelo de IA</Label>
-                <Select value={form.model} onValueChange={(v) => setForm({ ...form, model: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{AVAILABLE_MODELS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
+                <Select value={availableModels.some(m => m.value === form.model) ? form.model : ""} onValueChange={(v) => setForm({ ...form, model: v })}>
+                  <SelectTrigger><SelectValue placeholder="Usar padrão do sistema" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Padrão do sistema ({availableModels[0]?.label})</SelectItem>
+                    {availableModels.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                  </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">Se não selecionado, usa o modelo padrão configurado no LLM ativo.</p>
               </div>
               <div className="space-y-2">
                 <Label>Temperatura ({form.temperature})</Label>
