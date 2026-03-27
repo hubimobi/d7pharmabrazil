@@ -225,8 +225,11 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Description below images - desktop only */}
-            {product.description && <DescriptionBlock className="hidden lg:block mt-6" />}
+          </div>
+
+          {/* MIDDLE: Description column - desktop only */}
+          <div className="hidden lg:block lg:w-[20%] lg:min-w-[200px] lg:self-start lg:sticky lg:top-4">
+            {product.description && <DescriptionBlock />}
           </div>
 
           {/* RIGHT: Product info + Purchase — side by side on desktop */}
