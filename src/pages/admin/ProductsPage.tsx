@@ -26,6 +26,7 @@ interface ProdForm {
   group_name: string; manufacturer: string;
   sku: string; ncm: string; gtin: string; unit: string;
   show_countdown: boolean;
+  featured: boolean;
 }
 
 const emptyForm: ProdForm = {
@@ -36,6 +37,7 @@ const emptyForm: ProdForm = {
   group_name: "", manufacturer: "",
   sku: "", ncm: "", gtin: "", unit: "UN",
   show_countdown: true,
+  featured: false,
 };
 
 interface Testimonial {
@@ -101,6 +103,7 @@ export default function ProductsPage() {
         price: parseFloat(form.price), original_price: parseFloat(form.original_price),
         badge: form.badge || null, stock: parseInt(form.stock) || 0, benefits,
         show_countdown: form.show_countdown,
+        featured: form.featured,
         weight: parseFloat(form.weight) || 0.3,
         height: parseFloat(form.height) || 5,
         width: parseFloat(form.width) || 15,
@@ -184,6 +187,7 @@ export default function ProductsPage() {
       gtin: (p as any).gtin ?? "",
       unit: (p as any).unit ?? "UN",
       show_countdown: (p as any).show_countdown !== false,
+      featured: (p as any).featured === true,
     });
 
     // Load testimonials
@@ -279,6 +283,13 @@ export default function ProductsPage() {
                       <p className="text-xs text-muted-foreground">Exibir cronômetro de promoção no produto</p>
                     </div>
                     <Switch id="show_countdown" checked={form.show_countdown} onCheckedChange={(checked) => setForm({ ...form, show_countdown: checked })} />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                    <div>
+                      <Label htmlFor="featured" className="font-medium">Produto Destaque</Label>
+                      <p className="text-xs text-muted-foreground">Exibir no carrossel de destaques da home</p>
+                    </div>
+                    <Switch id="featured" checked={form.featured} onCheckedChange={(checked) => setForm({ ...form, featured: checked })} />
                   </div>
                   <div className="space-y-2"><Label>Benefícios (um por linha)</Label><Textarea value={form.benefits} onChange={(e) => setForm({ ...form, benefits: e.target.value })} rows={4} /></div>
                 </TabsContent>
@@ -481,9 +492,12 @@ export default function ProductsPage() {
                     <TableCell>{fmt(p.price)}</TableCell>
                     <TableCell>{p.stock}</TableCell>
                     <TableCell>
-                      <Badge variant={p.active ? "default" : "secondary"} className="cursor-pointer" onClick={() => toggleActive.mutate({ id: p.id, active: p.active })}>
-                        {p.active ? "Ativo" : "Inativo"}
-                      </Badge>
+                      <div className="flex items-center gap-1">
+                        <Badge variant={p.active ? "default" : "secondary"} className="cursor-pointer" onClick={() => toggleActive.mutate({ id: p.id, active: p.active })}>
+                          {p.active ? "Ativo" : "Inativo"}
+                        </Badge>
+                        {(p as any).featured && <Badge variant="outline" className="text-xs">⭐</Badge>}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">

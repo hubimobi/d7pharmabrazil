@@ -21,6 +21,8 @@ export interface Product {
   width: number;
   length: number;
   showCountdown: boolean;
+  featured: boolean;
+  groupName: string;
 }
 
 // Fallback images for products without uploaded images
@@ -58,6 +60,8 @@ function mapDbProduct(p: any): Product {
     width: Number(p.width) || 15,
     length: Number(p.length) || 20,
     showCountdown: p.show_countdown !== false,
+    featured: p.featured === true,
+    groupName: p.group_name || "",
   };
 }
 

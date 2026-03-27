@@ -2,7 +2,8 @@ import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import SEOHead from "@/components/SEOHead";
 import BenefitsSection from "@/components/BenefitsSection";
-import FeaturedProducts from "@/components/FeaturedProducts";
+import FeaturedCarousel from "@/components/FeaturedCarousel";
+import AllProducts from "@/components/AllProducts";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import GuaranteeSection from "@/components/GuaranteeSection";
 import FinalCTA from "@/components/FinalCTA";
@@ -18,7 +19,8 @@ const Index = () => (
     <main>
       <HeroSection />
       <BenefitsSection />
-      <FeaturedProducts />
+      <FeaturedCarousel />
+      <AllProducts />
       <TestimonialsSection />
       <GuaranteeSection />
       <FinalCTA />

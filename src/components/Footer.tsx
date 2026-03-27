@@ -57,14 +57,14 @@ const Footer = () => {
   return (
     <footer className="border-t border-border bg-card py-12">
       <div className="container">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
+        <div className="grid gap-8 md:grid-cols-[1.2fr_1fr_1fr_1fr]">
+          <div className="flex flex-col">
             {settings?.logo_url ? (
-              <img src={settings.logo_url} alt={storeName} className="h-10 object-contain mb-2" />
+              <img src={settings.logo_url} alt={storeName} className="h-14 w-auto max-w-[180px] object-contain mb-3" />
             ) : (
-              <h3 className="text-lg font-bold text-primary">{storeName}</h3>
+              <h3 className="text-xl font-bold text-primary mb-3">{storeName}</h3>
             )}
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Suplementos de alta performance com qualidade farmacêutica.
             </p>
             {socials.length > 0 && (
@@ -77,7 +77,7 @@ const Footer = () => {
                       href={s.url!}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-primary transition"
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground transition"
                       title={s.label}
                     >
                       {Icon ? <Icon /> : s.label}
