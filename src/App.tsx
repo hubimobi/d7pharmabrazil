@@ -44,6 +44,8 @@ import WebchatWidget from "./components/WebchatWidget";
 import PopupBanner from "./components/PopupBanner";
 import DesignTokenApplier from "./components/DesignTokenApplier";
 import TrackingScripts from "./components/TrackingScripts";
+import LinkRedirectPage from "./pages/LinkRedirectPage";
+import LinksPage from "./pages/admin/LinksPage";
 
 const queryClient = new QueryClient();
 
@@ -109,6 +111,8 @@ const App = () => (
               <Route path="/admin/checkout" element={<AdminLayout><CheckoutSettingsPage /></AdminLayout>} />
               <Route path="/admin/agentes-ia" element={<AdminLayout><AIAgentsPage /></AdminLayout>} />
               <Route path="/admin/usuarios" element={<AdminLayout><UsersPage /></AdminLayout>} />
+              <Route path="/admin/links" element={<AdminLayout><LinksPage /></AdminLayout>} />
+              <Route path="/l/:code" element={<LinkRedirectPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { Progress } from "@/components/ui/progress";
+import { getActiveRef } from "@/pages/LinkRedirectPage";
 
 interface PaymentResult {
   payment_id: string;
@@ -263,6 +264,26 @@ const CheckoutPage = () => {
       supabase.functions.invoke("ghl-sync", { body: ghlPayload }).catch((err) =>
         console.error("GHL sync error (non-fatal):", err)
       );
+
+      // Link attribution (non-blocking)
+      const ref = getActiveRef();
+      if (ref && data.order_id) {
+        supabase.from("link_conversions").insert({
+          short_link_id: ref.linkId,
+          order_id: data.order_id,
+          order_total: form.paymentMethod === "pix" ? pixTotal : finalTotal,
+        }).then(() => {});
+        supabase.rpc("increment_link_conversions", { link_id: ref.linkId }).then(() => {});
+        // GA4 event
+        if ((window as any).gtag) {
+          (window as any).gtag("event", "purchase_attributed", {
+            link_code: ref.code,
+            link_id: ref.linkId,
+            order_id: data.order_id,
+            value: form.paymentMethod === "pix" ? pixTotal : finalTotal,
+          });
+        }
+      }
 
       if (form.paymentMethod === "card" && (data.status === "CONFIRMED" || data.status === "RECEIVED")) {
         toast.success("Pagamento aprovado! 🎉");
