@@ -13,7 +13,7 @@ const Header = () => {
   const { items } = useCart();
   const { data: settings } = useStoreSettings();
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
-  const cartTotal = items.reduce((sum, i) => sum + i.quantity * i.price, 0);
+  const cartTotal = items.reduce((sum, i) => sum + i.quantity * i.product.price, 0);
   const navigate = useNavigate();
   const location = useLocation();
 
