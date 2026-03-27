@@ -54,8 +54,14 @@ const Footer = () => {
     }
   }, [settings?.favicon_url]);
 
+  const footerColor = settings?.design_footer_color;
+
   return (
-    <footer className="bg-foreground text-background/80 py-10 md:py-14">
+    <footer
+      className="text-background/80 py-10 md:py-14"
+      style={footerColor ? { backgroundColor: footerColor, color: "#ffffffcc" } : undefined}
+      {...(!footerColor ? { className: "bg-foreground text-background/80 py-10 md:py-14" } : {})}
+    >
       <div className="container">
         <div className="grid grid-cols-2 md:grid-cols-[1.2fr_1fr_1fr_1fr] gap-6 md:gap-8">
           <div className="col-span-2 md:col-span-1 flex flex-col">
