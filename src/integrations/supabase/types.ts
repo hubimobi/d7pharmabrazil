@@ -16,6 +16,9 @@ export type Database = {
     Tables: {
       abandoned_carts: {
         Row: {
+          ai_agent_active: boolean
+          ai_contact_count: number
+          assigned_agent_id: string | null
           cart_total: number
           created_at: string
           customer_email: string | null
@@ -24,12 +27,18 @@ export type Database = {
           ghl_synced: boolean
           id: string
           items: Json
+          last_contact_at: string | null
           recovered_at: string | null
+          recovery_notes: string | null
+          recovery_stage: string
           shipping_cep: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          ai_agent_active?: boolean
+          ai_contact_count?: number
+          assigned_agent_id?: string | null
           cart_total?: number
           created_at?: string
           customer_email?: string | null
@@ -38,12 +47,18 @@ export type Database = {
           ghl_synced?: boolean
           id?: string
           items?: Json
+          last_contact_at?: string | null
           recovered_at?: string | null
+          recovery_notes?: string | null
+          recovery_stage?: string
           shipping_cep?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          ai_agent_active?: boolean
+          ai_contact_count?: number
+          assigned_agent_id?: string | null
           cart_total?: number
           created_at?: string
           customer_email?: string | null
@@ -52,12 +67,23 @@ export type Database = {
           ghl_synced?: boolean
           id?: string
           items?: Json
+          last_contact_at?: string | null
           recovered_at?: string | null
+          recovery_notes?: string | null
+          recovery_stage?: string
           shipping_cep?: string | null
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "abandoned_carts_assigned_agent_id_fkey"
+            columns: ["assigned_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       admin_notifications: {
         Row: {
