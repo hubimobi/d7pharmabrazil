@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { Progress } from "@/components/ui/progress";
+import { getActiveRef } from "@/pages/LinkRedirectPage";
 
 interface PaymentResult {
   payment_id: string;
