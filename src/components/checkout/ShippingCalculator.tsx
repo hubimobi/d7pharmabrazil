@@ -21,6 +21,7 @@ interface ShippingCalculatorProps {
   items: { price: number; quantity: number; weight: number; height: number; width: number; length: number }[];
   selectedOption: ShippingOption | null;
   onSelectOption: (option: ShippingOption) => void;
+  onAddressFound?: (address: { street: string; neighborhood: string; city: string; state: string }) => void;
 }
 
 export default function ShippingCalculator({
@@ -29,6 +30,7 @@ export default function ShippingCalculator({
   items,
   selectedOption,
   onSelectOption,
+  onAddressFound,
 }: ShippingCalculatorProps) {
   const [options, setOptions] = useState<ShippingOption[]>([]);
   const [loading, setLoading] = useState(false);
