@@ -661,6 +661,9 @@ export type Database = {
           price: number
           rating: number
           reviews_count: number
+          seo_description: string | null
+          seo_keywords: string | null
+          seo_title: string | null
           short_description: string
           show_countdown: boolean
           sku: string | null
@@ -692,6 +695,9 @@ export type Database = {
           price?: number
           rating?: number
           reviews_count?: number
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
           short_description?: string
           show_countdown?: boolean
           sku?: string | null
@@ -723,6 +729,9 @@ export type Database = {
           price?: number
           rating?: number
           reviews_count?: number
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
           short_description?: string
           show_countdown?: boolean
           sku?: string | null
