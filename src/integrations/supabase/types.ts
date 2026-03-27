@@ -1435,6 +1435,7 @@ export type Database = {
           whatsapp_delay_seconds: number | null
           whatsapp_position: string | null
           whatsapp_show_on_scroll: boolean | null
+          whatsapp_support: string | null
           youtube: string | null
         }
         Insert: {
@@ -1538,6 +1539,7 @@ export type Database = {
           whatsapp_delay_seconds?: number | null
           whatsapp_position?: string | null
           whatsapp_show_on_scroll?: boolean | null
+          whatsapp_support?: string | null
           youtube?: string | null
         }
         Update: {
@@ -1641,6 +1643,7 @@ export type Database = {
           whatsapp_delay_seconds?: number | null
           whatsapp_position?: string | null
           whatsapp_show_on_scroll?: boolean | null
+          whatsapp_support?: string | null
           youtube?: string | null
         }
         Relationships: [
