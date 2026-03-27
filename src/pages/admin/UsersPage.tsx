@@ -263,13 +263,15 @@ export default function UsersPage() {
                     <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Nenhum usuário encontrado</TableCell></TableRow>
                   ) : (
                     users.map((u) => (
-                      <TableRow key={u.user_id}>
+                      <TableRow key={u.user_id} className={!u.active ? "opacity-50" : ""}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <UserCog className="h-4 w-4 text-muted-foreground" />
                             <div>
                               <span>{u.name}</span>
+                              {u.email && <p className="text-xs text-muted-foreground">{u.email}</p>}
                               {u.phone && <p className="text-xs text-muted-foreground">{u.phone}</p>}
+                              {!u.active && <Badge variant="destructive" className="text-[10px] px-1 py-0 mt-0.5">Inativo</Badge>}
                             </div>
                           </div>
                         </TableCell>
@@ -293,7 +295,7 @@ export default function UsersPage() {
                               <DropdownMenuItem onClick={() => openEdit(u)}>
                                 <Pencil className="mr-2 h-4 w-4" /> Editar
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSendPasswordReset(u.email || u.name)}>
+                              <DropdownMenuItem onClick={() => handleSendPasswordReset(u.email)}>
                                 <KeyRound className="mr-2 h-4 w-4" /> Enviar Nova Senha
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleToggleActive(u.user_id, u.active)}>
