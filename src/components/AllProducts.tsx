@@ -3,7 +3,6 @@ import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { useProducts } from "@/hooks/useProducts";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown } from "lucide-react";
 
 const PAGE_SIZE = 6;
@@ -29,9 +28,9 @@ const AllProducts = () => {
   const hasMore = visibleCount < filtered.length;
 
   return (
-    <section className="py-10 md:py-20 bg-muted/30">
+    <section className="py-10 md:py-20">
       <div className="container">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex flex-col gap-4">
           <div>
             <h2 className="text-xl font-bold text-foreground md:text-3xl">
               Todos os Produtos
@@ -41,17 +40,31 @@ const AllProducts = () => {
             </p>
           </div>
           {groups.length > 1 && (
-            <Select value={groupFilter} onValueChange={(v) => { setGroupFilter(v); setVisibleCount(PAGE_SIZE); }}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filtrar por grupo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Grupos</SelectItem>
-                {groups.map((g) => (
-                  <SelectItem key={g} value={g}>{g}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+              <button
+                onClick={() => { setGroupFilter("all"); setVisibleCount(PAGE_SIZE); }}
+                className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+                  groupFilter === "all"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                Todos
+              </button>
+              {groups.map((g) => (
+                <button
+                  key={g}
+                  onClick={() => { setGroupFilter(g); setVisibleCount(PAGE_SIZE); }}
+                  className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all whitespace-nowrap ${
+                    groupFilter === g
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
@@ -67,8 +80,8 @@ const AllProducts = () => {
               ))}
             </div>
             {hasMore && (
-              <div className="mt-6 text-center">
-                <Button variant="outline" size="lg" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)} className="gap-2">
+              <div className="mt-8 text-center">
+                <Button variant="outline" size="lg" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)} className="gap-2 rounded-xl">
                   <ChevronDown className="h-4 w-4" /> Carregar Mais
                 </Button>
               </div>
