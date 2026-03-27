@@ -186,6 +186,7 @@ export default function ProductsPage() {
       gtin: (p as any).gtin ?? "",
       unit: (p as any).unit ?? "UN",
       show_countdown: (p as any).show_countdown !== false,
+      featured: (p as any).featured === true,
     });
 
     // Load testimonials
