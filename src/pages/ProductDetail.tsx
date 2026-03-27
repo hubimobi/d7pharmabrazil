@@ -147,24 +147,14 @@ const ProductDetail = () => {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Header />
       <main className="container py-8 md:py-16">
-        <div className="mb-6 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-          <Link to="/" className="hover:text-primary transition">Início</Link>
-          <span>/</span>
-          <Link to="/produtos" className="hover:text-primary transition">Produtos</Link>
-          {product.groupName && (
-            <>
-              <span>/</span>
-              <Link to={`/produtos?grupo=${encodeURIComponent(product.groupName)}`} className="hover:text-primary transition">{product.groupName}</Link>
-            </>
-          )}
-          <span>/</span>
-          <span className="text-foreground font-medium truncate max-w-[200px]">{product.name}</span>
-        </div>
+        <Link to="/produtos" className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
+          <ArrowLeft className="h-4 w-4" /> Voltar aos Produtos
+        </Link>
 
         {/* Desktop: 3-area layout like Mercado Livre */}
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* LEFT: Thumbnails + Main Image + Description (desktop) */}
-          <div className="order-1 lg:order-none lg:flex-1 lg:min-w-0">
+          <div className="order-1 lg:order-none lg:flex-1 lg:max-w-[55%]">
             <div className="flex gap-3">
               {/* Vertical thumbnails - desktop */}
               {product.extraImages.length > 0 && (
@@ -225,21 +215,13 @@ const ProductDetail = () => {
               </div>
             )}
 
-          </div>
-
-          {/* MIDDLE: Description column - desktop only */}
-          <div className="hidden lg:block lg:w-[20%] lg:min-w-[200px] lg:self-start lg:sticky lg:top-4">
-            {product.description && <DescriptionBlock />}
+            {/* Description below images - desktop only */}
+            {product.description && <DescriptionBlock className="hidden lg:block mt-6" />}
           </div>
 
           {/* RIGHT: Product info + Purchase — side by side on desktop */}
-          <div className="order-2 lg:order-none lg:w-[25%] lg:min-w-[320px] lg:self-start lg:sticky lg:top-4">
-            {product.badge && (
-              <div className="mb-3 flex items-center gap-2">
-                <Badge className="bg-secondary text-secondary-foreground">{product.badge}</Badge>
-                <span className="text-xs text-muted-foreground">| {displayReviews}+ vendidos</span>
-              </div>
-            )}
+          <div className="order-2 lg:order-none lg:w-[45%] lg:max-w-[480px] lg:self-start lg:sticky lg:top-4">
+            {product.badge && <Badge className="mb-3 bg-secondary text-secondary-foreground">{product.badge}</Badge>}
             <div className="flex items-start justify-between gap-2">
               <h1 className="text-2xl font-bold text-foreground lg:text-3xl">{product.name}</h1>
               <div className="flex gap-1 flex-shrink-0 pt-1">
@@ -299,13 +281,10 @@ const ProductDetail = () => {
             )}
 
             <div className="mt-4 flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center rounded-md border border-border">
-                  <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-3 py-2 text-lg font-medium text-muted-foreground hover:text-foreground">−</button>
-                  <span className="min-w-[2rem] text-center text-sm font-semibold">{qty}</span>
-                  <button onClick={() => setQty(Math.min(product.stock, qty + 1))} className="px-3 py-2 text-lg font-medium text-muted-foreground hover:text-foreground">+</button>
-                </div>
-                <span className="text-sm text-muted-foreground">({product.stock} disponíveis)</span>
+              <div className="flex items-center rounded-md border border-border">
+                <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-3 py-2 text-lg font-medium text-muted-foreground hover:text-foreground">−</button>
+                <span className="min-w-[2rem] text-center text-sm font-semibold">{qty}</span>
+                <button onClick={() => setQty(qty + 1)} className="px-3 py-2 text-lg font-medium text-muted-foreground hover:text-foreground">+</button>
               </div>
               <Button size="lg" className="h-14 text-base gap-2 w-full" onClick={() => {
                 addItem(product, qty);
