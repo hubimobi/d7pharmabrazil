@@ -53,6 +53,7 @@ export default function CheckoutSettingsPage() {
     setBoletoEnabled(s.checkout_boleto_enabled ?? false);
     setMetaPixelId(s.meta_pixel_id || "");
     setGtmId(s.gtm_id || "");
+    setHotjarId(s.hotjar_id || "");
     setMaxInstallments(s.max_installments ?? 3);
 
     setFreeShippingEnabled(s.free_shipping_enabled ?? false);
@@ -80,6 +81,7 @@ export default function CheckoutSettingsPage() {
           checkout_boleto_enabled: boletoEnabled,
           meta_pixel_id: metaPixelId,
           gtm_id: gtmId,
+          hotjar_id: hotjarId,
           max_installments: maxInstallments,
           free_shipping_enabled: freeShippingEnabled,
           free_shipping_min_value: freeShippingMinValue,
