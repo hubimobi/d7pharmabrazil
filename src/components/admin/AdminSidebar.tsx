@@ -53,7 +53,7 @@ const adminSections: MenuSection[] = [
     label: "Marketing",
     items: [
       { title: "Banner", url: "/admin/banner", icon: ImageIcon },
-      { title: "PopUps & Barra", url: "/admin/popups", icon: Megaphone },
+      { title: "PopUps", url: "/admin/popups", icon: Megaphone },
       { title: "Leads", url: "/admin/leads", icon: Mail },
     ],
   },
