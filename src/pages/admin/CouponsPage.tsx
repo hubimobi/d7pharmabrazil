@@ -39,6 +39,7 @@ export default function CouponsPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<CouponForm>(emptyForm);
+  const [viewOrdersCode, setViewOrdersCode] = useState<string | null>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -393,6 +394,9 @@ export default function CouponsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" title="Ver vendas" onClick={() => setViewOrdersCode(c.code)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
