@@ -551,6 +551,41 @@ export type Database = {
         }
         Relationships: []
       }
+      product_faqs: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          product_id: string
+          question: string
+          sort_order: number
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          product_id: string
+          question: string
+          sort_order?: number
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          question?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_faqs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_groups: {
         Row: {
           created_at: string

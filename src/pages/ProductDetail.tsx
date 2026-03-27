@@ -1,10 +1,11 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard, Share2, Copy, MessageCircle } from "lucide-react";
+import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard, Share2, Copy, MessageCircle, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
 import CountdownTimer from "@/components/CountdownTimer";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useProduct, useProducts } from "@/hooks/useProducts";
 import ProductCard from "@/components/ProductCard";
 import { useCart } from "@/hooks/useCart";
@@ -41,6 +42,22 @@ const ProductDetail = () => {
     },
     enabled: !!product?.id,
   });
+
+  const { data: faqs } = useQuery({
+    queryKey: ["product-faqs", product?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_faqs")
+        .select("*")
+        .eq("product_id", product!.id)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!product?.id,
+  });
+
+  const [descExpanded, setDescExpanded] = useState(false);
 
   if (isLoading) {
     return (
@@ -240,12 +257,37 @@ const ProductDetail = () => {
             {product.description && (
               <div className="mt-8">
                 <h2 className="text-lg font-bold text-foreground mb-3">Descrição do Produto</h2>
-                {product.description.startsWith("<") ? (
-                  <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold [&_hr]:my-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-foreground [&_a]:text-primary [&_a]:underline"
-                    dangerouslySetInnerHTML={{ __html: product.description }} />
-                ) : (
-                  <p className="text-muted-foreground">{product.description}</p>
-                )}
+                <div className={`relative overflow-hidden transition-all duration-300 ${!descExpanded ? "max-h-48" : ""}`}>
+                  {product.description.startsWith("<") ? (
+                    <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold [&_hr]:my-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-foreground [&_a]:text-primary [&_a]:underline"
+                      dangerouslySetInnerHTML={{ __html: product.description }} />
+                  ) : (
+                    <p className="text-muted-foreground">{product.description}</p>
+                  )}
+                  {!descExpanded && (
+                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
+                  )}
+                </div>
+                <Button variant="ghost" size="sm" className="mt-2 gap-1 text-primary" onClick={() => setDescExpanded(!descExpanded)}>
+                  {descExpanded ? <><ChevronUp className="h-4 w-4" /> Ver menos</> : <><ChevronDown className="h-4 w-4" /> Ver mais</>}
+                </Button>
+              </div>
+            )}
+
+            {/* FAQ */}
+            {faqs && faqs.length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
+                  <HelpCircle className="h-5 w-5 text-primary" /> Perguntas Frequentes
+                </h2>
+                <Accordion type="single" collapsible className="w-full">
+                  {faqs.map((f, i) => (
+                    <AccordionItem key={f.id || i} value={`faq-${i}`}>
+                      <AccordionTrigger className="text-sm font-medium text-left">{f.question}</AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground">{f.answer}</AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
               </div>
             )}
           </div>
