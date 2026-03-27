@@ -134,9 +134,9 @@ export default function RecentPurchasePopup() {
       timeouts.push(nextT);
     }
     return () => timeouts.forEach(clearTimeout);
-  }, [visible, currentIndex, dismissed, isAdmin, showNext, popupEnabled, burstMax, intervalMin, intervalMax]);
+  }, [visible, currentIndex, dismissed, isPublicStorefront, showNext, popupEnabled, burstMax, intervalMin, intervalMax]);
 
-  if (!displayOrders.length || dismissed || isAdmin || !popupEnabled) return null;
+  if (!displayOrders.length || dismissed || !isPublicStorefront || !popupEnabled) return null;
 
   const order = displayOrders[currentIndex % displayOrders.length];
   const firstName = order.customer_name?.split(" ")[0] || "Cliente";
