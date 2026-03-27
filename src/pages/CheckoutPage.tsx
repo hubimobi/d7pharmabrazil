@@ -16,6 +16,7 @@ import CartRecommendations from "@/components/checkout/CartRecommendations";
 import CheckoutUrgency from "@/components/checkout/CheckoutUrgency";
 import ComboUpsell from "@/components/checkout/ComboUpsell";
 import CheckoutMotivation from "@/components/checkout/CheckoutMotivation";
+import CartItemTestimonial from "@/components/checkout/CartItemTestimonial";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
@@ -362,6 +363,9 @@ const CheckoutPage = () => {
                     <div className="flex-1">
                       <h3 className="text-sm font-semibold">{item.product.name}</h3>
                       <p className="text-sm font-bold text-primary">R$ {item.product.price.toFixed(2).replace(".", ",")}</p>
+                      {(storeSettings as any)?.checkout_show_testimonials !== false && (
+                        <CartItemTestimonial productId={item.product.id} customerState={form.state || undefined} />
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="rounded p-1 hover:bg-muted"><Minus className="h-4 w-4" /></button>
