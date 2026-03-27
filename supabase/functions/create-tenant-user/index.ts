@@ -33,7 +33,47 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Sem permissão" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { email, password, full_name, role } = await req.json();
+    const body = await req.json();
+    const { action } = body;
+
+    // UPDATE existing user
+    if (action === "update") {
+      const { user_id, full_name, role, representative_id } = body;
+      if (!user_id || !role) {
+        return new Response(JSON.stringify({ error: "user_id e role são obrigatórios" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Update profile name
+      if (full_name) {
+        await supabase.from("profiles").update({ full_name }).eq("user_id", user_id);
+      }
+
+      // Update role: delete old roles, insert new one
+      await supabase.from("user_roles").delete().eq("user_id", user_id);
+      await supabase.from("user_roles").insert({ user_id, role });
+
+      // If prescriber, link to representative via doctors table
+      if (role === "prescriber" && representative_id) {
+        // Check if doctor record exists for this user
+        const { data: existingDoc } = await supabase.from("doctors").select("id").eq("user_id", user_id).limit(1);
+        if (existingDoc && existingDoc.length > 0) {
+          await supabase.from("doctors").update({ representative_id }).eq("user_id", user_id);
+        } else {
+          await supabase.from("doctors").insert({
+            user_id,
+            name: full_name || "Prescritor",
+            representative_id,
+          });
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // CREATE new user (default action)
+    const { email, password, full_name, role, representative_id } = body;
 
     if (!email || !password || !role) {
       return new Response(JSON.stringify({ error: "Email, senha e role são obrigatórios" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -55,6 +95,15 @@ Deno.serve(async (req) => {
 
     // Assign role
     await supabase.from("user_roles").insert({ user_id: userId, role });
+
+    // If prescriber, link to representative
+    if (role === "prescriber" && representative_id) {
+      await supabase.from("doctors").insert({
+        user_id: userId,
+        name: full_name || email,
+        representative_id,
+      });
+    }
 
     return new Response(JSON.stringify({ success: true, user_id: userId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
