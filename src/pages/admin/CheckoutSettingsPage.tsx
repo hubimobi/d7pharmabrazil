@@ -22,6 +22,7 @@ export default function CheckoutSettingsPage() {
   const [showFreeShippingBar, setShowFreeShippingBar] = useState(true);
   const [metaPixelId, setMetaPixelId] = useState("");
   const [gtmId, setGtmId] = useState("");
+  const [maxInstallments, setMaxInstallments] = useState(3);
 
   useEffect(() => {
     if (!settings) return;

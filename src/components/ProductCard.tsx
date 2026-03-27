@@ -69,9 +69,14 @@ const ProductCard = ({ product }: { product: Product }) => {
           <p className="text-2xs md:text-xs font-medium text-success mt-0.5">
             R$ {pixPrice} <span className="text-muted-foreground font-normal">no Pix</span>
           </p>
-          <p className="hidden md:block text-xs text-muted-foreground mt-0.5">
-            ou até {product.price >= 500 ? "12" : product.price >= 200 ? "6" : "3"}x de R$ {(product.price / (product.price >= 500 ? 12 : product.price >= 200 ? 6 : 3)).toFixed(2).replace(".", ",")}
-          </p>
+          {(() => {
+            const maxInst = settings?.max_installments ?? 3;
+            return (
+              <p className="hidden md:block text-xs text-muted-foreground mt-0.5">
+                Parcele em até {maxInst}x sem juros de R$ {(product.price / maxInst).toFixed(2).replace(".", ",")}
+              </p>
+            );
+          })()}
           {hasFreeShipping && (
             <span className="mt-1 inline-flex items-center gap-1 text-2xs md:text-xs font-semibold text-success">
               <Truck className="h-3 w-3" /> Frete Grátis
