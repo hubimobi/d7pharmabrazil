@@ -332,7 +332,7 @@ const ProductDetail = () => {
               <span className="text-xs text-muted-foreground">Aceitamos:</span>
               <div className="flex flex-wrap items-center gap-1.5 mt-1">
                 {["Visa", "Mastercard", "Elo", "Amex", "Pix"].map((flag) => (
-                  <span key={flag} className="inline-flex items-center gap-1 rounded border border-border bg-background px-1.5 py-0.5 text-2xs md:text-xs font-medium text-muted-foreground">
+                  <span key={flag} className="inline-flex items-center gap-1 rounded-lg bg-muted px-2 py-1 text-2xs md:text-xs font-medium text-muted-foreground">
                     <CreditCard className="h-3 w-3" /> {flag}
                   </span>
                 ))}
@@ -341,7 +341,7 @@ const ProductDetail = () => {
 
             {/* FAQ - abaixo de Aceitamos */}
             {faqs && faqs.length > 0 && (
-              <div className="mt-6 rounded-lg border border-border p-4">
+              <div className="mt-6 rounded-xl bg-muted/50 p-4 md:p-5">
                 <h2 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
                   <HelpCircle className="h-5 w-5 text-primary" /> Perguntas Frequentes
                 </h2>
