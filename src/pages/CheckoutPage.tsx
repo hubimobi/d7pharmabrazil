@@ -350,7 +350,9 @@ const CheckoutPage = () => {
         <h1 className="text-2xl font-bold text-foreground">Checkout</h1>
 
         {/* Motivational step indicator */}
-        <CheckoutMotivation step={step} items={items} />
+        {(storeSettings as any)?.checkout_show_motivation !== false && (
+          <CheckoutMotivation step={step} items={items} />
+        )}
 
         <div className="mt-8 grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
