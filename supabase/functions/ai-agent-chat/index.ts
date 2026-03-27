@@ -85,7 +85,7 @@ serve(async (req) => {
 
     const systemPrompt = (agent.system_prompt || "Você é um assistente útil.") + kbContext;
 
-    const response = await fetch(apiUrl, {
+    let response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -100,6 +100,31 @@ serve(async (req) => {
         stream: true,
       }),
     });
+
+    // Fallback to Lovable AI if external provider fails
+    if (!response.ok && apiUrl !== "https://ai.gateway.lovable.dev/v1/chat/completions") {
+      const errStatus = response.status;
+      const errText = await response.text();
+      console.error("External AI failed:", errStatus, errText, "— falling back to Lovable AI");
+      
+      const fallbackKey = Deno.env.get("LOVABLE_API_KEY") || "";
+      const fallbackModel = "google/gemini-3-flash-preview";
+      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${fallbackKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: fallbackModel,
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...messages,
+          ],
+          stream: true,
+        }),
+      });
+    }
 
     if (!response.ok) {
       const status = response.status;
