@@ -290,7 +290,7 @@ export default function OrdersPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button
+      <Button
                             variant="ghost"
                             size="icon"
                             title="Sync Bling"
@@ -298,6 +298,31 @@ export default function OrdersPage() {
                           >
                             <RefreshCw className="h-4 w-4" />
                           </Button>
+                          {order.status === "pending" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Marcar como Pago"
+                              onClick={async () => {
+                                if (!window.confirm("Marcar este pedido como pago manualmente?")) return;
+                                try {
+                                  const { error } = await supabase
+                                    .from("orders")
+                                    .update({ status: "paid" })
+                                    .eq("id", order.id);
+                                  if (error) throw error;
+                                  toast.success("Pedido marcado como pago!");
+                                  refetch();
+                                  // Auto-sync Bling
+                                  handleSyncBling(order.id, true);
+                                } catch (err: any) {
+                                  toast.error(`Erro: ${err.message}`);
+                                }
+                              }}
+                            >
+                              <DollarSign className="h-4 w-4 text-green-600" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
