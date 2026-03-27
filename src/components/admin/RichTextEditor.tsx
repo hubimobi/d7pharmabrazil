@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,13 +18,57 @@ interface RichTextEditorProps {
 export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const mode = useRef<"visual" | "html">("visual");
+  const internalValue = useRef(value);
+  const isInitialized = useRef(false);
+
+  // Only set innerHTML on first mount or when value changes externally
+  useEffect(() => {
+    if (editorRef.current && !isInitialized.current) {
+      editorRef.current.innerHTML = value;
+      internalValue.current = value;
+      isInitialized.current = true;
+    }
+  }, []);
+
+  // Sync external value changes (e.g. from HTML tab)
+  useEffect(() => {
+    if (editorRef.current && value !== internalValue.current) {
+      // Save selection
+      const sel = window.getSelection();
+      const hadFocus = document.activeElement === editorRef.current;
+      
+      editorRef.current.innerHTML = value;
+      internalValue.current = value;
+
+      // If editor was focused, move cursor to end
+      if (hadFocus && sel) {
+        const range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+  }, [value]);
 
   const exec = useCallback((command: string, val?: string) => {
     document.execCommand(command, false, val);
     editorRef.current?.focus();
     setTimeout(() => {
-      if (editorRef.current) onChange(editorRef.current.innerHTML);
+      if (editorRef.current) {
+        const html = editorRef.current.innerHTML;
+        internalValue.current = html;
+        onChange(html);
+      }
     }, 0);
+  }, [onChange]);
+
+  const handleInput = useCallback(() => {
+    if (editorRef.current) {
+      const html = editorRef.current.innerHTML;
+      internalValue.current = html;
+      onChange(html);
+    }
   }, [onChange]);
 
   const insertTable = () => {
@@ -54,6 +98,10 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     <div className="space-y-2">
       <Tabs defaultValue="visual" onValueChange={(v) => {
         mode.current = v as "visual" | "html";
+        if (v === "visual" && editorRef.current) {
+          editorRef.current.innerHTML = value;
+          internalValue.current = value;
+        }
       }}>
         <TabsList className="h-8">
           <TabsTrigger value="visual" className="text-xs px-3 h-6">Visual</TabsTrigger>
@@ -96,10 +144,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
             ref={editorRef}
             contentEditable
             className="min-h-[200px] max-h-[400px] overflow-y-auto rounded-b-md border p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring prose prose-sm max-w-none dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold [&_hr]:my-4"
-            dangerouslySetInnerHTML={{ __html: value }}
-            onInput={() => {
-              if (editorRef.current) onChange(editorRef.current.innerHTML);
-            }}
+            onInput={handleInput}
             data-placeholder={placeholder}
             suppressContentEditableWarning
           />
