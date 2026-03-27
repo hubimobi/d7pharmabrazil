@@ -101,6 +101,7 @@ export default function ShippingCalculator({
           size="sm"
           onClick={calculate}
           disabled={loading}
+          className={loading ? "" : "animate-pulse-soft border-primary text-primary hover:bg-primary/10"}
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Calcular"}
         </Button>
