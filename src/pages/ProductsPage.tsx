@@ -18,7 +18,7 @@ const ProductsPage = () => {
         {isLoading ? (
           <p className="mt-8 text-center text-muted-foreground">Carregando produtos...</p>
         ) : (
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
             {products?.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
