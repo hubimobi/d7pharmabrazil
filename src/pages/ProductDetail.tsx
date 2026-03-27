@@ -32,7 +32,7 @@ const ProductDetail = () => {
   const { data: product, isLoading } = useProduct(slug);
   const { addItem } = useCart();
   const navigate = useNavigate();
-  const { settings } = useStoreSettings();
+  const { data: settings } = useStoreSettings();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showUpsell, setShowUpsell] = useState(false);
