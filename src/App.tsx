@@ -21,6 +21,7 @@ import ReportsPage from "./pages/admin/ReportsPage";
 import AdminProductsPage from "./pages/admin/ProductsPage";
 import CommissionsPage from "./pages/admin/CommissionsPage";
 import StoreSettingsPage from "./pages/admin/StoreSettingsPage";
+import DesignSettingsPage from "./pages/admin/DesignSettingsPage";
 import IntegrationsPage from "./pages/admin/IntegrationsPage";
 import RecoveryPage from "./pages/admin/RecoveryPage";
 import CouponsPage from "./pages/admin/CouponsPage";
@@ -37,6 +38,7 @@ import StaticPage from "./pages/StaticPage";
 import RecentPurchasePopup from "./components/RecentPurchasePopup";
 import WebchatWidget from "./components/WebchatWidget";
 import PopupBanner from "./components/PopupBanner";
+import DesignTokenApplier from "./components/DesignTokenApplier";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +63,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <DesignTokenApplier />
             <RecentPurchasePopup />
             <WebchatWidget />
             <PopupBanner />
@@ -86,6 +89,7 @@ const App = () => (
               <Route path="/admin/comissoes" element={<AdminLayout><CommissionsPage /></AdminLayout>} />
               <Route path="/admin/relatorios" element={<AdminLayout><ReportsPage /></AdminLayout>} />
               <Route path="/admin/configuracoes" element={<AdminLayout><StoreSettingsPage /></AdminLayout>} />
+              <Route path="/admin/design" element={<AdminLayout><DesignSettingsPage /></AdminLayout>} />
               <Route path="/admin/integracoes" element={<AdminLayout><IntegrationsPage /></AdminLayout>} />
               <Route path="/admin/recuperacao" element={<AdminLayout><RecoveryPage /></AdminLayout>} />
               <Route path="/admin/cupons" element={<AdminLayout><CouponsPage /></AdminLayout>} />
