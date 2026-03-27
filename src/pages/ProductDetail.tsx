@@ -132,11 +132,251 @@ const ProductDetail = () => {
           <ArrowLeft className="h-4 w-4" /> Voltar aos Produtos
         </Link>
 
-        <div className="grid gap-8 md:grid-cols-2">
-          {/* Left column: Images + Description */}
-          <div className="space-y-3">
+        <div className="flex flex-col md:grid md:grid-cols-2 gap-8">
+          {/* Images — order-1 on mobile */}
+          <div className="order-1 md:order-none space-y-3">
             <div className="flex gap-3">
-              {/* Lateral thumbnails (desktop) */}
+              {product.extraImages.length > 0 && (
+                <div className="hidden md:flex flex-col gap-2">
+                  <button
+                    onClick={() => setSelectedImage(null)}
+                    className={`flex-shrink-0 rounded-lg border-2 overflow-hidden transition-all ${
+                      !selectedImage ? "border-primary ring-1 ring-primary/30" : "border-transparent hover:border-primary/30"
+                    }`}
+                  >
+                    <img src={product.image} alt={product.name} className="h-16 w-16 object-cover" />
+                  </button>
+                  {product.extraImages.map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedImage(img)}
+                      className={`flex-shrink-0 rounded-lg border-2 overflow-hidden transition-all ${
+                        selectedImage === img ? "border-primary ring-1 ring-primary/30" : "border-transparent hover:border-primary/30"
+                      }`}
+                    >
+                      <img src={img} alt={`${product.name} ${i + 2}`} className="h-16 w-16 object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex-1 aspect-square overflow-hidden rounded-xl bg-muted">
+                <img
+                  src={selectedImage || product.image}
+                  alt={product.name}
+                  className="h-full w-full object-cover transition-opacity duration-200"
+                />
+              </div>
+            </div>
+            {product.extraImages.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1 md:hidden">
+                <button
+                  onClick={() => setSelectedImage(null)}
+                  className={`flex-shrink-0 rounded-lg border-2 overflow-hidden transition ${
+                    !selectedImage ? "border-primary ring-1 ring-primary/30" : "border-transparent"
+                  }`}
+                >
+                  <img src={product.image} alt={product.name} className="h-16 w-16 object-cover" />
+                </button>
+                {product.extraImages.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedImage(img)}
+                    className={`flex-shrink-0 rounded-lg border-2 overflow-hidden transition ${
+                      selectedImage === img ? "border-primary ring-1 ring-primary/30" : "border-transparent"
+                    }`}
+                  >
+                    <img src={img} alt={`${product.name} ${i + 2}`} className="h-16 w-16 object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Desktop-only description */}
+            {product.description && (
+              <div className="hidden md:block mt-4 rounded-xl bg-muted/50 p-4 md:p-5">
+                <h2 className="text-lg font-bold text-foreground mb-3">Descrição do Produto</h2>
+                <div className={`relative overflow-hidden transition-all duration-300 ${!descExpanded ? "max-h-48" : ""}`}>
+                  {product.description.startsWith("<") ? (
+                    <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold [&_hr]:my-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-foreground [&_a]:text-primary [&_a]:underline"
+                      dangerouslySetInnerHTML={{ __html: product.description }} />
+                  ) : (
+                    <p className="text-muted-foreground">{product.description}</p>
+                  )}
+                  {!descExpanded && (
+                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-muted/50 to-transparent" />
+                  )}
+                </div>
+                <Button variant="ghost" size="sm" className="mt-2 gap-1 text-primary" onClick={() => setDescExpanded(!descExpanded)}>
+                  {descExpanded ? <><ChevronUp className="h-4 w-4" /> Ver menos</> : <><ChevronDown className="h-4 w-4" /> Ver mais</>}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Right column: Purchase info — order-2 on mobile */}
+          <div className="order-2 md:order-none">
+            {product.badge && <Badge className="mb-3 bg-secondary text-secondary-foreground">{product.badge}</Badge>}
+            <div className="flex items-start justify-between gap-2">
+              <h1 className="text-2xl font-bold text-foreground md:text-3xl">{product.name}</h1>
+              <div className="flex gap-1 flex-shrink-0 pt-1">
+                <button
+                  onClick={() => {
+                    const url = window.location.href;
+                    navigator.clipboard.writeText(url);
+                    import("sonner").then(({ toast }) => toast.success("Link copiado!"));
+                  }}
+                  className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition"
+                  title="Copiar link"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(product.name + " - " + window.location.href)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full p-2 text-muted-foreground hover:bg-success/10 hover:text-success transition"
+                  title="Compartilhar no WhatsApp"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                </a>
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex gap-0.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} className={`h-5 w-5 ${i < Math.floor(product.rating) ? "fill-warning text-warning" : "text-border"}`} />
+                ))}
+              </div>
+              <span className="text-base font-semibold">{product.rating}</span>
+              <span className="text-sm text-muted-foreground">({displayReviews} avaliações)</span>
+            </div>
+
+            <p className="mt-3 text-sm text-muted-foreground">{product.shortDescription}</p>
+
+            <div className="mt-6">
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl font-bold text-primary">R$ {product.price.toFixed(2).replace(".", ",")}</span>
+                <span className="text-lg text-muted-foreground line-through">R$ {product.originalPrice.toFixed(2).replace(".", ",")}</span>
+                <Badge variant="secondary" className="bg-success/10 text-success">-{discountPercent}%</Badge>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                ou até {product.price >= 500 ? "12" : product.price >= 200 ? "6" : "3"}x de R$ {(product.price / (product.price >= 500 ? 12 : product.price >= 200 ? 6 : 3)).toFixed(2).replace(".", ",")} {(product.price >= 500 ? 12 : product.price >= 200 ? 6 : 3) <= 3 ? "sem juros" : ""}
+              </p>
+              <p className="mt-1 text-sm font-medium text-success">💰 R$ {(product.price * 0.95).toFixed(2).replace(".", ",")} no Pix (5% off)</p>
+            </div>
+
+            {product.stock <= 10 && (
+              <p className="mt-3 animate-pulse-soft text-sm font-semibold text-destructive">⚠️ Apenas {product.stock} unidades em estoque!</p>
+            )}
+
+            {product.showCountdown && (
+              <CountdownTimer label="🔥 Preço promocional expira em" className="mt-4" />
+            )}
+
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="flex items-center rounded-md border border-border">
+                <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-3 py-2 text-lg font-medium text-muted-foreground hover:text-foreground">−</button>
+                <span className="min-w-[2rem] text-center text-sm font-semibold">{qty}</span>
+                <button onClick={() => setQty(qty + 1)} className="px-3 py-2 text-lg font-medium text-muted-foreground hover:text-foreground">+</button>
+              </div>
+              <Button size="lg" className="h-14 text-base gap-2 w-full" onClick={() => {
+                addItem(product, qty);
+                setShowUpsell(true);
+              }}>
+                <ShoppingCart className="h-5 w-5" /> Adicionar ao Carrinho
+              </Button>
+              <Button size="lg" className="h-14 text-base gap-2 w-full bg-success hover:bg-success/90 text-success-foreground animate-pulse-soft" onClick={() => {
+                addItem(product, qty);
+                navigate("/checkout");
+              }}>
+                <Zap className="h-5 w-5" /> Compra Rápida
+              </Button>
+            </div>
+
+            <div className="mt-6 space-y-2">
+              {product.benefits.map((b) => (
+                <div key={b} className="flex items-center gap-2 text-sm">
+                  <CheckCircle className="h-4 w-4 text-success" /><span>{b}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 rounded-xl bg-muted/50 p-4">
+              <ShippingCalculator
+                cep={shippingCep}
+                onCepChange={setShippingCep}
+                items={[{
+                  price: product.price,
+                  quantity: qty,
+                  weight: product.weight,
+                  height: product.height,
+                  width: product.width,
+                  length: product.length,
+                }]}
+                selectedOption={shippingOption}
+                onSelectOption={setShippingOption}
+              />
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-4 rounded-xl bg-muted/50 p-4 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-primary" /> Qualidade Comprovada</span>
+              <span className="flex items-center gap-1"><Truck className="h-4 w-4 text-primary" /> Frete Grátis +R$499</span>
+              <span className="flex items-center gap-1">🔒 Pagamento Seguro</span>
+            </div>
+
+            <div className="mt-3 px-1">
+              <span className="text-xs text-muted-foreground">Aceitamos:</span>
+              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                {["Visa", "Mastercard", "Elo", "Amex", "Pix"].map((flag) => (
+                  <span key={flag} className="inline-flex items-center gap-1 rounded-lg bg-muted px-2 py-1 text-2xs md:text-xs font-medium text-muted-foreground">
+                    <CreditCard className="h-3 w-3" /> {flag}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {faqs && faqs.length > 0 && (
+              <div className="mt-6 rounded-xl bg-muted/50 p-4 md:p-5">
+                <h2 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
+                  <HelpCircle className="h-5 w-5 text-primary" /> Perguntas Frequentes
+                </h2>
+                <Accordion type="single" collapsible className="w-full">
+                  {faqs.map((f, i) => (
+                    <AccordionItem key={f.id || i} value={`faq-${i}`}>
+                      <AccordionTrigger className="text-sm font-medium text-left">{f.question}</AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground">{f.answer}</AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
+            )}
+
+            {/* AI Q&A Section */}
+            <ProductQA product={product} faqs={faqs as any} />
+          </div>
+
+          {/* Mobile-only description — order-3 (after purchase section) */}
+          {product.description && (
+            <div className="order-3 md:hidden rounded-xl bg-muted/50 p-4">
+              <h2 className="text-lg font-bold text-foreground mb-3">Descrição do Produto</h2>
+              <div className={`relative overflow-hidden transition-all duration-300 ${!descExpanded ? "max-h-48" : ""}`}>
+                {product.description.startsWith("<") ? (
+                  <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold [&_hr]:my-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-foreground [&_a]:text-primary [&_a]:underline"
+                    dangerouslySetInnerHTML={{ __html: product.description }} />
+                ) : (
+                  <p className="text-muted-foreground">{product.description}</p>
+                )}
+                {!descExpanded && (
+                  <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-muted/50 to-transparent" />
+                )}
+              </div>
+              <Button variant="ghost" size="sm" className="mt-2 gap-1 text-primary" onClick={() => setDescExpanded(!descExpanded)}>
+                {descExpanded ? <><ChevronUp className="h-4 w-4" /> Ver menos</> : <><ChevronDown className="h-4 w-4" /> Ver mais</>}
+              </Button>
+            </div>
+          )}
+        </div>
               {product.extraImages.length > 0 && (
                 <div className="hidden md:flex flex-col gap-2">
                   <button
