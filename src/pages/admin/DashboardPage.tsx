@@ -90,13 +90,13 @@ export default function DashboardPage() {
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
-                  <p className="text-[11px] font-medium tracking-wider text-muted-foreground">
+                  <p className="text-xs font-medium tracking-wider text-muted-foreground">
                     {card.title}
                   </p>
                   <p className="text-2xl font-bold text-foreground">{card.value}</p>
                   <Badge
                     variant="outline"
-                    className={`text-[10px] px-1.5 py-0 font-medium border-0 ${
+                    className={`text-2xs px-1.5 py-0 font-medium border-0 ${
                       card.trendUp
                         ? "bg-green-500/10 text-green-600"
                         : "bg-red-500/10 text-red-600"

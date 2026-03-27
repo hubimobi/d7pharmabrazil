@@ -57,7 +57,7 @@ function TimeBlock({ value, unit }: { value: number; unit: string }) {
   return (
     <span className="inline-flex min-w-[28px] items-center justify-center rounded bg-destructive px-1.5 py-0.5 text-xs font-bold text-destructive-foreground tabular-nums">
       {String(value).padStart(2, "0")}
-      <span className="ml-0.5 text-[9px] font-normal opacity-80">{unit}</span>
+      <span className="ml-0.5 text-2xs font-normal opacity-80">{unit}</span>
     </span>
   );
 }

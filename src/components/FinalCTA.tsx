@@ -25,7 +25,7 @@ const FinalCTA = () => {
         <h2 className="text-2xl font-bold text-primary-foreground md:text-4xl">
           Comece sua transformação agora
         </h2>
-        <p className="mx-auto mt-4 max-w-lg text-primary-foreground/80 text-lg">
+        <p className="mx-auto mt-4 max-w-lg text-primary-foreground/80 text-base md:text-lg">
           Milhares de clientes já confiam na D7 Pharma. Junte-se a eles e experimente suplementos de qualidade farmacêutica.
         </p>
         <div className="mt-8">

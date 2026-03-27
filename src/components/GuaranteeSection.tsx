@@ -16,7 +16,7 @@ const GuaranteeSection = () => (
         <h2 className="text-2xl font-bold text-foreground md:text-3xl">
           Garantia de Satisfação
         </h2>
-        <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+        <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-xl mx-auto">
           Se por qualquer motivo você não ficar satisfeito, devolvemos 100% do seu dinheiro em até 30 dias. Sem burocracia, sem perguntas.
         </p>
       </div>

@@ -120,7 +120,7 @@ export default function CommissionsPage() {
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
-                  <p className="text-[11px] font-medium tracking-wider text-muted-foreground">{card.title}</p>
+                  <p className="text-xs font-medium tracking-wider text-muted-foreground">{card.title}</p>
                   <p className="text-2xl font-bold text-foreground">{card.value}</p>
                 </div>
                 <div className={`h-12 w-12 rounded-xl ${card.iconBg} flex items-center justify-center`}>

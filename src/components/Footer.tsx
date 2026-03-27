@@ -88,7 +88,7 @@ const Footer = () => {
             )}
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-foreground">Navegação</h4>
+            <h4 className="text-[15px] font-semibold text-foreground">Navegação</h4>
             <nav className="mt-3 flex flex-col gap-2">
               <Link to="/" className="text-sm text-muted-foreground hover:text-primary">Início</Link>
               <Link to="/produtos" className="text-sm text-muted-foreground hover:text-primary">Produtos</Link>
@@ -96,7 +96,7 @@ const Footer = () => {
             </nav>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-foreground">Institucional</h4>
+            <h4 className="text-[15px] font-semibold text-foreground">Institucional</h4>
             <nav className="mt-3 flex flex-col gap-2">
               <Link to="/quem-somos" className="text-sm text-muted-foreground hover:text-primary">Quem Somos</Link>
               <Link to="/politica-de-privacidade" className="text-sm text-muted-foreground hover:text-primary">Política de Privacidade</Link>
@@ -105,20 +105,20 @@ const Footer = () => {
             </nav>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-foreground">Contato</h4>
+            <h4 className="text-[15px] font-semibold text-foreground">Contato</h4>
             <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
               <span>{email}</span>
               <span>{whatsapp}</span>
               <span>{city}, {state} - Brasil</span>
-              {settings?.cnpj && <span className="text-xs">CNPJ: {settings.cnpj}</span>}
+              {settings?.cnpj && <span className="text-[13px]">CNPJ: {settings.cnpj}</span>}
             </div>
           </div>
         </div>
         <div className="mt-8 border-t border-border pt-6 text-center">
-          <p className="text-xs font-semibold text-muted-foreground mb-2">
+          <p className="text-[13px] font-semibold text-muted-foreground mb-2">
             🔒 100% Seguro — 100% Transparente — 100% Protegido
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             © {new Date().getFullYear()} {storeName}. Todos os direitos reservados.
           </p>
         </div>

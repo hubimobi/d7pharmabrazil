@@ -14,7 +14,7 @@ const TestimonialsSection = () => (
       <h2 className="text-center text-2xl font-bold text-foreground md:text-3xl">
         O que dizem sobre nós
       </h2>
-      <p className="mx-auto mt-3 max-w-xl text-center text-muted-foreground">
+      <p className="mx-auto mt-3 max-w-xl text-center text-base md:text-lg text-muted-foreground">
         Profissionais de saúde e clientes confiam na D7 Pharma
       </p>
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -32,7 +32,7 @@ const TestimonialsSection = () => (
                 <Star key={j} className="h-4 w-4 fill-warning text-warning" />
               ))}
             </div>
-            <p className="mt-3 text-sm text-muted-foreground">"{t.text}"</p>
+            <p className="mt-3 text-sm md:text-base text-muted-foreground leading-relaxed">"{t.text}"</p>
             <div className="mt-4">
               <p className="text-sm font-semibold text-foreground">{t.name}</p>
               <p className="text-xs text-muted-foreground">{t.role}</p>

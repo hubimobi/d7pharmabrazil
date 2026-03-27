@@ -295,7 +295,7 @@ const ProductDetail = () => {
               />
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-4 rounded-lg bg-muted p-4 text-xs text-muted-foreground">
+            <div className="mt-6 flex flex-wrap gap-4 rounded-lg bg-muted p-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-primary" /> Qualidade Comprovada</span>
               <span className="flex items-center gap-1"><Truck className="h-4 w-4 text-primary" /> Frete Grátis +R$499</span>
               <span className="flex items-center gap-1">🔒 Pagamento Seguro</span>
@@ -306,7 +306,7 @@ const ProductDetail = () => {
               <span className="text-xs text-muted-foreground">Aceitamos:</span>
               <div className="flex items-center gap-2">
                 {["Visa", "Mastercard", "Elo", "Amex", "Pix"].map((flag) => (
-                  <span key={flag} className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                  <span key={flag} className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-1 text-xs font-medium text-muted-foreground">
                     <CreditCard className="h-3 w-3" /> {flag}
                   </span>
                 ))}

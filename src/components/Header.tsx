@@ -44,15 +44,15 @@ const Header = () => {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
-          <Link to="/" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">Início</Link>
-          <Link to="/produtos" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">Produtos</Link>
-          <a href="/#beneficios" onClick={(e) => handleAnchorClick(e, "#beneficios")} className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary cursor-pointer">Benefícios</a>
-          <a href="/#depoimentos" onClick={(e) => handleAnchorClick(e, "#depoimentos")} className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary cursor-pointer">Depoimentos</a>
-          <Link to="/acompanhar-pedido" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">Meu Pedido</Link>
+          <Link to="/" className="text-sm md:text-[15px] font-medium text-foreground/80 transition-colors hover:text-primary">Início</Link>
+          <Link to="/produtos" className="text-sm md:text-[15px] font-medium text-foreground/80 transition-colors hover:text-primary">Produtos</Link>
+          <a href="/#beneficios" onClick={(e) => handleAnchorClick(e, "#beneficios")} className="text-sm md:text-[15px] font-medium text-foreground/80 transition-colors hover:text-primary cursor-pointer">Benefícios</a>
+          <a href="/#depoimentos" onClick={(e) => handleAnchorClick(e, "#depoimentos")} className="text-sm md:text-[15px] font-medium text-foreground/80 transition-colors hover:text-primary cursor-pointer">Depoimentos</a>
+          <Link to="/acompanhar-pedido" className="text-sm md:text-[15px] font-medium text-foreground/80 transition-colors hover:text-primary">Meu Pedido</Link>
         </nav>
 
         <div className="flex items-center gap-3">
-          <a href="tel:+5500000000000" className="hidden items-center gap-1 text-xs font-medium text-muted-foreground md:flex">
+          <a href="tel:+5500000000000" className="hidden items-center gap-1 text-[13px] font-medium text-muted-foreground md:flex">
             <Phone className="h-3.5 w-3.5" />
             Fale Conosco
           </a>
@@ -60,7 +60,7 @@ const Header = () => {
             <Button variant="outline" size="sm" className="relative">
               <ShoppingCart className="h-4 w-4" />
               {totalItems > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-secondary-foreground">
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-2xs font-bold text-secondary-foreground">
                   {totalItems}
                 </span>
               )}

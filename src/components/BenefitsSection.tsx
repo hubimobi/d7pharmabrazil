@@ -26,7 +26,7 @@ const BenefitsSection = () => {
         <h2 className="text-center text-2xl font-bold text-foreground md:text-3xl">
           {title}
         </h2>
-        <p className="mx-auto mt-3 max-w-xl text-center text-muted-foreground">
+        <p className="mx-auto mt-3 max-w-xl text-center text-base md:text-lg text-muted-foreground">
           {subtitle}
         </p>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
