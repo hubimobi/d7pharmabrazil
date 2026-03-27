@@ -21,6 +21,7 @@ export default function CheckoutSettingsPage() {
   const [showRecommendations, setShowRecommendations] = useState(true);
   const [showMotivation, setShowMotivation] = useState(true);
   const [showFreeShippingBar, setShowFreeShippingBar] = useState(true);
+  const [boletoEnabled, setBoletoEnabled] = useState(false);
   const [metaPixelId, setMetaPixelId] = useState("");
   const [gtmId, setGtmId] = useState("");
   const [maxInstallments, setMaxInstallments] = useState(3);
@@ -33,6 +34,7 @@ export default function CheckoutSettingsPage() {
     setShowRecommendations((settings as any).checkout_show_recommendations ?? true);
     setShowMotivation((settings as any).checkout_show_motivation ?? true);
     setShowFreeShippingBar((settings as any).checkout_show_free_shipping_bar ?? true);
+    setBoletoEnabled((settings as any).checkout_boleto_enabled ?? false);
     setMetaPixelId((settings as any).meta_pixel_id || "");
     setGtmId((settings as any).gtm_id || "");
     setMaxInstallments((settings as any).max_installments ?? 3);
@@ -49,6 +51,7 @@ export default function CheckoutSettingsPage() {
           checkout_show_recommendations: showRecommendations,
           checkout_show_motivation: showMotivation,
           checkout_show_free_shipping_bar: showFreeShippingBar,
+          checkout_boleto_enabled: boletoEnabled,
           meta_pixel_id: metaPixelId,
           gtm_id: gtmId,
           max_installments: maxInstallments,
@@ -70,6 +73,7 @@ export default function CheckoutSettingsPage() {
     { label: "Produtos Recomendados", desc: "Seção 'Você também pode gostar' na sidebar", icon: ShoppingCart, value: showRecommendations, set: setShowRecommendations },
     { label: "Mensagem Motivacional", desc: "Texto rotativo de benefícios ao lado dos passos do checkout", icon: Sparkles, value: showMotivation, set: setShowMotivation },
     { label: "Barra de Frete Grátis", desc: "Barra de progresso mostrando quanto falta para frete grátis", icon: Truck, value: showFreeShippingBar, set: setShowFreeShippingBar },
+    { label: "Boleto Bancário", desc: "Habilitar pagamento por boleto bancário no checkout", icon: CreditCard, value: boletoEnabled, set: setBoletoEnabled },
   ];
 
   return (
