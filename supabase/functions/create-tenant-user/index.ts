@@ -36,6 +36,22 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    // LIST USERS with emails (admin only)
+    if (action === "list_users") {
+      const { data: { users: authUsers }, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      if (listError) {
+        return new Response(JSON.stringify({ error: listError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const userMap: Record<string, { email: string; banned: boolean }> = {};
+      authUsers?.forEach((u: any) => {
+        userMap[u.id] = { email: u.email || "", banned: !!u.banned_until && new Date(u.banned_until) > new Date() };
+      });
+      return new Response(JSON.stringify({ success: true, users: userMap }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
     // TOGGLE ACTIVE (ban/unban user)
     if (action === "toggle_active") {
       const { user_id, active } = body;
