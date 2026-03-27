@@ -1018,6 +1018,7 @@ export type Database = {
           code: string
           conversions_count: number
           created_at: string
+          doctor_id: string | null
           id: string
           product_id: string | null
           target_url: string
@@ -1032,6 +1033,7 @@ export type Database = {
           code: string
           conversions_count?: number
           created_at?: string
+          doctor_id?: string | null
           id?: string
           product_id?: string | null
           target_url: string
@@ -1046,6 +1048,7 @@ export type Database = {
           code?: string
           conversions_count?: number
           created_at?: string
+          doctor_id?: string | null
           id?: string
           product_id?: string | null
           target_url?: string
@@ -1055,6 +1058,20 @@ export type Database = {
           utm_source?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "short_links_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "short_links_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "short_links_product_id_fkey"
             columns: ["product_id"]
