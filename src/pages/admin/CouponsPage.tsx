@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Tag, Truck, Percent, DollarSign, ShoppingCart } from "lucide-react";
+import { Plus, Pencil, Trash2, Tag, Truck, Percent, DollarSign, ShoppingCart, Eye } from "lucide-react";
+import { CouponOrdersDialog } from "@/components/admin/CouponOrdersDialog";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -38,6 +39,7 @@ export default function CouponsPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<CouponForm>(emptyForm);
+  const [viewOrdersCode, setViewOrdersCode] = useState<string | null>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -392,6 +394,9 @@ export default function CouponsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" title="Ver vendas" onClick={() => setViewOrdersCode(c.code)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -408,6 +413,11 @@ export default function CouponsPage() {
           </Table>
         </CardContent>
       </Card>
+      <CouponOrdersDialog
+        open={!!viewOrdersCode}
+        onOpenChange={(v) => { if (!v) setViewOrdersCode(null); }}
+        couponCode={viewOrdersCode || ""}
+      />
     </div>
   );
 }
