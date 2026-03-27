@@ -399,10 +399,8 @@ const ProductDetail = () => {
 
             {/* Trust badges */}
             <div className="flex flex-wrap gap-3 rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1"><Truck className="h-3.5 w-3.5 text-success" /> Frete Grátis a partir de R$ {freeShippingMin}</span>
-              <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-primary" /> Qualidade Comprovada</span>
-              <span className="flex items-center gap-1">🔒 Pagamento Seguro</span>
-              <span className="flex items-center gap-1"><Package className="h-3.5 w-3.5 text-primary" /> Envio em até 24h</span>
+              <span className="flex items-center gap-1"><Truck className="h-3.5 w-3.5 text-success" /> Frete Grátis a partir de R$ {freeShippingMin} - Envio Rápido</span>
+               <span className="flex items-center gap-1">🔒 Pagamento Seguro - Garantia de Satisfação</span>
             </div>
 
             {/* Stock warning */}
