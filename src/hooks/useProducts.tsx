@@ -23,6 +23,10 @@ export interface Product {
   showCountdown: boolean;
   featured: boolean;
   groupName: string;
+  seoTitle: string;
+  seoDescription: string;
+  seoKeywords: string;
+  sku: string;
 }
 
 // Fallback images for products without uploaded images
@@ -62,6 +66,10 @@ function mapDbProduct(p: any): Product {
     showCountdown: p.show_countdown !== false,
     featured: p.featured === true,
     groupName: p.group_name || "",
+    seoTitle: p.seo_title || "",
+    seoDescription: p.seo_description || "",
+    seoKeywords: p.seo_keywords || "",
+    sku: p.sku || "",
   };
 }
 
