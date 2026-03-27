@@ -165,7 +165,7 @@ export default function AIAgentsPage() {
       if (!editAgent) return;
       const { error } = await supabase.from("ai_agents" as any).update({
         name: form.name, description: form.description, system_prompt: form.system_prompt,
-        model: form.model, temperature: form.temperature, active: form.active,
+        model: form.model || defaultModel, temperature: form.temperature, active: form.active,
         channels: form.channels, icon: form.icon, color: form.color,
         allowed_panels: form.allowed_panels, llm_override: form.llm_override || null,
       } as any).eq("id", editAgent.id);
