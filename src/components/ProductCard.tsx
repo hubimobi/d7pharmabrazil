@@ -20,9 +20,9 @@ const ProductCard = ({ product }: { product: Product }) => {
         <Badge className="absolute left-3 top-3 z-10 bg-secondary text-secondary-foreground">{product.badge}</Badge>
       )}
       {product.stock <= 10 && (
-        <span className="absolute right-3 top-3 z-10 animate-pulse-soft rounded bg-destructive px-2 py-0.5 text-[10px] font-bold text-destructive-foreground">
-          Últimas {product.stock} unidades!
-        </span>
+         <span className="absolute right-3 top-3 z-10 animate-pulse-soft rounded bg-destructive px-2 py-0.5 text-2xs font-bold text-destructive-foreground">
+           Últimas {product.stock} unidades!
+         </span>
       )}
       <Link to={`/produto/${product.slug}`} className="relative block aspect-square overflow-hidden bg-muted">
         <img
@@ -44,12 +44,12 @@ const ProductCard = ({ product }: { product: Product }) => {
             <span className="text-xs text-muted-foreground">({product.reviews < 500 ? product.reviews + 500 : product.reviews})</span>
         </div>
         <Link to={`/produto/${product.slug}`}>
-          <h3 className="mt-1 text-sm font-semibold text-foreground line-clamp-2">{product.name}</h3>
+          <h3 className="mt-1 text-sm md:text-base font-semibold text-foreground line-clamp-2">{product.name}</h3>
         </Link>
-        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{product.shortDescription}</p>
+        <p className="mt-1 text-[13px] text-muted-foreground line-clamp-2">{product.shortDescription}</p>
         <div className="mt-auto pt-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-primary">
+            <span className="text-lg md:text-xl font-bold text-primary">
               R$ {product.price.toFixed(2).replace(".", ",")}
             </span>
             <span className="text-xs text-muted-foreground line-through">
@@ -57,7 +57,7 @@ const ProductCard = ({ product }: { product: Product }) => {
             </span>
             <span className="text-xs font-semibold text-success">-{discountPercent}%</span>
           </div>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             ou até {product.price >= 500 ? "12" : product.price >= 200 ? "6" : "3"}x de R$ {(product.price / (product.price >= 500 ? 12 : product.price >= 200 ? 6 : 3)).toFixed(2).replace(".", ",")}
           </p>
           {product.showCountdown && <CountdownTimer label="Oferta expira em" className="mt-2" />}

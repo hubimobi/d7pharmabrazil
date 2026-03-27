@@ -111,7 +111,7 @@ export function AdminSidebar() {
             </div>
             <div>
               <h2 className="text-sm font-semibold text-sidebar-accent-foreground">D7 Pharma</h2>
-              <p className="text-[10px] text-sidebar-foreground">Painel Administrativo</p>
+              <p className="text-2xs text-sidebar-foreground">Painel Administrativo</p>
             </div>
           </div>
         ) : (
@@ -126,7 +126,7 @@ export function AdminSidebar() {
       <SidebarContent className="px-2">
         {sections.map((section, idx) => (
           <SidebarGroup key={section.label}>
-            <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-sidebar-foreground/50 font-medium px-3 mb-1">
+            <SidebarGroupLabel className="text-2xs uppercase tracking-widest text-sidebar-foreground/50 font-medium px-3 mb-1">
               {!collapsed && section.label}
             </SidebarGroupLabel>
             <SidebarGroupContent>

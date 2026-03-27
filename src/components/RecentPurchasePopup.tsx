@@ -153,7 +153,7 @@ export default function RecentPurchasePopup() {
               <div className="flex items-center justify-center h-5 w-5 rounded-full bg-primary/10">
                 <Bell className="h-3 w-3 text-primary" />
               </div>
-              <span className="text-[11px] font-medium text-primary uppercase tracking-wide">Compra recente</span>
+              <span className="text-xs font-medium text-primary uppercase tracking-wide">Compra recente</span>
             </div>
 
             <div className="flex items-center gap-4 px-4 pb-4 pt-1 cursor-pointer" onClick={handleClick}>
@@ -190,7 +190,7 @@ export default function RecentPurchasePopup() {
                       <Star key={i} className="h-3.5 w-3.5 fill-warning text-warning" />
                     ))}
                   </div>
-                  <span className="text-[11px] text-muted-foreground">{timeLabel}</span>
+                  <span className="text-xs text-muted-foreground">{timeLabel}</span>
                 </div>
 
                 {/* CTA */}

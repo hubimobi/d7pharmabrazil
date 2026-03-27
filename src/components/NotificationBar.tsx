@@ -12,7 +12,7 @@ export default function NotificationBar() {
 
   return (
     <div
-      className="relative flex items-center justify-center px-4 py-2 text-sm font-medium"
+      className="relative flex items-center justify-center px-4 py-2 text-sm md:text-base font-medium"
       style={{
         backgroundColor: settings.notification_bar_bg_color || "#1a1a2e",
         color: settings.notification_bar_text_color || "#ffffff",

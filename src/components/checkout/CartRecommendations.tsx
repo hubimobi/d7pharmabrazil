@@ -110,7 +110,7 @@ export default function CartRecommendations({ cartItems }: CartRecommendationsPr
                       {discount > 0 && (
                         <>
                           <span className="text-xs text-muted-foreground line-through">R$ {p.originalPrice.toFixed(2).replace(".", ",")}</span>
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-success/10 text-success">-{discount}%</Badge>
+                          <Badge variant="secondary" className="text-2xs px-1.5 py-0 bg-success/10 text-success">-{discount}%</Badge>
                         </>
                       )}
                     </div>
