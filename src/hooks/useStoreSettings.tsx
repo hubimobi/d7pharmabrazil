@@ -101,6 +101,7 @@ export interface StoreSettings {
   sales_popup_burst_count: number;
   sales_popup_include_real_orders: boolean;
   sales_popup_custom_entries: Array<{ customer_name: string; product_name: string; city: string }>;
+}
 
 export function useStoreSettings() {
   return useQuery({
