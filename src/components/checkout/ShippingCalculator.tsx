@@ -54,6 +54,22 @@ export default function ShippingCalculator({
     setCalculated(false);
 
     try {
+      // Pre-fill address from ViaCEP
+      if (onAddressFound) {
+        try {
+          const viaCepRes = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+          const viaCepData = await viaCepRes.json();
+          if (!viaCepData.erro) {
+            onAddressFound({
+              street: viaCepData.logradouro || "",
+              neighborhood: viaCepData.bairro || "",
+              city: viaCepData.localidade || "",
+              state: viaCepData.uf || "",
+            });
+          }
+        } catch { /* ignore */ }
+      }
+
       const produtos = items.map((i) => ({
         price: i.price,
         quantity: i.quantity,
@@ -87,7 +103,7 @@ export default function ShippingCalculator({
       <Label className="flex items-center gap-1.5 text-sm font-semibold">
         <Truck className="h-4 w-4" /> Calcular Frete
       </Label>
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <Input
           placeholder="00000-000"
           value={cep}
@@ -107,7 +123,9 @@ export default function ShippingCalculator({
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Calcular"}
         </Button>
+        <span className="text-xs text-muted-foreground hidden sm:inline">📦 Envio em até 24h úteis</span>
       </div>
+      <p className="text-xs text-muted-foreground sm:hidden mt-1">📦 Envio em até 24h úteis</p>
 
       {calculated && options.length > 0 && (
         <div className="space-y-2">
