@@ -268,13 +268,14 @@ export default function ProductsPage() {
             <DialogHeader><DialogTitle>{editId ? "Editar" : "Novo"} Produto</DialogTitle></DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
               <Tabs defaultValue="basic">
-                <TabsList className="grid w-full grid-cols-6">
+                <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="basic">Dados</TabsTrigger>
                   <TabsTrigger value="dimensions">Frete</TabsTrigger>
                   <TabsTrigger value="bling">Fiscal/Bling</TabsTrigger>
                   <TabsTrigger value="images">Imagens</TabsTrigger>
                   <TabsTrigger value="testimonials">Depoimentos</TabsTrigger>
                   <TabsTrigger value="faq">FAQ</TabsTrigger>
+                  <TabsTrigger value="seo">SEO</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="basic" className="space-y-4 mt-4">
