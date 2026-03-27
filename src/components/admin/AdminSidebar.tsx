@@ -35,10 +35,10 @@ const adminSections: MenuSection[] = [
     label: "Vendas",
     items: [
       { title: "Vendas", url: "/admin/vendas", icon: ShoppingBag },
-      { title: "Checkout", url: "/admin/checkout", icon: Settings2 },
       { title: "Clientes", url: "/admin/clientes", icon: Contact },
       { title: "Recuperação", url: "/admin/recuperacao", icon: ShoppingCart },
       { title: "Cupons", url: "/admin/cupons", icon: Tag },
+      { title: "Checkout", url: "/admin/checkout", icon: Settings2 },
     ],
   },
   {
