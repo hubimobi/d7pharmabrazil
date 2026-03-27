@@ -92,6 +92,9 @@ export interface StoreSettings {
   design_footer_color: string;
   design_bg_color: string;
   design_icon_style: string;
+  design_nav_color: string;
+  design_bg_gradient: string;
+  design_footer_gradient: string;
   // Sales popup
   sales_popup_enabled: boolean;
   sales_popup_position: string;
