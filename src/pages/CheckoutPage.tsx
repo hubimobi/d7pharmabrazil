@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import CartRecommendations from "@/components/checkout/CartRecommendations";
 import CheckoutUrgency from "@/components/checkout/CheckoutUrgency";
 import ComboUpsell from "@/components/checkout/ComboUpsell";
+import CheckoutMotivation from "@/components/checkout/CheckoutMotivation";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
@@ -348,21 +349,7 @@ const CheckoutPage = () => {
         <h1 className="text-2xl font-bold text-foreground">Checkout</h1>
 
         {/* Motivational step indicator */}
-        <div className="mt-6 space-y-2">
-          <div className="flex items-center gap-4">
-            {[1, 2].map((s) => (
-              <div key={s} className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${step >= s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{s}</div>
-            ))}
-          </div>
-          {items.length > 0 && (
-            <p className="text-sm text-primary font-medium">
-              ✨ Você está a {step === 1 ? "2 passos" : "1 passo"} de{" "}
-              {items[0]?.product?.benefits?.[0]
-                ? items[0].product.benefits[0].toLowerCase()
-                : "melhorar sua performance"}
-            </p>
-          )}
-        </div>
+        <CheckoutMotivation step={step} items={items} />
 
         <div className="mt-8 grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
