@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
@@ -46,6 +47,7 @@ interface HeroBanner {
 }
 
 export default function BannerPage() {
+  const { canDelete } = useAuth();
   const { data: settings, isLoading: settingsLoading } = useStoreSettings();
   const { data: allProducts } = useProducts();
 
@@ -320,7 +322,7 @@ export default function BannerPage() {
                     checked={banner.active}
                     onCheckedChange={(v) => updateBanner(banner.id, "active", v)}
                   />
-                  {localBanners.length > 1 && (
+                  {localBanners.length > 1 && canDelete && (
                     <Button type="button" variant="ghost" size="icon" onClick={() => deleteBannerMut.mutate(banner.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
