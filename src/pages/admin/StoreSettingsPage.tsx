@@ -209,8 +209,13 @@ export default function StoreSettingsPage() {
               <Input type="email" value={form.email || ""} onChange={(e) => update("email", e.target.value)} />
             </div>
             <div>
-              <Label>WhatsApp</Label>
+              <Label>Telefone Padrão / Vendas</Label>
               <Input placeholder="(11) 99999-9999" value={form.whatsapp || ""} onChange={(e) => update("whatsapp", e.target.value)} />
+            </div>
+            <div>
+              <Label>Telefone de Suporte / WhatsApp</Label>
+              <Input placeholder="(11) 98888-8888" value={(form as any).whatsapp_support || ""} onChange={(e) => update("whatsapp_support" as any, e.target.value)} />
+              <p className="text-xs text-muted-foreground mt-1">Usado no botão "Fale Conosco" e suporte via WhatsApp</p>
             </div>
           </div>
         </div>

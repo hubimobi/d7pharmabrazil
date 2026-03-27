@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
-import { useEffect } from "react";
-import { Lock, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Lock, ShieldCheck, Phone, Mail, MapPin, Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 
 const InstagramIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C16.67.014 16.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
@@ -26,6 +27,24 @@ const socialIcons: Record<string, React.FC> = {
   YouTube: YouTubeIcon,
 };
 
+function CopyableInfo({ icon: Icon, text, label }: { icon: React.FC<any>; text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      toast.success(`${label} copiado!`);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <button onClick={handleCopy} className="flex items-center gap-2 text-sm opacity-60 hover:opacity-100 transition group text-left">
+      <Icon className="h-4 w-4 flex-shrink-0" />
+      <span className="flex-1">{text}</span>
+      {copied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3 opacity-0 group-hover:opacity-60 transition" />}
+    </button>
+  );
+}
+
 const Footer = () => {
   const { data: settings } = useStoreSettings();
 
@@ -34,6 +53,8 @@ const Footer = () => {
   const whatsapp = settings?.whatsapp || "(11) 99999-9999";
   const city = settings?.address_city || "São Paulo";
   const state = settings?.address_state || "SP";
+  const address = [settings?.address_street, settings?.address_number, settings?.address_neighborhood].filter(Boolean).join(", ");
+  const fullAddress = address ? `${address} - ${city}, ${state}` : `${city}, ${state} - Brasil`;
 
   const socials = [
     { label: "Instagram", url: settings?.instagram },
@@ -62,25 +83,34 @@ const Footer = () => {
       style={{ backgroundColor: footerColor || "hsl(var(--foreground))" }}
     >
       <div className="container">
-        <div className="grid grid-cols-2 md:grid-cols-[1.2fr_1fr_1fr_1fr] gap-6 md:gap-8">
-          <div className="col-span-2 md:col-span-1 flex flex-col">
-            {settings?.logo_url ? (
-              <img src={settings.logo_url} alt={storeName} className="h-14 w-auto max-w-[180px] object-contain mb-3 brightness-0 invert" />
-            ) : (
-              <h3 className="text-xl font-bold text-background mb-3">{storeName}</h3>
+        <div className="grid grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr_1.2fr] gap-6 md:gap-8">
+          {/* Logo + Text in two visual columns */}
+          <div className="col-span-2 md:col-span-1 flex items-start gap-4">
+            {settings?.logo_url && (
+              <img src={settings.logo_url} alt={storeName} className="h-20 w-auto max-w-[100px] object-contain brightness-0 invert flex-shrink-0" />
             )}
-            <p className="text-sm leading-relaxed opacity-70">
-              Suplementos de alta performance com qualidade farmacêutica.
-            </p>
+            <div className="flex flex-col">
+              {!settings?.logo_url && (
+                <h3 className="text-xl font-bold text-background mb-2">{storeName}</h3>
+              )}
+              <p className="text-sm leading-relaxed opacity-70">
+                Suplementos de alta performance com qualidade farmacêutica.
+              </p>
+            </div>
           </div>
+
+          {/* Navigation */}
           <div>
             <h4 className="text-sm font-semibold text-background">Navegação</h4>
             <nav className="mt-2 md:mt-3 flex flex-col gap-1.5 md:gap-2">
               <Link to="/" className="text-sm opacity-60 hover:opacity-100">Início</Link>
               <Link to="/produtos" className="text-sm opacity-60 hover:opacity-100">Produtos</Link>
               <Link to="/checkout" className="text-sm opacity-60 hover:opacity-100">Carrinho</Link>
+              <Link to="/acompanhar-pedido" className="text-sm opacity-60 hover:opacity-100">Meu Pedido</Link>
             </nav>
           </div>
+
+          {/* Institutional */}
           <div>
             <h4 className="text-sm font-semibold text-background">Institucional</h4>
             <nav className="mt-2 md:mt-3 flex flex-col gap-1.5 md:gap-2">
@@ -90,18 +120,22 @@ const Footer = () => {
               <Link to="/trocas-e-devolucoes" className="text-sm opacity-60 hover:opacity-100">Trocas</Link>
             </nav>
           </div>
+
+          {/* Contact with icons + copy */}
           <div className="col-span-2 md:col-span-1">
             <h4 className="text-sm font-semibold text-background">Contato</h4>
-            <div className="mt-2 md:mt-3 flex flex-col gap-1.5 md:gap-2 text-sm opacity-60">
-              <span>{email}</span>
-              <span>{whatsapp}</span>
-              <span>{city}, {state} - Brasil</span>
-              {settings?.cnpj && <span className="text-[13px]">CNPJ: {settings.cnpj}</span>}
+            <div className="mt-2 md:mt-3 flex flex-col gap-2">
+              <CopyableInfo icon={Phone} text={whatsapp} label="Telefone" />
+              <CopyableInfo icon={Mail} text={email} label="E-mail" />
+              <CopyableInfo icon={MapPin} text={fullAddress} label="Endereço" />
+              {settings?.cnpj && (
+                <CopyableInfo icon={ShieldCheck} text={`CNPJ: ${settings.cnpj}`} label="CNPJ" />
+              )}
             </div>
           </div>
         </div>
 
-        {/* Social icons centered row */}
+        {/* Social icons */}
         {socials.length > 0 && (
           <div className="mt-8 border-t border-background/10 pt-6 flex justify-center gap-4">
             {socials.map((s) => {
