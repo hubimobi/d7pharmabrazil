@@ -440,6 +440,13 @@ const CheckoutPage = () => {
                   items={items.map((i) => ({ price: i.product.price, quantity: i.quantity, weight: i.product.weight, height: i.product.height, width: i.product.width, length: i.product.length }))}
                   selectedOption={selectedShipping}
                   onSelectOption={setSelectedShipping}
+                  onAddressFound={(addr) => setForm((prev) => ({
+                    ...prev,
+                    street: addr.street || prev.street,
+                    neighborhood: addr.neighborhood || prev.neighborhood,
+                    city: addr.city || prev.city,
+                    state: addr.state || prev.state,
+                  }))}
                 />
 
                 {(storeSettings as any)?.checkout_show_combo !== false && <ComboUpsell />}
@@ -568,8 +575,17 @@ const CheckoutPage = () => {
                     className={`flex-1 rounded-lg border-2 p-4 text-center text-sm font-medium transition ${form.paymentMethod === "card" ? "border-primary bg-primary/5" : "border-border"}`}
                     onClick={() => setForm({ ...form, paymentMethod: "card" })}
                   >
-                    <CreditCard className="mx-auto mb-1 h-5 w-5" />Cartão<br /><span className="text-xs text-muted-foreground">até 3x sem juros</span>
+                    <CreditCard className="mx-auto mb-1 h-5 w-5" />Cartão<br /><span className="text-xs text-muted-foreground">até {storeSettings?.max_installments || 3}x sem juros</span>
                   </button>
+                  {(storeSettings as any)?.checkout_boleto_enabled && (
+                    <button
+                      type="button"
+                      className={`flex-1 rounded-lg border-2 p-4 text-center text-sm font-medium transition ${form.paymentMethod === "boleto" ? "border-primary bg-primary/5" : "border-border"}`}
+                      onClick={() => setForm({ ...form, paymentMethod: "boleto" as any })}
+                    >
+                      🏦 Boleto<br /><span className="text-xs text-muted-foreground">à vista</span>
+                    </button>
+                  )}
                 </div>
 
                 {form.paymentMethod === "card" && (
@@ -585,7 +601,9 @@ const CheckoutPage = () => {
                 <div className="flex gap-3">
                   <Button type="button" variant="outline" onClick={() => setStep(1)}>Voltar</Button>
                   <Button type="submit" className="flex-1 bg-success hover:bg-success/90 text-success-foreground" size="lg" disabled={isSubmitting}>
-                    {isSubmitting ? "Processando pagamento..." : form.paymentMethod === "pix" ? `💰 Pagar via Pix — De R$ ${finalTotal.toFixed(2).replace(".", ",")} por R$ ${pixTotal.toFixed(2).replace(".", ",")}` : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
+                    {isSubmitting ? "Processando pagamento..." : form.paymentMethod === "pix" ? (
+                      <span>💰 Pagar via Pix — <span className="line-through opacity-70">R$ {finalTotal.toFixed(2).replace(".", ",")}</span> por R$ {pixTotal.toFixed(2).replace(".", ",")}</span>
+                    ) : form.paymentMethod === "boleto" ? `🏦 Pagar Boleto R$ ${finalTotal.toFixed(2).replace(".", ",")}` : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
                   </Button>
                 </div>
               </form>
