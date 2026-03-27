@@ -164,6 +164,7 @@ const CheckoutPage = () => {
     }
   }, []);
 
+  const { data: doctors } = useQuery({
     queryKey: ["active-doctors"],
     queryFn: async () => {
       const { data, error } = await supabase
