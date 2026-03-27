@@ -85,9 +85,9 @@ const ProductDetail = () => {
   const discountPercent = Math.round((1 - product.price / product.originalPrice) * 100);
   const displayReviews = product.reviews < 500 ? product.reviews + 500 : product.reviews;
 
-  const seoTitle = (product as any).seoTitle || product.name;
-  const seoDesc = (product as any).seoDescription || product.shortDescription;
-  const seoKeywords = (product as any).seoKeywords || "";
+  const seoTitle = product.seoTitle || product.name;
+  const seoDesc = product.seoDescription || product.shortDescription;
+  const seoKeywords = product.seoKeywords || "";
   const productUrl = `https://d7pharmabrazil.lovable.app/produto/${product.slug}`;
 
   // JSON-LD structured data
@@ -97,7 +97,7 @@ const ProductDetail = () => {
     name: product.name,
     description: product.shortDescription,
     image: product.image,
-    sku: (product as any).sku || product.slug,
+    sku: product.sku || product.slug,
     brand: { "@type": "Brand", name: "D7 Pharma Brazil" },
     offers: {
       "@type": "Offer",
