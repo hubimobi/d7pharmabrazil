@@ -86,15 +86,53 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_agent_knowledge_bases: {
+        Row: {
+          agent_id: string
+          created_at: string
+          id: string
+          knowledge_base_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          id?: string
+          knowledge_base_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          knowledge_base_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_knowledge_bases_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_knowledge_bases_knowledge_base_id_fkey"
+            columns: ["knowledge_base_id"]
+            isOneToOne: false
+            referencedRelation: "ai_knowledge_bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_agents: {
         Row: {
           active: boolean
+          allowed_panels: Json
           channels: Json
           color: string
           created_at: string
           description: string
           icon: string
           id: string
+          llm_override: string | null
           model: string
           name: string
           slug: string
@@ -104,12 +142,14 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          allowed_panels?: Json
           channels?: Json
           color?: string
           created_at?: string
           description?: string
           icon?: string
           id?: string
+          llm_override?: string | null
           model?: string
           name: string
           slug: string
@@ -119,18 +159,177 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          allowed_panels?: Json
           channels?: Json
           color?: string
           created_at?: string
           description?: string
           icon?: string
           id?: string
+          llm_override?: string | null
           model?: string
           name?: string
           slug?: string
           system_prompt?: string
           temperature?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_chat_messages: {
+        Row: {
+          agent_id: string
+          content: string
+          created_at: string
+          feedback: string | null
+          id: string
+          role: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          content?: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          role?: string
+          session_id?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          content?: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          role?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_messages_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_kb_items: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          knowledge_base_id: string
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          knowledge_base_id: string
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          knowledge_base_id?: string
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_kb_items_knowledge_base_id_fkey"
+            columns: ["knowledge_base_id"]
+            isOneToOne: false
+            referencedRelation: "ai_knowledge_bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_knowledge_bases: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_llm_config: {
+        Row: {
+          active: boolean
+          api_key_name: string
+          created_at: string
+          default_model: string
+          id: string
+          provider: string
+        }
+        Insert: {
+          active?: boolean
+          api_key_name?: string
+          created_at?: string
+          default_model?: string
+          id?: string
+          provider?: string
+        }
+        Update: {
+          active?: boolean
+          api_key_name?: string
+          created_at?: string
+          default_model?: string
+          id?: string
+          provider?: string
+        }
+        Relationships: []
+      }
+      ai_meetings: {
+        Row: {
+          agent_ids: Json
+          created_at: string
+          id: string
+          messages: Json
+          summary: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          agent_ids?: Json
+          created_at?: string
+          id?: string
+          messages?: Json
+          summary?: string | null
+          title?: string
+          user_id: string
+        }
+        Update: {
+          agent_ids?: Json
+          created_at?: string
+          id?: string
+          messages?: Json
+          summary?: string | null
+          title?: string
+          user_id?: string
         }
         Relationships: []
       }
