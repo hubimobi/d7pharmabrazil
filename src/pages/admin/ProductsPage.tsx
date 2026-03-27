@@ -682,9 +682,11 @@ export default function ProductsPage() {
                                       Excluir
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </DropdownMenuContent>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </>
+                            )}
+                          </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
