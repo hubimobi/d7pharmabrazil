@@ -79,7 +79,7 @@ export default function CustomersPage() {
         .from("customer_tags" as any)
         .select("*");
       if (error) throw error;
-      return (data || []) as { id: string; customer_email: string; tag: string }[];
+      return (data as unknown as { id: string; customer_email: string; tag: string }[]) || [];
     },
   });
 
