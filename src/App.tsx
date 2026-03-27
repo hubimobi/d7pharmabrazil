@@ -20,6 +20,7 @@ import DoctorsPage from "./pages/admin/DoctorsPage";
 import ReportsPage from "./pages/admin/ReportsPage";
 import AdminProductsPage from "./pages/admin/ProductsPage";
 import CommissionsPage from "./pages/admin/CommissionsPage";
+import RepCommissionsPage from "./pages/admin/RepCommissionsPage";
 import StoreSettingsPage from "./pages/admin/StoreSettingsPage";
 import DesignSettingsPage from "./pages/admin/DesignSettingsPage";
 import IntegrationsPage from "./pages/admin/IntegrationsPage";
@@ -87,6 +88,7 @@ const App = () => (
               <Route path="/quem-somos" element={<StaticPage />} />
               <Route path="/admin" element={<AdminLayout><DashboardPage /></AdminLayout>} />
               <Route path="/admin/representantes" element={<AdminLayout><RepresentativesPage /></AdminLayout>} />
+              <Route path="/admin/representantes/:repId/comissoes" element={<AdminLayout><RepCommissionsPage /></AdminLayout>} />
               <Route path="/admin/produtos" element={<AdminLayout><AdminProductsPage /></AdminLayout>} />
               <Route path="/admin/prescritores" element={<AdminLayout><DoctorsPage /></AdminLayout>} />
               <Route path="/admin/comissoes" element={<AdminLayout><CommissionsPage /></AdminLayout>} />

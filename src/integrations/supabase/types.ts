@@ -122,6 +122,8 @@ export type Database = {
           id: string
           order_id: string
           order_total: number
+          paid_at: string | null
+          payment_id: string | null
           representative_id: string
           status: string
           updated_at: string
@@ -134,6 +136,8 @@ export type Database = {
           id?: string
           order_id: string
           order_total?: number
+          paid_at?: string | null
+          payment_id?: string | null
           representative_id: string
           status?: string
           updated_at?: string
@@ -146,6 +150,8 @@ export type Database = {
           id?: string
           order_id?: string
           order_total?: number
+          paid_at?: string | null
+          payment_id?: string | null
           representative_id?: string
           status?: string
           updated_at?: string
@@ -782,6 +788,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          pix: string | null
           region: string | null
           updated_at: string
           user_id: string | null
@@ -793,6 +800,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          pix?: string | null
           region?: string | null
           updated_at?: string
           user_id?: string | null
@@ -804,6 +812,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          pix?: string | null
           region?: string | null
           updated_at?: string
           user_id?: string | null
