@@ -4,13 +4,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "./AdminSidebar";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, X, ChevronRight } from "lucide-react";
+import { Bell, X, ChevronRight, Sun, Moon, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useAdminTheme, type AdminTheme } from "@/hooks/useAdminTheme";
 
 interface AdminNotification {
   id: string;
@@ -44,6 +45,13 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const { user, loading, isAdmin, isRepresentative } = useAuth();
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const location = useLocation();
+  const { theme, setTheme } = useAdminTheme();
+
+  const themeOptions: { value: AdminTheme; label: string; icon: React.ReactNode }[] = [
+    { value: "dark", label: "Escuro", icon: <Moon className="h-4 w-4" /> },
+    { value: "light", label: "Claro", icon: <Sun className="h-4 w-4" /> },
+    { value: "company", label: "Empresa", icon: <Palette className="h-4 w-4" /> },
+  ];
 
   const pageTitle = useMemo(() => {
     return routeTitleMap[location.pathname] || "Painel";
@@ -113,10 +121,25 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               <span className="sm:hidden text-sm font-semibold text-foreground">{pageTitle}</span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="hidden md:block text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <span className="hidden md:block text-sm text-muted-foreground mr-2">
                 {greeting}{user?.email ? `, ${user.email.split("@")[0]}` : ""}
               </span>
+
+              <div className="flex items-center border border-border rounded-lg p-0.5 gap-0.5">
+                {themeOptions.map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant={theme === opt.value ? "default" : "ghost"}
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setTheme(opt.value)}
+                    title={opt.label}
+                  >
+                    {opt.icon}
+                  </Button>
+                ))}
+              </div>
 
               {isAdmin && (
                 <Popover>
