@@ -651,10 +651,7 @@ export default function BannerPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
-                      </div>
-                    </div>
-                  </div>
+
                 </div>
               </CardContent>
             )}
