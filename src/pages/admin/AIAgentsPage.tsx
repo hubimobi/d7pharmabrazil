@@ -28,13 +28,31 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Headphones, Calculator, ClipboardList, Stethoscope,
 };
 
-const AVAILABLE_MODELS = [
+const LOVABLE_MODELS = [
   { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash (Rápido)" },
   { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (Balanceado)" },
   { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (Avançado)" },
   { value: "openai/gpt-5-mini", label: "GPT-5 Mini (Rápido)" },
   { value: "openai/gpt-5", label: "GPT-5 (Avançado)" },
 ];
+
+const EXTERNAL_MODELS: Record<string, { value: string; label: string }[]> = {
+  xai: [
+    { value: "grok-3", label: "Grok 3" },
+    { value: "grok-3-fast", label: "Grok 3 Fast" },
+    { value: "grok-3-mini", label: "Grok 3 Mini" },
+    { value: "grok-3-mini-fast", label: "Grok 3 Mini Fast" },
+    { value: "grok-2", label: "Grok 2" },
+  ],
+  openai: [
+    { value: "gpt-4o", label: "GPT-4o" },
+    { value: "gpt-4o-mini", label: "GPT-4o Mini" },
+  ],
+  anthropic: [
+    { value: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet" },
+    { value: "claude-3-haiku-20240307", label: "Claude 3 Haiku" },
+  ],
+};
 
 const CHANNELS = [
   { id: "admin", label: "Painel Interno" },
