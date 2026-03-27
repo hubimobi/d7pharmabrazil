@@ -12,6 +12,7 @@ export default function ComboUpsell() {
   const { data: allProducts } = useProducts();
   const { items, addItem, setComboDiscount, setComboFreeShipping } = useCart();
   const [accepted, setAccepted] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const [savings, setSavings] = useState(0);
 
   const { data: comboSettings } = useQuery({
