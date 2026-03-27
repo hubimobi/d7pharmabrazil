@@ -902,6 +902,14 @@ export type Database = {
           popup_banner_enabled: boolean | null
           popup_banner_image_url: string | null
           popup_banner_title: string | null
+          sales_popup_burst_count: number | null
+          sales_popup_button_color: string | null
+          sales_popup_custom_entries: Json | null
+          sales_popup_enabled: boolean | null
+          sales_popup_include_real_orders: boolean | null
+          sales_popup_interval_max: number | null
+          sales_popup_interval_min: number | null
+          sales_popup_position: string | null
           store_name: string
           tiktok: string | null
           updated_at: string
@@ -983,6 +991,14 @@ export type Database = {
           popup_banner_enabled?: boolean | null
           popup_banner_image_url?: string | null
           popup_banner_title?: string | null
+          sales_popup_burst_count?: number | null
+          sales_popup_button_color?: string | null
+          sales_popup_custom_entries?: Json | null
+          sales_popup_enabled?: boolean | null
+          sales_popup_include_real_orders?: boolean | null
+          sales_popup_interval_max?: number | null
+          sales_popup_interval_min?: number | null
+          sales_popup_position?: string | null
           store_name?: string
           tiktok?: string | null
           updated_at?: string
@@ -1064,6 +1080,14 @@ export type Database = {
           popup_banner_enabled?: boolean | null
           popup_banner_image_url?: string | null
           popup_banner_title?: string | null
+          sales_popup_burst_count?: number | null
+          sales_popup_button_color?: string | null
+          sales_popup_custom_entries?: Json | null
+          sales_popup_enabled?: boolean | null
+          sales_popup_include_real_orders?: boolean | null
+          sales_popup_interval_max?: number | null
+          sales_popup_interval_min?: number | null
+          sales_popup_position?: string | null
           store_name?: string
           tiktok?: string | null
           updated_at?: string
