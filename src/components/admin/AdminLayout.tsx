@@ -4,13 +4,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "./AdminSidebar";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, X, ChevronRight } from "lucide-react";
+import { Bell, X, ChevronRight, Sun, Moon, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useAdminTheme, type AdminTheme } from "@/hooks/useAdminTheme";
 
 interface AdminNotification {
   id: string;
