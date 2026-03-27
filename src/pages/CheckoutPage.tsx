@@ -155,7 +155,15 @@ const CheckoutPage = () => {
     };
   }, []);
 
-  const { data: doctors } = useQuery({
+  // Auto-fill doctor from smart link ref
+  useEffect(() => {
+    const ref = getActiveRef();
+    if (ref?.doctorId && ref?.doctorName && !selectedDoctorId) {
+      setSelectedDoctorId(ref.doctorId);
+      setForm((prev) => ({ ...prev, doctor: ref.doctorName! }));
+    }
+  }, []);
+
     queryKey: ["active-doctors"],
     queryFn: async () => {
       const { data, error } = await supabase
