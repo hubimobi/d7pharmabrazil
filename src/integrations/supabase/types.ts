@@ -86,6 +86,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_agents: {
+        Row: {
+          active: boolean
+          channels: Json
+          color: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          model: string
+          name: string
+          slug: string
+          system_prompt: string
+          temperature: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          channels?: Json
+          color?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          model?: string
+          name: string
+          slug: string
+          system_prompt?: string
+          temperature?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          channels?: Json
+          color?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          model?: string
+          name?: string
+          slug?: string
+          system_prompt?: string
+          temperature?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bling_tokens: {
         Row: {
           access_token: string
