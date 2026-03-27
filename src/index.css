@@ -30,11 +30,11 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
+    --border: 210 15% 93%;
+    --input: 210 15% 93%;
     --ring: 203 78% 20%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
@@ -62,6 +62,7 @@
   }
   html {
     font-size: 15px;
+    scroll-behavior: smooth;
   }
   @media (min-width: 768px) {
     html {
@@ -75,6 +76,9 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold tracking-tight;
     line-height: 1.25;
+  }
+  a, button {
+    @apply transition-all duration-200;
   }
 }
 
