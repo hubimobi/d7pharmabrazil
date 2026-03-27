@@ -92,7 +92,6 @@ export interface StoreSettings {
   design_footer_color: string;
   design_bg_color: string;
   design_icon_style: string;
-  hide_chat_on_checkout: boolean;
 }
 
 export function useStoreSettings() {
