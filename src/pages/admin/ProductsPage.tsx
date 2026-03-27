@@ -47,6 +47,12 @@ interface Testimonial {
   rating: number;
 }
 
+interface FaqItem {
+  id?: string;
+  question: string;
+  answer: string;
+}
+
 export default function ProductsPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -56,6 +62,8 @@ export default function ProductsPage() {
   const [existingExtras, setExistingExtras] = useState<string[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [newTestimonial, setNewTestimonial] = useState<Testimonial>({ author_name: "", content: "", rating: 5 });
+  const [faqs, setFaqs] = useState<FaqItem[]>([]);
+  const [newFaq, setNewFaq] = useState<FaqItem>({ question: "", answer: "" });
   const [cropOpen, setCropOpen] = useState(false);
   const [cropImageUrl, setCropImageUrl] = useState("");
   const [removingBg, setRemovingBg] = useState(false);
