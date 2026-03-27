@@ -71,14 +71,25 @@ Deno.serve(async (req) => {
 
     // UPDATE existing user
     if (action === "update") {
-      const { user_id, full_name, role, representative_id } = body;
+      const { user_id, full_name, role, representative_id, phone, email } = body;
       if (!user_id || !role) {
         return new Response(JSON.stringify({ error: "user_id e role são obrigatórios" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Update profile name
-      if (full_name) {
-        await supabase.from("profiles").update({ full_name }).eq("user_id", user_id);
+      // Update profile name and phone
+      const profileUpdate: Record<string, string> = {};
+      if (full_name) profileUpdate.full_name = full_name;
+      if (phone !== undefined) profileUpdate.phone = phone;
+      if (Object.keys(profileUpdate).length > 0) {
+        await supabase.from("profiles").update(profileUpdate).eq("user_id", user_id);
+      }
+
+      // Update email in auth if provided
+      if (email) {
+        const { error: emailError } = await supabase.auth.admin.updateUserById(user_id, { email });
+        if (emailError) {
+          return new Response(JSON.stringify({ error: emailError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
       }
 
       // Update role: delete old roles, insert new one
