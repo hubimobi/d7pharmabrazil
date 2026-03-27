@@ -67,25 +67,6 @@ const Footer = () => {
             <p className="text-sm leading-relaxed opacity-70">
               Suplementos de alta performance com qualidade farmacêutica.
             </p>
-            {socials.length > 0 && (
-              <div className="mt-3 flex gap-3">
-                {socials.map((s) => {
-                  const Icon = socialIcons[s.label];
-                  return (
-                    <a
-                      key={s.label}
-                      href={s.url!}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex h-9 w-9 items-center justify-center rounded-full bg-background/10 text-background/70 hover:bg-background/20 hover:text-background transition"
-                      title={s.label}
-                    >
-                      {Icon ? <Icon /> : s.label}
-                    </a>
-                  );
-                })}
-              </div>
-            )}
           </div>
           <div>
             <h4 className="text-sm font-semibold text-background">Navegação</h4>
