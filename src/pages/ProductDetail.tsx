@@ -96,6 +96,7 @@ const ProductDetail = () => {
 
         <div className="grid gap-8 md:grid-cols-2">
           {/* Image Gallery */}
+          {/* Left column: Images + Description */}
           <div className="space-y-3">
             <div className="aspect-square overflow-hidden rounded-lg bg-muted">
               <img
@@ -127,8 +128,30 @@ const ProductDetail = () => {
                 ))}
               </div>
             )}
+
+            {/* Descrição do produto - abaixo das fotos */}
+            {product.description && (
+              <div className="mt-4 rounded-lg border border-border p-4">
+                <h2 className="text-lg font-bold text-foreground mb-3">Descrição do Produto</h2>
+                <div className={`relative overflow-hidden transition-all duration-300 ${!descExpanded ? "max-h-48" : ""}`}>
+                  {product.description.startsWith("<") ? (
+                    <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold [&_hr]:my-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-foreground [&_a]:text-primary [&_a]:underline"
+                      dangerouslySetInnerHTML={{ __html: product.description }} />
+                  ) : (
+                    <p className="text-muted-foreground">{product.description}</p>
+                  )}
+                  {!descExpanded && (
+                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
+                  )}
+                </div>
+                <Button variant="ghost" size="sm" className="mt-2 gap-1 text-primary" onClick={() => setDescExpanded(!descExpanded)}>
+                  {descExpanded ? <><ChevronUp className="h-4 w-4" /> Ver menos</> : <><ChevronDown className="h-4 w-4" /> Ver mais</>}
+                </Button>
+              </div>
+            )}
           </div>
 
+          {/* Right column: Product info */}
           <div>
             {product.badge && <Badge className="mb-3 bg-secondary text-secondary-foreground">{product.badge}</Badge>}
             <div className="flex items-start justify-between gap-2">
@@ -253,30 +276,9 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            {/* Descrição completa do produto */}
-            {product.description && (
-              <div className="mt-8">
-                <h2 className="text-lg font-bold text-foreground mb-3">Descrição do Produto</h2>
-                <div className={`relative overflow-hidden transition-all duration-300 ${!descExpanded ? "max-h-48" : ""}`}>
-                  {product.description.startsWith("<") ? (
-                    <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold [&_hr]:my-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-foreground [&_a]:text-primary [&_a]:underline"
-                      dangerouslySetInnerHTML={{ __html: product.description }} />
-                  ) : (
-                    <p className="text-muted-foreground">{product.description}</p>
-                  )}
-                  {!descExpanded && (
-                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
-                  )}
-                </div>
-                <Button variant="ghost" size="sm" className="mt-2 gap-1 text-primary" onClick={() => setDescExpanded(!descExpanded)}>
-                  {descExpanded ? <><ChevronUp className="h-4 w-4" /> Ver menos</> : <><ChevronDown className="h-4 w-4" /> Ver mais</>}
-                </Button>
-              </div>
-            )}
-
-            {/* FAQ */}
+            {/* FAQ - abaixo de Aceitamos */}
             {faqs && faqs.length > 0 && (
-              <div className="mt-8">
+              <div className="mt-6 rounded-lg border border-border p-4">
                 <h2 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
                   <HelpCircle className="h-5 w-5 text-primary" /> Perguntas Frequentes
                 </h2>
