@@ -1,43 +1,41 @@
 
 
-## Plano: Dashboard Avançado com Métricas Completas
+## Plano: Layout Responsivo + Seção de Perguntas com IA
 
-### O que será adicionado ao `DashboardPage.tsx`
+### Bloco 1 — Reorganizar layout do ProductDetail
 
-**Seção 1 — Cards KPI (já existem, expandir):**
-- Manter: Representantes, Prescritores, Pedidos, Faturamento
-- Adicionar: **Ticket Médio**, **Pessoas Online** (placeholder — requer Analytics real)
+**Desktop (md+):** Duas colunas lado a lado (já funciona assim). Coluna esquerda = fotos + descrição. Coluna direita = compra + benefícios + frete + FAQ.
 
-**Seção 2 — Gráficos de Vendas (dados internos do banco):**
-- **Vendas por Mês** (já existe — manter)
-- **Vendas por Produto** — novo gráfico de barras horizontais, agrupando `order_items` por produto
-- **Vendas por Representante** — PieChart (mover da ReportsPage)
-- **Top 10 Prescritores** — tabela ranking (mover da ReportsPage)
+**Mobile:** Reordenar para: Fotos → Seção de compra (preço, botões, benefícios, frete, FAQ) → Descrição do produto. Atualmente a descrição fica junto das fotos no mobile.
 
-**Seção 3 — Métricas de Tráfego Pago (placeholders com estrutura pronta):**
-- **Meta Ads**: Cards com Valor Investido, CPL, CPA, ROAS, CTR, Impressões, Cliques
-- **Google Ads**: Cards com Valor Investido, CPL, CPA, ROAS, CTR, Impressões, Cliques
-- Esses dados virão de API futura — por agora mostrar cards com "Conectar API" ou valores zerados
-- Nota: você mencionou "API automática" — quando as integrações Meta/Google forem configuradas, esses cards serão alimentados
+**Como implementar:**
+- Separar a descrição do produto da div de imagens em um bloco próprio
+- Usar `order` classes do Tailwind para reordenar no mobile: imagens (`order-1`), compra (`order-2`), descrição (`order-3`)
+- No desktop manter o grid de 2 colunas atual
 
-**Seção 4 — Volume Orgânico e Analytics:**
-- Card de **Sessões Orgânicas** (placeholder para Google Analytics)
-- Card de **Pessoas Online Agora** (placeholder)
-- **Mapa de calor por região** — gráfico simples de vendas por estado (UF) usando dados reais de pedidos, exibido como treemap ou barra horizontal
+### Bloco 2 — Seção "Perguntas e Respostas" com IA
 
-### Alterações na query de dados
+Abaixo do FAQ, adicionar uma seção conforme a imagem de referência: título "Perguntas e respostas", input de texto + botão "Perguntar" com icone de IA.
 
-Expandir a query de `orders` para incluir `order_items(product_name, quantity, price)` e `doctors(name, state, representative_id, representatives(name))` para alimentar todos os gráficos com dados reais do banco.
+**Funcionamento:**
+- Criar edge function `product-qa` que recebe a pergunta + dados do produto (nome, descrição, benefícios, FAQs cadastradas)
+- Usa Lovable AI (Gemini) para gerar resposta baseada nos dados do produto
+- System prompt instruindo a IA a responder APENAS com base nas informações do produto cadastrado
+- Resposta renderizada com markdown abaixo do input
+- Loading state enquanto processa
 
-### Arquivos modificados
+**Arquivos:**
 
 | Arquivo | Ação |
 |---|---|
-| `src/pages/admin/DashboardPage.tsx` | Reescrever com todos os gráficos e seções |
+| `src/pages/ProductDetail.tsx` | Reorganizar layout + adicionar seção Q&A |
+| `src/components/ProductQA.tsx` | Novo componente de perguntas com IA |
+| `supabase/functions/product-qa/index.ts` | Nova edge function que chama Lovable AI |
 
-### Importante
+### Detalhes técnicos
 
-- Dados de Meta Ads e Google Ads ficam como **placeholders visuais** prontos para receber dados quando as APIs forem integradas
-- Vendas por produto, representante e top prescritores usam **dados reais** do banco
-- Mapa por região usa o campo `state` dos pedidos/prescritores
+- Edge function recebe `{ question, productName, productDescription, benefits, faqs }` e monta um prompt contextual
+- Usa `LOVABLE_API_KEY` (já disponível) com modelo `google/gemini-3-flash-preview`
+- Não usa streaming (resposta curta, invoke simples)
+- Layout mobile usa `flex flex-col` com classes `order-*` para reordenar sem duplicar HTML
 
