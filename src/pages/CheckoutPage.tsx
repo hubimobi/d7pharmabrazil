@@ -567,8 +567,8 @@ const CheckoutPage = () => {
 
           {step <= 2 && (
             <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="text-base font-semibold">Resumo do Pedido</h3>
-              <div className="mt-4 space-y-2 text-sm">
+              <h3 className="text-base lg:text-lg font-semibold">Resumo do Pedido</h3>
+              <div className="mt-4 space-y-2 text-sm lg:text-base">
                 {items.map((item) => (
                   <div key={item.product.id} className="flex justify-between">
                     <span className="text-muted-foreground">{item.product.name} x{item.quantity}</span>
