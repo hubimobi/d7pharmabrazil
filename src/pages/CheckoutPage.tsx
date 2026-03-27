@@ -16,6 +16,7 @@ import CartRecommendations from "@/components/checkout/CartRecommendations";
 import CheckoutUrgency from "@/components/checkout/CheckoutUrgency";
 import ComboUpsell from "@/components/checkout/ComboUpsell";
 import CheckoutMotivation from "@/components/checkout/CheckoutMotivation";
+import CartItemTestimonial from "@/components/checkout/CartItemTestimonial";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
@@ -349,7 +350,9 @@ const CheckoutPage = () => {
         <h1 className="text-2xl font-bold text-foreground">Checkout</h1>
 
         {/* Motivational step indicator */}
-        <CheckoutMotivation step={step} items={items} />
+        {(storeSettings as any)?.checkout_show_motivation !== false && (
+          <CheckoutMotivation step={step} items={items} />
+        )}
 
         <div className="mt-8 grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
@@ -362,6 +365,9 @@ const CheckoutPage = () => {
                     <div className="flex-1">
                       <h3 className="text-sm font-semibold">{item.product.name}</h3>
                       <p className="text-sm font-bold text-primary">R$ {item.product.price.toFixed(2).replace(".", ",")}</p>
+                      {(storeSettings as any)?.checkout_show_testimonials !== false && (
+                        <CartItemTestimonial productId={item.product.id} customerState={form.state || undefined} />
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="rounded p-1 hover:bg-muted"><Minus className="h-4 w-4" /></button>
@@ -373,7 +379,7 @@ const CheckoutPage = () => {
                 ))}
 
                 {/* Free shipping progress bar */}
-                {storeSettings?.free_shipping_enabled && (() => {
+                {(storeSettings as any)?.checkout_show_free_shipping_bar !== false && storeSettings?.free_shipping_enabled && (() => {
                   const minValue = freeShippingMinValue;
                   const subtotalValue = subtotal;
                   const remaining = Math.max(0, minValue - subtotalValue);
@@ -415,7 +421,7 @@ const CheckoutPage = () => {
                   onSelectOption={setSelectedShipping}
                 />
 
-                <ComboUpsell />
+                {(storeSettings as any)?.checkout_show_combo !== false && <ComboUpsell />}
 
                 <Button className="w-full bg-primary hover:bg-primary/90" size="lg" onClick={() => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Passo 2 — Seus Dados</Button>
               </div>
@@ -609,15 +615,19 @@ const CheckoutPage = () => {
                   )}
                 </div>
               </div>
-              <div className="mt-4">
-                <CheckoutUrgency
-                  reviewsCount={items.reduce((sum, i) => sum + (i.product.reviews || 0), 0)}
-                  firstBenefit={items[0]?.product?.benefits?.[0]}
-                />
-              </div>
-              <div className="mt-4">
-                <CartRecommendations cartItems={items} />
-              </div>
+              {(storeSettings as any)?.checkout_show_urgency !== false && (
+                <div className="mt-4">
+                  <CheckoutUrgency
+                    reviewsCount={items.reduce((sum, i) => sum + (i.product.reviews || 0), 0)}
+                    firstBenefit={items[0]?.product?.benefits?.[0]}
+                  />
+                </div>
+              )}
+              {(storeSettings as any)?.checkout_show_recommendations !== false && (
+                <div className="mt-4">
+                  <CartRecommendations cartItems={items} />
+                </div>
+              )}
             </div>
           )}
         </div>

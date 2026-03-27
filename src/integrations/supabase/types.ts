@@ -849,6 +849,12 @@ export type Database = {
           benefits_items: Json
           benefits_subtitle: string
           benefits_title: string
+          checkout_show_combo: boolean | null
+          checkout_show_free_shipping_bar: boolean | null
+          checkout_show_motivation: boolean | null
+          checkout_show_recommendations: boolean | null
+          checkout_show_testimonials: boolean | null
+          checkout_show_urgency: boolean | null
           cnpj: string | null
           combo_offer_discount: number
           combo_offer_enabled: boolean
@@ -869,6 +875,7 @@ export type Database = {
           free_shipping_enabled: boolean | null
           free_shipping_min_value: number | null
           free_shipping_regions: string | null
+          gtm_id: string | null
           hero_badges: Json | null
           hero_btn1_bg_color: string | null
           hero_btn1_hover_color: string | null
@@ -891,6 +898,7 @@ export type Database = {
           id: string
           instagram: string | null
           logo_url: string | null
+          meta_pixel_id: string | null
           notification_bar_bg_color: string | null
           notification_bar_enabled: boolean | null
           notification_bar_text: string | null
@@ -938,6 +946,12 @@ export type Database = {
           benefits_items?: Json
           benefits_subtitle?: string
           benefits_title?: string
+          checkout_show_combo?: boolean | null
+          checkout_show_free_shipping_bar?: boolean | null
+          checkout_show_motivation?: boolean | null
+          checkout_show_recommendations?: boolean | null
+          checkout_show_testimonials?: boolean | null
+          checkout_show_urgency?: boolean | null
           cnpj?: string | null
           combo_offer_discount?: number
           combo_offer_enabled?: boolean
@@ -958,6 +972,7 @@ export type Database = {
           free_shipping_enabled?: boolean | null
           free_shipping_min_value?: number | null
           free_shipping_regions?: string | null
+          gtm_id?: string | null
           hero_badges?: Json | null
           hero_btn1_bg_color?: string | null
           hero_btn1_hover_color?: string | null
@@ -980,6 +995,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           logo_url?: string | null
+          meta_pixel_id?: string | null
           notification_bar_bg_color?: string | null
           notification_bar_enabled?: boolean | null
           notification_bar_text?: string | null
@@ -1027,6 +1043,12 @@ export type Database = {
           benefits_items?: Json
           benefits_subtitle?: string
           benefits_title?: string
+          checkout_show_combo?: boolean | null
+          checkout_show_free_shipping_bar?: boolean | null
+          checkout_show_motivation?: boolean | null
+          checkout_show_recommendations?: boolean | null
+          checkout_show_testimonials?: boolean | null
+          checkout_show_urgency?: boolean | null
           cnpj?: string | null
           combo_offer_discount?: number
           combo_offer_enabled?: boolean
@@ -1047,6 +1069,7 @@ export type Database = {
           free_shipping_enabled?: boolean | null
           free_shipping_min_value?: number | null
           free_shipping_regions?: string | null
+          gtm_id?: string | null
           hero_badges?: Json | null
           hero_btn1_bg_color?: string | null
           hero_btn1_hover_color?: string | null
@@ -1069,6 +1092,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           logo_url?: string | null
+          meta_pixel_id?: string | null
           notification_bar_bg_color?: string | null
           notification_bar_enabled?: boolean | null
           notification_bar_text?: string | null
