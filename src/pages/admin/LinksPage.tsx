@@ -22,6 +22,7 @@ function generateCode(length = 6): string {
 }
 
 export default function LinksPage() {
+  const { canDelete } = useAuth();
   const qc = useQueryClient();
   const { data: products } = useProducts();
   const [open, setOpen] = useState(false);

@@ -27,6 +27,7 @@ const emptyForm: RepForm = { name: "", email: "", phone: "", region: "", pix: ""
 
 export default function RepresentativesPage() {
   const [open, setOpen] = useState(false);
+  const { canDelete } = useAuth();
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<RepForm>(emptyForm);
   const [deleteDialog, setDeleteDialog] = useState<{ id: string; name: string } | null>(null);

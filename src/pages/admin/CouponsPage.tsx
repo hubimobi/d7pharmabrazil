@@ -37,6 +37,7 @@ const emptyForm: CouponForm = {
 };
 
 export default function CouponsPage() {
+  const { canDelete } = useAuth();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<CouponForm>(emptyForm);
