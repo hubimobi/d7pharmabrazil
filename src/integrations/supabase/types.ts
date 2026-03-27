@@ -856,6 +856,13 @@ export type Database = {
           combo_offer_label: string
           combo_offer_products: Json
           created_at: string
+          design_bg_color: string | null
+          design_font: string | null
+          design_footer_color: string | null
+          design_icon_color: string | null
+          design_icon_style: string | null
+          design_text_color: string | null
+          design_title_color: string | null
           email: string | null
           facebook: string | null
           favicon_url: string | null
@@ -930,6 +937,13 @@ export type Database = {
           combo_offer_label?: string
           combo_offer_products?: Json
           created_at?: string
+          design_bg_color?: string | null
+          design_font?: string | null
+          design_footer_color?: string | null
+          design_icon_color?: string | null
+          design_icon_style?: string | null
+          design_text_color?: string | null
+          design_title_color?: string | null
           email?: string | null
           facebook?: string | null
           favicon_url?: string | null
@@ -1004,6 +1018,13 @@ export type Database = {
           combo_offer_label?: string
           combo_offer_products?: Json
           created_at?: string
+          design_bg_color?: string | null
+          design_font?: string | null
+          design_footer_color?: string | null
+          design_icon_color?: string | null
+          design_icon_style?: string | null
+          design_text_color?: string | null
+          design_title_color?: string | null
           email?: string | null
           facebook?: string | null
           favicon_url?: string | null
