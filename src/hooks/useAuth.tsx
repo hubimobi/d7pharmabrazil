@@ -10,6 +10,11 @@ interface AuthContextType {
   user: User | null;
   roles: AppRole[];
   isAdmin: boolean;
+  isSuperAdmin: boolean;
+  isFinanceiro: boolean;
+  isGestor: boolean;
+  isAdministrador: boolean;
+  isSuporte: boolean;
   isRepresentative: boolean;
   isPrescriber: boolean;
   loading: boolean;
@@ -18,6 +23,9 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Hierarchy: super_admin > suporte > administrador > gestor > financeiro > admin > representative > prescriber
+const ADMIN_LIKE_ROLES: AppRole[] = ["super_admin", "suporte", "administrador", "gestor", "financeiro", "admin"];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -69,15 +77,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles([]);
   };
 
+  const hasRole = (r: AppRole) => roles.includes(r);
+  const hasAnyAdminRole = ADMIN_LIKE_ROLES.some((r) => roles.includes(r));
+
   return (
     <AuthContext.Provider
       value={{
         session,
         user,
         roles,
-        isAdmin: roles.includes("admin"),
-        isRepresentative: roles.includes("representative"),
-        isPrescriber: roles.includes("prescriber" as AppRole),
+        isAdmin: hasAnyAdminRole,
+        isSuperAdmin: hasRole("super_admin" as AppRole),
+        isFinanceiro: hasRole("financeiro" as AppRole) || hasRole("super_admin" as AppRole),
+        isGestor: hasRole("gestor" as AppRole) || hasRole("super_admin" as AppRole),
+        isAdministrador: hasRole("administrador" as AppRole) || hasRole("super_admin" as AppRole),
+        isSuporte: hasRole("suporte" as AppRole) || hasRole("super_admin" as AppRole),
+        isRepresentative: hasRole("representative" as AppRole),
+        isPrescriber: hasRole("prescriber" as AppRole),
         loading,
         signIn,
         signOut,

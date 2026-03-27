@@ -174,6 +174,7 @@ export type Database = {
           payment_id: string | null
           representative_id: string
           status: string
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -188,6 +189,7 @@ export type Database = {
           payment_id?: string | null
           representative_id: string
           status?: string
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -202,6 +204,7 @@ export type Database = {
           payment_id?: string | null
           representative_id?: string
           status?: string
+          tenant_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -231,6 +234,13 @@ export type Database = {
             columns: ["representative_id"]
             isOneToOne: false
             referencedRelation: "representatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -359,6 +369,7 @@ export type Database = {
           representative_id: string
           specialty: string | null
           state: string | null
+          tenant_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -375,6 +386,7 @@ export type Database = {
           representative_id: string
           specialty?: string | null
           state?: string | null
+          tenant_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -391,6 +403,7 @@ export type Database = {
           representative_id?: string
           specialty?: string | null
           state?: string | null
+          tenant_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -400,6 +413,13 @@ export type Database = {
             columns: ["representative_id"]
             isOneToOne: false
             referencedRelation: "representatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -539,6 +559,7 @@ export type Database = {
           items: Json
           shipping_address: Json | null
           status: string
+          tenant_id: string | null
           total: number
           tracking_code: string | null
           updated_at: string
@@ -557,6 +578,7 @@ export type Database = {
           items?: Json
           shipping_address?: Json | null
           status?: string
+          tenant_id?: string | null
           total?: number
           tracking_code?: string | null
           updated_at?: string
@@ -575,6 +597,7 @@ export type Database = {
           items?: Json
           shipping_address?: Json | null
           status?: string
+          tenant_id?: string | null
           total?: number
           tracking_code?: string | null
           updated_at?: string
@@ -592,6 +615,13 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -744,6 +774,7 @@ export type Database = {
           sku: string | null
           slug: string
           stock: number
+          tenant_id: string | null
           unit: string
           updated_at: string
           weight: number
@@ -778,6 +809,7 @@ export type Database = {
           sku?: string | null
           slug: string
           stock?: number
+          tenant_id?: string | null
           unit?: string
           updated_at?: string
           weight?: number
@@ -812,12 +844,21 @@ export type Database = {
           sku?: string | null
           slug?: string
           stock?: number
+          tenant_id?: string | null
           unit?: string
           updated_at?: string
           weight?: number
           width?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -859,6 +900,7 @@ export type Database = {
           phone: string | null
           pix: string | null
           region: string | null
+          tenant_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -871,6 +913,7 @@ export type Database = {
           phone?: string | null
           pix?: string | null
           region?: string | null
+          tenant_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -883,10 +926,19 @@ export type Database = {
           phone?: string | null
           pix?: string | null
           region?: string | null
+          tenant_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "representatives_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       static_pages: {
         Row: {
@@ -997,6 +1049,7 @@ export type Database = {
           sales_popup_interval_min: number | null
           sales_popup_position: string | null
           store_name: string
+          tenant_id: string | null
           tiktok: string | null
           updated_at: string
           webchat_delay_seconds: number | null
@@ -1094,6 +1147,7 @@ export type Database = {
           sales_popup_interval_min?: number | null
           sales_popup_position?: string | null
           store_name?: string
+          tenant_id?: string | null
           tiktok?: string | null
           updated_at?: string
           webchat_delay_seconds?: number | null
@@ -1191,6 +1245,7 @@ export type Database = {
           sales_popup_interval_min?: number | null
           sales_popup_position?: string | null
           store_name?: string
+          tenant_id?: string | null
           tiktok?: string | null
           updated_at?: string
           webchat_delay_seconds?: number | null
@@ -1206,6 +1261,73 @@ export type Database = {
           whatsapp_position?: string | null
           whatsapp_show_on_scroll?: boolean | null
           youtube?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_users: {
+        Row: {
+          created_at: string | null
+          id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenants: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          name: string
+          settings: Json | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name: string
+          settings?: Json | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          settings?: Json | null
+          slug?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1293,6 +1415,13 @@ export type Database = {
     Functions: {
       get_doctor_id: { Args: never; Returns: string }
       get_representative_id: { Args: never; Returns: string }
+      has_any_role: {
+        Args: {
+          _roles: Database["public"]["Enums"]["app_role"][]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1303,7 +1432,15 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "representative" | "prescriber"
+      app_role:
+        | "admin"
+        | "representative"
+        | "prescriber"
+        | "super_admin"
+        | "suporte"
+        | "administrador"
+        | "gestor"
+        | "financeiro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1431,7 +1568,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "representative", "prescriber"],
+      app_role: [
+        "admin",
+        "representative",
+        "prescriber",
+        "super_admin",
+        "suporte",
+        "administrador",
+        "gestor",
+        "financeiro",
+      ],
     },
   },
 } as const
