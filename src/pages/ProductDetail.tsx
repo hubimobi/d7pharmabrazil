@@ -17,6 +17,7 @@ import SEOHead from "@/components/SEOHead";
 import { useState } from "react";
 import UpsellDialog from "@/components/UpsellDialog";
 import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
+import ProductQA from "@/components/ProductQA";
 
 const ProductDetail = () => {
   const { slug } = useParams();
