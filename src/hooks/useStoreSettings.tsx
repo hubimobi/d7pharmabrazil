@@ -84,6 +84,15 @@ export interface StoreSettings {
   combo_offer_free_shipping: boolean;
   combo_offer_label: string;
   hide_chat_on_checkout: boolean;
+  // Design settings
+  design_title_color: string;
+  design_text_color: string;
+  design_icon_color: string;
+  design_font: string;
+  design_footer_color: string;
+  design_bg_color: string;
+  design_icon_style: string;
+  hide_chat_on_checkout: boolean;
 }
 
 export function useStoreSettings() {
