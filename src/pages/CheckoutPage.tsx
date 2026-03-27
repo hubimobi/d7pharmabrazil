@@ -417,8 +417,6 @@ const CheckoutPage = () => {
 
                 <ComboUpsell />
 
-                <CartRecommendations cartItems={items} />
-
                 <Button className="w-full bg-primary hover:bg-primary/90" size="lg" onClick={() => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Passo 2 — Seus Dados</Button>
               </div>
             )}
@@ -616,6 +614,9 @@ const CheckoutPage = () => {
                   reviewsCount={items.reduce((sum, i) => sum + (i.product.reviews || 0), 0)}
                   firstBenefit={items[0]?.product?.benefits?.[0]}
                 />
+              </div>
+              <div className="mt-4">
+                <CartRecommendations cartItems={items} />
               </div>
             </div>
           )}
