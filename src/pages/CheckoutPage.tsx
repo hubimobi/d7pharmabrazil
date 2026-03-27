@@ -50,7 +50,7 @@ const CheckoutPage = () => {
   const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
     cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "",
-    doctor: "", paymentMethod: "pix" as "pix" | "card",
+    doctor: "", paymentMethod: "pix" as "pix" | "card" | "boleto",
   });
   const abandonmentSaved = useRef(false);
   const [cepLoading, setCepLoading] = useState(false);
