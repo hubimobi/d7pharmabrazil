@@ -492,9 +492,12 @@ export default function ProductsPage() {
                     <TableCell>{fmt(p.price)}</TableCell>
                     <TableCell>{p.stock}</TableCell>
                     <TableCell>
-                      <Badge variant={p.active ? "default" : "secondary"} className="cursor-pointer" onClick={() => toggleActive.mutate({ id: p.id, active: p.active })}>
-                        {p.active ? "Ativo" : "Inativo"}
-                      </Badge>
+                      <div className="flex items-center gap-1">
+                        <Badge variant={p.active ? "default" : "secondary"} className="cursor-pointer" onClick={() => toggleActive.mutate({ id: p.id, active: p.active })}>
+                          {p.active ? "Ativo" : "Inativo"}
+                        </Badge>
+                        {(p as any).featured && <Badge variant="outline" className="text-xs">⭐</Badge>}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
