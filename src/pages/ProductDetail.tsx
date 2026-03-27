@@ -304,7 +304,7 @@ const ProductDetail = () => {
             </div>
 
             {/* Shipping Calculator */}
-            <div className="mt-6 rounded-lg border border-border p-4">
+            <div className="mt-6 rounded-xl bg-muted/50 p-4">
               <ShippingCalculator
                 cep={shippingCep}
                 onCepChange={setShippingCep}
@@ -321,7 +321,7 @@ const ProductDetail = () => {
               />
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-4 rounded-lg bg-muted p-4 text-sm text-muted-foreground">
+            <div className="mt-4 flex flex-wrap gap-4 rounded-xl bg-muted/50 p-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-primary" /> Qualidade Comprovada</span>
               <span className="flex items-center gap-1"><Truck className="h-4 w-4 text-primary" /> Frete Grátis +R$499</span>
               <span className="flex items-center gap-1">🔒 Pagamento Seguro</span>
