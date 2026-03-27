@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 const STORAGE_KEY = "d7_link_ref";
 const REF_EXPIRY_DAYS = 30;
 
-export function getActiveRef(): { linkId: string; code: string } | null {
+export function getActiveRef(): { linkId: string; code: string; doctorId?: string; doctorName?: string } | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
@@ -14,16 +14,16 @@ export function getActiveRef(): { linkId: string; code: string } | null {
       localStorage.removeItem(STORAGE_KEY);
       return null;
     }
-    return { linkId: data.linkId, code: data.code };
+    return { linkId: data.linkId, code: data.code, doctorId: data.doctorId, doctorName: data.doctorName };
   } catch {
     return null;
   }
 }
 
-function setRef(linkId: string, code: string) {
+function setRef(linkId: string, code: string, doctorId?: string, doctorName?: string) {
   localStorage.setItem(
     STORAGE_KEY,
-    JSON.stringify({ linkId, code, expiresAt: Date.now() + REF_EXPIRY_DAYS * 86400000 })
+    JSON.stringify({ linkId, code, doctorId, doctorName, expiresAt: Date.now() + REF_EXPIRY_DAYS * 86400000 })
   );
 }
 
@@ -35,18 +35,30 @@ const LinkRedirectPage = () => {
     if (!code) { navigate("/", { replace: true }); return; }
 
     (async () => {
-      // Fetch link
+      // Fetch link with doctor info
       const { data: link } = await supabase
         .from("short_links")
-        .select("id, target_url, code")
+        .select("id, target_url, code, doctor_id")
         .eq("code", code)
         .eq("active", true)
         .single();
 
       if (!link) { navigate("/", { replace: true }); return; }
 
-      // Save ref
-      setRef(link.id, link.code);
+      // If link has doctor_id, fetch doctor name
+      let doctorName: string | undefined;
+      const doctorId = (link as any).doctor_id;
+      if (doctorId) {
+        const { data: doc } = await supabase
+          .from("doctors")
+          .select("name")
+          .eq("id", doctorId)
+          .maybeSingle();
+        doctorName = doc?.name || undefined;
+      }
+
+      // Save ref with doctor info
+      setRef(link.id, link.code, doctorId || undefined, doctorName);
 
       // Detect device
       const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);

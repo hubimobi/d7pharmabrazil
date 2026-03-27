@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Link2, Copy, Trash2, BarChart3, MousePointerClick, ShoppingCart, TrendingUp, Smartphone, Monitor, ExternalLink } from "lucide-react";
+import { Link2, Copy, Trash2, MousePointerClick, ShoppingCart, TrendingUp, Smartphone, Monitor, ExternalLink, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 
 function generateCode(length = 6): string {
@@ -25,9 +25,23 @@ export default function LinksPage() {
   const { data: products } = useProducts();
   const [open, setOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState("");
+  const [selectedDoctor, setSelectedDoctor] = useState("");
   const [utmSource, setUtmSource] = useState("");
   const [utmMedium, setUtmMedium] = useState("");
   const [utmCampaign, setUtmCampaign] = useState("");
+
+  const { data: doctors } = useQuery({
+    queryKey: ["doctors-for-links"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("doctors")
+        .select("id, name, specialty, representative_id, representatives(name)")
+        .eq("active", true)
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const { data: links, isLoading } = useQuery({
     queryKey: ["short-links"],
@@ -41,7 +55,6 @@ export default function LinksPage() {
     },
   });
 
-  // Clicks by link for stats
   const { data: clickStats } = useQuery({
     queryKey: ["link-click-stats"],
     queryFn: async () => {
@@ -70,7 +83,7 @@ export default function LinksPage() {
       if (!user) throw new Error("Não autenticado");
 
       const code = generateCode();
-      const { error } = await supabase.from("short_links").insert({
+      const insertData: any = {
         code,
         product_id: product.id,
         user_id: user.id,
@@ -78,7 +91,13 @@ export default function LinksPage() {
         utm_source: utmSource || "share",
         utm_medium: utmMedium || "link",
         utm_campaign: utmCampaign || "",
-      });
+      };
+
+      if (selectedDoctor && selectedDoctor !== "none") {
+        insertData.doctor_id = selectedDoctor;
+      }
+
+      const { error } = await supabase.from("short_links").insert(insertData);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -86,6 +105,7 @@ export default function LinksPage() {
       toast.success("Link criado com sucesso!");
       setOpen(false);
       setSelectedProduct("");
+      setSelectedDoctor("");
       setUtmSource("");
       setUtmMedium("");
       setUtmCampaign("");
@@ -126,6 +146,11 @@ export default function LinksPage() {
     return products?.find((p) => p.id === productId)?.name || "Produto removido";
   };
 
+  const getDoctorName = (doctorId: string | null) => {
+    if (!doctorId) return null;
+    return doctors?.find((d) => d.id === doctorId)?.name || null;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -152,6 +177,25 @@ export default function LinksPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label className="flex items-center gap-1.5">
+                  <Stethoscope className="h-3.5 w-3.5" /> Prescritor (opcional)
+                </Label>
+                <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                  <SelectTrigger><SelectValue placeholder="Sem prescritor vinculado" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem prescritor vinculado</SelectItem>
+                    {(doctors || []).map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}{d.specialty ? ` — ${d.specialty}` : ""}{(d.representatives as any)?.name ? ` (${(d.representatives as any).name})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ao vincular um prescritor, ele será preenchido automaticamente no checkout do cliente.
+                </p>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
@@ -204,6 +248,7 @@ export default function LinksPage() {
               <TableRow>
                 <TableHead>Link</TableHead>
                 <TableHead>Produto</TableHead>
+                <TableHead>Prescritor</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead className="text-center">Cliques</TableHead>
                 <TableHead className="text-center">
@@ -216,13 +261,14 @@ export default function LinksPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !links?.length ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum link criado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhum link criado</TableCell></TableRow>
               ) : (
                 links.map((l: any) => {
                   const stats = clickStats?.[l.id];
                   const rate = l.clicks_count > 0 ? ((l.conversions_count / l.clicks_count) * 100).toFixed(1) : "0";
+                  const docName = getDoctorName(l.doctor_id);
                   return (
                     <TableRow key={l.id}>
                       <TableCell>
@@ -231,6 +277,15 @@ export default function LinksPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm max-w-[200px] truncate">{getProductName(l.product_id)}</TableCell>
+                      <TableCell>
+                        {docName ? (
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <Stethoscope className="h-3 w-3" /> {docName}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {l.utm_source && <Badge variant="outline" className="text-2xs">{l.utm_source}</Badge>}
                       </TableCell>

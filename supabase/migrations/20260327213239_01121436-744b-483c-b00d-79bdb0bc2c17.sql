@@ -1,0 +1,1 @@
+ALTER TABLE public.short_links ADD COLUMN doctor_id uuid REFERENCES public.doctors(id) ON DELETE SET NULL DEFAULT NULL;
