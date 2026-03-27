@@ -31,6 +31,7 @@ import LeadsPage from "./pages/admin/LeadsPage";
 import PagesPage from "./pages/admin/PagesPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import CustomersPage from "./pages/admin/CustomersPage";
+import CheckoutSettingsPage from "./pages/admin/CheckoutSettingsPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import TrackOrderPage from "./pages/TrackOrderPage";
 import PrescritorPage from "./pages/PrescritorPage";
@@ -39,6 +40,7 @@ import RecentPurchasePopup from "./components/RecentPurchasePopup";
 import WebchatWidget from "./components/WebchatWidget";
 import PopupBanner from "./components/PopupBanner";
 import DesignTokenApplier from "./components/DesignTokenApplier";
+import TrackingScripts from "./components/TrackingScripts";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +66,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <DesignTokenApplier />
+            <TrackingScripts />
             <RecentPurchasePopup />
             <WebchatWidget />
             <PopupBanner />
@@ -99,6 +102,7 @@ const App = () => (
               <Route path="/admin/paginas" element={<AdminLayout><PagesPage /></AdminLayout>} />
               <Route path="/admin/vendas" element={<AdminLayout><OrdersPage /></AdminLayout>} />
               <Route path="/admin/clientes" element={<AdminLayout><CustomersPage /></AdminLayout>} />
+              <Route path="/admin/checkout" element={<AdminLayout><CheckoutSettingsPage /></AdminLayout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
