@@ -43,6 +43,22 @@ const ProductDetail = () => {
     enabled: !!product?.id,
   });
 
+  const { data: faqs } = useQuery({
+    queryKey: ["product-faqs", product?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_faqs")
+        .select("*")
+        .eq("product_id", product!.id)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!product?.id,
+  });
+
+  const [descExpanded, setDescExpanded] = useState(false);
+
   if (isLoading) {
     return (
       <div className="min-h-screen">
