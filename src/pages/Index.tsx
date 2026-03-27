@@ -28,6 +28,7 @@ const Index = () => (
         <TestimonialsSection />
         <GuaranteeSection />
         <FinalCTA />
+        <InstagramFeed />
       </Suspense>
     </main>
     <Footer />
