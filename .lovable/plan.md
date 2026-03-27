@@ -1,80 +1,100 @@
 
 
-## Otimização Mobile, Respiro Visual e Performance — Inspirado no Mercado Livre
+## Modernização Visual — Inspirado em Airbnb + Mercado Livre
 
-### Problemas Identificados
+### Filosofia
 
-**Respiro / Padding:**
-- Container usa `padding: 1rem` (16px) — ok no geral, mas seções internas como `FeaturedCarousel` adicionam `px-8 md:px-12` desnecessário que comprime o conteúdo mobile
-- `ProductCard` e grids usam `gap-6` (24px) que ocupa muito espaço no mobile 375px
-- Seções como `AllProducts`, `BenefitsSection` usam `py-16` no mobile — muito vertical
-- `ProductDetail` fixed top bar (CTA) sobrepõe o header sticky sem spacing
+**Airbnb**: espaço branco generoso, cards sem bordas visíveis (shadow sutil), tipografia limpa, transições suaves, foco total no conteúdo visual.
 
-**Mobile UX:**
-- Grid de produtos usa `sm:grid-cols-2` — no 375px mostra 1 coluna com cards muito largos
-- Carrossel de destaque com `px-8` comprime demais no mobile
-- Footer 4 colunas empilha bem mas poderia ter grid 2x2 no mobile
-- "Aceitamos" flags no ProductDetail fazem overflow horizontal no mobile
-- Benefícios 4 colunas: ok com `sm:grid-cols-2` mas cards poderiam ser mais compactos
+**Mercado Livre**: hierarquia de preço agressiva, badges de desconto em destaque, frete grátis como elemento visual forte, confiança via selos, compra rápida em 1 clique.
 
-**Performance:**
-- Framer Motion importado em BenefitsSection e TestimonialsSection para animações simples — overhead desnecessário
-- Imagens sem `width`/`height` attributes causam layout shift
-- Múltiplos `useStoreSettings()` chamados em cada componente (já cached pelo React Query, ok)
-- `HeroSection` importa 12 ícones do Lucide — ok tree-shaked
+**Objetivo**: mesclar a leveza e elegância do Airbnb com a praticidade e urgência de conversão do Mercado Livre.
 
-### Plano de Ajustes
+---
 
-#### 1. Tailwind Container (`tailwind.config.ts`)
-- Aumentar padding mobile para `1.25rem` (20px) para mais respiro nas bordas
-- Adicionar padding `md: 2rem` para desktop
+### Mudanças Propostas
 
-#### 2. Home — Seções (`Index.tsx` e componentes)
-- Reduzir `py-16 md:py-24` para `py-10 md:py-20` nas seções para mobile mais compacto
-- `FeaturedCarousel`: remover `px-8 md:px-12`, usar `px-2 md:px-8`
-- `AllProducts`: grid `grid-cols-2 lg:grid-cols-3` com `gap-3 md:gap-6` para 2 colunas no mobile
-- `BenefitsSection`: `grid-cols-2 lg:grid-cols-4` com `gap-3 md:gap-6`, padding `p-4 md:p-6`
-- `TestimonialsSection`: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` com `gap-4 md:gap-6`
-- `GuaranteeSection`: `gap-4 md:gap-6`
-- `FinalCTA`: highlights flex-wrap com `gap-3 md:gap-6`
+#### 1. Cards de Produto — Estilo Airbnb
 
-#### 3. ProductCard Mobile-first
-- Reduzir padding `p-3 md:p-4`
-- Título `text-xs md:text-sm` em grid de 2 colunas
-- Botões mais compactos no mobile: `size="xs"` ou menor text
-- Ocultar "Compra Rápida" no mobile para simplificar (mantém "Adicionar ao Carrinho")
-- Parcelas: esconder no mobile para limpar visual
+**Atual**: borda visível `border-border`, shadow-sm, hover overlay escuro com "Ver Mais"
+**Novo**:
+- Remover borda visível — usar apenas `shadow-sm` e `hover:shadow-lg` (estilo Airbnb)
+- Cantos mais arredondados: `rounded-xl` ao invés de `rounded-lg`
+- Hover: ao invés de overlay escuro, apenas escalar a imagem + elevar shadow (mais limpo)
+- Badge de desconto: pill verde grande no canto (`-12% OFF`) estilo Mercado Livre
+- Preço Pix destacado: adicionar label "no Pix" em verde ao lado do preço principal
+- Frete grátis: badge verde "Frete Grátis" abaixo do preço quando aplicável
 
-#### 4. ProductDetail Mobile
-- Fixed top bar: adicionar `top-0` com `pt-[60px]` no main para não sobrepor
-- "Aceitamos" flags: `flex-wrap` com itens menores no mobile
-- Quantity selector inline com botões de compra
+#### 2. Header — Mais Limpo
 
-#### 5. Footer Mobile
-- Grid `grid-cols-2 md:grid-cols-[1.2fr_1fr_1fr_1fr]` para 2 colunas no mobile
+**Atual**: borda inferior + backdrop-blur
+**Novo**:
+- Remover `border-b`, usar apenas shadow sutil `shadow-sm` (Airbnb style)
+- Carrinho: mostrar mini-preview do valor total ao lado do ícone
+- Search: adicionar campo de busca inline no header (estilo Mercado Livre) — mobile: ícone que expande
 
-#### 6. Performance — Remover Framer Motion overhead
-- `BenefitsSection`: substituir `motion.div` por CSS `animate-fade-in` com `IntersectionObserver` leve ou simplesmente classes Tailwind `animate-fade-in`
-- `TestimonialsSection`: mesmo — usar CSS animations ao invés de framer-motion
-- Adicionar `width`/`height` em imagens de produto para evitar CLS
-- Lazy load seções abaixo da dobra com `React.lazy` + `Suspense` (TestimonialsSection, GuaranteeSection, FinalCTA)
+#### 3. Seção de Benefícios — Cards Flutuantes
 
-#### 7. Skeleton Loading (Mercado Livre style)
-- Criar `ProductCardSkeleton` com pulso cinza para estados de loading
-- Usar no `AllProducts` e `FeaturedCarousel` durante loading
+**Atual**: grid de cards com fundo `bg-card` e shadow-sm sobre fundo `bg-muted`
+**Novo**:
+- Fundo da seção: branco puro (sem `bg-muted`) — menos poluição visual
+- Cards: ícone + texto sem borda/fundo, layout horizontal (ícone à esquerda, texto à direita)
+- Inspiração Airbnb: limpo, sem caixas dentro de caixas
 
-### Arquivos Modificados
-- `tailwind.config.ts` — container padding
-- `src/components/ProductCard.tsx` — mobile compact
-- `src/components/FeaturedCarousel.tsx` — padding e spacing
-- `src/components/AllProducts.tsx` — grid 2 colunas + skeleton
-- `src/components/BenefitsSection.tsx` — remover framer-motion, grid mobile
-- `src/components/TestimonialsSection.tsx` — remover framer-motion, grid mobile
-- `src/components/GuaranteeSection.tsx` — spacing mobile
-- `src/components/FinalCTA.tsx` — spacing mobile
-- `src/components/Footer.tsx` — grid 2 colunas mobile
-- `src/pages/ProductDetail.tsx` — fixed bar spacing, flags wrap
-- `src/pages/Index.tsx` — lazy loading seções
+#### 4. Seção "Todos os Produtos" — Filtro Superior Horizontal
 
-Sem mudanças de banco de dados.
+**Atual**: Select dropdown para filtro de grupo
+**Novo**:
+- Chips/pills horizontais scrolláveis (estilo Airbnb categorias) ao invés de dropdown
+- Active chip com fundo `primary`, demais outline
+- Sticky abaixo do header no scroll (como filtros do Mercado Livre)
+
+#### 5. CSS Global — Transições e Suavidade
+
+- Adicionar `scroll-behavior: smooth` ao html
+- Transições globais em links e botões: `transition-all duration-200`
+- Bordas mais suaves: aumentar `--radius` de `0.5rem` para `0.75rem`
+- Border color mais sutil: `--border` de `210 20% 90%` para `210 15% 93%` (quase invisível)
+
+#### 6. Footer — Mais Moderno
+
+**Atual**: grid 4 colunas, fundo `bg-card`
+**Novo**:
+- Fundo escuro (`bg-foreground text-background`) — contraste forte como Mercado Livre
+- Links com hover mais suave (opacity transition)
+- Selos de segurança visuais (ícones Lock, Shield) na base
+
+#### 7. Seção Garantia e CTA Final — Mais Impactante
+
+**Atual**: gradient trust com ícones em linha
+**Novo (Garantia)**:
+- Layout com card central grande + número "30" em destaque (dias de garantia)
+- Ícone de escudo animado sutilmente
+
+**Novo (CTA Final)**:
+- Full-width com gradiente mais vibrante
+- Botão CTA maior com animação de hover scale
+
+#### 8. ProductDetail — Galeria Airbnb Style
+
+- Thumbnails na lateral (desktop) com transição suave ao trocar
+- Botão "Comprar" fixo no bottom mobile com preço visível (sticky bar)
+- Seção de avaliações com estrelas visuais maiores
+
+---
+
+### Detalhes Tecnicos
+
+**Arquivos modificados:**
+- `src/index.css` — border radius, scroll-behavior, transições globais, border color
+- `src/components/ProductCard.tsx` — cards sem borda, rounded-xl, badge desconto pill, hover limpo
+- `src/components/Header.tsx` — shadow ao invés de border-b, campo de busca
+- `src/components/BenefitsSection.tsx` — layout horizontal, sem bg-muted
+- `src/components/AllProducts.tsx` — chips de filtro ao invés de dropdown
+- `src/components/Footer.tsx` — fundo escuro, selos de segurança
+- `src/components/GuaranteeSection.tsx` — card central com destaque "30 dias"
+- `src/components/FinalCTA.tsx` — botão maior, gradiente mais vibrante
+- `src/pages/ProductDetail.tsx` — galeria lateral, sticky buy bar refinada
+
+Sem mudancas de banco de dados ou rotas.
 
