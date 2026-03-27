@@ -119,7 +119,35 @@ export default function AIAgentsPage() {
     },
   });
 
-  const [agentKbIds, setAgentKbIds] = useState<string[]>([]);
+  // Fetch active LLM configs to determine available models
+  const { data: llmConfigs } = useQuery({
+    queryKey: ["ai-llm-config"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("ai_llm_config" as any).select("*").order("created_at");
+      if (error) throw error;
+      return (data as any[]) || [];
+    },
+  });
+
+  // Build available models from active LLM config
+  const availableModels = (() => {
+    const activeExternal = (llmConfigs || []).find((c: any) => c.active && c.provider !== "lovable");
+    if (activeExternal) {
+      const providerModels = EXTERNAL_MODELS[activeExternal.provider] || [];
+      // Put the configured default model first
+      const sorted = [...providerModels].sort((a, b) => 
+        a.value === activeExternal.default_model ? -1 : b.value === activeExternal.default_model ? 1 : 0
+      );
+      return sorted;
+    }
+    return LOVABLE_MODELS;
+  })();
+
+  const defaultModel = (() => {
+    const activeExternal = (llmConfigs || []).find((c: any) => c.active && c.provider !== "lovable");
+    if (activeExternal?.default_model) return activeExternal.default_model;
+    return "google/gemini-3-flash-preview";
+  })();
 
   const toggleMut = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
