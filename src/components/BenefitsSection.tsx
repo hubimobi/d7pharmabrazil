@@ -32,7 +32,7 @@ const BenefitsSection = () => {
   const iconContainerCls = ICON_STYLE_CLASSES[iconStyle] || ICON_STYLE_CLASSES.rounded;
 
   return (
-    <section id="beneficios" className="py-10 md:py-20">
+    <section id="beneficios" className="py-10 md:py-20 bg-muted/40">
       <div className="container">
         {/* Logo + Title */}
         <div className="flex flex-col items-center text-center">
@@ -40,7 +40,8 @@ const BenefitsSection = () => {
             <img
               src={logoUrl}
               alt="Logo"
-              className="h-14 w-14 md:h-16 md:w-16 object-contain mb-3 rounded-xl"
+              className="object-contain mb-4 rounded-xl"
+              style={{ width: 300, height: 300 }}
             />
           )}
           <h2 className="text-xl font-bold text-foreground md:text-3xl">
