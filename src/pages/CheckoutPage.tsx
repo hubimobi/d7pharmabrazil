@@ -211,7 +211,7 @@ const CheckoutPage = () => {
         customer_email: form.email,
         customer_cpf: form.cpf,
         customer_phone: form.phone,
-        billing_type: form.paymentMethod === "pix" ? "PIX" : "CREDIT_CARD",
+        billing_type: form.paymentMethod === "pix" ? "PIX" : form.paymentMethod === "boleto" ? "BOLETO" : "CREDIT_CARD",
         value: paymentValue,
         items: orderItems,
         doctor_id: selectedDoctorId === "sem-prescritor" ? null : selectedDoctorId,
