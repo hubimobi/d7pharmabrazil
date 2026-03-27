@@ -6,11 +6,11 @@ export default function TrackingScripts() {
 
   const metaPixelId = (settings as any)?.meta_pixel_id || "";
   const gtmId = (settings as any)?.gtm_id || "";
+  const hotjarId = (settings as any)?.hotjar_id || "";
 
   // Meta Pixel
   useEffect(() => {
     if (!metaPixelId) return;
-    // Avoid duplicate
     if (document.getElementById("meta-pixel-script")) return;
 
     const script = document.createElement("script");
@@ -52,7 +52,6 @@ export default function TrackingScripts() {
     `;
     document.head.appendChild(script);
 
-    // GTM noscript iframe
     const noscript = document.createElement("noscript");
     noscript.id = "gtm-noscript";
     const iframe = document.createElement("iframe");
@@ -69,6 +68,30 @@ export default function TrackingScripts() {
       document.getElementById("gtm-noscript")?.remove();
     };
   }, [gtmId]);
+
+  // Hotjar
+  useEffect(() => {
+    if (!hotjarId) return;
+    if (document.getElementById("hotjar-script")) return;
+
+    const script = document.createElement("script");
+    script.id = "hotjar-script";
+    script.innerHTML = `
+      (function(h,o,t,j,a,r){
+        h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+        h._hjSettings={hjid:${hotjarId},hjsv:6};
+        a=o.getElementsByTagName('head')[0];
+        r=o.createElement('script');r.async=1;
+        r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+        a.appendChild(r);
+      })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+    `;
+    document.head.appendChild(script);
+
+    return () => {
+      document.getElementById("hotjar-script")?.remove();
+    };
+  }, [hotjarId]);
 
   return null;
 }
