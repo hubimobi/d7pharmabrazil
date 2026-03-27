@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Plus, UserCog, Pencil, Shield } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, UserCog, Pencil, Shield, MoreHorizontal, KeyRound, UserX, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 
 const ROLE_OPTIONS = [
@@ -37,7 +38,6 @@ const ROLE_COLORS: Record<string, string> = {
   prescriber: "bg-teal-500/10 text-teal-700 border-teal-200",
 };
 
-// Access rules: which sections each role can see/edit
 const MENU_SECTIONS = [
   { key: "dashboard", label: "Dashboard" },
   { key: "orders", label: "Pedidos" },
@@ -61,7 +61,6 @@ const MENU_SECTIONS = [
   { key: "users", label: "Usuários" },
 ];
 
-// Default access rules
 const DEFAULT_ACCESS: Record<string, Record<string, { view: boolean; edit: boolean }>> = {
   super_admin: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: true, edit: true }])),
   admin: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: true, edit: true }])),
@@ -73,13 +72,22 @@ const DEFAULT_ACCESS: Record<string, Record<string, { view: boolean; edit: boole
   prescriber: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: ["dashboard", "commissions"].includes(s.key), edit: false }])),
 };
 
+interface UserEntry {
+  user_id: string;
+  roles: string[];
+  name: string;
+  email: string;
+  phone: string;
+  active: boolean;
+}
+
 export default function UsersPage() {
   const { isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
-  const [editUser, setEditUser] = useState<{ user_id: string; name: string; roles: string[] } | null>(null);
+  const [editUser, setEditUser] = useState<UserEntry | null>(null);
   const [form, setForm] = useState({ email: "", password: "", full_name: "", role: "admin", representative_id: "" });
-  const [editForm, setEditForm] = useState({ full_name: "", role: "", representative_id: "" });
+  const [editForm, setEditForm] = useState({ full_name: "", role: "", representative_id: "", email: "", phone: "" });
   const [accessRules, setAccessRules] = useState<Record<string, Record<string, { view: boolean; edit: boolean }>>>(DEFAULT_ACCESS);
   const [selectedAccessRole, setSelectedAccessRole] = useState("gestor");
 
@@ -88,13 +96,24 @@ export default function UsersPage() {
     queryFn: async () => {
       const { data: roles, error } = await supabase.from("user_roles").select("id, user_id, role");
       if (error) throw error;
-      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name");
-      const profileMap: Record<string, string> = {};
-      profiles?.forEach((p) => { profileMap[p.user_id] = p.full_name; });
-      const userMap: Record<string, { user_id: string; roles: string[]; name: string }> = {};
+      const { data: profiles } = await supabase.from("profiles").select("user_id, full_name, phone");
+      const profileMap: Record<string, { name: string; phone: string }> = {};
+      profiles?.forEach((p) => { profileMap[p.user_id] = { name: p.full_name, phone: p.phone || "" }; });
+
+      // We don't have direct access to auth.users emails from client, so we'll store email info
+      // from the edge function response. For now, show profile data.
+      const userMap: Record<string, UserEntry> = {};
       roles?.forEach((r) => {
         if (!userMap[r.user_id]) {
-          userMap[r.user_id] = { user_id: r.user_id, roles: [], name: profileMap[r.user_id] || "—" };
+          const profile = profileMap[r.user_id];
+          userMap[r.user_id] = {
+            user_id: r.user_id,
+            roles: [],
+            name: profile?.name || "—",
+            email: "",
+            phone: profile?.phone || "",
+            active: true,
+          };
         }
         userMap[r.user_id].roles.push(r.role);
       });
@@ -153,9 +172,39 @@ export default function UsersPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const openEdit = (u: { user_id: string; name: string; roles: string[] }) => {
+  const handleSendPasswordReset = async (email: string) => {
+    if (!email) {
+      toast.error("Este usuário não possui e-mail cadastrado.");
+      return;
+    }
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success(`Link de redefinição enviado para ${email}`);
+    } catch (err: any) {
+      toast.error(`Erro ao enviar: ${err.message}`);
+    }
+  };
+
+  const handleToggleActive = async (userId: string, currentlyActive: boolean) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("create-tenant-user", {
+        body: { action: "toggle_active", user_id: userId, active: !currentlyActive },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success(currentlyActive ? "Usuário desativado" : "Usuário ativado");
+    } catch (err: any) {
+      toast.error(`Erro: ${err.message}`);
+    }
+  };
+
+  const openEdit = (u: UserEntry) => {
     setEditUser(u);
-    setEditForm({ full_name: u.name, role: u.roles[0] || "admin", representative_id: "" });
+    setEditForm({ full_name: u.name, role: u.roles[0] || "admin", representative_id: "", email: u.email, phone: u.phone });
   };
 
   const currentAccess = accessRules[selectedAccessRole] || DEFAULT_ACCESS[selectedAccessRole] || {};
@@ -197,26 +246,27 @@ export default function UsersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Roles</TableHead>
-                    <TableHead className="w-20">Ações</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="w-28">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
                   ) : !users?.length ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Nenhum usuário encontrado</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Nenhum usuário encontrado</TableCell></TableRow>
                   ) : (
                     users.map((u) => (
                       <TableRow key={u.user_id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <UserCog className="h-4 w-4 text-muted-foreground" />
-                            {u.name}
+                            <div>
+                              <span>{u.name}</span>
+                              {u.phone && <p className="text-xs text-muted-foreground">{u.phone}</p>}
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground font-mono">{u.user_id.substring(0, 8)}...</TableCell>
                         <TableCell>
                           <div className="flex gap-1 flex-wrap">
                             {u.roles.map((r) => (
@@ -227,9 +277,28 @@ export default function UsersPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEdit(u)}>
+                                <Pencil className="mr-2 h-4 w-4" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleSendPasswordReset(u.email || u.name)}>
+                                <KeyRound className="mr-2 h-4 w-4" /> Enviar Nova Senha
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleToggleActive(u.user_id, u.active)}>
+                                {u.active ? (
+                                  <><UserX className="mr-2 h-4 w-4" /> Desativar</>
+                                ) : (
+                                  <><UserCheck className="mr-2 h-4 w-4" /> Ativar</>
+                                )}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))
@@ -325,7 +394,7 @@ export default function UsersPage() {
               <Input type="password" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
             </div>
             <div>
-              <Label>Role</Label>
+              <Label>Tipo</Label>
               <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -372,10 +441,18 @@ export default function UsersPage() {
                 <Input value={editForm.full_name} onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))} />
               </div>
               <div>
+                <Label>Email</Label>
+                <Input value={editForm.email} readOnly disabled className="bg-muted" />
+              </div>
+              <div>
+                <Label>Telefone</Label>
+                <Input value={editForm.phone} readOnly disabled className="bg-muted" />
+              </div>
+              <div>
                 <Label className="text-xs text-muted-foreground">ID: {editUser.user_id}</Label>
               </div>
               <div>
-                <Label>Role</Label>
+                <Label>Tipo</Label>
                 <Select value={editForm.role} onValueChange={(v) => setEditForm((f) => ({ ...f, role: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
