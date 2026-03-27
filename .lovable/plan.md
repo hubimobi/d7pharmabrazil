@@ -1,41 +1,59 @@
 
 
-## Plano: Layout Responsivo + Seção de Perguntas com IA
+## Plano: Corrigir Integração Asaas Webhook + Robustez do Sistema
 
-### Bloco 1 — Reorganizar layout do ProductDetail
+### Problema Raiz
+O webhook do Asaas está sendo **bloqueado pela verificação JWT**. Edge functions do Lovable Cloud exigem JWT por padrão, mas o Asaas envia webhooks sem autenticação JWT. Resultado: todas as notificações de pagamento são rejeitadas com 401.
 
-**Desktop (md+):** Duas colunas lado a lado (já funciona assim). Coluna esquerda = fotos + descrição. Coluna direita = compra + benefícios + frete + FAQ.
+### Correção 1 — Desabilitar JWT no webhook (CRÍTICO)
 
-**Mobile:** Reordenar para: Fotos → Seção de compra (preço, botões, benefícios, frete, FAQ) → Descrição do produto. Atualmente a descrição fica junto das fotos no mobile.
+Adicionar configuração no `supabase/config.toml`:
 
-**Como implementar:**
-- Separar a descrição do produto da div de imagens em um bloco próprio
-- Usar `order` classes do Tailwind para reordenar no mobile: imagens (`order-1`), compra (`order-2`), descrição (`order-3`)
-- No desktop manter o grid de 2 colunas atual
+```toml
+[functions.asaas-webhook]
+verify_jwt = false
+```
 
-### Bloco 2 — Seção "Perguntas e Respostas" com IA
+Isso permite que o Asaas envie webhooks sem token JWT.
 
-Abaixo do FAQ, adicionar uma seção conforme a imagem de referência: título "Perguntas e respostas", input de texto + botão "Perguntar" com icone de IA.
+### Correção 2 — Corrigir pedido pendente manualmente
 
-**Funcionamento:**
-- Criar edge function `product-qa` que recebe a pergunta + dados do produto (nome, descrição, benefícios, FAQs cadastradas)
-- Usa Lovable AI (Gemini) para gerar resposta baseada nos dados do produto
-- System prompt instruindo a IA a responder APENAS com base nas informações do produto cadastrado
-- Resposta renderizada com markdown abaixo do input
-- Loading state enquanto processa
+Atualizar o pedido `48806e93-870f-4f23-821c-bb3f2e45a866` para "paid" via migration e disparar sync com Bling.
 
-**Arquivos:**
+### Correção 3 — Botão "Marcar como Pago" no Admin
+
+No `OrdersPage.tsx`, adicionar ação no menu de cada pedido pendente:
+- "Marcar como Pago" — atualiza status para "paid" e dispara sync com Bling automaticamente
+- Útil para casos onde o webhook falha
+
+### Correção 4 — Robustez do Webhook
+
+No `asaas-webhook/index.ts`:
+- Adicionar validação opcional por token secreto (header `asaas-access-token`) para segurança
+- Tratar mais eventos: `PAYMENT_OVERDUE`, `PAYMENT_DELETED`, `PAYMENT_REFUNDED` para manter status atualizado
+- Logar o body completo em caso de erro para debug
+
+### Correção 5 — Polling mais resiliente
+
+No `PixPaymentResult.tsx`:
+- Fazer primeiro poll imediatamente (não esperar 15s)
+- Reduzir intervalo para 10s
+- Mostrar botão "Verificar pagamento" manual caso o polling falhe
+
+### Arquivos modificados
 
 | Arquivo | Ação |
 |---|---|
-| `src/pages/ProductDetail.tsx` | Reorganizar layout + adicionar seção Q&A |
-| `src/components/ProductQA.tsx` | Novo componente de perguntas com IA |
-| `supabase/functions/product-qa/index.ts` | Nova edge function que chama Lovable AI |
+| `supabase/config.toml` | Adicionar `verify_jwt = false` para `asaas-webhook` |
+| `supabase/functions/asaas-webhook/index.ts` | Tratar mais eventos + log melhorado |
+| `src/pages/admin/OrdersPage.tsx` | Botão "Marcar como Pago" + sync Bling |
+| `src/components/checkout/PixPaymentResult.tsx` | Poll imediato + botão manual |
+| Migration SQL | Corrigir pedido 48806e93 |
 
-### Detalhes técnicos
+### URL do Webhook para configurar no Asaas
 
-- Edge function recebe `{ question, productName, productDescription, benefits, faqs }` e monta um prompt contextual
-- Usa `LOVABLE_API_KEY` (já disponível) com modelo `google/gemini-3-flash-preview`
-- Não usa streaming (resposta curta, invoke simples)
-- Layout mobile usa `flex flex-col` com classes `order-*` para reordenar sem duplicar HTML
+O webhook precisa estar configurado no painel do Asaas apontando para:
+`https://xufiemrhlmirkrdrcxox.supabase.co/functions/v1/asaas-webhook`
+
+Eventos a habilitar: `PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `PAYMENT_REFUNDED`
 
