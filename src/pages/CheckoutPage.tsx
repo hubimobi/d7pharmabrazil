@@ -79,8 +79,11 @@ const CheckoutPage = () => {
   }, []);
 
   // Track cart abandonment: save to DB + sync to GHL when user leaves without completing
+  const saveAbandonment = useRef(() => {});
+  
+  // Keep the function ref updated with latest form/items state
   useEffect(() => {
-    const saveAbandonment = () => {
+    saveAbandonment.current = () => {
       if (abandonmentSaved.current || items.length === 0) return;
       if (!form.name && !form.phone && !form.email) return;
 
@@ -96,7 +99,7 @@ const CheckoutPage = () => {
       const itemsTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
       const dbPayload: any = {
-        customer_name: form.name,
+        customer_name: form.name || form.email || form.phone || "Visitante",
         customer_email: form.email || null,
         customer_phone: form.phone || null,
         items: cartItems,
@@ -139,12 +142,18 @@ const CheckoutPage = () => {
         }).catch(() => {});
       }
     };
+  }, [form.name, form.phone, form.email, form.cep, items, total]);
 
-    window.addEventListener("beforeunload", saveAbandonment);
+  // Save on beforeunload AND on unmount (SPA navigation)
+  useEffect(() => {
+    const handleBeforeUnload = () => saveAbandonment.current();
+    window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
-      window.removeEventListener("beforeunload", saveAbandonment);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      // Fire on SPA unmount (back button, navigate away within app)
+      saveAbandonment.current();
     };
-  }, [form.name, form.phone, form.email, items, total]);
+  }, []);
 
   const { data: doctors } = useQuery({
     queryKey: ["active-doctors"],
