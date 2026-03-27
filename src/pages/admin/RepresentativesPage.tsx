@@ -288,9 +288,11 @@ export default function RepresentativesPage() {
                         <Button variant="ghost" size="icon" onClick={() => openEdit(rep)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteDialog({ id: rep.id, name: rep.name })}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        {canDelete && (
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteDialog({ id: rep.id, name: rep.name })}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

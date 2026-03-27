@@ -307,9 +307,11 @@ export default function LinksPage() {
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copyWithMessage(l.code, getProductName(l.product_id))} title="Copiar com mensagem">
                             <ExternalLink className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteLink.mutate(l.id)} title="Excluir">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {canDelete && (
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteLink.mutate(l.id)} title="Excluir">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
