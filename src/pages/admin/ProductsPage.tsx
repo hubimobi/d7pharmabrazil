@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus, Link2, Check, Eye, Download, ArrowUpRight, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus, Link2, Check, Eye, Download, ArrowUpRight, RefreshCw, Search } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
@@ -27,6 +27,7 @@ interface ProdForm {
   sku: string; ncm: string; gtin: string; unit: string;
   show_countdown: boolean;
   featured: boolean;
+  seo_title: string; seo_description: string; seo_keywords: string;
 }
 
 const emptyForm: ProdForm = {
@@ -38,6 +39,7 @@ const emptyForm: ProdForm = {
   sku: "", ncm: "", gtin: "", unit: "UN",
   show_countdown: true,
   featured: false,
+  seo_title: "", seo_description: "", seo_keywords: "",
 };
 
 interface Testimonial {
