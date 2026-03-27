@@ -38,6 +38,7 @@ import StaticPage from "./pages/StaticPage";
 import RecentPurchasePopup from "./components/RecentPurchasePopup";
 import WebchatWidget from "./components/WebchatWidget";
 import PopupBanner from "./components/PopupBanner";
+import DesignTokenApplier from "./components/DesignTokenApplier";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <DesignTokenApplier />
             <RecentPurchasePopup />
             <WebchatWidget />
             <PopupBanner />
