@@ -413,6 +413,11 @@ export default function CouponsPage() {
           </Table>
         </CardContent>
       </Card>
+      <CouponOrdersDialog
+        open={!!viewOrdersCode}
+        onOpenChange={(v) => { if (!v) setViewOrdersCode(null); }}
+        couponCode={viewOrdersCode || ""}
+      />
     </div>
   );
 }
