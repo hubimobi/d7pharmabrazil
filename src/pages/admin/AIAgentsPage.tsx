@@ -28,13 +28,31 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Headphones, Calculator, ClipboardList, Stethoscope,
 };
 
-const AVAILABLE_MODELS = [
+const LOVABLE_MODELS = [
   { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash (Rápido)" },
   { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (Balanceado)" },
   { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (Avançado)" },
   { value: "openai/gpt-5-mini", label: "GPT-5 Mini (Rápido)" },
   { value: "openai/gpt-5", label: "GPT-5 (Avançado)" },
 ];
+
+const EXTERNAL_MODELS: Record<string, { value: string; label: string }[]> = {
+  xai: [
+    { value: "grok-3", label: "Grok 3" },
+    { value: "grok-3-fast", label: "Grok 3 Fast" },
+    { value: "grok-3-mini", label: "Grok 3 Mini" },
+    { value: "grok-3-mini-fast", label: "Grok 3 Mini Fast" },
+    { value: "grok-2", label: "Grok 2" },
+  ],
+  openai: [
+    { value: "gpt-4o", label: "GPT-4o" },
+    { value: "gpt-4o-mini", label: "GPT-4o Mini" },
+  ],
+  anthropic: [
+    { value: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet" },
+    { value: "claude-3-haiku-20240307", label: "Claude 3 Haiku" },
+  ],
+};
 
 const CHANNELS = [
   { id: "admin", label: "Painel Interno" },
@@ -101,6 +119,36 @@ export default function AIAgentsPage() {
     },
   });
 
+  // Fetch active LLM configs to determine available models
+  const { data: llmConfigs } = useQuery({
+    queryKey: ["ai-llm-config"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("ai_llm_config" as any).select("*").order("created_at");
+      if (error) throw error;
+      return (data as any[]) || [];
+    },
+  });
+
+  // Build available models from active LLM config
+  const availableModels = (() => {
+    const activeExternal = (llmConfigs || []).find((c: any) => c.active && c.provider !== "lovable");
+    if (activeExternal) {
+      const providerModels = EXTERNAL_MODELS[activeExternal.provider] || [];
+      // Put the configured default model first
+      const sorted = [...providerModels].sort((a, b) => 
+        a.value === activeExternal.default_model ? -1 : b.value === activeExternal.default_model ? 1 : 0
+      );
+      return sorted;
+    }
+    return LOVABLE_MODELS;
+  })();
+
+  const defaultModel = (() => {
+    const activeExternal = (llmConfigs || []).find((c: any) => c.active && c.provider !== "lovable");
+    if (activeExternal?.default_model) return activeExternal.default_model;
+    return "google/gemini-3-flash-preview";
+  })();
+
   const [agentKbIds, setAgentKbIds] = useState<string[]>([]);
 
   const toggleMut = useMutation({
@@ -117,7 +165,7 @@ export default function AIAgentsPage() {
       if (!editAgent) return;
       const { error } = await supabase.from("ai_agents" as any).update({
         name: form.name, description: form.description, system_prompt: form.system_prompt,
-        model: form.model, temperature: form.temperature, active: form.active,
+        model: form.model || defaultModel, temperature: form.temperature, active: form.active,
         channels: form.channels, icon: form.icon, color: form.color,
         allowed_panels: form.allowed_panels, llm_override: form.llm_override || null,
       } as any).eq("id", editAgent.id);
@@ -253,10 +301,14 @@ export default function AIAgentsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Modelo de IA</Label>
-                <Select value={form.model} onValueChange={(v) => setForm({ ...form, model: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{AVAILABLE_MODELS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
+                <Select value={availableModels.some(m => m.value === form.model) ? form.model : ""} onValueChange={(v) => setForm({ ...form, model: v })}>
+                  <SelectTrigger><SelectValue placeholder="Usar padrão do sistema" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Padrão do sistema ({availableModels[0]?.label})</SelectItem>
+                    {availableModels.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                  </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">Se não selecionado, usa o modelo padrão configurado no LLM ativo.</p>
               </div>
               <div className="space-y-2">
                 <Label>Temperatura ({form.temperature})</Label>
