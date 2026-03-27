@@ -121,6 +121,9 @@ export default function ProductsPage() {
         group_name: form.group_name, manufacturer: form.manufacturer,
         sku: form.sku, ncm: form.ncm, gtin: form.gtin, unit: form.unit,
         extra_images: uploadedExtras,
+        seo_title: form.seo_title || null,
+        seo_description: form.seo_description || null,
+        seo_keywords: form.seo_keywords || null,
       };
       if (image_url) payload.image_url = image_url;
 
@@ -212,6 +215,9 @@ export default function ProductsPage() {
       unit: (p as any).unit ?? "UN",
       show_countdown: (p as any).show_countdown !== false,
       featured: (p as any).featured === true,
+      seo_title: (p as any).seo_title ?? "",
+      seo_description: (p as any).seo_description ?? "",
+      seo_keywords: (p as any).seo_keywords ?? "",
     });
 
     // Load testimonials
