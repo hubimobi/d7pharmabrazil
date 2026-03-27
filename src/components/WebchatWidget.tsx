@@ -7,15 +7,17 @@ export default function WebchatWidget() {
   const location = useLocation();
   const [visible, setVisible] = useState(false);
 
+  const isPublicStorefront = ["/", "/produtos"].includes(location.pathname) || location.pathname.startsWith("/produto/");
   const isCheckout = location.pathname === "/checkout";
   const hideOnCheckout = settings?.hide_chat_on_checkout && isCheckout;
+  const shouldHide = !isPublicStorefront && !isCheckout;
 
   const delaySeconds = settings?.webchat_delay_seconds || 0;
   const showOnScroll = settings?.webchat_show_on_scroll ?? false;
   const position = settings?.webchat_position || "right";
 
   useEffect(() => {
-    if (!settings?.webchat_enabled || !settings?.webchat_script || hideOnCheckout) return;
+    if (!settings?.webchat_enabled || !settings?.webchat_script || hideOnCheckout || shouldHide) return;
 
     const shouldDelay = delaySeconds > 0;
     const shouldScroll = showOnScroll;
@@ -46,7 +48,7 @@ export default function WebchatWidget() {
   }, [settings?.webchat_enabled, settings?.webchat_script, delaySeconds, showOnScroll]);
 
   useEffect(() => {
-    if (!visible || !settings?.webchat_enabled || !settings?.webchat_script || hideOnCheckout) return;
+    if (!visible || !settings?.webchat_enabled || !settings?.webchat_script || hideOnCheckout || shouldHide) return;
 
     const container = document.createElement("div");
     container.id = "webchat-widget-container";

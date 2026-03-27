@@ -21,25 +21,25 @@ export default function PopupBanner() {
   const enabled = settings?.popup_banner_enabled;
   const delay = settings?.popup_banner_delay_seconds || 5;
 
-  // Don't show on admin pages
-  const isAdmin = location.pathname.startsWith("/admin");
+  // Only show on public storefront pages
+  const isPublicStorefront = ["/", "/produtos"].includes(location.pathname) || location.pathname.startsWith("/produto/");
 
   useEffect(() => {
-    if (!enabled || isAdmin) return;
+    if (!enabled || !isPublicStorefront) return;
     if (sessionStorage.getItem("popup-dismissed")) return;
 
     const timer = setTimeout(() => setOpen(true), delay * 1000);
     return () => clearTimeout(timer);
-  }, [enabled, delay, isAdmin]);
+  }, [enabled, delay, isPublicStorefront]);
 
-  // Re-trigger on route change (e.g. navigating to checkout) if not dismissed
+  // Re-trigger on route change if not dismissed
   useEffect(() => {
-    if (!enabled || isAdmin || open) return;
+    if (!enabled || !isPublicStorefront || open) return;
     if (sessionStorage.getItem("popup-dismissed")) return;
 
     const timer = setTimeout(() => setOpen(true), delay * 1000);
     return () => clearTimeout(timer);
-  }, [location.pathname, enabled, isAdmin, delay, open]);
+  }, [location.pathname, enabled, isPublicStorefront, delay, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +66,7 @@ export default function PopupBanner() {
     sessionStorage.setItem("popup-dismissed", "1");
   };
 
-  if (!enabled || isAdmin) return null;
+  if (!enabled || !isPublicStorefront) return null;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
