@@ -67,7 +67,8 @@ serve(async (req) => {
         if (extKey) {
           apiKey = extKey;
           model = overrideConfig.default_model || model;
-          if (overrideConfig.provider === "openai") apiUrl = "https://api.openai.com/v1/chat/completions";
+        if (overrideConfig.provider === "xai") apiUrl = "https://api.x.ai/v1/chat/completions";
+          else if (overrideConfig.provider === "openai") apiUrl = "https://api.openai.com/v1/chat/completions";
           else if (overrideConfig.provider === "anthropic") apiUrl = "https://api.anthropic.com/v1/messages";
         }
       }
@@ -76,7 +77,8 @@ serve(async (req) => {
       if (extKey) {
         apiKey = extKey;
         model = externalConfig.default_model || model;
-        if (externalConfig.provider === "openai") apiUrl = "https://api.openai.com/v1/chat/completions";
+        if (externalConfig.provider === "xai") apiUrl = "https://api.x.ai/v1/chat/completions";
+        else if (externalConfig.provider === "openai") apiUrl = "https://api.openai.com/v1/chat/completions";
         else if (externalConfig.provider === "anthropic") apiUrl = "https://api.anthropic.com/v1/messages";
       }
     }

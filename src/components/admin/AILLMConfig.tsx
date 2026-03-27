@@ -27,6 +27,13 @@ const PROVIDERS = [
     { value: "openai/gpt-5", label: "GPT-5" },
     { value: "openai/gpt-5-mini", label: "GPT-5 Mini" },
   ]},
+  { value: "xai", label: "xAI (Grok)", models: [
+    { value: "grok-3", label: "Grok 3" },
+    { value: "grok-3-fast", label: "Grok 3 Fast" },
+    { value: "grok-3-mini", label: "Grok 3 Mini" },
+    { value: "grok-3-mini-fast", label: "Grok 3 Mini Fast" },
+    { value: "grok-2", label: "Grok 2" },
+  ]},
   { value: "openai", label: "OpenAI", models: [
     { value: "gpt-4o", label: "GPT-4o" },
     { value: "gpt-4o-mini", label: "GPT-4o Mini" },
@@ -128,7 +135,7 @@ export default function AILLMConfig() {
             <div className="space-y-2">
               <Label>Nome do Secret (API Key)</Label>
               <Input
-                placeholder={form.provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY"}
+                placeholder={form.provider === "xai" ? "XAI_API_KEY" : form.provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY"}
                 value={form.api_key_name}
                 onChange={(e) => setForm({ ...form, api_key_name: e.target.value })}
               />
