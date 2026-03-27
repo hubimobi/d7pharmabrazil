@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 interface RepForm {
@@ -18,9 +19,10 @@ interface RepForm {
   email: string;
   phone: string;
   region: string;
+  pix: string;
 }
 
-const emptyForm: RepForm = { name: "", email: "", phone: "", region: "" };
+const emptyForm: RepForm = { name: "", email: "", phone: "", region: "", pix: "" };
 
 export default function RepresentativesPage() {
   const [open, setOpen] = useState(false);
@@ -29,6 +31,7 @@ export default function RepresentativesPage() {
   const [deleteDialog, setDeleteDialog] = useState<{ id: string; name: string } | null>(null);
   const [transferRepId, setTransferRepId] = useState<string>("");
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: reps, isLoading } = useQuery({
     queryKey: ["representatives"],
@@ -38,6 +41,34 @@ export default function RepresentativesPage() {
       return data;
     },
   });
+
+  // Fetch current month commissions per representative
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+  const { data: monthCommissions } = useQuery({
+    queryKey: ["rep-month-commissions", monthStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("commissions")
+        .select("representative_id, commission_value")
+        .gte("created_at", monthStart)
+        .lte("created_at", monthEnd);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const monthTotals = useMemo(() => {
+    const map = new Map<string, number>();
+    monthCommissions?.forEach((c) => {
+      map.set(c.representative_id, (map.get(c.representative_id) ?? 0) + Number(c.commission_value));
+    });
+    return map;
+  }, [monthCommissions]);
+
+  const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 
   const save = useMutation({
     mutationFn: async () => {
@@ -66,19 +97,17 @@ export default function RepresentativesPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["representatives"] });
-      toast.success("Status atualizado. Comissões futuras não serão mais geradas para representantes inativos.");
+      toast.success("Status atualizado.");
     },
   });
 
   const deleteRep = useMutation({
     mutationFn: async ({ repId, transferTo }: { repId: string; transferTo: string }) => {
-      // 1. Get commissions report before deleting
       const { data: commissions } = await supabase
         .from("commissions")
         .select("*, doctors(name), orders(customer_name, created_at, total)")
         .eq("representative_id", repId);
 
-      // 2. Generate CSV report
       if (commissions?.length) {
         const rows = [["Pedido", "Prescritor", "Valor Produtos", "Taxa", "Cashback", "Status", "Data"].join(",")];
         commissions.forEach((c: any) => {
@@ -100,14 +129,12 @@ export default function RepresentativesPage() {
         a.click();
       }
 
-      // 3. Transfer doctors to new representative
       const { error: transferError } = await supabase
         .from("doctors")
         .update({ representative_id: transferTo })
         .eq("representative_id", repId);
       if (transferError) throw transferError;
 
-      // 4. Delete the representative
       const { error } = await supabase.from("representatives").delete().eq("id", repId);
       if (error) throw error;
     },
@@ -123,7 +150,7 @@ export default function RepresentativesPage() {
 
   const openEdit = (rep: NonNullable<typeof reps>[number]) => {
     setEditId(rep.id);
-    setForm({ name: rep.name, email: rep.email, phone: rep.phone ?? "", region: rep.region ?? "" });
+    setForm({ name: rep.name, email: rep.email, phone: rep.phone ?? "", region: rep.region ?? "", pix: (rep as any).pix ?? "" });
     setOpen(true);
   };
 
@@ -162,6 +189,10 @@ export default function RepresentativesPage() {
                   <Label>Região</Label>
                   <Input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Chave PIX</Label>
+                <Input value={form.pix} onChange={(e) => setForm({ ...form, pix: e.target.value })} placeholder="CPF, email, telefone ou chave aleatória" />
               </div>
               <Button type="submit" className="w-full" disabled={save.isPending}>
                 {save.isPending ? "Salvando..." : "Salvar"}
@@ -217,23 +248,24 @@ export default function RepresentativesPage() {
                 <TableHead>Nome</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
                 <TableHead className="hidden lg:table-cell">Telefone</TableHead>
-                <TableHead className="hidden lg:table-cell">Região</TableHead>
+                <TableHead className="hidden lg:table-cell">PIX</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-32">Ações</TableHead>
+                <TableHead>Comissão do Mês</TableHead>
+                <TableHead className="w-36">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !reps?.length ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum representante cadastrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum representante cadastrado</TableCell></TableRow>
               ) : (
                 reps.map((rep) => (
                   <TableRow key={rep.id}>
                     <TableCell className="font-medium">{rep.name}</TableCell>
                     <TableCell className="hidden md:table-cell">{rep.email}</TableCell>
                     <TableCell className="hidden lg:table-cell">{rep.phone ?? "—"}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{rep.region ?? "—"}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-xs">{(rep as any).pix || "—"}</TableCell>
                     <TableCell>
                       <Badge
                         variant={rep.active ? "default" : "secondary"}
@@ -243,16 +275,18 @@ export default function RepresentativesPage() {
                         {rep.active ? "Ativo" : "Inativo"}
                       </Badge>
                     </TableCell>
+                    <TableCell className="font-semibold text-emerald-600">
+                      {fmt(monthTotals.get(rep.id) ?? 0)}
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" title="Ver Comissões" onClick={() => navigate(`/admin/representantes/${rep.id}/comissoes`)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => openEdit(rep)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteDialog({ id: rep.id, name: rep.name })}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteDialog({ id: rep.id, name: rep.name })}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
