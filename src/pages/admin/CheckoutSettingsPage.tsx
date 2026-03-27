@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save, Loader2, ShoppingCart, MessageSquareQuote, Flame, Gift, Truck, Sparkles, BarChart3 } from "lucide-react";
+import { Save, Loader2, ShoppingCart, MessageSquareQuote, Flame, Gift, Truck, Sparkles, BarChart3, CreditCard } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function CheckoutSettingsPage() {
   const { data: settings } = useStoreSettings();
@@ -22,6 +23,7 @@ export default function CheckoutSettingsPage() {
   const [showFreeShippingBar, setShowFreeShippingBar] = useState(true);
   const [metaPixelId, setMetaPixelId] = useState("");
   const [gtmId, setGtmId] = useState("");
+  const [maxInstallments, setMaxInstallments] = useState(3);
 
   useEffect(() => {
     if (!settings) return;
@@ -33,6 +35,7 @@ export default function CheckoutSettingsPage() {
     setShowFreeShippingBar((settings as any).checkout_show_free_shipping_bar ?? true);
     setMetaPixelId((settings as any).meta_pixel_id || "");
     setGtmId((settings as any).gtm_id || "");
+    setMaxInstallments((settings as any).max_installments ?? 3);
   }, [settings]);
 
   const mutation = useMutation({
@@ -48,6 +51,7 @@ export default function CheckoutSettingsPage() {
           checkout_show_free_shipping_bar: showFreeShippingBar,
           meta_pixel_id: metaPixelId,
           gtm_id: gtmId,
+          max_installments: maxInstallments,
         })
         .eq("id", settings.id);
       if (error) throw error;
@@ -93,6 +97,31 @@ export default function CheckoutSettingsPage() {
               <Switch checked={t.value} onCheckedChange={t.set} />
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <CreditCard className="h-5 w-5" /> Parcelamento
+          </CardTitle>
+          <CardDescription>Configure a quantidade máxima de parcelas sem juros exibida nos produtos.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <Label className="whitespace-nowrap">Parcelas sem juros</Label>
+            <Select value={String(maxInstallments)} onValueChange={(v) => setMaxInstallments(Number(v))}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
+                  <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">Exibido como "Parcele em até Xx sem juros" nos cards de produto.</p>
         </CardContent>
       </Card>
 
