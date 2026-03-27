@@ -297,6 +297,15 @@ const CheckoutPage = () => {
         toast.success("Cobrança Pix gerada! Escaneie o QR Code.");
         setPaymentResult(data);
         setStep(3);
+      } else if (form.paymentMethod === "boleto") {
+        toast.success("Boleto gerado com sucesso!");
+        clearCart();
+        if (data.invoice_url) {
+          window.open(data.invoice_url, "_blank");
+        }
+        if (data.order_id) {
+          navigate(`/pedido-confirmado/${data.order_id}`);
+        }
       } else {
         toast.error("Pagamento não aprovado. Verifique os dados do cartão.");
       }
