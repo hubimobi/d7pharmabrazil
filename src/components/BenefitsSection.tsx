@@ -20,7 +20,7 @@ const BenefitsSection = () => {
   const benefits = settings?.benefits_items?.length ? settings.benefits_items : defaultBenefits;
 
   return (
-    <section id="beneficios" className="bg-muted py-10 md:py-20">
+    <section id="beneficios" className="py-10 md:py-20">
       <div className="container">
         <h2 className="text-center text-xl font-bold text-foreground md:text-3xl">
           {title}
@@ -28,20 +28,22 @@ const BenefitsSection = () => {
         <p className="mx-auto mt-2 max-w-xl text-center text-sm md:text-lg text-muted-foreground">
           {subtitle}
         </p>
-        <div className="mt-8 md:mt-12 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+        <div className="mt-8 md:mt-12 grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
           {benefits.map((b, i) => {
             const IconComp = iconMap[b.icon] || Star;
             return (
               <div
                 key={i}
-                className="rounded-lg bg-card p-4 md:p-6 text-center shadow-sm animate-fade-in"
-                style={{ animationDelay: `${i * 100}ms` }}
+                className="flex items-start gap-3 md:gap-4 animate-fade-in"
+                style={{ animationDelay: `${i * 80}ms` }}
               >
-                <div className="mx-auto mb-3 md:mb-4 flex h-11 w-11 md:h-14 md:w-14 items-center justify-center rounded-full bg-trust-light">
-                  <IconComp className="h-5 w-5 md:h-7 md:w-7 text-primary" />
+                <div className="flex-shrink-0 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-xl bg-primary/10">
+                  <IconComp className="h-5 w-5 md:h-6 md:w-6 text-primary" />
                 </div>
-                <h3 className="text-xs md:text-base font-semibold text-foreground leading-tight">{b.title}</h3>
-                <p className="mt-1 md:mt-2 text-2xs md:text-sm text-muted-foreground hidden md:block">{b.desc}</p>
+                <div>
+                  <h3 className="text-xs md:text-sm font-semibold text-foreground leading-tight">{b.title}</h3>
+                  <p className="mt-0.5 text-2xs md:text-xs text-muted-foreground leading-relaxed">{b.desc}</p>
+                </div>
               </div>
             );
           })}

@@ -132,22 +132,48 @@ const ProductDetail = () => {
         </Link>
 
         <div className="grid gap-8 md:grid-cols-2">
-          {/* Image Gallery */}
           {/* Left column: Images + Description */}
           <div className="space-y-3">
-            <div className="aspect-square overflow-hidden rounded-lg bg-muted">
-              <img
-                src={selectedImage || product.image}
-                alt={product.name}
-                className="h-full w-full object-cover transition-opacity duration-200"
-              />
+            <div className="flex gap-3">
+              {/* Lateral thumbnails (desktop) */}
+              {product.extraImages.length > 0 && (
+                <div className="hidden md:flex flex-col gap-2">
+                  <button
+                    onClick={() => setSelectedImage(null)}
+                    className={`flex-shrink-0 rounded-lg border-2 overflow-hidden transition-all ${
+                      !selectedImage ? "border-primary ring-1 ring-primary/30" : "border-transparent hover:border-primary/30"
+                    }`}
+                  >
+                    <img src={product.image} alt={product.name} className="h-16 w-16 object-cover" />
+                  </button>
+                  {product.extraImages.map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedImage(img)}
+                      className={`flex-shrink-0 rounded-lg border-2 overflow-hidden transition-all ${
+                        selectedImage === img ? "border-primary ring-1 ring-primary/30" : "border-transparent hover:border-primary/30"
+                      }`}
+                    >
+                      <img src={img} alt={`${product.name} ${i + 2}`} className="h-16 w-16 object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex-1 aspect-square overflow-hidden rounded-xl bg-muted">
+                <img
+                  src={selectedImage || product.image}
+                  alt={product.name}
+                  className="h-full w-full object-cover transition-opacity duration-200"
+                />
+              </div>
             </div>
+            {/* Mobile horizontal thumbnails */}
             {product.extraImages.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 overflow-x-auto pb-1 md:hidden">
                 <button
                   onClick={() => setSelectedImage(null)}
-                  className={`flex-shrink-0 rounded-md border-2 overflow-hidden transition ${
-                    !selectedImage ? "border-primary ring-1 ring-primary/30" : "border-border hover:border-primary/50"
+                  className={`flex-shrink-0 rounded-lg border-2 overflow-hidden transition ${
+                    !selectedImage ? "border-primary ring-1 ring-primary/30" : "border-transparent"
                   }`}
                 >
                   <img src={product.image} alt={product.name} className="h-16 w-16 object-cover" />
@@ -156,8 +182,8 @@ const ProductDetail = () => {
                   <button
                     key={i}
                     onClick={() => setSelectedImage(img)}
-                    className={`flex-shrink-0 rounded-md border-2 overflow-hidden transition ${
-                      selectedImage === img ? "border-primary ring-1 ring-primary/30" : "border-border hover:border-primary/50"
+                    className={`flex-shrink-0 rounded-lg border-2 overflow-hidden transition ${
+                      selectedImage === img ? "border-primary ring-1 ring-primary/30" : "border-transparent"
                     }`}
                   >
                     <img src={img} alt={`${product.name} ${i + 2}`} className="h-16 w-16 object-cover" />
@@ -168,7 +194,7 @@ const ProductDetail = () => {
 
             {/* Descrição do produto - abaixo das fotos */}
             {product.description && (
-              <div className="mt-4 rounded-lg border border-border p-4">
+              <div className="mt-4 rounded-xl bg-muted/50 p-4 md:p-5">
                 <h2 className="text-lg font-bold text-foreground mb-3">Descrição do Produto</h2>
                 <div className={`relative overflow-hidden transition-all duration-300 ${!descExpanded ? "max-h-48" : ""}`}>
                   {product.description.startsWith("<") ? (
@@ -178,7 +204,7 @@ const ProductDetail = () => {
                     <p className="text-muted-foreground">{product.description}</p>
                   )}
                   {!descExpanded && (
-                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-muted/50 to-transparent" />
                   )}
                 </div>
                 <Button variant="ghost" size="sm" className="mt-2 gap-1 text-primary" onClick={() => setDescExpanded(!descExpanded)}>
@@ -220,10 +246,10 @@ const ProductDetail = () => {
             <div className="mt-2 flex items-center gap-2">
               <div className="flex gap-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className={`h-4 w-4 ${i < Math.floor(product.rating) ? "fill-warning text-warning" : "text-border"}`} />
+                  <Star key={i} className={`h-5 w-5 ${i < Math.floor(product.rating) ? "fill-warning text-warning" : "text-border"}`} />
                 ))}
               </div>
-              <span className="text-sm font-medium">{product.rating}</span>
+              <span className="text-base font-semibold">{product.rating}</span>
               <span className="text-sm text-muted-foreground">({displayReviews} avaliações)</span>
             </div>
 
@@ -278,7 +304,7 @@ const ProductDetail = () => {
             </div>
 
             {/* Shipping Calculator */}
-            <div className="mt-6 rounded-lg border border-border p-4">
+            <div className="mt-6 rounded-xl bg-muted/50 p-4">
               <ShippingCalculator
                 cep={shippingCep}
                 onCepChange={setShippingCep}
@@ -295,7 +321,7 @@ const ProductDetail = () => {
               />
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-4 rounded-lg bg-muted p-4 text-sm text-muted-foreground">
+            <div className="mt-4 flex flex-wrap gap-4 rounded-xl bg-muted/50 p-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-primary" /> Qualidade Comprovada</span>
               <span className="flex items-center gap-1"><Truck className="h-4 w-4 text-primary" /> Frete Grátis +R$499</span>
               <span className="flex items-center gap-1">🔒 Pagamento Seguro</span>
@@ -306,7 +332,7 @@ const ProductDetail = () => {
               <span className="text-xs text-muted-foreground">Aceitamos:</span>
               <div className="flex flex-wrap items-center gap-1.5 mt-1">
                 {["Visa", "Mastercard", "Elo", "Amex", "Pix"].map((flag) => (
-                  <span key={flag} className="inline-flex items-center gap-1 rounded border border-border bg-background px-1.5 py-0.5 text-2xs md:text-xs font-medium text-muted-foreground">
+                  <span key={flag} className="inline-flex items-center gap-1 rounded-lg bg-muted px-2 py-1 text-2xs md:text-xs font-medium text-muted-foreground">
                     <CreditCard className="h-3 w-3" /> {flag}
                   </span>
                 ))}
@@ -315,7 +341,7 @@ const ProductDetail = () => {
 
             {/* FAQ - abaixo de Aceitamos */}
             {faqs && faqs.length > 0 && (
-              <div className="mt-6 rounded-lg border border-border p-4">
+              <div className="mt-6 rounded-xl bg-muted/50 p-4 md:p-5">
                 <h2 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
                   <HelpCircle className="h-5 w-5 text-primary" /> Perguntas Frequentes
                 </h2>
