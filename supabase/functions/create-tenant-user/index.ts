@@ -36,6 +36,23 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    // TOGGLE ACTIVE (ban/unban user)
+    if (action === "toggle_active") {
+      const { user_id, active } = body;
+      if (!user_id) {
+        return new Response(JSON.stringify({ error: "user_id é obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { error: banError } = await supabase.auth.admin.updateUserById(user_id, {
+        ban_duration: active ? "none" : "876000h",
+      });
+      if (banError) {
+        return new Response(JSON.stringify({ error: banError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      return new Response(JSON.stringify({ success: true, active }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // UPDATE existing user
     if (action === "update") {
       const { user_id, full_name, role, representative_id } = body;
@@ -54,7 +71,6 @@ Deno.serve(async (req) => {
 
       // If prescriber, link to representative via doctors table
       if (role === "prescriber" && representative_id) {
-        // Check if doctor record exists for this user
         const { data: existingDoc } = await supabase.from("doctors").select("id").eq("user_id", user_id).limit(1);
         if (existingDoc && existingDoc.length > 0) {
           await supabase.from("doctors").update({ representative_id }).eq("user_id", user_id);
