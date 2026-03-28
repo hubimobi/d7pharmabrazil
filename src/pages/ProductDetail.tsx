@@ -235,6 +235,12 @@ const ProductDetail = () => {
 
             {/* ---- Desktop-only below images ---- */}
             <div className="hidden lg:block space-y-6 mt-6">
+              {/* Short Description */}
+              {product.shortDescription && (
+                <div className="rounded-xl border border-border bg-card p-4 md:p-5">
+                  <p className="text-base font-medium text-foreground leading-relaxed">{product.shortDescription}</p>
+                </div>
+              )}
               {/* Description */}
               {product.description && (
                 <div className="rounded-xl bg-muted/50 p-4 md:p-5">
@@ -474,6 +480,12 @@ const ProductDetail = () => {
 
           {/* ====== MOBILE-ONLY: Description + Benefits + Testimonials below purchase ====== */}
           <div className="order-3 lg:hidden space-y-6">
+            {/* Short Description - mobile */}
+            {product.shortDescription && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <p className="text-sm font-medium text-foreground leading-relaxed">{product.shortDescription}</p>
+              </div>
+            )}
             {/* Description */}
             {product.description && (
               <div className="rounded-xl bg-muted/50 p-4">
