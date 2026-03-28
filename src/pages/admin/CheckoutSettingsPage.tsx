@@ -126,6 +126,38 @@ export default function CheckoutSettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">Configure frete, combo, conversão e rastreamento do checkout.</p>
       </div>
 
+      {/* Versão do Checkout */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Layout className="h-5 w-5" /> Versão do Checkout
+          </CardTitle>
+          <CardDescription>Escolha qual layout de checkout será exibido para os clientes.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              { value: "v1", label: "Checkout 1 — Padrão", desc: "Layout completo com carrinho, combos, depoimentos, urgência e recomendações." },
+              { value: "v2", label: "Checkout 2 — Multi-etapas", desc: "Fluxo em 4 etapas com barra de progresso, cronômetro e sidebar de resumo." },
+              { value: "v3", label: "Checkout 3 — Simplificado", desc: "Página única e minimalista: produto, frete, dados e pagamento." },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setCheckoutVersion(opt.value)}
+                className={`rounded-xl border-2 p-4 text-left transition-all ${checkoutVersion === opt.value ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30"}`}
+              >
+                <p className="text-sm font-bold">{opt.label}</p>
+                <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
+                {checkoutVersion === opt.value && (
+                  <span className="mt-2 inline-block rounded-full bg-primary px-2.5 py-0.5 text-xs font-medium text-primary-foreground">Ativo</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Configuração de Frete */}
       <Card>
         <CardHeader>
