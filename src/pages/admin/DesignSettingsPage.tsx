@@ -394,35 +394,62 @@ export default function DesignSettingsPage() {
             <ColorInput label="Cor do Título" value={form.design_title_color || "#1a1a2e"} onChange={(v) => update("design_title_color", v)} />
             <ColorInput label="Cor do Texto" value={form.design_text_color || "#374151"} onChange={(v) => update("design_text_color", v)} />
             <ColorInput label="Cor dos Ícones" value={form.design_icon_color || "#2563eb"} onChange={(v) => update("design_icon_color", v)} />
-            <ColorInput label="Cor de Fundo do Site" value={form.design_bg_color || "#ffffff"} onChange={(v) => update("design_bg_color", v)} />
-            <ColorInput label="Cor do Rodapé" value={form.design_footer_color || "#1a1a2e"} onChange={(v) => update("design_footer_color", v)} />
             <ColorInput label="Cor do Menu de Navegação" value={navColor} onChange={(v) => update("design_nav_color" as any, v)} />
           </div>
         </div>
 
-        {/* Degradês */}
+        {/* Fundo do Site */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Degradês (Gradientes)</h2>
+          <h2 className="text-lg font-semibold">Fundo do Site</h2>
           <p className="text-sm text-muted-foreground">
-            Use degradês no fundo do site e no rodapé. Deixe em branco para usar cor sólida.
+            Escolha uma cor sólida ou um degradê para o fundo. O degradê tem prioridade quando preenchido.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
+            <ColorInput label="Cor Sólida de Fundo" value={form.design_bg_color || "#ffffff"} onChange={(v) => update("design_bg_color", v)} />
             <GradientInput
-              label="Degradê do Fundo"
+              label="Degradê de Fundo (opcional)"
               value={bgGradient}
               onChange={(v) => update("design_bg_gradient" as any, v)}
             />
+          </div>
+          {(bgGradient || form.design_bg_color) && (
+            <div className="space-y-1">
+              <Label className="text-xs">Prévia</Label>
+              <div
+                className="h-16 rounded-lg border border-border"
+                style={{ background: bgGradient || form.design_bg_color || "#ffffff" }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Rodapé do Site */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Rodapé do Site</h2>
+          <p className="text-sm text-muted-foreground">
+            Escolha uma cor sólida ou um degradê para o rodapé. O degradê tem prioridade quando preenchido.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ColorInput label="Cor Sólida do Rodapé" value={form.design_footer_color || "#1a1a2e"} onChange={(v) => update("design_footer_color", v)} />
             <GradientInput
-              label="Degradê do Rodapé"
+              label="Degradê do Rodapé (opcional)"
               value={footerGradient}
               onChange={(v) => update("design_footer_gradient" as any, v)}
             />
           </div>
+          {(footerGradient || form.design_footer_color) && (
+            <div className="space-y-1">
+              <Label className="text-xs">Prévia</Label>
+              <div
+                className="h-16 rounded-lg border border-border"
+                style={{ background: footerGradient || form.design_footer_color || "#1a1a2e" }}
+              />
+            </div>
+          )}
           <div className="text-xs text-muted-foreground space-y-1">
-            <p><strong>Exemplos:</strong></p>
+            <p><strong>Exemplos de degradê:</strong></p>
             <p className="font-mono text-[10px]">linear-gradient(135deg, #1a1a2e, #16213e)</p>
             <p className="font-mono text-[10px]">linear-gradient(to right, #0f0c29, #302b63, #24243e)</p>
-            <p className="font-mono text-[10px]">radial-gradient(circle, #1a1a2e, #0d0d1a)</p>
           </div>
         </div>
 
