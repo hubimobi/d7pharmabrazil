@@ -83,6 +83,13 @@ export type Database = {
             referencedRelation: "ai_agents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "abandoned_carts_assigned_agent_id_fkey"
+            columns: ["assigned_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       admin_notifications: {
@@ -137,6 +144,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_knowledge_bases_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents_public"
             referencedColumns: ["id"]
           },
           {
@@ -239,6 +253,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_chat_messages_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1893,6 +1914,95 @@ export type Database = {
       }
     }
     Views: {
+      ai_agents_public: {
+        Row: {
+          active: boolean | null
+          color: string | null
+          description: string | null
+          icon: string | null
+          id: string | null
+          name: string | null
+          slug: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          color?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string | null
+          name?: string | null
+          slug?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          color?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string | null
+          name?: string | null
+          slug?: string | null
+        }
+        Relationships: []
+      }
+      coupons_public: {
+        Row: {
+          active: boolean | null
+          code: string | null
+          created_at: string | null
+          description: string | null
+          discount_type: string | null
+          discount_value: number | null
+          expires_at: string | null
+          free_shipping: boolean | null
+          id: string | null
+          max_uses: number | null
+          min_order_value: number | null
+          product_id: string | null
+          starts_at: string | null
+          used_count: number | null
+        }
+        Insert: {
+          active?: boolean | null
+          code?: string | null
+          created_at?: string | null
+          description?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
+          expires_at?: string | null
+          free_shipping?: boolean | null
+          id?: string | null
+          max_uses?: number | null
+          min_order_value?: number | null
+          product_id?: string | null
+          starts_at?: string | null
+          used_count?: number | null
+        }
+        Update: {
+          active?: boolean | null
+          code?: string | null
+          created_at?: string | null
+          description?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
+          expires_at?: string | null
+          free_shipping?: boolean | null
+          id?: string | null
+          max_uses?: number | null
+          min_order_value?: number | null
+          product_id?: string | null
+          starts_at?: string | null
+          used_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctors_public: {
         Row: {
           active: boolean | null
