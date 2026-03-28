@@ -133,6 +133,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  // If modern theme, render the CRM-style layout
+  if (visualTheme === "modern") {
+    return <ModernAdminLayout>{children}</ModernAdminLayout>;
+  }
+
   const unreadCount = notifications.length;
 
   return (

@@ -43,9 +43,9 @@ const VISUAL_THEMES = [
   {
     value: "modern",
     label: "Moderno",
-    desc: "Linhas limpas, cantos suaves, sombras mínimas e blocos de cor.",
+    desc: "CRM-style: sidebar compacta (ícones), topbar com abas centralizadas, linhas limpas.",
     icon: <Layers className="h-4 w-4 text-primary" />,
-    available: false,
+    available: true,
     previewRadius: "rounded-md",
     previewRadiusSmall: "rounded",
     previewClass: "rounded-md",
