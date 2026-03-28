@@ -23,6 +23,8 @@ interface CreditCardFormProps {
   installments: number;
   onInstallmentsChange: (n: number) => void;
   total: number;
+  interestFreeLimit?: number;
+  maxTotalInstallments?: number;
 }
 
 function getMonthlyRate(n: number, interestFreeLimit: number): number {
@@ -72,13 +74,15 @@ export default function CreditCardForm({
   installments,
   onInstallmentsChange,
   total,
+  interestFreeLimit = 3,
+  maxTotalInstallments = 12,
 }: CreditCardFormProps) {
   const formatCardNumber = (value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 16);
     return digits.replace(/(.{4})/g, "$1 ").trim();
   };
 
-  const installmentOptions = getInstallmentOptions(total);
+  const installmentOptions = getInstallmentOptions(total, interestFreeLimit, maxTotalInstallments);
   const selectedOpt = installmentOptions.find((o) => o.n === installments);
 
   return (
