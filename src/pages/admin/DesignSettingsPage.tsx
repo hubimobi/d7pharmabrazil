@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Palette, Save, Loader2, FlaskConical, Truck, ShieldCheck, TrendingUp, Wand2, Sun, Moon, Building2 } from "lucide-react";
+import { Palette, Save, Loader2, FlaskConical, Truck, ShieldCheck, TrendingUp, Wand2, Sun, Moon, Building2, Layout, Layers, BookOpen } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
 import { useAdminTheme, type AdminTheme } from "@/hooks/useAdminTheme";
 
@@ -208,6 +208,7 @@ export default function DesignSettingsPage() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     mutation.mutate({
+      visual_theme: (form as any).visual_theme,
       design_title_color: form.design_title_color,
       design_text_color: form.design_text_color,
       design_icon_color: form.design_icon_color,
