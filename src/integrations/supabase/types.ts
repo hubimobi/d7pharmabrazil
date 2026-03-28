@@ -781,6 +781,13 @@ export type Database = {
             referencedRelation: "short_links"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "link_clicks_short_link_id_fkey"
+            columns: ["short_link_id"]
+            isOneToOne: false
+            referencedRelation: "short_links_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       link_conversions: {
@@ -818,6 +825,13 @@ export type Database = {
             columns: ["short_link_id"]
             isOneToOne: false
             referencedRelation: "short_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "link_conversions_short_link_id_fkey"
+            columns: ["short_link_id"]
+            isOneToOne: false
+            referencedRelation: "short_links_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1905,6 +1919,45 @@ export type Database = {
           state?: string | null
         }
         Relationships: []
+      }
+      short_links_public: {
+        Row: {
+          active: boolean | null
+          code: string | null
+          doctor_id: string | null
+          id: string | null
+          target_url: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          code?: string | null
+          doctor_id?: string | null
+          id?: string | null
+          target_url?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          code?: string | null
+          doctor_id?: string | null
+          id?: string | null
+          target_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "short_links_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "short_links_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
