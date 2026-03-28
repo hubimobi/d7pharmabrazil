@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Palette, Save, Loader2, FlaskConical, Truck, ShieldCheck, TrendingUp, Wand2, Sun, Moon, Building2 } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
@@ -191,6 +192,19 @@ export default function DesignSettingsPage() {
     toast.success(`Cor ${color} aplicada!`);
   };
 
+  const SECTION_TOGGLES = [
+    { key: "section_hero_visible", label: "Hero (Banner Principal)" },
+    { key: "section_featured_visible", label: "Produtos em Destaque" },
+    { key: "section_benefits_visible", label: "Benefícios" },
+    { key: "section_products_visible", label: "Todos os Produtos" },
+    { key: "section_testimonials_visible", label: "Depoimentos" },
+    { key: "section_promo_banners_visible", label: "Banners Promocionais" },
+    { key: "section_guarantee_visible", label: "Garantia de Satisfação" },
+    { key: "section_trust_badges_visible", label: "Selos de Confiança" },
+    { key: "section_mailing_visible", label: "Captura de Mailing" },
+    { key: "section_instagram_visible", label: "Feed Instagram" },
+  ];
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     mutation.mutate({
@@ -206,6 +220,16 @@ export default function DesignSettingsPage() {
       design_footer_gradient: (form as any).design_footer_gradient,
       design_footer_text_color: (form as any).design_footer_text_color,
       design_footer_title_color: (form as any).design_footer_title_color,
+      section_hero_visible: (form as any).section_hero_visible,
+      section_featured_visible: (form as any).section_featured_visible,
+      section_benefits_visible: (form as any).section_benefits_visible,
+      section_products_visible: (form as any).section_products_visible,
+      section_testimonials_visible: (form as any).section_testimonials_visible,
+      section_promo_banners_visible: (form as any).section_promo_banners_visible,
+      section_guarantee_visible: (form as any).section_guarantee_visible,
+      section_trust_badges_visible: (form as any).section_trust_badges_visible,
+      section_mailing_visible: (form as any).section_mailing_visible,
+      section_instagram_visible: (form as any).section_instagram_visible,
     } as any);
   };
 
@@ -246,6 +270,25 @@ export default function DesignSettingsPage() {
       </div>
 
       <form onSubmit={handleSave} className="max-w-2xl space-y-6">
+        {/* Seções da Home */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Seções da Home</h2>
+            <p className="text-sm text-muted-foreground">Escolha quais seções exibir na página inicial.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {SECTION_TOGGLES.map((s) => (
+              <div key={s.key} className="flex items-center justify-between rounded-lg border border-border p-3">
+                <Label className="text-sm font-medium cursor-pointer">{s.label}</Label>
+                <Switch
+                  checked={(form as any)[s.key] !== false}
+                  onCheckedChange={(v) => update(s.key as any, v)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Tema do Painel Admin */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <div>
