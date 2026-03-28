@@ -78,6 +78,7 @@ const App = () => (
             <RecentPurchasePopup />
             <WebchatWidget />
             <PopupBanner />
+            <FloatingCheckoutButton />
             <Routes>
               <Route path="/" element={<BlingRedirect />} />
               <Route path="/produtos" element={<ProductsPage />} />
