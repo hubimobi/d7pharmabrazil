@@ -11,6 +11,7 @@ import NotificationBar from "@/components/NotificationBar";
 import CookieConsent from "@/components/CookieConsent";
 
 const TestimonialsSection = lazy(() => import("@/components/TestimonialsSection"));
+const PromoBanners = lazy(() => import("@/components/PromoBanners"));
 const GuaranteeSection = lazy(() => import("@/components/GuaranteeSection"));
 const FinalCTA = lazy(() => import("@/components/FinalCTA"));
 const InstagramFeed = lazy(() => import("@/components/InstagramFeed"));
@@ -27,6 +28,7 @@ const Index = () => (
       <AllProducts />
       <Suspense fallback={null}>
         <TestimonialsSection />
+        <PromoBanners />
         <GuaranteeSection />
         <FinalCTA />
         <InstagramFeed />

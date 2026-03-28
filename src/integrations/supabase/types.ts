@@ -1186,6 +1186,48 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_banners: {
+        Row: {
+          active: boolean
+          bg_color: string | null
+          button_link: string
+          button_text: string
+          created_at: string
+          id: string
+          image_url: string | null
+          slot: number
+          subtitle: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          bg_color?: string | null
+          button_link?: string
+          button_text?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          slot?: number
+          subtitle?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          bg_color?: string | null
+          button_link?: string
+          button_text?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          slot?: number
+          subtitle?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       representatives: {
         Row: {
           active: boolean
