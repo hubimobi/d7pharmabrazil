@@ -479,6 +479,11 @@ const CheckoutPage = () => {
                 {(storeSettings as any)?.checkout_show_combo !== false && <ComboUpsell />}
 
                 <Button className="w-full bg-primary hover:bg-primary/90" size="lg" onClick={() => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Passo 2 — Seus Dados</Button>
+
+                {/* Aproveite e economize - after step 2 button */}
+                {(storeSettings as any)?.checkout_show_recommendations !== false && (
+                  <CartRecommendations cartItems={items} showOnlyUpsell />
+                )}
               </div>
             )}
 
