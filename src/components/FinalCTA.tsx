@@ -1,50 +1,74 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
-import { Lock, CreditCard, Truck, Package } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Mail, Loader2 } from "lucide-react";
 
 const FinalCTA = () => {
   const { data: settings } = useStoreSettings();
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const freeShippingEnabled = settings?.free_shipping_enabled ?? false;
-  const freeShippingMin = settings?.free_shipping_min_value ?? 199;
+  const bgColor = (settings as any)?.mailing_bg_color || "#1a365d";
+  const buttonColor = (settings as any)?.mailing_button_color || "#e53e3e";
+  const titleColor = (settings as any)?.mailing_title_color || "#ffffff";
+  const textColor = (settings as any)?.mailing_text_color || "#ffffffcc";
 
-  const highlights = [
-    { icon: Lock, label: "Pagamento Seguro" },
-    { icon: CreditCard, label: "Pix e Cartão" },
-    ...(freeShippingEnabled
-      ? [{ icon: Truck, label: `Frete Grátis acima de R$${freeShippingMin}` }]
-      : []),
-    { icon: Package, label: "Parcele em até 3x" },
-  ];
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("popup_leads" as any)
+        .insert({ email: email.trim(), source: "mailing_capture" } as any);
+      if (error) throw error;
+      toast.success("E-mail cadastrado com sucesso!");
+      setEmail("");
+    } catch {
+      toast.error("Erro ao cadastrar. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-secondary py-12 md:py-24">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary-foreground/5 to-transparent" />
+    <section className="relative overflow-hidden py-12 md:py-24" style={{ backgroundColor: bgColor }}>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/5 to-transparent" />
       <div className="container relative text-center">
-        <h2 className="text-2xl font-bold text-primary-foreground md:text-4xl">
-          {(settings as any)?.cta_title || "Comece sua transformação agora"}
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/10 mb-6">
+          <Mail className="h-7 w-7" style={{ color: titleColor }} />
+        </div>
+        <h2 className="text-2xl font-bold md:text-4xl" style={{ color: titleColor }}>
+          {(settings as any)?.cta_title || "Fique por dentro das novidades"}
         </h2>
-        <p className="mx-auto mt-3 max-w-lg text-primary-foreground/80 text-sm md:text-lg">
-          {(settings as any)?.cta_subtitle || "Milhares de clientes já confiam na D7 Pharma. Junte-se a eles e experimente suplementos de qualidade farmacêutica."}
+        <p className="mx-auto mt-3 max-w-lg text-sm md:text-lg" style={{ color: textColor }}>
+          {(settings as any)?.cta_subtitle || "Cadastre seu e-mail e seja o primeiro a receber promoções exclusivas e lançamentos."}
         </p>
-        <div className="mt-8 md:mt-10">
-          <Link to="/produtos">
-            <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 hover:scale-105 px-10 md:px-14 py-6 md:py-7 text-base md:text-lg font-semibold shadow-xl rounded-xl transition-transform">
-              Ver Produtos
-            </Button>
-          </Link>
-        </div>
-        <div className="mt-8 md:mt-12 flex flex-wrap justify-center gap-4 md:gap-8">
-          {highlights.map((h) => (
-            <div key={h.label} className="flex items-center gap-2 text-primary-foreground/80">
-              <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-full bg-primary-foreground/10">
-                <h.icon className="h-4 w-4 md:h-4.5 md:w-4.5" />
-              </div>
-              <span className="text-xs md:text-sm font-medium">{h.label}</span>
-            </div>
-          ))}
-        </div>
+        <form onSubmit={handleSubmit} className="mx-auto mt-8 flex max-w-md flex-col sm:flex-row gap-3">
+          <Input
+            type="email"
+            required
+            placeholder="Seu melhor e-mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50 h-12"
+          />
+          <Button
+            type="submit"
+            disabled={loading}
+            className="h-12 px-6 font-semibold text-white shadow-lg hover:opacity-90 transition-opacity whitespace-nowrap"
+            style={{ backgroundColor: buttonColor }}
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Quero receber novidades"}
+          </Button>
+        </form>
+        <p className="mt-4 text-xs" style={{ color: textColor }}>
+          Não enviamos spam. Você pode cancelar a qualquer momento.
+        </p>
       </div>
     </section>
   );
