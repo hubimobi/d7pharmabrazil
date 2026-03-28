@@ -76,11 +76,16 @@ const Footer = () => {
   }, [settings?.favicon_url]);
 
   const footerColor = settings?.design_footer_color;
+  const footerGradient = (settings as any)?.design_footer_gradient;
 
   return (
     <footer
       className="text-white/80 py-10 md:py-14"
-      style={{ backgroundColor: footerColor || "hsl(var(--foreground))" }}
+      style={{
+        ...(footerGradient
+          ? { background: footerGradient }
+          : { backgroundColor: footerColor || "hsl(var(--foreground))" }),
+      }}
     >
       <div className="container">
         <div className="grid grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr_1.2fr] gap-6 md:gap-8">
