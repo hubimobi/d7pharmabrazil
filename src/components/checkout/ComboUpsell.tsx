@@ -89,7 +89,7 @@ export default function ComboUpsell() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-lg border-2 border-primary bg-gradient-to-br from-primary/5 to-accent/5 p-5"
+      className="rounded-lg border-2 border-primary bg-gradient-to-br from-primary/5 to-accent/5 p-4 sm:p-5 overflow-hidden"
     >
       <div className="flex items-center gap-2 mb-3">
         <Flame className="h-5 w-5 text-primary" />
@@ -106,7 +106,7 @@ export default function ComboUpsell() {
 
       <p className="text-sm text-foreground mb-3">
         Leve o combo{" "}
-        <strong>{comboProducts.map((p) => p.name).join(" + ")}</strong>{" "}
+        <strong className="break-words">{comboProducts.map((p) => p.name).join(" + ")}</strong>{" "}
         e GANHE:
       </p>
 
@@ -127,11 +127,11 @@ export default function ComboUpsell() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 overflow-x-auto pb-1">
         {comboProducts.map((p) => (
-          <div key={p.id} className="flex items-center gap-2">
-            <img src={p.image} alt={p.name} className="h-12 w-12 rounded object-contain bg-muted p-1" />
-            <span className="text-xs font-medium text-muted-foreground truncate max-w-[80px]">{p.name}</span>
+          <div key={p.id} className="flex items-center gap-2 shrink-0">
+            <img src={p.image} alt={p.name} className="h-10 w-10 sm:h-12 sm:w-12 rounded object-contain bg-muted p-1" />
+            <span className="text-xs font-medium text-muted-foreground truncate max-w-[70px] sm:max-w-[80px]">{p.name}</span>
           </div>
         ))}
       </div>
@@ -151,7 +151,7 @@ export default function ComboUpsell() {
       <div className="flex gap-2">
         <Button
           onClick={handleAccept}
-          className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground font-bold text-sm"
+          className="flex-1 gap-1.5 bg-success hover:bg-success/90 text-success-foreground font-bold text-xs sm:text-sm"
           size="lg"
         >
           Quero Economizar R$ {totalSavings.toFixed(0)}
@@ -159,10 +159,10 @@ export default function ComboUpsell() {
         <Button
           onClick={() => setDismissed(true)}
           variant="secondary"
-          className="shrink-0 text-sm font-medium"
+          className="shrink-0 text-xs sm:text-sm font-medium"
           size="lg"
         >
-          Não Agora
+          Não
         </Button>
       </div>
 

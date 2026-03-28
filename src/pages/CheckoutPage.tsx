@@ -390,39 +390,45 @@ const CheckoutPage = () => {
   return (
     <div className="min-h-screen">
       <Header />
-      <main className="container px-4 sm:px-6 py-8 md:py-12">
-        <Link to="/produtos" className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
+      <main className="container px-3 sm:px-6 py-6 md:py-12">
+        <Link to="/produtos" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Continuar Comprando
         </Link>
 
-        <h1 className="text-2xl font-bold text-foreground">Checkout</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Checkout</h1>
 
         {/* Motivational step indicator */}
         {(storeSettings as any)?.checkout_show_motivation !== false && (
           <CheckoutMotivation step={step} items={items} />
         )}
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-3">
+        <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             {step === 1 && (
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold">Carrinho</h2>
                 {items.map((item) => (
-                  <div key={item.product.id} className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
-                    <img src={item.product.image} alt={item.product.name} className="h-16 w-16 rounded object-contain" />
-                    <div className="flex-1">
-                      <h3 className="text-sm font-semibold">{item.product.name}</h3>
+                  <div key={item.product.id} className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 sm:p-4 sm:items-center">
+                    <img src={item.product.image} alt={item.product.name} className="h-14 w-14 sm:h-16 sm:w-16 rounded object-contain shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold truncate">{item.product.name}</h3>
                       <p className="text-sm font-bold text-primary">R$ {item.product.price.toFixed(2).replace(".", ",")}</p>
                       {(storeSettings as any)?.checkout_show_testimonials !== false && (
                         <CartItemTestimonial productId={item.product.id} customerState={form.state || undefined} />
                       )}
+                      <div className="flex items-center gap-2 mt-2 sm:hidden">
+                        <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="rounded border border-border p-1.5 hover:bg-muted"><Minus className="h-3.5 w-3.5" /></button>
+                        <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="rounded border border-border p-1.5 hover:bg-muted"><Plus className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => removeItem(item.product.id)} className="ml-auto rounded p-1.5 text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="hidden sm:flex items-center gap-1">
                       <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="rounded p-1 hover:bg-muted"><Minus className="h-4 w-4" /></button>
                       <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
                       <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="rounded p-1 hover:bg-muted"><Plus className="h-4 w-4" /></button>
                     </div>
-                    <button onClick={() => removeItem(item.product.id)} className="rounded p-1 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => removeItem(item.product.id)} className="hidden sm:block rounded p-1 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 ))}
 
@@ -455,9 +461,9 @@ const CheckoutPage = () => {
                 })()}
 
                 <div className="flex gap-2">
-                  <Input placeholder="Cupom de desconto" value={couponInput} onChange={(e) => setCouponInput(e.target.value)} className="max-w-xs" />
-                  <Button variant="outline" size="sm" className="gap-1" onClick={() => applyCoupon(couponInput)}>
-                    <Tag className="h-4 w-4" /> {coupon ? "Reaplicar" : "Aplicar"}
+                  <Input placeholder="Cupom de desconto" value={couponInput} onChange={(e) => setCouponInput(e.target.value)} className="flex-1 min-w-0" />
+                  <Button variant="outline" size="sm" className="gap-1 shrink-0" onClick={() => applyCoupon(couponInput)}>
+                    <Tag className="h-4 w-4" /> <span className="hidden xs:inline">{coupon ? "Reaplicar" : "Aplicar"}</span><span className="xs:hidden">OK</span>
                   </Button>
                 </div>
 
@@ -645,13 +651,13 @@ const CheckoutPage = () => {
           </div>
 
           {step <= 2 && (
-            <div className="rounded-lg border border-border bg-card p-6">
+             <div className="rounded-lg border border-border bg-card p-4 sm:p-6">
               <h3 className="text-base lg:text-lg font-semibold">Resumo do Pedido</h3>
-              <div className="mt-4 space-y-2 text-sm lg:text-base">
+              <div className="mt-3 space-y-2 text-sm">
                 {items.map((item) => (
-                  <div key={item.product.id} className="flex justify-between">
-                    <span className="text-muted-foreground">{item.product.name} x{item.quantity}</span>
-                    <span>R$ {(item.product.price * item.quantity).toFixed(2).replace(".", ",")}</span>
+                  <div key={item.product.id} className="flex justify-between gap-2">
+                    <span className="text-muted-foreground truncate">{item.product.name} x{item.quantity}</span>
+                    <span className="shrink-0">R$ {(item.product.price * item.quantity).toFixed(2).replace(".", ",")}</span>
                   </div>
                 ))}
                 <div className="border-t border-border pt-2">
