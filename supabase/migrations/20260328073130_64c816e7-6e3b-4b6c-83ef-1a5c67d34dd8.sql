@@ -1,0 +1,31 @@
+
+-- Fix views to use SECURITY INVOKER (safe pattern)
+DROP VIEW IF EXISTS public.coupons_public;
+CREATE VIEW public.coupons_public 
+WITH (security_invoker = true) AS
+SELECT 
+  id, code, description, discount_type, discount_value, 
+  free_shipping, min_order_value, max_uses, used_count,
+  active, starts_at, expires_at, product_id, created_at
+FROM public.coupons
+WHERE active = true;
+
+DROP VIEW IF EXISTS public.ai_agents_public;
+CREATE VIEW public.ai_agents_public
+WITH (security_invoker = true) AS
+SELECT id, name, slug, description, icon, color, active
+FROM public.ai_agents
+WHERE active = true;
+
+-- Re-add restricted SELECT policies on base tables so views can read through them
+CREATE POLICY "Public can view safe coupon fields via view"
+ON public.coupons FOR SELECT TO anon, authenticated
+USING (active = true);
+
+CREATE POLICY "Public can view safe agent fields via view"
+ON public.ai_agents FOR SELECT TO anon, authenticated
+USING (active = true);
+
+-- Grant SELECT on views to anon and authenticated
+GRANT SELECT ON public.coupons_public TO anon, authenticated;
+GRANT SELECT ON public.ai_agents_public TO anon, authenticated;

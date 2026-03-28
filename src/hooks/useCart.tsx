@@ -105,11 +105,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     try {
       const { data, error } = await supabase
-        .from("coupons")
+        .from("coupons_public" as any)
         .select("*")
         .eq("code", upper)
         .eq("active", true)
-        .single();
+        .single() as { data: any; error: any };
 
       if (error || !data) {
         toast.error("Cupom inválido");
