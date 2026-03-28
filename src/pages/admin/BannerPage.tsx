@@ -842,8 +842,6 @@ export default function BannerPage() {
       {/* Banners Promocionais */}
       <PromoBannersAdmin />
 
-      {/* Popup de Vendas Recentes */}
-      <SalesPopupSettings settings={settings} />
 
       {/* Crop Dialog */}
       {cropDialog && (
