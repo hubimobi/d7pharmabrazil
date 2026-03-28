@@ -60,6 +60,36 @@ export default function StoreSettingsPage() {
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const [cropOpen, setCropOpen] = useState(false);
   const [cropImageUrl, setCropImageUrl] = useState("");
+  const [removingLogoBg, setRemovingLogoBg] = useState<string | null>(null);
+
+  const handleRemoveLogoBg = useCallback(async (type: "logo" | "horizontal_logo") => {
+    const field = type === "logo" ? "logo_url" : "horizontal_logo_url";
+    const imageUrl = form?.[field as keyof StoreSettings] as string;
+    if (!imageUrl) return;
+    setRemovingLogoBg(type);
+    try {
+      const { data, error } = await supabase.functions.invoke("remove-background", {
+        body: { image_url: imageUrl },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const binary = atob(data.image_base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "image/png" });
+      const filePath = `${type.replace("_", "-")}-nobg.png`;
+      await supabase.storage.from("store-assets").remove([filePath]);
+      const { error: uploadError } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(filePath);
+      updateField(field as keyof StoreSettings, urlData.publicUrl + "?t=" + Date.now());
+      toast.success("Fundo removido com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao remover fundo: " + err.message);
+    } finally {
+      setRemovingLogoBg(null);
+    }
+  }, [form, updateField]);
 
   const updateField = useCallback((field: keyof StoreSettings, value: any) =>
     setForm((prev) => prev ? { ...prev, [field]: value } : prev), []);
