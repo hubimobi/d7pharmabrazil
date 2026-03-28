@@ -22,26 +22,26 @@ const ProductCard = ({ product }: { product: Product }) => {
   const hasFreeShipping = freeShippingEnabled && product.price >= freeShippingMin;
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl bg-card shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+    <div className="group relative flex flex-col overflow-hidden rounded-2xl bg-card shadow-elegant transition-all duration-500 hover:shadow-elevated hover:-translate-y-1">
       {/* Discount pill */}
       {discountPercent > 0 && (
-        <span className="absolute left-2 top-2 z-10 rounded-full bg-success px-2 py-0.5 text-2xs md:text-xs font-bold text-success-foreground">
+        <span className="absolute left-3 top-3 z-10 rounded-full bg-success px-2.5 py-0.5 text-[10.4px] font-bold uppercase tracking-wide text-success-foreground">
           -{discountPercent}%
         </span>
       )}
       {product.badge && (
-        <Badge className="absolute right-2 top-2 z-10 bg-secondary text-secondary-foreground text-2xs md:text-xs">{product.badge}</Badge>
+        <Badge className="absolute right-3 top-3 z-10 bg-secondary text-secondary-foreground text-[10.4px]">{product.badge}</Badge>
       )}
       {product.stock <= 10 && (
-         <span className="absolute right-2 top-10 z-10 animate-pulse-soft rounded-full bg-destructive px-2 py-0.5 text-2xs font-bold text-destructive-foreground">
-           Últimas {product.stock}!
-         </span>
+        <span className="absolute right-3 top-11 z-10 animate-pulse-soft rounded-full bg-destructive px-2.5 py-0.5 text-[10.4px] font-bold text-destructive-foreground">
+          Últimas {product.stock}!
+        </span>
       )}
-      <Link to={`/produto/${product.slug}`} className="relative block aspect-square overflow-hidden bg-muted">
+      <Link to={`/produto/${product.slug}`} className="relative block aspect-square overflow-hidden bg-muted rounded-2xl">
         <img
           src={product.image}
           alt={product.name}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           loading="lazy"
           width={400}
           height={400}
@@ -54,12 +54,12 @@ const ProductCard = ({ product }: { product: Product }) => {
           <span className="text-2xs md:text-xs text-muted-foreground">({product.reviews < 500 ? product.reviews + 500 : product.reviews})</span>
         </div>
         <Link to={`/produto/${product.slug}`}>
-          <h3 className="mt-1 text-xs md:text-sm font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</h3>
+          <h3 className="mt-1.5 text-xs md:text-sm font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</h3>
         </Link>
         <p className="mt-1 hidden md:block text-[13px] text-muted-foreground line-clamp-2">{product.shortDescription}</p>
-        <div className="mt-auto pt-2 md:pt-3">
+        <div className="mt-auto pt-3">
           <div className="flex items-baseline gap-1.5 md:gap-2">
-            <span className="text-base md:text-xl font-bold text-foreground">
+            <span className="text-base md:text-xl font-bold text-foreground font-display">
               R$ {product.price.toFixed(2).replace(".", ",")}
             </span>
             <span className="text-2xs md:text-xs text-muted-foreground line-through">
@@ -83,9 +83,9 @@ const ProductCard = ({ product }: { product: Product }) => {
             </span>
           )}
           {product.showCountdown && <CountdownTimer label="Oferta expira em" className="mt-2" />}
-          <div className="mt-2 flex flex-col gap-1.5">
+          <div className="mt-3 flex flex-col gap-1.5">
             <Button
-              className="w-full gap-1 text-xs md:text-sm rounded-lg"
+              className="w-full gap-1.5 text-[11.2px] uppercase tracking-wide font-semibold rounded-full"
               size="sm"
               onClick={() => {
                 addItem(product);
@@ -97,7 +97,7 @@ const ProductCard = ({ product }: { product: Product }) => {
               <span className="hidden md:inline">Adicionar ao Carrinho</span>
             </Button>
             <Button
-              className="hidden md:flex w-full gap-1 bg-success hover:bg-success/90 text-success-foreground rounded-lg"
+              className="hidden md:flex w-full gap-1.5 bg-success hover:bg-success/90 text-success-foreground rounded-full text-[11.2px] uppercase tracking-wide font-semibold"
               size="sm"
               onClick={() => {
                 addItem(product);
@@ -108,7 +108,7 @@ const ProductCard = ({ product }: { product: Product }) => {
               Compra Rápida
             </Button>
           </div>
-          <p className="mt-1.5 text-center text-2xs md:text-xs text-muted-foreground font-medium">📦 Envio em até 24h úteis</p>
+          <p className="mt-2 text-center text-2xs md:text-xs text-muted-foreground font-medium">📦 Envio em até 24h úteis</p>
         </div>
       </div>
       <UpsellDialog open={showUpsell} onOpenChange={setShowUpsell} product={product} onAddMore={(extra) => addItem(product, extra)} />

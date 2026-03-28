@@ -17,12 +17,12 @@ const TrustBadges = () => {
   ];
 
   return (
-    <section className="py-6 md:py-8">
+    <section className="py-8 md:py-12">
       <div className="container">
         <div className="flex flex-wrap justify-center gap-4 md:gap-8">
           {highlights.map((h) => (
-            <div key={h.label} className="flex items-center gap-2 text-muted-foreground">
-              <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-full bg-muted">
+            <div key={h.label} className="flex items-center gap-2.5 text-muted-foreground group">
+              <div className="flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full bg-muted transition-transform duration-300 group-hover:scale-110">
                 <h.icon className="h-4 w-4 md:h-[18px] md:w-[18px]" />
               </div>
               <span className="text-xs md:text-sm font-medium">{h.label}</span>

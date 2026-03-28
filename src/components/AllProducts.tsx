@@ -28,14 +28,15 @@ const AllProducts = () => {
   const hasMore = visibleCount < filtered.length;
 
   return (
-    <section className="py-10 md:py-20">
+    <section className="py-12 md:py-24">
       <div className="container">
         <div className="flex flex-col gap-4">
           <div>
-            <h2 className="text-xl font-bold text-foreground md:text-3xl">
+            <span className="label-section text-muted-foreground mb-2 block">Catálogo</span>
+            <h2 className="heading-section text-foreground">
               Todos os Produtos
             </h2>
-            <p className="mt-1 text-sm md:text-base text-muted-foreground">
+            <p className="mt-2 text-base md:text-lg text-muted-foreground">
               Conheça nossa linha completa de suplementos
             </p>
           </div>
@@ -43,9 +44,9 @@ const AllProducts = () => {
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
               <button
                 onClick={() => { setGroupFilter("all"); setVisibleCount(PAGE_SIZE); }}
-                className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+                className={`flex-shrink-0 rounded-full px-5 py-2 text-[11.2px] font-semibold uppercase tracking-wide transition-all ${
                   groupFilter === "all"
-                    ? "bg-primary text-primary-foreground shadow-sm"
+                    ? "bg-foreground text-background shadow-sm"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
               >
@@ -55,9 +56,9 @@ const AllProducts = () => {
                 <button
                   key={g}
                   onClick={() => { setGroupFilter(g); setVisibleCount(PAGE_SIZE); }}
-                  className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all whitespace-nowrap ${
+                  className={`flex-shrink-0 rounded-full px-5 py-2 text-[11.2px] font-semibold uppercase tracking-wide transition-all whitespace-nowrap ${
                     groupFilter === g
-                      ? "bg-primary text-primary-foreground shadow-sm"
+                      ? "bg-foreground text-background shadow-sm"
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
                   }`}
                 >
@@ -69,25 +70,25 @@ const AllProducts = () => {
         </div>
 
         {isLoading ? (
-          <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+          <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
             {Array.from({ length: PAGE_SIZE }).map((_, i) => <ProductCardSkeleton key={i} />)}
           </div>
         ) : (
           <>
-            <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+            <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {visible.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
             </div>
             {hasMore && (
-              <div className="mt-8 text-center">
-                <Button variant="outline" size="lg" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)} className="gap-2 rounded-xl">
+              <div className="mt-10 text-center">
+                <Button variant="outline" size="lg" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)} className="gap-2 rounded-full text-[11.2px] uppercase tracking-wide font-semibold px-8">
                   <ChevronDown className="h-4 w-4" /> Carregar Mais
                 </Button>
               </div>
             )}
             {!isLoading && filtered.length === 0 && (
-              <p className="mt-12 text-center text-muted-foreground">Nenhum produto encontrado.</p>
+              <p className="mt-16 text-center text-muted-foreground">Nenhum produto encontrado.</p>
             )}
           </>
         )}

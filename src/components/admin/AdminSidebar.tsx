@@ -111,16 +111,16 @@ export function AdminSidebar() {
       <SidebarHeader className="px-4 py-5">
         {!collapsed ? (
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
+            <div className="h-9 w-9 rounded-2xl bg-sidebar-primary flex items-center justify-center">
               <span className="text-sidebar-primary-foreground font-bold text-sm">D7</span>
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-sidebar-accent-foreground">D7 Pharma</h2>
-              <p className="text-2xs text-sidebar-foreground">Painel Administrativo</p>
+              <h2 className="text-sm font-semibold font-display text-sidebar-accent-foreground">D7 Pharma</h2>
+              <p className="text-[10.4px] uppercase tracking-wide text-sidebar-foreground">Painel Administrativo</p>
             </div>
           </div>
         ) : (
-          <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center mx-auto">
+          <div className="h-9 w-9 rounded-2xl bg-sidebar-primary flex items-center justify-center mx-auto">
             <span className="text-sidebar-primary-foreground font-bold text-xs">D7</span>
           </div>
         )}
@@ -129,9 +129,9 @@ export function AdminSidebar() {
       <SidebarSeparator />
 
       <SidebarContent className="px-2">
-        {sections.map((section, idx) => (
+        {sections.map((section) => (
           <SidebarGroup key={section.label}>
-            <SidebarGroupLabel className="text-2xs uppercase tracking-widest text-sidebar-foreground/50 font-medium px-3 mb-1">
+            <SidebarGroupLabel className="label-section text-sidebar-foreground/40 px-3 mb-1">
               {!collapsed && section.label}
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -146,7 +146,7 @@ export function AdminSidebar() {
                         <NavLink
                           to={item.url}
                           end={item.url === "/admin"}
-                          className="rounded-lg transition-colors text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                          className="rounded-xl transition-colors text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                           activeClassName="!bg-sidebar-primary !text-sidebar-primary-foreground font-medium"
                         >
                           <item.icon className="mr-2 h-4 w-4 shrink-0" />
@@ -167,20 +167,20 @@ export function AdminSidebar() {
       <SidebarFooter className="px-3 py-4">
         {!collapsed ? (
           <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8 border border-sidebar-border">
-              <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-medium">
+            <Avatar className="h-9 w-9 border border-sidebar-border rounded-xl">
+              <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-medium rounded-xl">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-sidebar-accent-foreground truncate">{user?.email}</p>
             </div>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-sidebar-foreground hover:text-sidebar-accent-foreground shrink-0" onClick={signOut}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-sidebar-foreground hover:text-sidebar-accent-foreground shrink-0 rounded-xl" onClick={signOut}>
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
         ) : (
-          <Button variant="ghost" size="icon" className="w-full text-sidebar-foreground hover:text-sidebar-accent-foreground" onClick={signOut}>
+          <Button variant="ghost" size="icon" className="w-full text-sidebar-foreground hover:text-sidebar-accent-foreground rounded-xl" onClick={signOut}>
             <LogOut className="h-4 w-4" />
           </Button>
         )}

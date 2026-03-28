@@ -110,10 +110,9 @@ const HeroSection = () => {
     return { backgroundColor: banner.btn2_bg_color, borderColor: banner.btn2_bg_color, color: "#ffffff" } as React.CSSProperties;
   }, [banner?.btn2_bg_color]);
 
-  // Fallback: loading state
   if (!banner) {
     return (
-      <section className="relative overflow-hidden bg-primary/90">
+      <section className="relative overflow-hidden rounded-container mx-4 md:mx-8 mt-4 bg-primary/90">
         <div className="container relative py-20 md:py-32 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-primary-foreground">
             <Loader2 className="h-8 w-8 animate-spin" />
@@ -130,7 +129,7 @@ const HeroSection = () => {
   const badges = (banner.badges || []).slice(0, 3);
 
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative overflow-hidden rounded-container mx-4 md:mx-8 mt-4">
       <AnimatePresence mode="wait">
         <motion.div
           key={banner.id}
@@ -165,7 +164,7 @@ const HeroSection = () => {
         </motion.div>
       </AnimatePresence>
 
-      <div className="container relative py-20 md:py-32">
+      <div className="container relative py-16 md:py-28 lg:py-32">
         <div className={`flex items-center gap-8 ${banner.side_image_url ? "justify-between" : ""}`}>
           <AnimatePresence mode="wait">
             <motion.div
@@ -176,11 +175,11 @@ const HeroSection = () => {
               transition={{ duration: 0.5, delay: 0.1 }}
               className={banner.side_image_url ? "max-w-xl" : "max-w-2xl"}
             >
-              <h1 className="text-3xl font-extrabold leading-tight text-primary-foreground md:text-5xl lg:text-6xl line-clamp-3 min-h-[3.6em] md:min-h-[3.6em]">
+              <h1 className="heading-hero text-primary-foreground line-clamp-3 min-h-[3.6em] md:min-h-[3.6em]">
                 {banner.title}
               </h1>
               {banner.subtitle && (
-                <p className="mt-4 text-lg text-primary-foreground/80 md:text-xl line-clamp-3 min-h-[4.5em] md:min-h-[4.5em]">
+                <p className="mt-5 text-lg text-primary-foreground/75 md:text-xl leading-relaxed line-clamp-3 min-h-[4.5em] md:min-h-[4.5em]">
                   {banner.subtitle}
                 </p>
               )}
@@ -189,7 +188,7 @@ const HeroSection = () => {
                   <Link to={banner.button_link || "/produtos"}>
                     <Button
                       size="lg"
-                      className="text-base font-semibold px-8 transition-colors"
+                      className="text-[11.2px] font-semibold uppercase tracking-wide px-8 rounded-full transition-colors"
                       style={btn1Style}
                       onMouseEnter={(e) => {
                         if (banner.btn1_hover_color) (e.currentTarget as HTMLButtonElement).style.backgroundColor = banner.btn1_hover_color;
@@ -207,7 +206,9 @@ const HeroSection = () => {
                     <Button
                       size="lg"
                       variant={banner.btn2_bg_color ? "default" : "outline"}
-                      className={banner.btn2_bg_color ? "text-base font-semibold px-8 transition-colors" : "border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"}
+                      className={banner.btn2_bg_color
+                        ? "text-[11.2px] font-semibold uppercase tracking-wide px-8 rounded-full transition-colors"
+                        : "border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 rounded-full text-[11.2px] uppercase tracking-wide px-8"}
                       style={btn2Style}
                       onMouseEnter={(e) => {
                         if (banner.btn2_hover_color) (e.currentTarget as HTMLButtonElement).style.backgroundColor = banner.btn2_hover_color;
@@ -222,12 +223,12 @@ const HeroSection = () => {
                 )}
               </div>
               {badges.length > 0 && (
-                <div className="mt-10 flex flex-wrap gap-4">
+                <div className="mt-10 flex flex-wrap gap-3">
                   {badges.map((b) => {
                     const IconComp = ICON_MAP[b.icon] || Shield;
                     return (
-                      <div key={b.label} className="flex items-center gap-2 rounded-full bg-primary-foreground/10 px-4 py-2 text-xs font-medium text-primary-foreground backdrop-blur-sm">
-                        <IconComp className="h-4 w-4" />
+                      <div key={b.label} className="flex items-center gap-2 rounded-full glass px-4 py-2 text-[10.4px] font-semibold uppercase tracking-wide text-primary-foreground">
+                        <IconComp className="h-3.5 w-3.5" />
                         {b.label}
                       </div>
                     );
@@ -237,7 +238,6 @@ const HeroSection = () => {
             </motion.div>
           </AnimatePresence>
 
-          {/* Side Image */}
           {banner.side_image_url && (
             <AnimatePresence mode="wait">
               <motion.div
@@ -259,17 +259,16 @@ const HeroSection = () => {
         </div>
       </div>
 
-      {/* Dots indicator */}
       {activeBanners.length > 1 && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
           {activeBanners.map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrent(i)}
-              className={`h-2.5 rounded-full transition-all duration-300 ${
+              className={`h-2 rounded-full transition-all duration-300 ${
                 i === safeIndex
                   ? "w-8 bg-primary-foreground"
-                  : "w-2.5 bg-primary-foreground/40 hover:bg-primary-foreground/60"
+                  : "w-2 bg-primary-foreground/40 hover:bg-primary-foreground/60"
               }`}
             />
           ))}
