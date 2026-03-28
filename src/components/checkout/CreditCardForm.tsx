@@ -25,35 +25,34 @@ interface CreditCardFormProps {
   total: number;
 }
 
-function getMonthlyRate(n: number): number {
-  if (n <= 3) return 0;
+function getMonthlyRate(n: number, interestFreeLimit: number): number {
+  if (n <= interestFreeLimit) return 0;
   if (n <= 6) return 0.0199; // 1.99% a.m.
   return 0.0249; // 2.49% a.m.
 }
 
-function calcTotalWithInterest(total: number, n: number): number {
-  const rate = getMonthlyRate(n);
+function calcTotalWithInterest(total: number, n: number, interestFreeLimit: number): number {
+  const rate = getMonthlyRate(n, interestFreeLimit);
   if (rate === 0) return total;
-  // Price table: PMT = PV * r / (1 - (1+r)^-n)
   const pmt = total * rate / (1 - Math.pow(1 + rate, -n));
   return pmt * n;
 }
 
-export function getInstallmentOptions(total: number): InstallmentOption[] {
+export function getInstallmentOptions(total: number, interestFreeLimit = 3, maxTotal = 12): InstallmentOption[] {
   const options: InstallmentOption[] = [];
 
-  for (let n = 1; n <= 12; n++) {
+  for (let n = 1; n <= maxTotal; n++) {
     // Tier limits
     if (n > 6 && total < 500) break;
-    if (n > 3 && total < 200) break;
+    if (n > interestFreeLimit && total < 200) break;
 
-    const totalWithInterest = calcTotalWithInterest(total, n);
+    const totalWithInterest = calcTotalWithInterest(total, n, interestFreeLimit);
     const installmentValue = totalWithInterest / n;
 
     // Min installment R$20
     if (installmentValue < 20 && n > 1) break;
 
-    const rate = getMonthlyRate(n);
+    const rate = getMonthlyRate(n, interestFreeLimit);
     let label: string;
     if (rate === 0) {
       label = `${n}x de R$ ${installmentValue.toFixed(2).replace(".", ",")} sem juros`;
