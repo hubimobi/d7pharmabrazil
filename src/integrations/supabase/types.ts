@@ -1194,6 +1194,7 @@ export type Database = {
           button_text: string
           created_at: string
           id: string
+          image_bg_color: string | null
           image_url: string | null
           link_type: string
           product_slug: string | null
@@ -1209,6 +1210,7 @@ export type Database = {
           button_text?: string
           created_at?: string
           id?: string
+          image_bg_color?: string | null
           image_url?: string | null
           link_type?: string
           product_slug?: string | null
@@ -1224,6 +1226,7 @@ export type Database = {
           button_text?: string
           created_at?: string
           id?: string
+          image_bg_color?: string | null
           image_url?: string | null
           link_type?: string
           product_slug?: string | null

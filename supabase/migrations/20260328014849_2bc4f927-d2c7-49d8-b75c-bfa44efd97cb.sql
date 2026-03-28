@@ -1,0 +1,1 @@
+ALTER TABLE public.promo_banners ADD COLUMN IF NOT EXISTS image_bg_color TEXT DEFAULT '#ffdd00';
