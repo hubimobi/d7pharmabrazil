@@ -71,11 +71,6 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const { data: storeSettings } = useStoreSettings();
   const visualTheme = (storeSettings as any)?.visual_theme || "editorial";
 
-  // If modern theme, render the CRM-style layout
-  if (!loading && user && (isAdmin || isRepresentative) && visualTheme === "modern") {
-    return <ModernAdminLayout>{children}</ModernAdminLayout>;
-  }
-
   const themeOptions: { value: AdminTheme; label: string; icon: React.ReactNode }[] = [
     { value: "light", label: "Claro", icon: <Sun className="h-4 w-4" /> },
     { value: "dark", label: "Escuro", icon: <Moon className="h-4 w-4" /> },
