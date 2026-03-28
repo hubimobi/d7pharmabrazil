@@ -16,7 +16,7 @@ const FloatingCheckoutButton = () => {
   return (
     <button
       onClick={() => navigate("/checkout")}
-      className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-[hsl(var(--success))] px-5 py-3 text-sm font-bold text-[hsl(var(--success-foreground))] shadow-lg transition-all hover:scale-105 hover:shadow-xl animate-fade-in sm:bottom-6 bottom-20"
+      className="fixed bottom-6 left-6 z-40 flex items-center gap-2 rounded-full bg-[hsl(var(--success))] px-5 py-3 text-sm font-bold text-[hsl(var(--success-foreground))] shadow-lg transition-all hover:scale-105 hover:shadow-xl animate-fade-in"
       aria-label="Finalizar compra agora"
     >
       <ShoppingCart className="h-5 w-5" />
