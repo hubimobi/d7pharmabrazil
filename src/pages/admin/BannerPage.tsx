@@ -267,10 +267,17 @@ function PromoBannersAdmin() {
               )}
 
               <div>
-                <Label>Cor de Fundo</Label>
+                <Label>Cor de Fundo (Texto)</Label>
                 <div className="flex items-center gap-2">
                   <input type="color" value={banner.bg_color || "#f5f5f5"} onChange={(e) => update(banner.id, "bg_color", e.target.value)} className="h-9 w-12 rounded border cursor-pointer" />
                   <Input value={banner.bg_color || ""} onChange={(e) => update(banner.id, "bg_color", e.target.value)} className="flex-1" />
+                </div>
+              </div>
+              <div>
+                <Label>Cor de Fundo (Imagem)</Label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={banner.image_bg_color || "#ffdd00"} onChange={(e) => update(banner.id, "image_bg_color", e.target.value)} className="h-9 w-12 rounded border cursor-pointer" />
+                  <Input value={banner.image_bg_color || ""} onChange={(e) => update(banner.id, "image_bg_color", e.target.value)} className="flex-1" />
                 </div>
               </div>
               <div>
