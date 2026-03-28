@@ -78,6 +78,7 @@ const Footer = () => {
   const footerColor = settings?.design_footer_color;
   const footerGradient = (settings as any)?.design_footer_gradient;
   const footerTextColor = (settings as any)?.design_footer_text_color || "#ffffff";
+  const footerTitleColor = (settings as any)?.design_footer_title_color || "#ffffff";
 
   return (
     <footer
