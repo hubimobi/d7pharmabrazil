@@ -101,7 +101,7 @@ export default function ShippingCalculator({
   return (
     <div className="space-y-3">
       <Label className="flex items-center gap-1.5 text-base font-semibold">
-        <Truck className="h-5 w-5" /> Escolha o Envio mais rápido
+        <Truck className="h-5 w-5" /> Pesquisar Frete
       </Label>
       <div className="flex items-center gap-2">
         <Input
@@ -123,8 +123,8 @@ export default function ShippingCalculator({
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Calcular"}
         </Button>
-        <span className="text-xs sm:text-sm font-medium text-primary">📦 Postagem de Envio em até 24h úteis</span>
       </div>
+      <span className="block text-xs sm:text-sm font-medium text-primary">📦 Postagem de Envio em até 24h</span>
 
       {calculated && options.length > 0 && (
         <div className="space-y-2">
