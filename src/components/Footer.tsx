@@ -78,6 +78,7 @@ const Footer = () => {
   const footerColor = settings?.design_footer_color;
   const footerGradient = (settings as any)?.design_footer_gradient;
   const footerTextColor = (settings as any)?.design_footer_text_color || "#ffffff";
+  const footerTitleColor = (settings as any)?.design_footer_title_color || "#ffffff";
 
   return (
     <footer
@@ -97,13 +98,13 @@ const Footer = () => {
               <img src={settings.logo_url} alt={storeName} className="h-[250px] w-[250px] object-contain flex-shrink-0" />
             )}
             {!settings?.logo_url && (
-              <h3 className="text-xl font-bold text-background mb-2">{storeName}</h3>
+              <h3 className="text-xl font-bold mb-2" style={{ color: footerTitleColor }}>{storeName}</h3>
             )}
           </div>
 
           {/* Navigation */}
           <div>
-            <h4 className="text-sm font-semibold text-background">Navegação</h4>
+            <h4 className="text-sm font-semibold" style={{ color: footerTitleColor }}>Navegação</h4>
             <nav className="mt-2 md:mt-3 flex flex-col gap-1.5 md:gap-2">
               <Link to="/" className="text-sm opacity-60 hover:opacity-100">Início</Link>
               <Link to="/produtos" className="text-sm opacity-60 hover:opacity-100">Produtos</Link>
@@ -114,7 +115,7 @@ const Footer = () => {
 
           {/* Institutional */}
           <div>
-            <h4 className="text-sm font-semibold text-background">Institucional</h4>
+            <h4 className="text-sm font-semibold" style={{ color: footerTitleColor }}>Institucional</h4>
             <nav className="mt-2 md:mt-3 flex flex-col gap-1.5 md:gap-2">
               <Link to="/quem-somos" className="text-sm opacity-60 hover:opacity-100">Quem Somos</Link>
               <Link to="/politica-de-privacidade" className="text-sm opacity-60 hover:opacity-100">Privacidade</Link>
@@ -125,7 +126,7 @@ const Footer = () => {
 
           {/* Contact with icons + copy */}
           <div className="col-span-2 md:col-span-1">
-            <h4 className="text-sm font-semibold text-background">Contato</h4>
+            <h4 className="text-sm font-semibold" style={{ color: footerTitleColor }}>Contato</h4>
             <div className="mt-2 md:mt-3 flex flex-col gap-2">
               <CopyableInfo icon={Phone} text={whatsapp} label="Telefone" />
               <CopyableInfo icon={Mail} text={email} label="E-mail" />
