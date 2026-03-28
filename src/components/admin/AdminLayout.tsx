@@ -85,7 +85,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
@@ -94,9 +94,9 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   if (!user) return <Navigate to="/login" replace />;
   if (!isAdmin && !isRepresentative) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-center p-4">
+      <div className="min-h-screen flex items-center justify-center text-center p-4 bg-background">
         <div>
-          <h2 className="text-xl font-bold mb-2">Acesso negado</h2>
+          <h2 className="text-xl font-bold font-display mb-2">Acesso negado</h2>
           <p className="text-muted-foreground">Você não tem permissão para acessar esta área.</p>
         </div>
       </div>
@@ -107,10 +107,10 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full bg-background">
         <AdminSidebar />
         <div className="flex-1 flex flex-col">
-          <header className="h-14 flex items-center shadow-sm px-4 bg-background justify-between sticky top-0 z-10">
+          <header className="h-14 flex items-center px-4 md:px-6 bg-card/80 backdrop-blur-xl border-b border-border/50 justify-between sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <SidebarTrigger />
               <div className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -126,13 +126,13 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 {greeting}{user?.email ? `, ${user.email.split("@")[0]}` : ""}
               </span>
 
-              <div className="flex items-center border border-border rounded-lg p-0.5 gap-0.5">
+              <div className="flex items-center border border-border rounded-full p-0.5 gap-0.5">
                 {themeOptions.map((opt) => (
                   <Button
                     key={opt.value}
                     variant={theme === opt.value ? "default" : "ghost"}
                     size="icon"
-                    className="h-7 w-7"
+                    className="h-7 w-7 rounded-full"
                     onClick={() => setTheme(opt.value)}
                     title={opt.label}
                   >
@@ -144,7 +144,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               {isAdmin && (
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative h-9 w-9">
+                    <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full">
                       <Bell className="h-4 w-4" />
                       {unreadCount > 0 && (
                         <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center">
@@ -153,7 +153,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                       )}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0" align="end">
+                  <PopoverContent className="w-80 p-0 rounded-2xl" align="end">
                     <div className="p-3 border-b font-semibold text-sm">Notificações</div>
                     {notifications.length === 0 ? (
                       <div className="p-4 text-sm text-muted-foreground text-center">
@@ -173,7 +173,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 shrink-0"
+                              className="h-6 w-6 shrink-0 rounded-full"
                               onClick={() => markAsRead(n.id)}
                             >
                               <X className="h-3 w-3" />
@@ -187,7 +187,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               )}
             </div>
           </header>
-          <main className="flex-1 p-4 md:p-6 overflow-auto bg-muted/30">
+          <main className="flex-1 p-4 md:p-6 overflow-auto">
             {children}
           </main>
         </div>
