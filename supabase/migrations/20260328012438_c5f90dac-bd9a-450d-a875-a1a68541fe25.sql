@@ -1,0 +1,2 @@
+ALTER TABLE public.store_settings ADD COLUMN IF NOT EXISTS cta_title text DEFAULT 'Comece sua transformação agora';
+ALTER TABLE public.store_settings ADD COLUMN IF NOT EXISTS cta_subtitle text DEFAULT 'Milhares de clientes já confiam na D7 Pharma. Junte-se a eles e experimente suplementos de qualidade farmacêutica.';

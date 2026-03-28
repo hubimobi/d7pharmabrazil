@@ -1359,6 +1359,8 @@ export type Database = {
           combo_offer_label: string
           combo_offer_products: Json
           created_at: string
+          cta_subtitle: string | null
+          cta_title: string | null
           design_bg_color: string | null
           design_bg_gradient: string | null
           design_font: string | null
@@ -1467,6 +1469,8 @@ export type Database = {
           combo_offer_label?: string
           combo_offer_products?: Json
           created_at?: string
+          cta_subtitle?: string | null
+          cta_title?: string | null
           design_bg_color?: string | null
           design_bg_gradient?: string | null
           design_font?: string | null
@@ -1575,6 +1579,8 @@ export type Database = {
           combo_offer_label?: string
           combo_offer_products?: Json
           created_at?: string
+          cta_subtitle?: string | null
+          cta_title?: string | null
           design_bg_color?: string | null
           design_bg_gradient?: string | null
           design_font?: string | null
