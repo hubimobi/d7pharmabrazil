@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import ProductsPage from "./pages/ProductsPage";
 import ProductDetail from "./pages/ProductDetail";
 import CheckoutPage from "./pages/CheckoutPage";
+import CheckoutPageV2 from "./pages/CheckoutPageV2";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -81,6 +82,7 @@ const App = () => (
               <Route path="/produtos" element={<ProductsPage />} />
               <Route path="/produto/:slug" element={<ProductDetail />} />
               <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/checkout-v2" element={<CheckoutPageV2 />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
