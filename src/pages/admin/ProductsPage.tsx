@@ -88,6 +88,16 @@ export default function ProductsPage() {
 
   const save = useMutation({
     mutationFn: async () => {
+      // Validate SKU uniqueness
+      if (form.sku && form.sku.trim() !== "") {
+        const skuQuery = supabase.from("products").select("id").eq("sku", form.sku.trim());
+        if (editId) skuQuery.neq("id", editId);
+        const { data: skuCheck } = await skuQuery;
+        if (skuCheck && skuCheck.length > 0) {
+          throw new Error("SKU já está em uso por outro produto.");
+        }
+      }
+
       let image_url: string | undefined;
 
       if (imageFile) {
