@@ -272,10 +272,14 @@ export default function StoreSettingsPage() {
               {form.logo_url ? (
                 <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30">
                   <img src={form.logo_url} alt="Logo" className="h-14 object-contain" />
-                  <div className="flex gap-2 ml-auto">
+                  <div className="flex flex-wrap gap-2 ml-auto">
                     <Button type="button" variant="outline" size="sm" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
                       {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                       Trocar
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => handleRemoveLogoBg("logo")} disabled={removingLogoBg === "logo"}>
+                      {removingLogoBg === "logo" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eraser className="h-4 w-4" />}
+                      {removingLogoBg === "logo" ? "Processando..." : "Remover Fundo"}
                     </Button>
                     <Button type="button" variant="destructive" size="sm" onClick={() => handleRemoveAsset("logo")}>
                       <Trash2 className="h-4 w-4" />
