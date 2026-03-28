@@ -271,6 +271,69 @@ export default function DesignSettingsPage() {
       </div>
 
       <form onSubmit={handleSave} className="max-w-2xl space-y-6">
+        {/* Layout Visual (Tema Estrutural) */}
+        <div className="rounded-lg border-2 border-primary/20 bg-card p-6 space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Layers className="h-5 w-5 text-primary" />
+              Layout Visual
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Escolha o padrão visual completo do site — tipografia, bordas, sombras e estrutura de layout.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {VISUAL_THEMES.map((t) => {
+              const isActive = ((form as any).visual_theme || "editorial") === t.value;
+              return (
+                <label
+                  key={t.value}
+                  className={`relative flex flex-col rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                    isActive
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-lg"
+                      : "border-border hover:border-primary/30 hover:shadow-md"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="visual_theme"
+                    value={t.value}
+                    checked={isActive}
+                    onChange={() => update("visual_theme" as any, t.value)}
+                    className="sr-only"
+                  />
+                  {isActive && (
+                    <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">✓</span>
+                  )}
+                  {/* Mini preview */}
+                  <div className={`mb-3 rounded-lg border border-border overflow-hidden bg-muted/30 ${t.previewClass}`}>
+                    <div className="h-3 bg-foreground/5 border-b border-border" />
+                    <div className="p-2 space-y-1.5">
+                      <div className={`h-2 w-3/4 bg-foreground/15 ${t.previewRadiusSmall}`} />
+                      <div className={`h-1.5 w-1/2 bg-foreground/8 ${t.previewRadiusSmall}`} />
+                      <div className="flex gap-1 mt-2">
+                        <div className={`h-6 flex-1 bg-primary/15 ${t.previewRadius}`} />
+                        <div className={`h-6 flex-1 bg-primary/10 ${t.previewRadius}`} />
+                      </div>
+                    </div>
+                    <div className="h-2 bg-foreground/5 border-t border-border" />
+                  </div>
+                  <div className="flex items-center gap-2 mb-1">
+                    {t.icon}
+                    <p className="font-semibold text-sm">{t.label}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{t.desc}</p>
+                  {!t.available && (
+                    <span className="mt-2 inline-block text-2xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">
+                      Em breve
+                    </span>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Seções da Home */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <div>
