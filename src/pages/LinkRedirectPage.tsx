@@ -36,13 +36,13 @@ const LinkRedirectPage = () => {
 
     (async () => {
       // Fetch link with doctor info
-      const { data: link } = await supabase
-        .from("short_links")
+      const { data } = await supabase
+        .from("short_links_public" as any)
         .select("id, target_url, code, doctor_id")
         .eq("code", code)
-        .eq("active", true)
         .single();
 
+      const link = data as unknown as { id: string; target_url: string; code: string; doctor_id: string | null } | null;
       if (!link) { navigate("/", { replace: true }); return; }
 
       // If link has doctor_id, fetch doctor name
