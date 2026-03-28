@@ -1438,6 +1438,7 @@ export type Database = {
           checkout_show_recommendations: boolean | null
           checkout_show_testimonials: boolean | null
           checkout_show_urgency: boolean | null
+          checkout_version: string
           cnpj: string | null
           combo_offer_discount: number
           combo_offer_enabled: boolean
@@ -1563,6 +1564,7 @@ export type Database = {
           checkout_show_recommendations?: boolean | null
           checkout_show_testimonials?: boolean | null
           checkout_show_urgency?: boolean | null
+          checkout_version?: string
           cnpj?: string | null
           combo_offer_discount?: number
           combo_offer_enabled?: boolean
@@ -1688,6 +1690,7 @@ export type Database = {
           checkout_show_recommendations?: boolean | null
           checkout_show_testimonials?: boolean | null
           checkout_show_urgency?: boolean | null
+          checkout_version?: string
           cnpj?: string | null
           combo_offer_discount?: number
           combo_offer_enabled?: boolean
