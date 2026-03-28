@@ -28,6 +28,7 @@ const Index = () => (
       <AllProducts />
       <Suspense fallback={null}>
         <TestimonialsSection />
+        <PromoBanners />
         <GuaranteeSection />
         <FinalCTA />
         <InstagramFeed />
