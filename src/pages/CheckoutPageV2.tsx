@@ -743,9 +743,9 @@ const CheckoutPageV2 = () => {
 
                 {/* Testimonial */}
                 {(storeSettings as any)?.checkout_show_testimonials !== false && items[0] && (
-                  <div className="mx-4 mb-3 rounded-lg border-l-4 border-amber-400 bg-muted/50 p-3">
+                  <div className="mx-4 mb-3 rounded-lg border-l-4 border-warning bg-muted/50 p-3">
                     <div className="flex gap-0.5 mb-1">
-                      {[1,2,3,4,5].map((s) => <Star key={s} className="h-3 w-3 fill-amber-400 text-amber-400" />)}
+                      {[1,2,3,4,5].map((s) => <Star key={s} className="h-3 w-3 fill-warning text-warning" />)}
                     </div>
                     <CartItemTestimonial productId={items[0].product.id} customerState={form.state || undefined} />
                   </div>
@@ -758,7 +758,7 @@ const CheckoutPageV2 = () => {
                       <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" /> Alta demanda — poucas unidades
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> 7 pessoas visualizando agora
+                      <span className="h-1.5 w-1.5 rounded-full bg-warning" /> 7 pessoas visualizando agora
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="h-1.5 w-1.5 rounded-full bg-success" /> +183 clientes compraram este mês
