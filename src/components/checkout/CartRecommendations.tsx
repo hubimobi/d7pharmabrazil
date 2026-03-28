@@ -6,9 +6,10 @@ import { ShoppingCart, Sparkles, TrendingUp, Gift } from "lucide-react";
 
 interface CartRecommendationsProps {
   cartItems: { product: Product; quantity: number }[];
+  showOnlyUpsell?: boolean;
 }
 
-export default function CartRecommendations({ cartItems }: CartRecommendationsProps) {
+export default function CartRecommendations({ cartItems, showOnlyUpsell = false }: CartRecommendationsProps) {
   const { data: allProducts } = useProducts();
   const { addItem } = useCart();
   const cartIds = new Set(cartItems.map((i) => i.product.id));
@@ -31,8 +32,8 @@ export default function CartRecommendations({ cartItems }: CartRecommendationsPr
 
   return (
     <div className="space-y-6">
-      {/* Free shipping progress */}
-      {remaining > 0 && (
+      {/* Free shipping progress - only in full mode */}
+      {!showOnlyUpsell && remaining > 0 && (
         <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
           <p className="text-sm font-medium text-foreground flex items-center gap-2">
             <Gift className="h-4 w-4 text-primary" />
@@ -88,8 +89,8 @@ export default function CartRecommendations({ cartItems }: CartRecommendationsPr
         </div>
       )}
 
-      {/* Cross-sell: related products */}
-      {crossSell.length > 0 && (
+      {/* Cross-sell: related products - only in full mode */}
+      {!showOnlyUpsell && crossSell.length > 0 && (
         <div className="space-y-3">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Sparkles className="h-4 w-4 text-primary" />

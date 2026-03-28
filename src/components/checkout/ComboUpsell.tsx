@@ -154,7 +154,7 @@ export default function ComboUpsell() {
           className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground font-bold text-sm"
           size="lg"
         >
-          SIM, QUERO ECONOMIZAR + R$ {totalSavings.toFixed(0)}
+          Quero Economizar R$ {totalSavings.toFixed(0)}
         </Button>
         <Button
           onClick={() => setDismissed(true)}

@@ -176,11 +176,11 @@ const HeroSection = () => {
               transition={{ duration: 0.5, delay: 0.1 }}
               className={banner.side_image_url ? "max-w-xl" : "max-w-2xl"}
             >
-              <h1 className="text-3xl font-extrabold leading-tight text-primary-foreground md:text-5xl lg:text-6xl">
+              <h1 className="text-3xl font-extrabold leading-tight text-primary-foreground md:text-5xl lg:text-6xl line-clamp-3 min-h-[3.6em] md:min-h-[3.6em]">
                 {banner.title}
               </h1>
               {banner.subtitle && (
-                <p className="mt-4 text-lg text-primary-foreground/80 md:text-xl">
+                <p className="mt-4 text-lg text-primary-foreground/80 md:text-xl line-clamp-3 min-h-[4.5em] md:min-h-[4.5em]">
                   {banner.subtitle}
                 </p>
               )}

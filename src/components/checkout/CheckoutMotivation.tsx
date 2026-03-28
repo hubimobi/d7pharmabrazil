@@ -50,10 +50,10 @@ export default function CheckoutMotivation({ step, items }: Props) {
       ))}
 
       {items.length > 0 && (
-        <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 overflow-hidden">
+        <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2.5 flex-wrap">
           <Sparkles className="h-4 w-4 text-primary shrink-0" />
-          <span className="text-sm font-semibold text-primary whitespace-nowrap">
-            Você está a 1 PASSO de ter
+          <span className="text-sm font-semibold text-primary">
+            Você está a 1 PASSO de ter um suplemento com
           </span>
           <AnimatePresence mode="wait">
             <motion.span
@@ -62,7 +62,7 @@ export default function CheckoutMotivation({ step, items }: Props) {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -16, opacity: 0 }}
               transition={{ duration: 0.4 }}
-              className="text-sm font-bold text-primary truncate max-w-[200px] sm:max-w-none"
+              className="text-sm font-bold text-primary"
             >
               {allBenefits[benefitIndex]}
             </motion.span>

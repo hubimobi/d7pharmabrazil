@@ -390,7 +390,7 @@ const CheckoutPage = () => {
   return (
     <div className="min-h-screen">
       <Header />
-      <main className="container py-8 md:py-12">
+      <main className="container px-4 sm:px-6 py-8 md:py-12">
         <Link to="/produtos" className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Continuar Comprando
         </Link>
@@ -479,6 +479,11 @@ const CheckoutPage = () => {
                 {(storeSettings as any)?.checkout_show_combo !== false && <ComboUpsell />}
 
                 <Button className="w-full bg-primary hover:bg-primary/90" size="lg" onClick={() => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Passo 2 — Seus Dados</Button>
+
+                {/* Aproveite e economize - after step 2 button */}
+                {(storeSettings as any)?.checkout_show_recommendations !== false && (
+                  <CartRecommendations cartItems={items} showOnlyUpsell />
+                )}
               </div>
             )}
 

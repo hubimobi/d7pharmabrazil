@@ -46,7 +46,7 @@ import DesignTokenApplier from "./components/DesignTokenApplier";
 import TrackingScripts from "./components/TrackingScripts";
 import LinkRedirectPage from "./pages/LinkRedirectPage";
 import LinksPage from "./pages/admin/LinksPage";
-
+import ScrollToTop from "./components/ScrollToTop";
 const queryClient = new QueryClient();
 
 // Detect Bling OAuth callback and redirect to edge function
@@ -70,6 +70,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ScrollToTop />
             <DesignTokenApplier />
             <TrackingScripts />
             <RecentPurchasePopup />

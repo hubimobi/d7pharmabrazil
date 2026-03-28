@@ -87,15 +87,15 @@ const Footer = () => {
         color: footerTextColor,
         ...(footerGradient
           ? { background: footerGradient }
-          : { backgroundColor: footerColor || "hsl(var(--foreground))" }),
+          : { backgroundColor: footerColor || "#ffffff" }),
       }}
     >
       <div className="container">
         <div className="grid grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr_1.2fr] gap-6 md:gap-8">
           {/* Logo + Text in two visual columns */}
-          <div className="col-span-2 md:col-span-1 flex flex-col items-start">
+          <div className="col-span-2 md:col-span-1 flex flex-col items-center md:items-start">
             {settings?.logo_url && (
-              <img src={settings.logo_url} alt={storeName} className="h-[250px] w-[250px] object-contain flex-shrink-0" />
+              <img src={settings.logo_url} alt={storeName} className="h-[250px] w-[250px] object-contain flex-shrink-0 mx-auto md:mx-0" />
             )}
             {!settings?.logo_url && (
               <h3 className="text-xl font-bold mb-2" style={{ color: footerTitleColor }}>{storeName}</h3>
