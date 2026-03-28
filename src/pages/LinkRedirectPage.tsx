@@ -42,7 +42,7 @@ const LinkRedirectPage = () => {
         .eq("code", code)
         .single();
 
-      const link = data as { id: string; target_url: string; code: string; doctor_id: string | null } | null;
+      const link = data as unknown as { id: string; target_url: string; code: string; doctor_id: string | null } | null;
       if (!link) { navigate("/", { replace: true }); return; }
 
       // If link has doctor_id, fetch doctor name
