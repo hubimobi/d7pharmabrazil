@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Star, X, Bell, ShoppingCart } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useCart } from "@/hooks/useCart";
+import { useCartSafe } from "@/hooks/useCart";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { Product } from "@/hooks/useProducts";
 
@@ -41,7 +41,7 @@ export default function RecentPurchasePopup() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
   const isPublicStorefront = ["/", "/produtos"].includes(location.pathname) || location.pathname.startsWith("/produto/");
-  const cart = useCart();
+  const cart = useCartSafe();
   const addItem = cart?.addItem;
   const { data: popupSettings } = useStoreSettings();
 
