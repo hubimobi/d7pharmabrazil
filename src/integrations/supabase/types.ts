@@ -1454,6 +1454,10 @@ export type Database = {
           id: string
           instagram: string | null
           logo_url: string | null
+          mailing_bg_color: string | null
+          mailing_button_color: string | null
+          mailing_text_color: string | null
+          mailing_title_color: string | null
           max_installments: number
           max_total_installments: number
           meta_pixel_id: string | null
@@ -1564,6 +1568,10 @@ export type Database = {
           id?: string
           instagram?: string | null
           logo_url?: string | null
+          mailing_bg_color?: string | null
+          mailing_button_color?: string | null
+          mailing_text_color?: string | null
+          mailing_title_color?: string | null
           max_installments?: number
           max_total_installments?: number
           meta_pixel_id?: string | null
@@ -1674,6 +1682,10 @@ export type Database = {
           id?: string
           instagram?: string | null
           logo_url?: string | null
+          mailing_bg_color?: string | null
+          mailing_button_color?: string | null
+          mailing_text_color?: string | null
+          mailing_title_color?: string | null
           max_installments?: number
           max_total_installments?: number
           meta_pixel_id?: string | null
