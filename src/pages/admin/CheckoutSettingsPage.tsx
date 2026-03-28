@@ -29,6 +29,7 @@ export default function CheckoutSettingsPage() {
   const [hotjarId, setHotjarId] = useState("");
   const [maxInstallments, setMaxInstallments] = useState(3);
   const [maxTotalInstallments, setMaxTotalInstallments] = useState(12);
+  const [checkoutVersion, setCheckoutVersion] = useState("v1");
 
   // Frete
   const [freeShippingEnabled, setFreeShippingEnabled] = useState(false);
@@ -57,6 +58,7 @@ export default function CheckoutSettingsPage() {
     setHotjarId(s.hotjar_id || "");
     setMaxInstallments(s.max_installments ?? 3);
     setMaxTotalInstallments(s.max_total_installments ?? 12);
+    setCheckoutVersion(s.checkout_version || "v1");
 
     setFreeShippingEnabled(s.free_shipping_enabled ?? false);
     setFreeShippingMinValue(s.free_shipping_min_value ?? 499);
@@ -94,6 +96,7 @@ export default function CheckoutSettingsPage() {
           combo_offer_products: comboProducts,
           combo_offer_discount: comboDiscount,
           combo_offer_free_shipping: comboFreeShipping,
+          checkout_version: checkoutVersion,
         })
         .eq("id", settings.id);
       if (error) throw error;
