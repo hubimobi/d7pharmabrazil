@@ -48,6 +48,7 @@ import TrackingScripts from "./components/TrackingScripts";
 import LinkRedirectPage from "./pages/LinkRedirectPage";
 import LinksPage from "./pages/admin/LinksPage";
 import ScrollToTop from "./components/ScrollToTop";
+import FloatingCheckoutButton from "./components/FloatingCheckoutButton";
 const queryClient = new QueryClient();
 
 // Detect Bling OAuth callback and redirect to edge function
