@@ -1400,6 +1400,7 @@ export type Database = {
           instagram: string | null
           logo_url: string | null
           max_installments: number
+          max_total_installments: number
           meta_pixel_id: string | null
           notification_bar_bg_color: string | null
           notification_bar_enabled: boolean | null
@@ -1505,6 +1506,7 @@ export type Database = {
           instagram?: string | null
           logo_url?: string | null
           max_installments?: number
+          max_total_installments?: number
           meta_pixel_id?: string | null
           notification_bar_bg_color?: string | null
           notification_bar_enabled?: boolean | null
@@ -1610,6 +1612,7 @@ export type Database = {
           instagram?: string | null
           logo_url?: string | null
           max_installments?: number
+          max_total_installments?: number
           meta_pixel_id?: string | null
           notification_bar_bg_color?: string | null
           notification_bar_enabled?: boolean | null

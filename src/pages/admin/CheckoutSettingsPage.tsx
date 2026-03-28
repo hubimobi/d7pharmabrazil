@@ -28,6 +28,7 @@ export default function CheckoutSettingsPage() {
   const [gtmId, setGtmId] = useState("");
   const [hotjarId, setHotjarId] = useState("");
   const [maxInstallments, setMaxInstallments] = useState(3);
+  const [maxTotalInstallments, setMaxTotalInstallments] = useState(12);
 
   // Frete
   const [freeShippingEnabled, setFreeShippingEnabled] = useState(false);
@@ -55,6 +56,7 @@ export default function CheckoutSettingsPage() {
     setGtmId(s.gtm_id || "");
     setHotjarId(s.hotjar_id || "");
     setMaxInstallments(s.max_installments ?? 3);
+    setMaxTotalInstallments(s.max_total_installments ?? 12);
 
     setFreeShippingEnabled(s.free_shipping_enabled ?? false);
     setFreeShippingMinValue(s.free_shipping_min_value ?? 499);
@@ -83,6 +85,7 @@ export default function CheckoutSettingsPage() {
           gtm_id: gtmId,
           hotjar_id: hotjarId,
           max_installments: maxInstallments,
+          max_total_installments: maxTotalInstallments,
           free_shipping_enabled: freeShippingEnabled,
           free_shipping_min_value: freeShippingMinValue,
           free_shipping_regions: freeShippingRegions,
@@ -248,21 +251,38 @@ export default function CheckoutSettingsPage() {
           <CardTitle className="flex items-center gap-2 text-lg">
             <CreditCard className="h-5 w-5" /> Parcelamento
           </CardTitle>
-          <CardDescription>Configure a quantidade máxima de parcelas sem juros exibida nos produtos.</CardDescription>
+          <CardDescription>Configure as parcelas sem juros e o parcelamento máximo com juros (integra com Asaas).</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Label className="whitespace-nowrap">Parcelas sem juros</Label>
-            <Select value={String(maxInstallments)} onValueChange={(v) => setMaxInstallments(Number(v))}>
-              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
-                  <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label className="whitespace-nowrap">Parcelas sem juros</Label>
+              <Select value={String(maxInstallments)} onValueChange={(v) => setMaxInstallments(Number(v))}>
+                <SelectTrigger className="w-full mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">Exibido como "até Xx sem juros" nos cards de produto.</p>
+            </div>
+            <div>
+              <Label className="whitespace-nowrap">Parcelamento máximo (com juros)</Label>
+              <Select value={String(maxTotalInstallments)} onValueChange={(v) => setMaxTotalInstallments(Number(v))}>
+                <SelectTrigger className="w-full mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">Quantidade máxima de parcelas no cartão (parcelas acima de "sem juros" terão juros aplicados).</p>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">Exibido como "Parcele em até Xx sem juros" nos cards de produto.</p>
+          <p className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
+            💡 Exemplo: Se configurar 3x sem juros e máximo 12x, o cliente verá 3x sem juros + 4x a 12x com juros. Este parâmetro é enviado ao Asaas na criação do pagamento.
+          </p>
         </CardContent>
       </Card>
 
