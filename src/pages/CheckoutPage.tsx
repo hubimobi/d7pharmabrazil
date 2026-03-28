@@ -218,8 +218,8 @@ const CheckoutPage = () => {
 
       // For card with installments > 3, use total with interest
       let paymentValue = form.paymentMethod === "pix" ? pixTotal : finalTotal;
-      if (form.paymentMethod === "card" && installments > 3) {
-        const opts = getInstallmentOptions(finalTotal);
+      if (form.paymentMethod === "card" && installments > (storeSettings?.max_installments ?? 3)) {
+        const opts = getInstallmentOptions(finalTotal, storeSettings?.max_installments ?? 3, (storeSettings as any)?.max_total_installments ?? 12);
         const selected = opts.find((o) => o.n === installments);
         if (selected) paymentValue = Number(selected.totalWithInterest.toFixed(2));
       }
@@ -622,6 +622,8 @@ const CheckoutPage = () => {
                     installments={installments}
                     onInstallmentsChange={setInstallments}
                     total={finalTotal}
+                    interestFreeLimit={storeSettings?.max_installments ?? 3}
+                    maxTotalInstallments={(storeSettings as any)?.max_total_installments ?? 12}
                   />
                 )}
 
