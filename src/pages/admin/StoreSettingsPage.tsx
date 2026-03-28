@@ -62,6 +62,9 @@ export default function StoreSettingsPage() {
   const [cropImageUrl, setCropImageUrl] = useState("");
   const [removingLogoBg, setRemovingLogoBg] = useState<string | null>(null);
 
+  const updateField = useCallback((field: keyof StoreSettings, value: any) =>
+    setForm((prev) => prev ? { ...prev, [field]: value } : prev), []);
+
   const handleRemoveLogoBg = useCallback(async (type: "logo" | "horizontal_logo") => {
     const field = type === "logo" ? "logo_url" : "horizontal_logo_url";
     const imageUrl = form?.[field as keyof StoreSettings] as string;
@@ -90,9 +93,6 @@ export default function StoreSettingsPage() {
       setRemovingLogoBg(null);
     }
   }, [form, updateField]);
-
-  const updateField = useCallback((field: keyof StoreSettings, value: any) =>
-    setForm((prev) => prev ? { ...prev, [field]: value } : prev), []);
 
   const handleUploadDirect = useCallback(async (file: File, type: "logo" | "horizontal_logo" | "favicon") => {
     const setUploading = type === "logo" ? setUploadingLogo : type === "horizontal_logo" ? setUploadingHorizontalLogo : setUploadingFavicon;
