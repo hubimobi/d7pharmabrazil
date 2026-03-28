@@ -25,7 +25,7 @@ const Index = () => {
   const show = (key: string) => s?.[key] !== false;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <SEOHead title="Suplementos de Alta Performance" description="D7 Pharma Brazil — suplementos com qualidade farmacêutica para resultados reais. Frete grátis acima de R$199." />
       <NotificationBar />
       <Header />
