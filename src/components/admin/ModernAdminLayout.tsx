@@ -73,6 +73,19 @@ export function ModernAdminLayout({ children }: { children: ReactNode }) {
     : "AD";
   const userName = user?.email?.split("@")[0] || "Admin";
 
+  /** Determine which tab is active based on current path */
+  const activeTab = useMemo(() => {
+    if (location.pathname === "/admin") return "/admin";
+    const match = NAV_TABS.slice(1).find((tab) => location.pathname.startsWith(tab.path));
+    if (!match) {
+      if (["/admin/clientes", "/admin/recuperacao", "/admin/cupons", "/admin/checkout"].some(p => location.pathname.startsWith(p))) return "/admin/vendas";
+      if (["/admin/prescritores", "/admin/representantes"].some(p => location.pathname.startsWith(p))) return "/admin/produtos";
+      if (["/admin/popups", "/admin/leads", "/admin/links", "/admin/paginas"].some(p => location.pathname.startsWith(p))) return "/admin/banner";
+      if (["/admin/design", "/admin/integracoes", "/admin/usuarios", "/admin/agentes-ia"].some(p => location.pathname.startsWith(p))) return "/admin/configuracoes";
+    }
+    return match?.path || "/admin";
+  }, [location.pathname]);
+
   useEffect(() => {
     if (!isAdmin) return;
     const fetchNotifications = async () => {
@@ -86,13 +99,6 @@ export function ModernAdminLayout({ children }: { children: ReactNode }) {
     };
     fetchNotifications();
   }, [isAdmin]);
-
-  const markAsRead = async (id: string) => {
-    await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
-
-  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f4f5f7]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
