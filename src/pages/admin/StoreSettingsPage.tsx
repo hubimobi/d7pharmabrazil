@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload, Trash2, Award, Plus, X, FlaskConical, ShieldCheck, TrendingUp, Heart, Star, Zap, Clock, Eye, Gift, ThumbsUp, CheckCircle, Sparkles } from "lucide-react";
+import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload, Trash2, Award, Plus, X, FlaskConical, ShieldCheck, TrendingUp, Heart, Star, Zap, Clock, Eye, Gift, ThumbsUp, CheckCircle, Sparkles, Eraser } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
 import { useProducts } from "@/hooks/useProducts";
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
@@ -60,9 +60,39 @@ export default function StoreSettingsPage() {
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const [cropOpen, setCropOpen] = useState(false);
   const [cropImageUrl, setCropImageUrl] = useState("");
+  const [removingLogoBg, setRemovingLogoBg] = useState<string | null>(null);
 
   const updateField = useCallback((field: keyof StoreSettings, value: any) =>
     setForm((prev) => prev ? { ...prev, [field]: value } : prev), []);
+
+  const handleRemoveLogoBg = useCallback(async (type: "logo" | "horizontal_logo") => {
+    const field = type === "logo" ? "logo_url" : "horizontal_logo_url";
+    const imageUrl = form?.[field as keyof StoreSettings] as string;
+    if (!imageUrl) return;
+    setRemovingLogoBg(type);
+    try {
+      const { data, error } = await supabase.functions.invoke("remove-background", {
+        body: { image_url: imageUrl },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const binary = atob(data.image_base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "image/png" });
+      const filePath = `${type.replace("_", "-")}-nobg.png`;
+      await supabase.storage.from("store-assets").remove([filePath]);
+      const { error: uploadError } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(filePath);
+      updateField(field as keyof StoreSettings, urlData.publicUrl + "?t=" + Date.now());
+      toast.success("Fundo removido com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao remover fundo: " + err.message);
+    } finally {
+      setRemovingLogoBg(null);
+    }
+  }, [form, updateField]);
 
   const handleUploadDirect = useCallback(async (file: File, type: "logo" | "horizontal_logo" | "favicon") => {
     const setUploading = type === "logo" ? setUploadingLogo : type === "horizontal_logo" ? setUploadingHorizontalLogo : setUploadingFavicon;
@@ -242,10 +272,14 @@ export default function StoreSettingsPage() {
               {form.logo_url ? (
                 <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30">
                   <img src={form.logo_url} alt="Logo" className="h-14 object-contain" />
-                  <div className="flex gap-2 ml-auto">
+                  <div className="flex flex-wrap gap-2 ml-auto">
                     <Button type="button" variant="outline" size="sm" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo}>
                       {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                       Trocar
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => handleRemoveLogoBg("logo")} disabled={removingLogoBg === "logo"}>
+                      {removingLogoBg === "logo" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eraser className="h-4 w-4" />}
+                      {removingLogoBg === "logo" ? "Processando..." : "Remover Fundo"}
                     </Button>
                     <Button type="button" variant="destructive" size="sm" onClick={() => handleRemoveAsset("logo")}>
                       <Trash2 className="h-4 w-4" />
@@ -276,10 +310,14 @@ export default function StoreSettingsPage() {
               {form.horizontal_logo_url ? (
                 <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30">
                   <img src={form.horizontal_logo_url} alt="Logo Horizontal" className="h-10 max-w-[160px] object-contain" />
-                  <div className="flex gap-2 ml-auto">
+                  <div className="flex flex-wrap gap-2 ml-auto">
                     <Button type="button" variant="outline" size="sm" onClick={() => horizontalLogoInputRef.current?.click()} disabled={uploadingHorizontalLogo}>
                       {uploadingHorizontalLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                       Trocar
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => handleRemoveLogoBg("horizontal_logo")} disabled={removingLogoBg === "horizontal_logo"}>
+                      {removingLogoBg === "horizontal_logo" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eraser className="h-4 w-4" />}
+                      {removingLogoBg === "horizontal_logo" ? "Processando..." : "Remover Fundo"}
                     </Button>
                     <Button type="button" variant="destructive" size="sm" onClick={() => handleRemoveAsset("horizontal_logo")}>
                       <Trash2 className="h-4 w-4" />
