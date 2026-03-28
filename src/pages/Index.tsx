@@ -13,6 +13,7 @@ import CookieConsent from "@/components/CookieConsent";
 const TestimonialsSection = lazy(() => import("@/components/TestimonialsSection"));
 const PromoBanners = lazy(() => import("@/components/PromoBanners"));
 const GuaranteeSection = lazy(() => import("@/components/GuaranteeSection"));
+const TrustBadges = lazy(() => import("@/components/TrustBadges"));
 const FinalCTA = lazy(() => import("@/components/FinalCTA"));
 const InstagramFeed = lazy(() => import("@/components/InstagramFeed"));
 
@@ -30,6 +31,7 @@ const Index = () => (
         <TestimonialsSection />
         <PromoBanners />
         <GuaranteeSection />
+        <TrustBadges />
         <FinalCTA />
         <InstagramFeed />
       </Suspense>
