@@ -204,3 +204,7 @@ export function useCart() {
   if (!ctx) throw new Error("useCart must be used within CartProvider");
   return ctx;
 }
+
+export function useCartSafe() {
+  return useContext(CartContext);
+}
