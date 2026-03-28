@@ -85,18 +85,13 @@ const Footer = () => {
       <div className="container">
         <div className="grid grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr_1.2fr] gap-6 md:gap-8">
           {/* Logo + Text in two visual columns */}
-          <div className="col-span-2 md:col-span-1 flex items-start gap-4">
+          <div className="col-span-2 md:col-span-1 flex flex-col items-start">
             {settings?.logo_url && (
-              <img src={settings.logo_url} alt={storeName} className="h-20 w-auto max-w-[100px] object-contain brightness-0 invert flex-shrink-0" />
+              <img src={settings.logo_url} alt={storeName} className="h-[250px] w-[250px] object-contain flex-shrink-0" />
             )}
-            <div className="flex flex-col">
-              {!settings?.logo_url && (
-                <h3 className="text-xl font-bold text-background mb-2">{storeName}</h3>
-              )}
-              <p className="text-sm leading-relaxed opacity-70">
-                Suplementos de alta performance com qualidade farmacêutica.
-              </p>
-            </div>
+            {!settings?.logo_url && (
+              <h3 className="text-xl font-bold text-background mb-2">{storeName}</h3>
+            )}
           </div>
 
           {/* Navigation */}
@@ -157,11 +152,14 @@ const Footer = () => {
         )}
 
         {/* Security + copyright */}
-        <div className="mt-6 border-t border-background/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="mt-6 border-t border-background/10 pt-6 flex flex-col items-center gap-3">
           <div className="flex items-center gap-4 text-sm opacity-60">
             <span className="flex items-center gap-1"><Lock className="h-3.5 w-3.5" /> 100% Seguro</span>
             <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Dados Protegidos</span>
           </div>
+          <p className="text-sm opacity-70">
+            Suplementos de alta performance com qualidade farmacêutica.
+          </p>
           <p className="text-[13px] opacity-50">
             © {new Date().getFullYear()} {storeName}. Todos os direitos reservados.
           </p>
