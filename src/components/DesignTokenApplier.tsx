@@ -12,9 +12,12 @@ export default function DesignTokenApplier() {
     if (!settings) return;
     const root = document.documentElement;
 
+    // Visual theme (editorial | modern | classic)
+    const visualTheme = (settings as any).visual_theme || "editorial";
+    root.setAttribute("data-visual-theme", visualTheme);
+
     // Font
     if (settings.design_font && settings.design_font !== "Inter") {
-      // Load Google Font dynamically
       const fontId = "dynamic-font-link";
       let link = document.getElementById(fontId) as HTMLLinkElement | null;
       if (!link) {
@@ -60,6 +63,7 @@ export default function DesignTokenApplier() {
     }
 
     return () => {
+      root.removeAttribute("data-visual-theme");
       root.style.removeProperty("--font-sans");
       root.style.removeProperty("--design-bg");
       root.style.removeProperty("--design-bg-gradient");

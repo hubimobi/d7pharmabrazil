@@ -1529,6 +1529,7 @@ export type Database = {
           tenant_id: string | null
           tiktok: string | null
           updated_at: string
+          visual_theme: string
           webchat_delay_seconds: number | null
           webchat_enabled: boolean
           webchat_position: string | null
@@ -1653,6 +1654,7 @@ export type Database = {
           tenant_id?: string | null
           tiktok?: string | null
           updated_at?: string
+          visual_theme?: string
           webchat_delay_seconds?: number | null
           webchat_enabled?: boolean
           webchat_position?: string | null
@@ -1777,6 +1779,7 @@ export type Database = {
           tenant_id?: string | null
           tiktok?: string | null
           updated_at?: string
+          visual_theme?: string
           webchat_delay_seconds?: number | null
           webchat_enabled?: boolean
           webchat_position?: string | null
