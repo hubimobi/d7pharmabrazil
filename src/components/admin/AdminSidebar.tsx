@@ -1,76 +1,107 @@
-import { LayoutDashboard, Users, Stethoscope, BarChart3, LogOut, Package, DollarSign, Store, Plug, ShoppingCart, Tag, ImageIcon, Megaphone, ShoppingBag, Contact, Mail, FileText, Palette, Settings2, Sparkles, UserCog, Link2 } from "lucide-react";
+import { useState } from "react";
+import {
+  LayoutDashboard, Users, Stethoscope, BarChart3, LogOut, Package,
+  DollarSign, Store, Plug, ShoppingCart, Tag, ImageIcon, Megaphone,
+  ShoppingBag, Contact, Mail, FileText, Palette, Settings2, Sparkles,
+  UserCog, Link2, ChevronDown, ChevronRight,
+} from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
+  SidebarFooter,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: React.ElementType;
+}
 
 interface MenuSection {
-  label: string;
-  items: { title: string; url: string; icon: React.ElementType }[];
+  label?: string;
+  items?: MenuItem[];
+  groups?: { title: string; icon: React.ElementType; children: MenuItem[] }[];
 }
 
 const adminSections: MenuSection[] = [
   {
-    label: "Menu",
     items: [
       { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
     ],
   },
   {
-    label: "Vendas",
-    items: [
-      { title: "Vendas", url: "/admin/vendas", icon: ShoppingBag },
-      { title: "Clientes", url: "/admin/clientes", icon: Contact },
-      { title: "Recuperação", url: "/admin/recuperacao", icon: ShoppingCart },
-      { title: "Cupons", url: "/admin/cupons", icon: Tag },
-      { title: "Checkout", url: "/admin/checkout", icon: Settings2 },
+    label: "VENDAS",
+    groups: [
+      {
+        title: "Vendas",
+        icon: ShoppingBag,
+        children: [
+          { title: "Pedidos", url: "/admin/vendas", icon: ShoppingBag },
+          { title: "Clientes", url: "/admin/clientes", icon: Contact },
+          { title: "Recuperação", url: "/admin/recuperacao", icon: ShoppingCart },
+          { title: "Cupons", url: "/admin/cupons", icon: Tag },
+          { title: "Checkout", url: "/admin/checkout", icon: Settings2 },
+        ],
+      },
     ],
   },
   {
-    label: "Catálogo",
-    items: [
-      { title: "Produtos", url: "/admin/produtos", icon: Package },
-      { title: "Prescritores", url: "/admin/prescritores", icon: Stethoscope },
-      { title: "Representantes", url: "/admin/representantes", icon: Users },
+    label: "CATÁLOGO",
+    groups: [
+      {
+        title: "Catálogo",
+        icon: Package,
+        children: [
+          { title: "Produtos", url: "/admin/produtos", icon: Package },
+          { title: "Prescritores", url: "/admin/prescritores", icon: Stethoscope },
+          { title: "Representantes", url: "/admin/representantes", icon: Users },
+        ],
+      },
     ],
   },
   {
-    label: "Marketing",
-    items: [
-      { title: "Banners", url: "/admin/banner", icon: ImageIcon },
-      { title: "PopUps", url: "/admin/popups", icon: Megaphone },
-      { title: "Leads", url: "/admin/leads", icon: Mail },
-      { title: "Links", url: "/admin/links", icon: Link2 },
+    label: "MARKETING",
+    groups: [
+      {
+        title: "Marketing",
+        icon: Megaphone,
+        children: [
+          { title: "Banners", url: "/admin/banner", icon: ImageIcon },
+          { title: "PopUps", url: "/admin/popups", icon: Megaphone },
+          { title: "Leads", url: "/admin/leads", icon: Mail },
+          { title: "Links", url: "/admin/links", icon: Link2 },
+          { title: "Páginas", url: "/admin/paginas", icon: FileText },
+        ],
+      },
     ],
   },
   {
-    label: "Financeiro",
+    label: "FINANCEIRO",
     items: [
       { title: "Cashback", url: "/admin/comissoes", icon: DollarSign },
       { title: "Relatórios", url: "/admin/relatorios", icon: BarChart3 },
     ],
   },
   {
-    label: "Sistema",
+    label: "SISTEMA",
     items: [
       { title: "Agentes de IA", url: "/admin/agentes-ia", icon: Sparkles },
       { title: "Usuários", url: "/admin/usuarios", icon: UserCog },
-      { title: "Páginas", url: "/admin/paginas", icon: FileText },
       { title: "Configurações", url: "/admin/configuracoes", icon: Store },
       { title: "Design", url: "/admin/design", icon: Palette },
       { title: "Integrações", url: "/admin/integracoes", icon: Plug },
@@ -80,13 +111,12 @@ const adminSections: MenuSection[] = [
 
 const repSections: MenuSection[] = [
   {
-    label: "Menu",
     items: [
       { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
     ],
   },
   {
-    label: "Gestão",
+    label: "GESTÃO",
     items: [
       { title: "Meus Prescritores", url: "/admin/prescritores", icon: Stethoscope },
       { title: "Cashback", url: "/admin/comissoes", icon: DollarSign },
@@ -94,6 +124,80 @@ const repSections: MenuSection[] = [
     ],
   },
 ];
+
+function CollapsibleGroup({
+  title,
+  icon: Icon,
+  children,
+  collapsed,
+}: {
+  title: string;
+  icon: React.ElementType;
+  children: MenuItem[];
+  collapsed: boolean;
+}) {
+  const location = useLocation();
+  const isChildActive = children.some((c) => location.pathname.startsWith(c.url));
+  const [open, setOpen] = useState(isChildActive);
+
+  if (collapsed) {
+    return (
+      <>
+        {children.map((item) => {
+          const active = location.pathname.startsWith(item.url);
+          return (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton asChild isActive={active}>
+                <NavLink
+                  to={item.url}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sm"
+                  activeClassName="!bg-sidebar-primary/15 !text-sidebar-primary border-l-2 !border-sidebar-primary"
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          );
+        })}
+      </>
+    );
+  }
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 rounded-md text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
+        <span className="flex items-center gap-2.5">
+          <Icon className="h-4 w-4 shrink-0" />
+          <span>{title}</span>
+        </span>
+        {open ? (
+          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5 opacity-60" />
+        )}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pl-4 mt-0.5 space-y-0.5">
+        {children.map((item) => {
+          const active = location.pathname.startsWith(item.url);
+          return (
+            <NavLink
+              key={item.title}
+              to={item.url}
+              className={cn(
+                "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] transition-colors",
+                "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              )}
+              activeClassName="!bg-sidebar-primary/15 !text-sidebar-primary font-medium"
+            >
+              <ChevronRight className="h-3 w-3 opacity-40 shrink-0" />
+              <span>{item.title}</span>
+            </NavLink>
+          );
+        })}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 export function AdminSidebar() {
   const { state } = useSidebar();
@@ -108,81 +212,106 @@ export function AdminSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="px-4 py-5">
+      {/* Logo */}
+      <SidebarHeader className="px-4 py-4 border-b border-sidebar-border">
         {!collapsed ? (
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-2xl bg-sidebar-primary flex items-center justify-center">
-              <span className="text-sidebar-primary-foreground font-bold text-sm">D7</span>
+            <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0">
+              <span className="text-sidebar-primary-foreground font-bold text-xs">D7</span>
             </div>
-            <div>
-              <h2 className="text-sm font-semibold font-display text-sidebar-accent-foreground">D7 Pharma</h2>
-              <p className="text-[10.4px] uppercase tracking-wide text-sidebar-foreground">Painel Administrativo</p>
-            </div>
+            <span className="text-sm font-semibold text-sidebar-accent-foreground tracking-tight">D7 Pharma</span>
           </div>
         ) : (
-          <div className="h-9 w-9 rounded-2xl bg-sidebar-primary flex items-center justify-center mx-auto">
+          <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center mx-auto">
             <span className="text-sidebar-primary-foreground font-bold text-xs">D7</span>
           </div>
         )}
       </SidebarHeader>
 
-      <SidebarSeparator />
+      {/* Navigation */}
+      <SidebarContent className="px-3 py-3 overflow-y-auto">
+        {sections.map((section, sIdx) => (
+          <div key={sIdx} className={cn(sIdx > 0 && "mt-4")}>
+            {section.label && !collapsed && (
+              <p className="px-3 mb-2 text-[10px] font-semibold tracking-[0.15em] text-sidebar-foreground/40 uppercase">
+                {section.label}
+              </p>
+            )}
+            {section.label && collapsed && (
+              <div className="h-px bg-sidebar-border mx-2 mb-2" />
+            )}
 
-      <SidebarContent className="px-2">
-        {sections.map((section) => (
-          <SidebarGroup key={section.label}>
-            <SidebarGroupLabel className="label-section text-sidebar-foreground/40 px-3 mb-1">
-              {!collapsed && section.label}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {section.items.map((item) => {
-                  const active = item.url === "/admin"
+            <SidebarMenu className="space-y-0.5">
+              {/* Direct items */}
+              {section.items?.map((item) => {
+                const active =
+                  item.url === "/admin"
                     ? location.pathname === "/admin"
                     : location.pathname.startsWith(item.url);
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={active}>
-                        <NavLink
-                          to={item.url}
-                          end={item.url === "/admin"}
-                          className="rounded-xl transition-colors text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                          activeClassName="!bg-sidebar-primary !text-sidebar-primary-foreground font-medium"
-                        >
-                          <item.icon className="mr-2 h-4 w-4 shrink-0" />
-                          {!collapsed && <span className="text-sm">{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={active}>
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/admin"}
+                        className={cn(
+                          "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
+                          "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        )}
+                        activeClassName="!bg-sidebar-primary/15 !text-sidebar-primary font-medium border-l-2 !border-sidebar-primary"
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+
+              {/* Collapsible groups */}
+              {section.groups?.map((group) => (
+                <CollapsibleGroup
+                  key={group.title}
+                  title={group.title}
+                  icon={group.icon}
+                  children={group.children}
+                  collapsed={collapsed}
+                />
+              ))}
+            </SidebarMenu>
+          </div>
         ))}
       </SidebarContent>
 
-      <SidebarSeparator />
-
-      <SidebarFooter className="px-3 py-4">
+      {/* User footer */}
+      <SidebarFooter className="px-3 py-3 border-t border-sidebar-border">
         {!collapsed ? (
-          <div className="flex items-center gap-3">
-            <Avatar className="h-9 w-9 border border-sidebar-border rounded-xl">
-              <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-medium rounded-xl">
+          <div className="flex items-center gap-3 px-2">
+            <Avatar className="h-9 w-9 border border-sidebar-border shrink-0">
+              <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-medium">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-sidebar-accent-foreground truncate">{user?.email}</p>
+              <p className="text-xs font-medium text-sidebar-accent-foreground truncate">
+                {user?.email?.split("@")[0] || "Admin"}
+              </p>
+              <p className="text-[10px] text-sidebar-foreground/50 truncate">{user?.email}</p>
             </div>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-sidebar-foreground hover:text-sidebar-accent-foreground shrink-0 rounded-xl" onClick={signOut}>
+            <button
+              onClick={signOut}
+              className="p-1.5 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors shrink-0"
+            >
               <LogOut className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
         ) : (
-          <Button variant="ghost" size="icon" className="w-full text-sidebar-foreground hover:text-sidebar-accent-foreground rounded-xl" onClick={signOut}>
+          <button
+            onClick={signOut}
+            className="w-full flex items-center justify-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+          >
             <LogOut className="h-4 w-4" />
-          </Button>
+          </button>
         )}
       </SidebarFooter>
     </Sidebar>
