@@ -3,29 +3,17 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  ArrowLeft, Share2, Upload, Star, Plus, Phone, Database, CalendarDays,
-  Send, Bell, Moon, Sun, Search, X, Mail, LogOut, User, Settings,
-  LayoutDashboard,
+  LayoutDashboard, List, Grid3X3, Send, CircleDollarSign, TrendingUp,
+  Cpu, Users, Settings, Calendar, ArrowRight, ChevronRight,
+  Bell, Sun, Moon, Globe, Search, LogOut, X, LayoutGrid,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { useAdminTheme } from "@/hooks/useAdminTheme";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useAdminTheme, type AdminTheme } from "@/hooks/useAdminTheme";
-import { cn } from "@/lib/utils";
 
 interface AdminNotification {
   id: string;
@@ -36,55 +24,100 @@ interface AdminNotification {
   created_at: string;
 }
 
-/** Navigation tabs for the CRM-style topbar */
-const NAV_TABS = [
-  { label: "Dashboard", path: "/admin" },
-  { label: "Vendas", path: "/admin/vendas" },
-  { label: "Catálogo", path: "/admin/produtos" },
-  { label: "Marketing", path: "/admin/banner" },
-  { label: "Financeiro", path: "/admin/comissoes" },
-  { label: "Configurações", path: "/admin/configuracoes" },
-  { label: "Relatórios", path: "/admin/relatorios" },
+const NAV_SECTIONS = [
+  {
+    label: null,
+    items: [
+      { label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
+    ],
+  },
+  {
+    label: "VENDAS",
+    items: [
+      { label: "Vendas", icon: List, path: "/admin/vendas", hasChevron: true },
+    ],
+  },
+  {
+    label: "CATÁLOGO",
+    items: [
+      { label: "Catálogo", icon: Grid3X3, path: "/admin/produtos", hasChevron: true },
+    ],
+  },
+  {
+    label: "MARKETING",
+    items: [
+      { label: "Marketing", icon: Send, path: "/admin/banner", hasChevron: true },
+    ],
+  },
+  {
+    label: "FINANCEIRO",
+    items: [
+      { label: "Cashback", icon: CircleDollarSign, path: "/admin/comissoes" },
+      { label: "Relatórios", icon: TrendingUp, path: "/admin/relatorios" },
+    ],
+  },
+  {
+    label: "SISTEMA",
+    items: [
+      { label: "Agentes de IA", icon: Cpu, path: "/admin/agentes-ia" },
+      { label: "Usuários", icon: Users, path: "/admin/usuarios" },
+      { label: "Configurações", icon: Settings, path: "/admin/configuracoes" },
+      { label: "Design", icon: Calendar, path: "/admin/design" },
+      { label: "Integrações", icon: ArrowRight, path: "/admin/integracoes" },
+    ],
+  },
 ];
 
-/** Quick-action sidebar icons */
-const SIDEBAR_ICONS = [
-  { icon: ArrowLeft, label: "Voltar à loja", action: "navigate", path: "/" },
-  { icon: Share2, label: "Links", action: "navigate", path: "/admin/links" },
-  { icon: Upload, label: "Integrações", action: "navigate", path: "/admin/integracoes" },
-  { icon: Star, label: "Produtos", action: "navigate", path: "/admin/produtos" },
-  { icon: Plus, label: "Novo Pedido", action: "navigate", path: "/admin/vendas" },
-  { icon: Phone, label: "Recuperação", action: "navigate", path: "/admin/recuperacao" },
-  { icon: Database, label: "Leads", action: "navigate", path: "/admin/leads" },
-  { icon: CalendarDays, label: "Páginas", action: "navigate", path: "/admin/paginas" },
-  { icon: Send, label: "PopUps", action: "navigate", path: "/admin/popups" },
-  { icon: Bell, label: "Agentes IA", action: "navigate", path: "/admin/agentes-ia" },
-];
+const routeTitleMap: Record<string, string> = {
+  "/admin": "Dashboard",
+  "/admin/vendas": "Vendas",
+  "/admin/clientes": "Clientes",
+  "/admin/produtos": "Catálogo",
+  "/admin/representantes": "Representantes",
+  "/admin/prescritores": "Prescritores",
+  "/admin/comissoes": "Cashback",
+  "/admin/recuperacao": "Recuperação",
+  "/admin/cupons": "Cupons",
+  "/admin/relatorios": "Relatórios",
+  "/admin/banner": "Marketing",
+  "/admin/popups": "PopUps",
+  "/admin/leads": "Leads",
+  "/admin/paginas": "Páginas",
+  "/admin/configuracoes": "Configurações",
+  "/admin/integracoes": "Integrações",
+  "/admin/design": "Design",
+  "/admin/agentes-ia": "Agentes de IA",
+  "/admin/usuarios": "Usuários",
+  "/admin/checkout": "Checkout",
+  "/admin/links": "Links",
+};
 
 export function ModernAdminLayout({ children }: { children: ReactNode }) {
   const { user, loading, isAdmin, isRepresentative, signOut } = useAuth();
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [searchFocused, setSearchFocused] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useAdminTheme();
 
-  const initials = user?.email
-    ? user.email.substring(0, 2).toUpperCase()
-    : "AD";
+  const initials = user?.email ? user.email.substring(0, 2).toUpperCase() : "AD";
   const userName = user?.email?.split("@")[0] || "Admin";
+  const userEmail = user?.email || "";
+  const truncatedEmail = userEmail.length > 24 ? userEmail.substring(0, 24) + "..." : userEmail;
 
-  /** Determine which tab is active based on current path */
-  const activeTab = useMemo(() => {
-    if (location.pathname === "/admin") return "/admin";
-    const match = NAV_TABS.slice(1).find((tab) => location.pathname.startsWith(tab.path));
-    if (!match) {
-      if (["/admin/clientes", "/admin/recuperacao", "/admin/cupons", "/admin/checkout"].some(p => location.pathname.startsWith(p))) return "/admin/vendas";
-      if (["/admin/prescritores", "/admin/representantes"].some(p => location.pathname.startsWith(p))) return "/admin/produtos";
-      if (["/admin/popups", "/admin/leads", "/admin/links", "/admin/paginas"].some(p => location.pathname.startsWith(p))) return "/admin/banner";
-      if (["/admin/design", "/admin/integracoes", "/admin/usuarios", "/admin/agentes-ia"].some(p => location.pathname.startsWith(p))) return "/admin/configuracoes";
-    }
-    return match?.path || "/admin";
-  }, [location.pathname]);
+  const pageTitle = useMemo(() => routeTitleMap[location.pathname] || "Painel", [location.pathname]);
+
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Bom dia";
+    if (h < 18) return "Boa tarde";
+    return "Boa noite";
+  }, []);
+
+  const isActivePath = (path: string) => {
+    if (path === "/admin") return location.pathname === "/admin";
+    return location.pathname.startsWith(path);
+  };
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -107,8 +140,8 @@ export function ModernAdminLayout({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f4f5f7]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#eef0f8" }}>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: "#2563eb" }} />
       </div>
     );
   }
@@ -116,10 +149,10 @@ export function ModernAdminLayout({ children }: { children: ReactNode }) {
   if (!user) return <Navigate to="/login" replace />;
   if (!isAdmin && !isRepresentative) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-center p-4 bg-[#f4f5f7]">
+      <div className="min-h-screen flex items-center justify-center text-center p-4" style={{ background: "#eef0f8" }}>
         <div>
-          <h2 className="text-xl font-bold mb-2">Acesso negado</h2>
-          <p className="text-muted-foreground">Você não tem permissão para acessar esta área.</p>
+          <h2 className="text-xl font-bold mb-2" style={{ color: "#111827" }}>Acesso negado</h2>
+          <p style={{ color: "#9ca3af" }}>Você não tem permissão para acessar esta área.</p>
         </div>
       </div>
     );
@@ -127,127 +160,233 @@ export function ModernAdminLayout({ children }: { children: ReactNode }) {
 
   const unreadCount = notifications.length;
 
+  const glassStyle: React.CSSProperties = {
+    background: "rgba(255,255,255,0.82)",
+    backdropFilter: "blur(18px)",
+    WebkitBackdropFilter: "blur(18px)",
+    border: "1px solid rgba(0,0,0,0.07)",
+  };
+
   return (
-    <div className="min-h-screen flex bg-[#f4f5f7]">
-      {/* ===== ICON-ONLY SIDEBAR ===== */}
-      <aside className="hidden md:flex flex-col w-14 bg-card border-r border-border fixed inset-y-0 left-0 z-20">
-        {/* Top icons */}
-        <div className="flex-1 flex flex-col items-center py-3 gap-1 overflow-y-auto">
-          {SIDEBAR_ICONS.map((item, i) => {
-            const Icon = item.icon;
-            const isActive = item.path ? location.pathname === item.path || (item.path !== "/" && location.pathname.startsWith(item.path)) : false;
-            return (
-              <button
-                key={i}
-                onClick={() => item.path && navigate(item.path)}
-                title={item.label}
-                className={cn(
-                  "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
-                  isActive
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Bottom toggle icons */}
-        <div className="flex flex-col items-center gap-1 pb-3 border-t border-border pt-3">
-          <button
-            onClick={() => setTheme("dark")}
-            title="Modo escuro"
-            className={cn(
-              "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
-              theme === "dark" ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"
-            )}
+    <div className="min-h-screen flex" style={{ background: "#eef0f8", fontFamily: "'Inter', system-ui, sans-serif", WebkitFontSmoothing: "antialiased" }}>
+      {/* ===== SIDEBAR ===== */}
+      <aside
+        className="hidden md:flex flex-col fixed inset-y-0 left-0 z-30"
+        style={{ ...glassStyle, width: 220, borderRadius: 0, borderRight: "1px solid rgba(0,0,0,0.07)" }}
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-2.5" style={{ padding: "18px 20px", borderBottom: "1px solid rgba(0,0,0,0.07)" }}>
+          <div
+            className="flex items-center justify-center font-bold text-white"
+            style={{
+              width: 32, height: 32, borderRadius: 9,
+              background: "#2563eb",
+              boxShadow: "0 2px 8px rgba(37,99,235,0.35)",
+              fontSize: 12,
+            }}
           >
-            <Moon className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setTheme("light")}
-            title="Modo claro"
-            className={cn(
-              "h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
-              theme === "light" ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"
-            )}
-          >
-            <Sun className="h-4 w-4" />
-          </button>
-        </div>
-      </aside>
-
-      {/* ===== MAIN AREA (offset by sidebar width) ===== */}
-      <div className="flex-1 flex flex-col md:ml-14 min-w-0">
-        {/* ===== TOPBAR ===== */}
-        <header className="h-[60px] flex items-center px-4 md:px-6 bg-card border-b border-border shadow-[0_1px_3px_0_rgba(0,0,0,0.04)] sticky top-0 z-10">
-          {/* Left: Logo */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-[10px]">D7</span>
-            </div>
-            <span className="text-sm hidden sm:inline">
-              <span className="text-muted-foreground">d7</span>
-              <span className="font-bold text-foreground">pharma</span>
-            </span>
+            D7
           </div>
+          <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.02em", color: "#111827" }}>
+            D7 Pharma
+          </span>
+        </div>
 
-          {/* Center: Navigation tabs */}
-          <nav className="flex-1 flex items-center justify-center">
-            <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar">
-              {NAV_TABS.map((tab) => {
-                const isActive = activeTab === tab.path;
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto" style={{ padding: "14px 12px" }}>
+          {NAV_SECTIONS.map((section, si) => (
+            <div key={si}>
+              {section.label && (
+                <div style={{
+                  fontSize: 10, fontWeight: 600, letterSpacing: "0.08em",
+                  textTransform: "uppercase" as const, color: "#9ca3af",
+                  padding: "14px 8px 6px",
+                }}>
+                  {section.label}
+                </div>
+              )}
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const active = isActivePath(item.path);
                 return (
                   <button
-                    key={tab.path}
-                    onClick={() => navigate(tab.path)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
-                      isActive
-                        ? "bg-foreground text-background"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    )}
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    className="w-full flex items-center gap-2.5 transition-all"
+                    style={{
+                      padding: "9px 10px",
+                      borderRadius: 12,
+                      fontSize: 13.5,
+                      color: active ? "#2563eb" : "#4b5563",
+                      background: active ? "rgba(37,99,235,0.1)" : "transparent",
+                      fontWeight: active ? 500 : 400,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) e.currentTarget.style.background = "rgba(0,0,0,0.04)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) e.currentTarget.style.background = "transparent";
+                    }}
                   >
-                    {tab.label}
+                    <Icon style={{ width: 16, height: 16, opacity: active ? 1 : 0.75 }} />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {(item as any).hasChevron && (
+                      <ChevronRight style={{ width: 14, height: 14, opacity: 0.4 }} />
+                    )}
+                    {active && item.path !== "/admin" && (
+                      <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#2563eb" }} />
+                    )}
                   </button>
                 );
               })}
             </div>
-          </nav>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="flex items-center gap-2.5" style={{ borderTop: "1px solid rgba(0,0,0,0.07)", padding: "14px 16px" }}>
+          <div
+            className="flex items-center justify-center text-white shrink-0"
+            style={{
+              width: 32, height: 32, borderRadius: "50%",
+              background: "#2563eb", fontSize: 11, fontWeight: 700,
+            }}
+          >
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#111827" }} className="truncate">{userName}</div>
+            <div style={{ fontSize: 11, color: "#9ca3af" }} className="truncate">{truncatedEmail}</div>
+          </div>
+          <button
+            onClick={signOut}
+            className="shrink-0 flex items-center justify-center transition-colors"
+            style={{ width: 28, height: 28, borderRadius: "50%", color: "#9ca3af" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.05)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            title="Sair"
+          >
+            <LogOut style={{ width: 15, height: 15 }} />
+          </button>
+        </div>
+      </aside>
+
+      {/* ===== MAIN AREA ===== */}
+      <div className="flex-1 flex flex-col min-w-0 md:ml-[220px]">
+        {/* ===== TOPBAR ===== */}
+        <header
+          className="sticky top-0 z-20 flex items-center"
+          style={{
+            ...glassStyle,
+            height: 58,
+            padding: "0 28px",
+            boxShadow: "0 2px 16px rgba(0,0,0,0.04)",
+            borderTop: "none",
+            borderLeft: "none",
+            borderRight: "none",
+          }}
+        >
+          {/* Left: Breadcrumb */}
+          <div className="flex items-center gap-2 shrink-0">
+            <LayoutGrid style={{ width: 14, height: 14, color: "#4b5563" }} />
+            <span style={{ fontSize: 13, color: "#4b5563" }}>Painel</span>
+            <span style={{ fontSize: 13, color: "#9ca3af" }}>›</span>
+            <span style={{ fontSize: 13, color: "#111827", fontWeight: 500 }}>{pageTitle}</span>
+          </div>
+
+          {/* Center: Search */}
+          <div className="flex-1 flex justify-center mx-4">
+            <div className="relative w-full" style={{ maxWidth: 380 }}>
+              <Search
+                className="absolute top-1/2 -translate-y-1/2"
+                style={{ left: 11, width: 14, height: 14, color: "#9ca3af" }}
+              />
+              <input
+                type="text"
+                placeholder="Pesquisar..."
+                className="w-full outline-none transition-all"
+                style={{
+                  height: 36,
+                  borderRadius: 10,
+                  paddingLeft: 34,
+                  paddingRight: 12,
+                  fontSize: 13,
+                  color: "#111827",
+                  background: searchFocused ? "rgba(255,255,255,0.9)" : "rgba(240,241,248,0.7)",
+                  border: `1px solid ${searchFocused ? "#93c5fd" : "rgba(0,0,0,0.07)"}`,
+                  boxShadow: searchFocused ? "0 0 0 3px rgba(37,99,235,0.08)" : "none",
+                }}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+              />
+            </div>
+          </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-1 shrink-0">
-            {/* Search */}
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground">
-              <Search className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="hidden xl:block mr-2" style={{ fontSize: 13 }}>
+              <span style={{ color: "#4b5563" }}>{greeting}, </span>
+              <span style={{ fontWeight: 600, color: "#111827" }}>{userName}</span>
+            </span>
 
-            {/* Compose/Mail */}
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground relative">
-              <Mail className="h-4 w-4" />
-            </Button>
+            {/* Theme toggles */}
+            {[
+              { icon: Sun, action: () => setTheme("light"), active: theme === "light" },
+              { icon: Moon, action: () => setTheme("dark"), active: theme === "dark" },
+              { icon: Globe, action: () => {}, active: false },
+            ].map((btn, i) => {
+              const BtnIcon = btn.icon;
+              return (
+                <button
+                  key={i}
+                  onClick={btn.action}
+                  className="flex items-center justify-center transition-all"
+                  style={{
+                    width: 36, height: 36, borderRadius: "50%",
+                    border: "1px solid rgba(0,0,0,0.07)",
+                    background: btn.active ? "rgba(37,99,235,0.1)" : "rgba(240,241,248,0.7)",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.9)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = btn.active ? "rgba(37,99,235,0.1)" : "rgba(240,241,248,0.7)"; }}
+                >
+                  <BtnIcon style={{ width: 16, height: 16, color: btn.active ? "#2563eb" : "#4b5563" }} />
+                </button>
+              );
+            })}
 
             {/* Notifications */}
             {isAdmin && (
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground relative">
-                    <Bell className="h-4 w-4" />
+                  <button
+                    className="relative flex items-center justify-center transition-all"
+                    style={{
+                      width: 36, height: 36, borderRadius: "50%",
+                      border: "1px solid rgba(0,0,0,0.07)",
+                      background: "rgba(240,241,248,0.7)",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.9)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(240,241,248,0.7)"; }}
+                  >
+                    <Bell style={{ width: 16, height: 16, color: "#4b5563" }} />
                     {unreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 bg-[#E8593C] text-white text-[9px] rounded-full h-4 min-w-[16px] px-0.5 flex items-center justify-center font-bold">
-                        {unreadCount}
-                      </span>
+                      <span
+                        className="absolute flex items-center justify-center text-white font-bold"
+                        style={{
+                          top: -1, right: -1, width: 7, height: 7,
+                          borderRadius: "50%", background: "#e85c4a",
+                          border: "1.5px solid rgba(255,255,255,0.9)",
+                        }}
+                      />
                     )}
-                  </Button>
+                  </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0 rounded-xl" align="end">
-                  <div className="p-3 border-b flex items-center justify-between">
-                    <span className="font-semibold text-sm">Notificações</span>
+                <PopoverContent className="w-80 p-0" style={{ borderRadius: 18 }} align="end">
+                  <div className="p-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(0,0,0,0.07)" }}>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: "#111827" }}>Notificações</span>
                     {unreadCount > 0 && (
                       <button
-                        className="text-xs text-primary hover:underline"
+                        style={{ fontSize: 12, color: "#2563eb" }}
                         onClick={() => notifications.forEach((n) => markAsRead(n.id))}
                       >
                         Marcar tudo como lido
@@ -255,31 +394,30 @@ export function ModernAdminLayout({ children }: { children: ReactNode }) {
                     )}
                   </div>
                   {notifications.length === 0 ? (
-                    <div className="p-6 text-sm text-muted-foreground text-center">
+                    <div className="p-6 text-center" style={{ fontSize: 13, color: "#9ca3af" }}>
                       Nenhuma notificação
                     </div>
                   ) : (
                     <div className="max-h-72 overflow-auto">
                       {notifications.map((n) => (
-                        <div key={n.id} className="p-3 border-b last:border-0 flex gap-3 hover:bg-muted/50 transition-colors">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                            <Bell className="h-3.5 w-3.5 text-primary" />
+                        <div key={n.id} className="p-3 flex gap-3 transition-colors hover:bg-[rgba(0,0,0,0.02)]" style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                          <div className="shrink-0 flex items-center justify-center" style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(37,99,235,0.1)" }}>
+                            <Bell style={{ width: 14, height: 14, color: "#2563eb" }} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium leading-tight">{n.title}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
-                            <p className="text-[10px] text-muted-foreground/60 mt-1">
+                            <p style={{ fontSize: 13, fontWeight: 500, color: "#111827" }}>{n.title}</p>
+                            <p className="line-clamp-2" style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{n.message}</p>
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 4 }}>
                               {new Date(n.created_at).toLocaleString("pt-BR")}
                             </p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 shrink-0 rounded-full"
+                          <button
                             onClick={() => markAsRead(n.id)}
+                            className="shrink-0 flex items-center justify-center transition-colors"
+                            style={{ width: 24, height: 24, borderRadius: "50%", color: "#9ca3af" }}
                           >
-                            <X className="h-3 w-3" />
-                          </Button>
+                            <X style={{ width: 12, height: 12 }} />
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -288,75 +426,53 @@ export function ModernAdminLayout({ children }: { children: ReactNode }) {
               </Popover>
             )}
 
-            {/* User avatar dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full ml-1">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 rounded-xl">
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex items-center gap-3 py-1">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">{userName}</p>
-                      <p className="text-xs text-muted-foreground">{isAdmin ? "Administrador" : "Representante"}</p>
-                    </div>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2 cursor-pointer">
-                  <User className="h-4 w-4" /> Perfil
-                </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => navigate("/admin/configuracoes")}>
-                  <Settings className="h-4 w-4" /> Configurações
-                </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => navigate("/admin")}>
-                  <LayoutDashboard className="h-4 w-4" /> Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="gap-2 cursor-pointer text-destructive" onClick={signOut}>
-                  <LogOut className="h-4 w-4" /> Sair
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Avatar */}
+            <button
+              className="flex items-center justify-center text-white shrink-0"
+              style={{
+                width: 34, height: 34, borderRadius: "50%",
+                background: "#2563eb", fontSize: 12, fontWeight: 700,
+                border: "2px solid rgba(255,255,255,0.8)",
+                boxShadow: "0 2px 8px rgba(37,99,235,0.25)",
+                marginLeft: 4,
+              }}
+            >
+              {initials}
+            </button>
           </div>
         </header>
 
         {/* ===== MAIN CONTENT ===== */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
+        <main
+          className="flex-1 overflow-auto"
+          style={{ padding: "28px 32px 40px" }}
+        >
           {children}
         </main>
       </div>
 
       {/* ===== MOBILE BOTTOM NAV ===== */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-card border-t border-border flex items-center justify-around z-20">
-        {NAV_TABS.slice(0, 5).map((tab) => {
-          const isActive = activeTab === tab.path;
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 flex items-center justify-around z-30"
+        style={{ ...glassStyle, height: 56, borderTop: "1px solid rgba(0,0,0,0.07)" }}
+      >
+        {[
+          { label: "Home", icon: LayoutDashboard, path: "/admin" },
+          { label: "Vendas", icon: List, path: "/admin/vendas" },
+          { label: "Catálogo", icon: Grid3X3, path: "/admin/produtos" },
+          { label: "Config", icon: Settings, path: "/admin/configuracoes" },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const active = isActivePath(tab.path);
           return (
             <button
               key={tab.path}
               onClick={() => navigate(tab.path)}
-              className={cn(
-                "flex flex-col items-center gap-0.5 text-[10px] transition-colors px-2",
-                isActive ? "text-primary font-semibold" : "text-muted-foreground"
-              )}
+              className="flex flex-col items-center gap-0.5"
+              style={{ color: active ? "#2563eb" : "#9ca3af", fontSize: 10 }}
             >
-              <span className={cn(
-                "text-xs font-medium",
-                isActive && "bg-foreground text-background px-2 py-0.5 rounded-full"
-              )}>
-                {tab.label.slice(0, 6)}
-              </span>
+              <Icon style={{ width: 20, height: 20 }} />
+              <span style={{ fontWeight: active ? 600 : 400 }}>{tab.label}</span>
             </button>
           );
         })}
