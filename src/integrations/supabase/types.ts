@@ -1195,6 +1195,8 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          link_type: string
+          product_slug: string | null
           slot: number
           subtitle: string
           title: string
@@ -1208,6 +1210,8 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          link_type?: string
+          product_slug?: string | null
           slot?: number
           subtitle?: string
           title?: string
@@ -1221,6 +1225,8 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          link_type?: string
+          product_slug?: string | null
           slot?: number
           subtitle?: string
           title?: string

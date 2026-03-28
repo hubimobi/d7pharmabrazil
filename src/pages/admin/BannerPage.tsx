@@ -15,7 +15,7 @@ import { Image, Type, Link2, Save, Loader2, Eye, Video, Plus, Trash2, Palette, G
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
 import { useProducts } from "@/hooks/useProducts";
 import { Package } from "lucide-react";
-import { SalesPopupSettings } from "@/components/admin/SalesPopupSettings";
+
 
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Shield, Lock, Truck, Award, FlaskConical, ShieldCheck, TrendingUp, Star, Heart, Zap, CheckCircle,
@@ -56,10 +56,16 @@ interface PromoBannerItem {
   button_link: string;
   image_url: string | null;
   bg_color: string | null;
+  link_type: string;
+  product_slug: string | null;
 }
 
 function PromoBannersAdmin() {
   const qc = useQueryClient();
+  const { data: allProducts } = useProducts();
+  const [promoCropDialog, setPromoCropDialog] = useState<{ bannerId: string; imageUrl: string } | null>(null);
+  const [promoRemovingBg, setPromoRemovingBg] = useState<string | null>(null);
+
   const { data: promos, isLoading } = useQuery({
     queryKey: ["promo-banners-admin"],
     queryFn: async () => {
@@ -136,9 +142,52 @@ function PromoBannersAdmin() {
     }
   };
 
+  const handlePromoCropComplete = useCallback(async (blob: Blob, bannerId: string) => {
+    try {
+      const filePath = `promo-banner-${bannerId}-cropped.png`;
+      await supabase.storage.from("store-assets").remove([filePath]);
+      const { error } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(filePath);
+      update(bannerId, "image_url", urlData.publicUrl + "?t=" + Date.now());
+      toast.success("Imagem recortada com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao salvar recorte: " + err.message);
+    }
+  }, []);
+
+  const handlePromoRemoveBg = useCallback(async (bannerId: string, imageUrl: string) => {
+    setPromoRemovingBg(bannerId);
+    try {
+      const { data, error } = await supabase.functions.invoke("remove-background", {
+        body: { image_url: imageUrl },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const binary = atob(data.image_base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "image/png" });
+
+      const filePath = `promo-banner-${bannerId}-nobg.png`;
+      await supabase.storage.from("store-assets").remove([filePath]);
+      const { error: uploadError } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(filePath);
+      update(bannerId, "image_url", urlData.publicUrl + "?t=" + Date.now());
+      toast.success("Fundo removido com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao remover fundo: " + err.message);
+    } finally {
+      setPromoRemovingBg(null);
+    }
+  }, []);
+
   if (isLoading) return null;
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
@@ -173,10 +222,49 @@ function PromoBannersAdmin() {
                 <Label>Texto do Botão</Label>
                 <Input value={banner.button_text} onChange={(e) => update(banner.id, "button_text", e.target.value)} />
               </div>
+
+              {/* Link type: URL ou Produto */}
               <div>
-                <Label>Link do Botão</Label>
-                <Input value={banner.button_link} onChange={(e) => update(banner.id, "button_link", e.target.value)} />
+                <Label>Vincular a</Label>
+                <Select value={banner.link_type || "url"} onValueChange={(v) => {
+                  update(banner.id, "link_type", v);
+                  if (v === "url") {
+                    update(banner.id, "product_slug", null);
+                  }
+                }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="url">Link Personalizado</SelectItem>
+                    <SelectItem value="product">Produto</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {(banner.link_type || "url") === "url" ? (
+                <div>
+                  <Label>Link do Botão</Label>
+                  <Input value={banner.button_link} onChange={(e) => update(banner.id, "button_link", e.target.value)} />
+                </div>
+              ) : (
+                <div>
+                  <Label>Selecionar Produto</Label>
+                  <Select
+                    value={banner.product_slug || ""}
+                    onValueChange={(slug) => {
+                      update(banner.id, "product_slug", slug);
+                      update(banner.id, "button_link", `/produto/${slug}`);
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Escolha um produto..." /></SelectTrigger>
+                    <SelectContent>
+                      {allProducts?.map((p) => (
+                        <SelectItem key={p.id} value={p.slug}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div>
                 <Label>Cor de Fundo</Label>
                 <div className="flex items-center gap-2">
@@ -188,7 +276,18 @@ function PromoBannersAdmin() {
                 <Label>Imagem</Label>
                 <Input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f, banner.id); }} />
                 {banner.image_url && (
-                  <img src={banner.image_url} alt="Preview" className="mt-2 h-20 w-20 object-contain rounded border" />
+                  <div className="mt-2 space-y-2">
+                    <img src={banner.image_url} alt="Preview" className="h-20 w-20 object-contain rounded border" />
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setPromoCropDialog({ bannerId: banner.id, imageUrl: banner.image_url! })}>
+                        <Crop className="h-4 w-4" /> Recortar
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => handlePromoRemoveBg(banner.id, banner.image_url!)} disabled={promoRemovingBg === banner.id}>
+                        {promoRemovingBg === banner.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eraser className="h-4 w-4" />}
+                        {promoRemovingBg === banner.id ? "Processando..." : "Remover Fundo"}
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -207,6 +306,16 @@ function PromoBannersAdmin() {
         </div>
       </CardContent>
     </Card>
+
+    {promoCropDialog && (
+      <CropImageDialog
+        open={!!promoCropDialog}
+        onOpenChange={(open) => { if (!open) setPromoCropDialog(null); }}
+        imageUrl={promoCropDialog.imageUrl}
+        onCropComplete={(blob) => handlePromoCropComplete(blob, promoCropDialog.bannerId)}
+      />
+    )}
+    </>
   );
 }
 
@@ -842,8 +951,6 @@ export default function BannerPage() {
       {/* Banners Promocionais */}
       <PromoBannersAdmin />
 
-      {/* Popup de Vendas Recentes */}
-      <SalesPopupSettings settings={settings} />
 
       {/* Crop Dialog */}
       {cropDialog && (

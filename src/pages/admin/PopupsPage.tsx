@@ -11,9 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { SalesPopupSettings } from "@/components/admin/SalesPopupSettings";
 
 export default function PopupsPage() {
   const queryClient = useQueryClient();
+  const { data: storeSettings } = useStoreSettings();
 
   const { data: settings, isLoading: loadingSettings } = useQuery({
     queryKey: ["store-settings-admin"],
@@ -272,6 +275,8 @@ export default function PopupsPage() {
           </CardContent>
         </Card>
 
+        {/* Popup de Vendas Recentes (Prova Social) */}
+        <SalesPopupSettings settings={storeSettings} />
 
       </div>
     </div>
