@@ -285,7 +285,7 @@ function PromoBannersAdmin() {
                 <Input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f, banner.id); }} />
                 {banner.image_url && (
                   <div className="mt-2 space-y-2">
-                    <img src={banner.image_url} alt="Preview" className="h-20 w-20 object-contain rounded border" />
+                    <img src={banner.image_url} alt="Preview" className="h-20 w-20 object-contain rounded-2xl border" />
                     <div className="flex gap-2">
                       <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => setPromoCropDialog({ bannerId: banner.id, imageUrl: banner.image_url! })}>
                         <Crop className="h-4 w-4" /> Recortar
