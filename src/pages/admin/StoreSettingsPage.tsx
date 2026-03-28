@@ -310,10 +310,14 @@ export default function StoreSettingsPage() {
               {form.horizontal_logo_url ? (
                 <div className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30">
                   <img src={form.horizontal_logo_url} alt="Logo Horizontal" className="h-10 max-w-[160px] object-contain" />
-                  <div className="flex gap-2 ml-auto">
+                  <div className="flex flex-wrap gap-2 ml-auto">
                     <Button type="button" variant="outline" size="sm" onClick={() => horizontalLogoInputRef.current?.click()} disabled={uploadingHorizontalLogo}>
                       {uploadingHorizontalLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                       Trocar
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => handleRemoveLogoBg("horizontal_logo")} disabled={removingLogoBg === "horizontal_logo"}>
+                      {removingLogoBg === "horizontal_logo" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eraser className="h-4 w-4" />}
+                      {removingLogoBg === "horizontal_logo" ? "Processando..." : "Remover Fundo"}
                     </Button>
                     <Button type="button" variant="destructive" size="sm" onClick={() => handleRemoveAsset("horizontal_logo")}>
                       <Trash2 className="h-4 w-4" />
