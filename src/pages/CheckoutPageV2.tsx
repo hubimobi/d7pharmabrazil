@@ -184,7 +184,7 @@ const CheckoutPageV2 = () => {
     if (!form.name.trim()) { toast.error("Preencha seu nome."); return false; }
     if (!form.email.trim() || !form.email.includes("@")) { toast.error("Preencha um e-mail válido."); return false; }
     if (!form.phone.trim()) { toast.error("Preencha seu telefone."); return false; }
-    if (!form.cpf.trim()) { toast.error("Preencha seu CPF."); return false; }
+    if (form.cpf.replace(/\D/g, "").length !== 11) { toast.error("CPF inválido. Deve ter 11 dígitos."); return false; }
     return true;
   };
 

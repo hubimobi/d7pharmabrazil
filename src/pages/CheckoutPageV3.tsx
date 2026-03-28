@@ -112,6 +112,10 @@ const CheckoutPageV3 = () => {
     e.preventDefault();
     const paymentTotal = form.paymentMethod === "pix" ? pixTotal : finalTotal;
     if (paymentTotal < 5) { toast.error("O valor mínimo para pagamento é R$ 5,00."); return; }
+    if (!form.name.trim()) { toast.error("Preencha seu nome."); return; }
+    if (!form.email.trim() || !form.email.includes("@")) { toast.error("Preencha um e-mail válido."); return; }
+    if (form.cpf.replace(/\D/g, "").length !== 11) { toast.error("CPF inválido. Deve ter 11 dígitos."); return; }
+    if (!form.phone.trim()) { toast.error("Preencha seu telefone."); return; }
     setIsSubmitting(true);
     try {
       const orderItems = items.map((i) => ({ product_id: i.product.id, name: i.product.name, price: i.product.price, quantity: i.quantity }));
