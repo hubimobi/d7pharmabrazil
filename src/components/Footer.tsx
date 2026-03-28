@@ -77,11 +77,13 @@ const Footer = () => {
 
   const footerColor = settings?.design_footer_color;
   const footerGradient = (settings as any)?.design_footer_gradient;
+  const footerTextColor = (settings as any)?.design_footer_text_color || "#ffffff";
 
   return (
     <footer
-      className="text-white/80 py-10 md:py-14"
+      className="py-10 md:py-14"
       style={{
+        color: footerTextColor,
         ...(footerGradient
           ? { background: footerGradient }
           : { backgroundColor: footerColor || "hsl(var(--foreground))" }),
