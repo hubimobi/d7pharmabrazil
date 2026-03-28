@@ -20,7 +20,7 @@ const FeaturedCarousel = () => {
         </p>
         <div className="mt-8 md:mt-12 px-2 md:px-8">
           {isLoading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {Array.from({ length: 3 }).map((_, i) => <ProductCardSkeleton key={i} />)}
             </div>
           ) : (
