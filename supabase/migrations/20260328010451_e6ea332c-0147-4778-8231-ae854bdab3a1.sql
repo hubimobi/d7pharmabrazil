@@ -1,0 +1,1 @@
+ALTER TABLE public.store_settings ADD COLUMN IF NOT EXISTS design_footer_text_color text DEFAULT '#ffffff';

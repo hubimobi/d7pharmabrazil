@@ -204,7 +204,8 @@ export default function DesignSettingsPage() {
       design_nav_color: (form as any).design_nav_color,
       design_bg_gradient: (form as any).design_bg_gradient,
       design_footer_gradient: (form as any).design_footer_gradient,
-    });
+      design_footer_text_color: (form as any).design_footer_text_color,
+    } as any);
   };
 
   const SampleIcon = FlaskConical;
@@ -429,8 +430,9 @@ export default function DesignSettingsPage() {
           <p className="text-sm text-muted-foreground">
             Escolha uma cor sólida ou um degradê para o rodapé. O degradê tem prioridade quando preenchido.
           </p>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <ColorInput label="Cor Sólida do Rodapé" value={form.design_footer_color || "#1a1a2e"} onChange={(v) => update("design_footer_color", v)} />
+            <ColorInput label="Cor do Texto do Rodapé" value={(form as any).design_footer_text_color || "#ffffff"} onChange={(v) => update("design_footer_text_color" as any, v)} />
             <GradientInput
               label="Degradê do Rodapé (opcional)"
               value={footerGradient}

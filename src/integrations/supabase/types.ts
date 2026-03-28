@@ -1364,6 +1364,7 @@ export type Database = {
           design_font: string | null
           design_footer_color: string | null
           design_footer_gradient: string | null
+          design_footer_text_color: string | null
           design_icon_color: string | null
           design_icon_style: string | null
           design_nav_color: string | null
@@ -1470,6 +1471,7 @@ export type Database = {
           design_font?: string | null
           design_footer_color?: string | null
           design_footer_gradient?: string | null
+          design_footer_text_color?: string | null
           design_icon_color?: string | null
           design_icon_style?: string | null
           design_nav_color?: string | null
@@ -1576,6 +1578,7 @@ export type Database = {
           design_font?: string | null
           design_footer_color?: string | null
           design_footer_gradient?: string | null
+          design_footer_text_color?: string | null
           design_icon_color?: string | null
           design_icon_style?: string | null
           design_nav_color?: string | null
