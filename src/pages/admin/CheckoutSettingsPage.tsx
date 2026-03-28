@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save, Loader2, ShoppingCart, MessageSquareQuote, Flame, Gift, Truck, Sparkles, BarChart3, CreditCard } from "lucide-react";
+import { Save, Loader2, ShoppingCart, MessageSquareQuote, Flame, Gift, Truck, Sparkles, BarChart3, CreditCard, Layout } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function CheckoutSettingsPage() {
@@ -29,6 +29,7 @@ export default function CheckoutSettingsPage() {
   const [hotjarId, setHotjarId] = useState("");
   const [maxInstallments, setMaxInstallments] = useState(3);
   const [maxTotalInstallments, setMaxTotalInstallments] = useState(12);
+  const [checkoutVersion, setCheckoutVersion] = useState("v1");
 
   // Frete
   const [freeShippingEnabled, setFreeShippingEnabled] = useState(false);
@@ -57,6 +58,7 @@ export default function CheckoutSettingsPage() {
     setHotjarId(s.hotjar_id || "");
     setMaxInstallments(s.max_installments ?? 3);
     setMaxTotalInstallments(s.max_total_installments ?? 12);
+    setCheckoutVersion(s.checkout_version || "v1");
 
     setFreeShippingEnabled(s.free_shipping_enabled ?? false);
     setFreeShippingMinValue(s.free_shipping_min_value ?? 499);
@@ -94,6 +96,7 @@ export default function CheckoutSettingsPage() {
           combo_offer_products: comboProducts,
           combo_offer_discount: comboDiscount,
           combo_offer_free_shipping: comboFreeShipping,
+          checkout_version: checkoutVersion,
         })
         .eq("id", settings.id);
       if (error) throw error;
@@ -122,6 +125,38 @@ export default function CheckoutSettingsPage() {
         <h1 className="text-2xl font-bold text-foreground">Checkout Inteligente</h1>
         <p className="text-sm text-muted-foreground mt-1">Configure frete, combo, conversão e rastreamento do checkout.</p>
       </div>
+
+      {/* Versão do Checkout */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Layout className="h-5 w-5" /> Versão do Checkout
+          </CardTitle>
+          <CardDescription>Escolha qual layout de checkout será exibido para os clientes.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              { value: "v1", label: "Checkout 1 — Padrão", desc: "Layout completo com carrinho, combos, depoimentos, urgência e recomendações." },
+              { value: "v2", label: "Checkout 2 — Multi-etapas", desc: "Fluxo em 4 etapas com barra de progresso, cronômetro e sidebar de resumo." },
+              { value: "v3", label: "Checkout 3 — Simplificado", desc: "Página única e minimalista: produto, frete, dados e pagamento." },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setCheckoutVersion(opt.value)}
+                className={`rounded-xl border-2 p-4 text-left transition-all ${checkoutVersion === opt.value ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30"}`}
+              >
+                <p className="text-sm font-bold">{opt.label}</p>
+                <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
+                {checkoutVersion === opt.value && (
+                  <span className="mt-2 inline-block rounded-full bg-primary px-2.5 py-0.5 text-xs font-medium text-primary-foreground">Ativo</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Configuração de Frete */}
       <Card>

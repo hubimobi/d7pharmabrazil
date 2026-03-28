@@ -109,6 +109,8 @@ export interface StoreSettings {
   max_total_installments: number;
   // Visual theme
   visual_theme: string;
+  // Checkout version
+  checkout_version: string;
 }
 
 export function useStoreSettings() {
