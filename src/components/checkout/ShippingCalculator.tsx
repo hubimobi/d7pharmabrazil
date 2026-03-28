@@ -100,8 +100,8 @@ export default function ShippingCalculator({
 
   return (
     <div className="space-y-3">
-      <Label className="flex items-center gap-1.5 text-sm font-semibold">
-        <Truck className="h-4 w-4" /> Calcular Frete
+      <Label className="flex items-center gap-1.5 text-base font-semibold">
+        <Truck className="h-5 w-5" /> Escolha o Envio mais rápido
       </Label>
       <div className="flex items-center gap-2">
         <Input
