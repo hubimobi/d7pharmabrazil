@@ -46,6 +46,170 @@ interface HeroBanner {
   badges: Array<{ icon: string; label: string }>;
 }
 
+interface PromoBannerItem {
+  id: string;
+  slot: number;
+  active: boolean;
+  title: string;
+  subtitle: string;
+  button_text: string;
+  button_link: string;
+  image_url: string | null;
+  bg_color: string | null;
+}
+
+function PromoBannersAdmin() {
+  const qc = useQueryClient();
+  const { data: promos, isLoading } = useQuery({
+    queryKey: ["promo-banners-admin"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("promo_banners" as any)
+        .select("*")
+        .order("slot", { ascending: true });
+      if (error) throw error;
+      return data as unknown as PromoBannerItem[];
+    },
+  });
+
+  const [local, setLocal] = useState<PromoBannerItem[]>([]);
+  useEffect(() => { if (promos) setLocal(promos); }, [promos]);
+
+  const update = (id: string, field: keyof PromoBannerItem, value: any) => {
+    setLocal((prev) => prev.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
+  };
+
+  const saveMut = useMutation({
+    mutationFn: async () => {
+      for (const b of local) {
+        const { id, ...rest } = b;
+        const { error } = await (supabase.from("promo_banners" as any) as any)
+          .update({ ...rest, updated_at: new Date().toISOString() })
+          .eq("id", id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["promo-banners-admin"] });
+      qc.invalidateQueries({ queryKey: ["promo-banners-public"] });
+      toast.success("Banners promocionais salvos!");
+    },
+    onError: () => toast.error("Erro ao salvar banners promocionais."),
+  });
+
+  const addMut = useMutation({
+    mutationFn: async () => {
+      const nextSlot = local.length + 1;
+      const { error } = await (supabase.from("promo_banners" as any) as any)
+        .insert({ slot: nextSlot, active: true, title: "Novo Banner Promo", subtitle: "" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["promo-banners-admin"] });
+      toast.success("Banner promo adicionado!");
+    },
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase.from("promo_banners" as any) as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["promo-banners-admin"] });
+      toast.success("Banner promo removido!");
+    },
+  });
+
+  const handleImageUpload = async (file: File, bannerId: string) => {
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const filePath = `promo-banner-${bannerId}.${ext}`;
+      await supabase.storage.from("store-assets").remove([filePath]);
+      const { error } = await supabase.storage.from("store-assets").upload(filePath, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(filePath);
+      update(bannerId, "image_url", urlData.publicUrl + "?t=" + Date.now());
+      toast.success("Imagem enviada!");
+    } catch (err: any) {
+      toast.error("Erro ao enviar imagem: " + err.message);
+    }
+  };
+
+  if (isLoading) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Image className="h-5 w-5" /> Banners Promocionais (Seção)
+        </CardTitle>
+        <CardDescription>Banners exibidos antes da garantia na home. Recomendado: 2 banners.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {local.map((banner, idx) => (
+          <div key={banner.id} className="border rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-sm">Banner Promo {idx + 1}</h4>
+              <div className="flex items-center gap-2">
+                <Switch checked={banner.active} onCheckedChange={(v) => update(banner.id, "active", v)} />
+                {local.length > 1 && (
+                  <Button variant="ghost" size="icon" onClick={() => deleteMut.mutate(banner.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label>Subtítulo (tag superior)</Label>
+                <Input value={banner.subtitle} onChange={(e) => update(banner.id, "subtitle", e.target.value)} placeholder="LINHA DE CRÉDITO" />
+              </div>
+              <div>
+                <Label>Título</Label>
+                <Input value={banner.title} onChange={(e) => update(banner.id, "title", e.target.value)} placeholder="COMPRE AGORA COM ATÉ 20% OFF" />
+              </div>
+              <div>
+                <Label>Texto do Botão</Label>
+                <Input value={banner.button_text} onChange={(e) => update(banner.id, "button_text", e.target.value)} />
+              </div>
+              <div>
+                <Label>Link do Botão</Label>
+                <Input value={banner.button_link} onChange={(e) => update(banner.id, "button_link", e.target.value)} />
+              </div>
+              <div>
+                <Label>Cor de Fundo</Label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={banner.bg_color || "#f5f5f5"} onChange={(e) => update(banner.id, "bg_color", e.target.value)} className="h-9 w-12 rounded border cursor-pointer" />
+                  <Input value={banner.bg_color || ""} onChange={(e) => update(banner.id, "bg_color", e.target.value)} className="flex-1" />
+                </div>
+              </div>
+              <div>
+                <Label>Imagem</Label>
+                <Input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f, banner.id); }} />
+                {banner.image_url && (
+                  <img src={banner.image_url} alt="Preview" className="mt-2 h-20 w-20 object-contain rounded border" />
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+        <div className="flex gap-3">
+          {local.length < 4 && (
+            <Button variant="outline" size="sm" onClick={() => addMut.mutate()} disabled={addMut.isPending} className="gap-2">
+              <Plus className="h-4 w-4" /> Adicionar Banner Promo
+            </Button>
+          )}
+          <Button size="sm" onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="gap-2">
+            {saveMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Salvar Banners Promo
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function BannerPage() {
   const { canDelete } = useAuth();
   const { data: settings, isLoading: settingsLoading } = useStoreSettings();
