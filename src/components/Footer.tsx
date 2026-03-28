@@ -82,52 +82,48 @@ const Footer = () => {
 
   return (
     <footer
-      className="py-10 md:py-14"
+      className="rounded-container mx-4 md:mx-8 mb-4 py-12 md:py-16"
       style={{
         color: footerTextColor,
         ...(footerGradient
           ? { background: footerGradient }
-          : { backgroundColor: footerColor || "#ffffff" }),
+          : { backgroundColor: footerColor || "#08090A" }),
       }}
     >
       <div className="container">
         <div className="grid grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr_1.2fr] gap-6 md:gap-8">
-          {/* Logo + Text in two visual columns */}
           <div className="col-span-2 md:col-span-1 flex flex-col items-center md:items-start">
             {settings?.logo_url && (
               <img src={settings.logo_url} alt={storeName} className="h-[250px] w-[250px] object-contain flex-shrink-0 mx-auto md:mx-0" />
             )}
             {!settings?.logo_url && (
-              <h3 className="text-xl font-bold mb-2" style={{ color: footerTitleColor }}>{storeName}</h3>
+              <h3 className="text-xl font-bold font-display mb-2" style={{ color: footerTitleColor }}>{storeName}</h3>
             )}
           </div>
 
-          {/* Navigation */}
           <div>
-            <h4 className="text-sm font-semibold" style={{ color: footerTitleColor }}>Navegação</h4>
-            <nav className="mt-2 md:mt-3 flex flex-col gap-1.5 md:gap-2">
-              <Link to="/" className="text-sm opacity-60 hover:opacity-100">Início</Link>
-              <Link to="/produtos" className="text-sm opacity-60 hover:opacity-100">Produtos</Link>
-              <Link to="/checkout" className="text-sm opacity-60 hover:opacity-100">Carrinho</Link>
-              <Link to="/acompanhar-pedido" className="text-sm opacity-60 hover:opacity-100">Meu Pedido</Link>
+            <h4 className="label-section" style={{ color: footerTitleColor }}>Navegação</h4>
+            <nav className="mt-3 md:mt-4 flex flex-col gap-2">
+              <Link to="/" className="text-sm opacity-60 hover:opacity-100 transition-opacity">Início</Link>
+              <Link to="/produtos" className="text-sm opacity-60 hover:opacity-100 transition-opacity">Produtos</Link>
+              <Link to="/checkout" className="text-sm opacity-60 hover:opacity-100 transition-opacity">Carrinho</Link>
+              <Link to="/acompanhar-pedido" className="text-sm opacity-60 hover:opacity-100 transition-opacity">Meu Pedido</Link>
             </nav>
           </div>
 
-          {/* Institutional */}
           <div>
-            <h4 className="text-sm font-semibold" style={{ color: footerTitleColor }}>Institucional</h4>
-            <nav className="mt-2 md:mt-3 flex flex-col gap-1.5 md:gap-2">
-              <Link to="/quem-somos" className="text-sm opacity-60 hover:opacity-100">Quem Somos</Link>
-              <Link to="/politica-de-privacidade" className="text-sm opacity-60 hover:opacity-100">Privacidade</Link>
-              <Link to="/termos-de-uso" className="text-sm opacity-60 hover:opacity-100">Termos de Uso</Link>
-              <Link to="/trocas-e-devolucoes" className="text-sm opacity-60 hover:opacity-100">Trocas</Link>
+            <h4 className="label-section" style={{ color: footerTitleColor }}>Institucional</h4>
+            <nav className="mt-3 md:mt-4 flex flex-col gap-2">
+              <Link to="/quem-somos" className="text-sm opacity-60 hover:opacity-100 transition-opacity">Quem Somos</Link>
+              <Link to="/politica-de-privacidade" className="text-sm opacity-60 hover:opacity-100 transition-opacity">Privacidade</Link>
+              <Link to="/termos-de-uso" className="text-sm opacity-60 hover:opacity-100 transition-opacity">Termos de Uso</Link>
+              <Link to="/trocas-e-devolucoes" className="text-sm opacity-60 hover:opacity-100 transition-opacity">Trocas</Link>
             </nav>
           </div>
 
-          {/* Contact with icons + copy */}
           <div className="col-span-2 md:col-span-1">
-            <h4 className="text-sm font-semibold" style={{ color: footerTitleColor }}>Contato</h4>
-            <div className="mt-2 md:mt-3 flex flex-col gap-2">
+            <h4 className="label-section" style={{ color: footerTitleColor }}>Contato</h4>
+            <div className="mt-3 md:mt-4 flex flex-col gap-2.5">
               <CopyableInfo icon={Phone} text={whatsapp} label="Telefone" />
               <CopyableInfo icon={Mail} text={email} label="E-mail" />
               <CopyableInfo icon={MapPin} text={fullAddress} label="Endereço" />
@@ -138,9 +134,8 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Social icons */}
         {socials.length > 0 && (
-          <div className="mt-8 border-t border-background/10 pt-6 flex justify-center gap-4">
+          <div className="mt-10 border-t border-white/10 pt-8 flex justify-center gap-3">
             {socials.map((s) => {
               const Icon = socialIcons[s.label];
               return (
@@ -149,7 +144,7 @@ const Footer = () => {
                   href={s.url!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-background/10 hover:bg-background/20 transition"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 hover:scale-110"
                   style={{ color: footerTextColor }}
                   title={s.label}
                 >
@@ -160,8 +155,7 @@ const Footer = () => {
           </div>
         )}
 
-        {/* Security + copyright */}
-        <div className="mt-6 border-t border-background/10 pt-6 flex flex-col items-center gap-3">
+        <div className="mt-8 border-t border-white/10 pt-8 flex flex-col items-center gap-3">
           <div className="flex items-center gap-4 text-sm opacity-60">
             <span className="flex items-center gap-1"><Lock className="h-3.5 w-3.5" /> 100% Seguro</span>
             <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Dados Protegidos</span>
