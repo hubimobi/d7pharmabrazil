@@ -186,7 +186,7 @@ export default function ProductsPage() {
       setOpen(false); resetForm();
       toast({ title: editId ? "Produto atualizado" : "Produto cadastrado" });
     },
-    onError: () => toast({ title: "Erro ao salvar", variant: "destructive" }),
+    onError: (err: any) => toast({ title: err?.message || "Erro ao salvar", variant: "destructive" }),
   });
 
   const toggleActive = useMutation({
