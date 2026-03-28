@@ -149,7 +149,8 @@ const Footer = () => {
                   href={s.url!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-background/10 text-background/70 hover:bg-background/20 hover:text-background transition"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-background/10 hover:bg-background/20 transition"
+                  style={{ color: footerTextColor }}
                   title={s.label}
                 >
                   {Icon ? <Icon /> : s.label}
