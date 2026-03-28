@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus, Link2, Check, Eye, Download, ArrowUpRight, RefreshCw, Search, MoreHorizontal, Power, PowerOff } from "lucide-react";
+import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus, Link2, Check, Eye, Download, ArrowUpRight, RefreshCw, Search, MoreHorizontal, Power, PowerOff, Copy } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
@@ -204,6 +204,80 @@ export default function ProductsPage() {
       toast({ title: "Produto excluído com sucesso" });
     },
     onError: () => toast({ title: "Erro ao excluir produto", variant: "destructive" }),
+  });
+
+  const duplicateProduct = useMutation({
+    mutationFn: async (p: NonNullable<typeof products>[number]) => {
+      // Load testimonials and FAQs
+      const [{ data: testimonialData }, { data: faqData }] = await Promise.all([
+        supabase.from("product_testimonials").select("*").eq("product_id", p.id),
+        supabase.from("product_faqs").select("*").eq("product_id", p.id).order("sort_order"),
+      ]);
+
+      const newSlug = `${p.slug}-copia-${Date.now()}`;
+      const { data: newProd, error } = await supabase.from("products").insert({
+        name: `${p.name} [COPIA]`,
+        slug: newSlug,
+        short_description: p.short_description,
+        description: p.description,
+        price: p.price,
+        original_price: p.original_price,
+        badge: p.badge,
+        stock: p.stock,
+        benefits: p.benefits as any,
+        show_countdown: p.show_countdown,
+        featured: p.featured,
+        weight: p.weight,
+        height: p.height,
+        width: p.width,
+        length: p.length,
+        group_name: p.group_name,
+        manufacturer: p.manufacturer,
+        sku: "",
+        ncm: p.ncm,
+        gtin: p.gtin,
+        unit: p.unit,
+        image_url: p.image_url,
+        extra_images: p.extra_images as any,
+        active: false,
+        rating: p.rating,
+        reviews_count: p.reviews_count,
+        seo_title: p.seo_title,
+        seo_description: p.seo_description,
+        seo_keywords: p.seo_keywords,
+      }).select("id").single();
+      if (error) throw error;
+
+      // Duplicate testimonials
+      if (testimonialData && testimonialData.length > 0) {
+        await supabase.from("product_testimonials").insert(
+          testimonialData.map((t: any) => ({
+            product_id: newProd.id,
+            author_name: t.author_name,
+            content: t.content,
+            rating: t.rating,
+          }))
+        );
+      }
+
+      // Duplicate FAQs
+      if (faqData && faqData.length > 0) {
+        await supabase.from("product_faqs").insert(
+          faqData.map((f: any, i: number) => ({
+            product_id: newProd.id,
+            question: f.question,
+            answer: f.answer,
+            sort_order: i,
+          }))
+        );
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      toast({ title: "Produto duplicado com sucesso! SKU removido." });
+    },
+    onError: () => toast({ title: "Erro ao duplicar produto", variant: "destructive" }),
   });
 
   const resetForm = () => {
@@ -654,6 +728,9 @@ export default function ProductsPage() {
                             toast({ title: "Link copiado!" });
                           }}>
                             <Link2 className="h-4 w-4 mr-2" /> Copiar Link
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => duplicateProduct.mutate(p)}>
+                            <Copy className="h-4 w-4 mr-2" /> Duplicar
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => toggleActive.mutate({ id: p.id, active: p.active })}>
