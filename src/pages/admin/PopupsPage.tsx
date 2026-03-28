@@ -16,6 +16,7 @@ import { SalesPopupSettings } from "@/components/admin/SalesPopupSettings";
 
 export default function PopupsPage() {
   const queryClient = useQueryClient();
+  const { data: storeSettings } = useStoreSettings();
 
   const { data: settings, isLoading: loadingSettings } = useQuery({
     queryKey: ["store-settings-admin"],
@@ -274,6 +275,8 @@ export default function PopupsPage() {
           </CardContent>
         </Card>
 
+        {/* Popup de Vendas Recentes (Prova Social) */}
+        <SalesPopupSettings settings={storeSettings} />
 
       </div>
     </div>
