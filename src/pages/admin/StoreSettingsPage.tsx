@@ -403,6 +403,19 @@ export default function StoreSettingsPage() {
           </div>
         </div>
 
+        {/* CTA Final Section */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Megaphone className="h-5 w-5" /> Seção CTA Final</h2>
+          <p className="text-sm text-muted-foreground">Configure o título e subtítulo da seção "Comece sua transformação" exibida na home.</p>
+          <div>
+            <Label>Título</Label>
+            <Input value={(form as any).cta_title || ""} onChange={(e) => update("cta_title" as any, e.target.value)} placeholder="Comece sua transformação agora" />
+          </div>
+          <div>
+            <Label>Subtítulo</Label>
+            <Textarea rows={3} value={(form as any).cta_subtitle || ""} onChange={(e) => update("cta_subtitle" as any, e.target.value)} placeholder="Milhares de clientes já confiam..." />
+          </div>
+        </div>
         <Button type="submit" size="lg" disabled={mutation.isPending} className="gap-2">
           {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Salvar Configurações

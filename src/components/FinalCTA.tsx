@@ -23,10 +23,10 @@ const FinalCTA = () => {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary-foreground/5 to-transparent" />
       <div className="container relative text-center">
         <h2 className="text-2xl font-bold text-primary-foreground md:text-4xl">
-          Comece sua transformação agora
+          {(settings as any)?.cta_title || "Comece sua transformação agora"}
         </h2>
         <p className="mx-auto mt-3 max-w-lg text-primary-foreground/80 text-sm md:text-lg">
-          Milhares de clientes já confiam na D7 Pharma. Junte-se a eles e experimente suplementos de qualidade farmacêutica.
+          {(settings as any)?.cta_subtitle || "Milhares de clientes já confiam na D7 Pharma. Junte-se a eles e experimente suplementos de qualidade farmacêutica."}
         </p>
         <div className="mt-8 md:mt-10">
           <Link to="/produtos">
