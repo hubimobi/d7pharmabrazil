@@ -376,7 +376,7 @@ const CheckoutPageV2 = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">CPF</Label>
-                        <Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: e.target.value })} placeholder="000.000.000-00" />
+                        <Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: formatCPF(e.target.value) })} placeholder="000.000.000-00" />
                       </div>
                     </div>
 
@@ -388,7 +388,7 @@ const CheckoutPageV2 = () => {
 
                     <div className="mt-3 space-y-1.5">
                       <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">WhatsApp</Label>
-                      <Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(00) 00000-0000" />
+                      <Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" />
                       <p className="text-xs text-muted-foreground">📱 Atualizações do pedido via WhatsApp</p>
                     </div>
 
