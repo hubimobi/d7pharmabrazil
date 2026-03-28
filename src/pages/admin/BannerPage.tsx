@@ -56,6 +56,7 @@ interface PromoBannerItem {
   button_link: string;
   image_url: string | null;
   bg_color: string | null;
+  image_bg_color: string | null;
   link_type: string;
   product_slug: string | null;
 }
