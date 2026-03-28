@@ -318,8 +318,6 @@ function PromoBannersAdmin() {
     </>
   );
 }
-  );
-}
 
 export default function BannerPage() {
   const { canDelete } = useAuth();
