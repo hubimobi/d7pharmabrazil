@@ -13,6 +13,7 @@ interface PromoBanner {
   button_link: string;
   image_url: string | null;
   bg_color: string | null;
+  image_bg_color: string | null;
 }
 
 const PromoBanners = () => {
@@ -40,11 +41,11 @@ const PromoBanners = () => {
           {banners.map((banner) => (
             <div
               key={banner.id}
-              className="relative rounded-2xl overflow-hidden flex flex-col sm:flex-row items-center gap-4 p-6 md:p-8 min-h-[200px]"
+              className="relative rounded-2xl overflow-hidden flex flex-row min-h-[220px]"
               style={{ backgroundColor: banner.bg_color || "#f5f5f5" }}
             >
-              {/* Text content */}
-              <div className="flex-1 z-10 text-center sm:text-left">
+              {/* Text content - left side */}
+              <div className="flex-1 flex flex-col justify-center p-6 md:p-8">
                 {banner.subtitle && (
                   <p className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground mb-2">
                     {banner.subtitle}
@@ -54,23 +55,30 @@ const PromoBanners = () => {
                   {banner.title}
                 </h3>
                 {banner.button_text && (
-                  <Link to={banner.button_link || "/produtos"}>
-                    <Button size="sm" className="rounded-full px-6">
-                      {banner.button_text}
-                    </Button>
-                  </Link>
+                  <div>
+                    <Link to={banner.button_link || "/produtos"}>
+                      <Button size="sm" className="rounded-lg px-8 py-2">
+                        {banner.button_text}
+                      </Button>
+                    </Link>
+                  </div>
                 )}
               </div>
 
-              {/* Image */}
+              {/* Image - right side with separate bg color */}
               {banner.image_url && (
-                <div className="flex-shrink-0 w-[180px] h-[180px] md:w-[200px] md:h-[200px] relative">
-                  <img
-                    src={banner.image_url}
-                    alt={banner.title}
-                    className="w-full h-full object-contain"
-                    loading="lazy"
-                  />
+                <div
+                  className="w-[40%] sm:w-[38%] flex items-center justify-center p-3 md:p-4"
+                  style={{ backgroundColor: banner.image_bg_color || banner.bg_color || "#f5f5f5" }}
+                >
+                  <div className="w-full h-full rounded-xl overflow-hidden">
+                    <img
+                      src={banner.image_url}
+                      alt={banner.title}
+                      className="w-full h-full object-contain"
+                      loading="lazy"
+                    />
+                  </div>
                 </div>
               )}
             </div>
