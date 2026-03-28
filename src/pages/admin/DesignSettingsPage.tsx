@@ -29,6 +29,39 @@ const ICON_STYLES = [
   { value: "solid", label: "Sólido", desc: "Fundo sólido com ícone branco — estilo farmácia americana", preview: "rounded-xl bg-primary text-white" },
 ];
 
+const VISUAL_THEMES = [
+  {
+    value: "editorial",
+    label: "Editorial",
+    desc: "Tipografia grande, cantos arredondados, glassmorphism e animações suaves.",
+    icon: <Layout className="h-4 w-4 text-primary" />,
+    available: true,
+    previewRadius: "rounded-xl",
+    previewRadiusSmall: "rounded-lg",
+    previewClass: "rounded-xl",
+  },
+  {
+    value: "modern",
+    label: "Moderno",
+    desc: "Linhas limpas, cantos suaves, sombras mínimas e blocos de cor.",
+    icon: <Layers className="h-4 w-4 text-primary" />,
+    available: false,
+    previewRadius: "rounded-md",
+    previewRadiusSmall: "rounded",
+    previewClass: "rounded-md",
+  },
+  {
+    value: "classic",
+    label: "Clássico",
+    desc: "Tipografia serifada, espaçamento elegante, refinamento sutil.",
+    icon: <BookOpen className="h-4 w-4 text-primary" />,
+    available: false,
+    previewRadius: "rounded-sm",
+    previewRadiusSmall: "rounded-sm",
+    previewClass: "rounded-sm",
+  },
+];
+
 const ColorInput = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
   <div className="space-y-1.5">
     <Label className="text-xs">{label}</Label>
