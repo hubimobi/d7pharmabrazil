@@ -205,7 +205,7 @@ export default function DesignSettingsPage() {
       design_bg_gradient: (form as any).design_bg_gradient,
       design_footer_gradient: (form as any).design_footer_gradient,
       design_footer_text_color: (form as any).design_footer_text_color,
-    });
+    } as any);
   };
 
   const SampleIcon = FlaskConical;
