@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,14 +7,14 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 0%;
+    --background: 40 20% 96%;
+    --foreground: 0 0% 4%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
+    --card-foreground: 0 0% 4%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
+    --popover-foreground: 0 0% 4%;
 
     --primary: 203 78% 20%;
     --primary-foreground: 0 0% 100%;
@@ -21,8 +22,8 @@
     --secondary: 203 66% 55%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 20% 96%;
-    --muted-foreground: 210 10% 40%;
+    --muted: 40 10% 92%;
+    --muted-foreground: 0 0% 40%;
 
     --accent: 203 66% 55%;
     --accent-foreground: 0 0% 100%;
@@ -30,11 +31,11 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 15% 93%;
-    --input: 210 15% 93%;
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
     --ring: 203 78% 20%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
@@ -45,56 +46,63 @@
     --trust: 203 78% 20%;
     --trust-light: 203 66% 95%;
 
-    --sidebar-background: 220 20% 14%;
+    --surface: 30 20% 94%;
+    --surface-dark: 220 20% 4%;
+    --glass: 0 0% 100% / 0.1;
+    --glass-border: 0 0% 100% / 0.15;
+
+    --sidebar-background: 220 20% 4%;
     --sidebar-foreground: 220 10% 75%;
     --sidebar-primary: 203 78% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 20%;
+    --sidebar-accent: 220 15% 12%;
     --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 220 15% 22%;
+    --sidebar-border: 220 15% 12%;
     --sidebar-ring: 203 78% 50%;
   }
 
   /* Admin Dark Theme */
   [data-admin-theme="dark"] {
-    --background: 220 20% 10%;
+    --background: 220 20% 4%;
     --foreground: 210 20% 90%;
-    --card: 220 18% 13%;
+    --card: 220 18% 7%;
     --card-foreground: 210 20% 90%;
-    --popover: 220 18% 13%;
+    --popover: 220 18% 7%;
     --popover-foreground: 210 20% 90%;
-    --muted: 220 15% 18%;
-    --muted-foreground: 210 10% 60%;
-    --border: 220 15% 22%;
-    --input: 220 15% 22%;
+    --muted: 220 15% 10%;
+    --muted-foreground: 210 10% 55%;
+    --border: 220 15% 12%;
+    --input: 220 15% 12%;
     --accent: 203 66% 55%;
     --accent-foreground: 0 0% 100%;
-    --sidebar-background: 220 20% 8%;
-    --sidebar-foreground: 220 10% 70%;
-    --sidebar-accent: 220 15% 15%;
+    --surface: 220 18% 8%;
+    --sidebar-background: 220 20% 3%;
+    --sidebar-foreground: 220 10% 65%;
+    --sidebar-accent: 220 15% 8%;
     --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 220 15% 16%;
+    --sidebar-border: 220 15% 8%;
   }
 
   /* Admin Light Theme */
   [data-admin-theme="light"] {
-    --background: 0 0% 98%;
-    --foreground: 220 20% 15%;
+    --background: 40 20% 97%;
+    --foreground: 220 20% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 15%;
+    --card-foreground: 220 20% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 15%;
-    --muted: 210 20% 96%;
+    --popover-foreground: 220 20% 8%;
+    --muted: 40 10% 93%;
     --muted-foreground: 210 10% 40%;
-    --border: 210 15% 90%;
-    --input: 210 15% 90%;
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
+    --surface: 40 10% 94%;
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 15% 40%;
     --sidebar-primary: 203 78% 35%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 20% 96%;
-    --sidebar-accent-foreground: 220 20% 15%;
-    --sidebar-border: 210 15% 90%;
+    --sidebar-accent: 40 10% 95%;
+    --sidebar-accent-foreground: 220 20% 8%;
+    --sidebar-border: 40 10% 90%;
   }
 }
 
@@ -112,12 +120,14 @@
     }
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
     line-height: 1.6;
   }
   h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
     @apply font-bold tracking-tight;
-    line-height: 1.25;
+    line-height: 1.1;
   }
   a, button {
     @apply transition-all duration-200;
@@ -137,5 +147,65 @@
   }
   .gradient-trust {
     background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+  }
+
+  /* Editorial typography */
+  .heading-display {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-size: clamp(3rem, 8vw, 6rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+  }
+  .heading-hero {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-size: clamp(2rem, 5vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  .heading-section {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-size: clamp(1.5rem, 3vw, 2.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    font-weight: 700;
+  }
+  .label-section {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  /* Glass effect */
+  .glass {
+    background: hsla(var(--glass));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsla(var(--glass-border));
+  }
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+  }
+
+  /* Hover effects */
+  .hover-lift {
+    @apply transition-all duration-300;
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -12px rgba(0,0,0,0.15);
+  }
+  .hover-scale {
+    @apply transition-transform duration-300;
+  }
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
+
+  /* Rounded container */
+  .rounded-container {
+    @apply rounded-[2rem] md:rounded-[2.5rem];
   }
 }
