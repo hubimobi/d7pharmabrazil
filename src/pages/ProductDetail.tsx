@@ -415,7 +415,6 @@ const ProductDetail = () => {
                 setShowUpsell(true);
               }}>
                 <ShoppingCart className="h-5 w-5" /> Adicionar ao Carrinho
-                <span className="text-xs opacity-75 ml-1">({product.stock} un.)</span>
               </Button>
               <Button size="lg" className="h-14 text-base gap-2 w-full bg-success hover:bg-success/90 text-success-foreground animate-pulse-soft" onClick={() => {
                 addItem(product, qty);
