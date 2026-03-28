@@ -1,4 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+
+const formatCPF = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+};
+
+const formatPhone = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : "";
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+};
 import { Link, useNavigate } from "react-router-dom";
 import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -206,6 +221,14 @@ const CheckoutPage = () => {
       toast.error("O valor mínimo para pagamento é R$ 5,00. Adicione mais produtos ao carrinho.");
       return;
     }
+
+    if (!form.name.trim()) { toast.error("Preencha seu nome."); return; }
+    if (!form.email.trim() || !form.email.includes("@")) { toast.error("Preencha um e-mail válido."); return; }
+    if (!form.phone.trim()) { toast.error("Preencha seu telefone."); return; }
+    if (form.cpf.replace(/\D/g, "").length !== 11) { toast.error("CPF inválido. Deve ter 11 dígitos."); return; }
+    if (!form.cep || form.cep.replace(/\D/g, "").length !== 8) { toast.error("Preencha o CEP."); return; }
+    if (!form.street.trim()) { toast.error("Preencha a rua."); return; }
+    if (!form.number.trim()) { toast.error("Preencha o número do endereço."); return; }
 
     setIsSubmitting(true);
     try {
@@ -498,9 +521,9 @@ const CheckoutPage = () => {
                 <h2 className="text-lg font-semibold">Dados Pessoais</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div><Label>Nome Completo *</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-                  <div><Label>CPF *</Label><Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: e.target.value })} placeholder="000.000.000-00" /></div>
+                  <div><Label>CPF *</Label><Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: formatCPF(e.target.value) })} placeholder="000.000.000-00" /></div>
                   <div><Label>Email *</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-                  <div><Label>Telefone *</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(00) 00000-0000" /></div>
+                  <div><Label>Telefone *</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" /></div>
                 </div>
 
                 <h2 className="text-lg font-semibold">Endereço</h2>
