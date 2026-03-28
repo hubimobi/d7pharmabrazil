@@ -41,7 +41,8 @@ export default function RecentPurchasePopup() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith("/admin");
   const isPublicStorefront = ["/", "/produtos"].includes(location.pathname) || location.pathname.startsWith("/produto/");
-  const { addItem } = useCart();
+  const cart = useCart();
+  const addItem = cart?.addItem;
   const { data: popupSettings } = useStoreSettings();
 
   // Settings with defaults
