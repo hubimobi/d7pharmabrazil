@@ -24,8 +24,9 @@ Deno.serve(async (req) => {
       .limit(10);
 
     if (error) {
+      console.error("Supabase query error:", JSON.stringify(error));
       return new Response(
-        JSON.stringify({ error: "Erro ao buscar pedidos recentes" }),
+        JSON.stringify({ error: "Erro ao buscar pedidos recentes", details: error.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
