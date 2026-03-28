@@ -1480,6 +1480,16 @@ export type Database = {
           sales_popup_interval_max: number | null
           sales_popup_interval_min: number | null
           sales_popup_position: string | null
+          section_benefits_visible: boolean
+          section_featured_visible: boolean
+          section_guarantee_visible: boolean
+          section_hero_visible: boolean
+          section_instagram_visible: boolean
+          section_mailing_visible: boolean
+          section_products_visible: boolean
+          section_promo_banners_visible: boolean
+          section_testimonials_visible: boolean
+          section_trust_badges_visible: boolean
           store_name: string
           tenant_id: string | null
           tiktok: string | null
@@ -1594,6 +1604,16 @@ export type Database = {
           sales_popup_interval_max?: number | null
           sales_popup_interval_min?: number | null
           sales_popup_position?: string | null
+          section_benefits_visible?: boolean
+          section_featured_visible?: boolean
+          section_guarantee_visible?: boolean
+          section_hero_visible?: boolean
+          section_instagram_visible?: boolean
+          section_mailing_visible?: boolean
+          section_products_visible?: boolean
+          section_promo_banners_visible?: boolean
+          section_testimonials_visible?: boolean
+          section_trust_badges_visible?: boolean
           store_name?: string
           tenant_id?: string | null
           tiktok?: string | null
@@ -1708,6 +1728,16 @@ export type Database = {
           sales_popup_interval_max?: number | null
           sales_popup_interval_min?: number | null
           sales_popup_position?: string | null
+          section_benefits_visible?: boolean
+          section_featured_visible?: boolean
+          section_guarantee_visible?: boolean
+          section_hero_visible?: boolean
+          section_instagram_visible?: boolean
+          section_mailing_visible?: boolean
+          section_products_visible?: boolean
+          section_promo_banners_visible?: boolean
+          section_testimonials_visible?: boolean
+          section_trust_badges_visible?: boolean
           store_name?: string
           tenant_id?: string | null
           tiktok?: string | null
