@@ -62,18 +62,8 @@ export default function DesignTokenApplier() {
       root.style.setProperty("--design-footer-gradient", footerGradient);
     }
 
-    return () => {
-      root.removeAttribute("data-visual-theme");
-      root.style.removeProperty("--font-sans");
-      root.style.removeProperty("--design-bg");
-      root.style.removeProperty("--design-bg-gradient");
-      root.style.removeProperty("--design-title");
-      root.style.removeProperty("--design-text");
-      root.style.removeProperty("--design-nav");
-      root.style.removeProperty("--design-footer-gradient");
-      document.body.style.backgroundColor = "";
-      document.body.style.background = "";
-    };
+    // No cleanup — DesignTokenApplier is a singleton and should persist tokens
+    // Removing attributes on unmount caused layout flashing during navigation
   }, [settings]);
 
   return null;

@@ -69,7 +69,16 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { theme, setTheme } = useAdminTheme();
   const { data: storeSettings } = useStoreSettings();
-  const visualTheme = (storeSettings as any)?.visual_theme || "editorial";
+  
+  // Cache visual_theme in localStorage to prevent layout flash on navigation
+  const visualTheme = (() => {
+    const fromSettings = (storeSettings as any)?.visual_theme;
+    if (fromSettings) {
+      localStorage.setItem("admin-visual-theme", fromSettings);
+      return fromSettings;
+    }
+    return localStorage.getItem("admin-visual-theme") || "editorial";
+  })();
 
   const themeOptions: { value: AdminTheme; label: string; icon: React.ReactNode }[] = [
     { value: "light", label: "Claro", icon: <Sun className="h-4 w-4" /> },
