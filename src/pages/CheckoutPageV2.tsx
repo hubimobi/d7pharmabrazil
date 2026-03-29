@@ -300,26 +300,26 @@ const CheckoutPageV2 = () => {
   const freeShipProgress = Math.min(100, (subtotal / freeShippingMinValue) * 100);
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-muted/30 overflow-x-hidden">
       <Header />
 
       {/* Urgency Bar */}
-      <div className="bg-gradient-to-r from-[hsl(var(--primary)/0.95)] to-[hsl(var(--primary))] py-2 px-4">
-        <div className="container flex items-center justify-center gap-3 sm:gap-6 flex-wrap text-xs sm:text-sm">
-          <span className="flex items-center gap-1.5 text-primary-foreground/80">
+      <div className="bg-gradient-to-r from-[hsl(var(--primary)/0.95)] to-[hsl(var(--primary))] py-2 px-3 sm:px-4">
+        <div className="container flex items-center justify-center gap-2 sm:gap-6 flex-wrap text-[10px] sm:text-sm">
+          <span className="flex items-center gap-1 text-primary-foreground/80">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
-            <strong className="text-primary-foreground/90">Alta demanda</strong> — poucas unidades
+            <strong className="text-primary-foreground/90">Alta demanda</strong>
           </span>
           <span className="text-primary-foreground/40 hidden sm:inline">|</span>
-          <span className="flex items-center gap-1.5 text-primary-foreground/80">
-            <Users className="h-3 w-3" />
-            <strong className="text-primary-foreground/90">7 pessoas</strong>&nbsp;vendo agora
+          <span className="flex items-center gap-1 text-primary-foreground/80">
+            <Users className="h-3 w-3 shrink-0" />
+            <strong className="text-primary-foreground/90">7 pessoas</strong>&nbsp;vendo
           </span>
           <span className="text-primary-foreground/40 hidden sm:inline">|</span>
-          <span className="flex items-center gap-1.5 text-primary-foreground/80">
-            <Clock className="h-3 w-3" />
-            Oferta expira em&nbsp;
-            <span className="rounded-md bg-primary-foreground/10 px-2 py-0.5 font-bold text-primary-foreground tracking-wider">{timerMin}:{timerSec}</span>
+          <span className="flex items-center gap-1 text-primary-foreground/80">
+            <Clock className="h-3 w-3 shrink-0" />
+            <span className="hidden sm:inline">Oferta expira em&nbsp;</span>
+            <span className="rounded-md bg-primary-foreground/10 px-1.5 py-0.5 font-bold text-primary-foreground tracking-wider">{timerMin}:{timerSec}</span>
           </span>
         </div>
       </div>
@@ -354,7 +354,7 @@ const CheckoutPageV2 = () => {
       </div>
 
       {/* Main Layout */}
-      <main className="container px-4 py-6 md:py-8">
+      <main className="container px-3 sm:px-4 py-6 md:py-8 max-w-full overflow-hidden">
         <div className="grid gap-6 lg:grid-cols-[1fr_360px] items-start max-w-6xl mx-auto">
 
           {/* LEFT: Form Area */}
@@ -522,20 +522,20 @@ const CheckoutPageV2 = () => {
 
                     {/* PIX Highlight */}
                     <button type="button" onClick={() => setForm({ ...form, paymentMethod: "pix" })}
-                      className={`w-full rounded-xl p-4 sm:p-5 flex items-center gap-4 text-left transition-all shadow-md ${
+                      className={`w-full rounded-xl p-3 sm:p-4 flex items-center gap-3 text-left transition-all shadow-md ${
                         form.paymentMethod === "pix"
                           ? "bg-gradient-to-r from-success to-[hsl(170,50%,45%)] ring-2 ring-success/50"
                           : "bg-gradient-to-r from-success/80 to-[hsl(170,50%,45%)]/80 opacity-80 hover:opacity-100"
                       }`}>
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 text-2xl shrink-0">⚡</div>
-                      <div className="flex-1">
-                        <p className="font-bold text-white text-base">Pagar com Pix</p>
-                        <p className="text-white/80 text-xs">Aprovação imediata · Mais seguro · Sem taxa extra</p>
+                      <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-white/20 text-xl sm:text-2xl shrink-0">⚡</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-white text-sm sm:text-base">Pagar com Pix</p>
+                        <p className="text-white/80 text-[10px] sm:text-xs truncate">Aprovação imediata · Sem taxa extra</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-white/60 text-xs line-through">R$ {finalTotal.toFixed(2).replace(".", ",")}</p>
-                        <p className="font-extrabold text-white text-xl leading-tight">R$ {pixTotal.toFixed(2).replace(".", ",")}</p>
-                        <span className="inline-block rounded bg-white/25 px-1.5 py-0.5 text-[10px] font-bold text-white">−5% OFF</span>
+                        <p className="text-white/60 text-[10px] sm:text-xs line-through">R$ {finalTotal.toFixed(2).replace(".", ",")}</p>
+                        <p className="font-extrabold text-white text-base sm:text-xl leading-tight">R$ {pixTotal.toFixed(2).replace(".", ",")}</p>
+                        <span className="inline-block rounded bg-white/25 px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold text-white">−5%</span>
                       </div>
                     </button>
 
