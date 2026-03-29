@@ -197,9 +197,9 @@ const CheckoutPageV3 = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
-      <main className="container max-w-3xl px-4 py-8">
+      <main className="container max-w-3xl px-3 sm:px-4 py-8">
         <Link to="/produtos" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Link>
@@ -286,15 +286,15 @@ const CheckoutPageV3 = () => {
           {/* Payment */}
           <section className="rounded-lg border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Pagamento</h2>
-            <div className="flex gap-2 mb-4">
-              <button type="button" className={`flex-1 rounded-lg border-2 p-3 text-center text-sm font-medium transition ${form.paymentMethod === "pix" ? "border-primary bg-primary/5" : "border-border"}`} onClick={() => setForm({ ...form, paymentMethod: "pix" })}>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <button type="button" className={`rounded-lg border-2 p-3 text-center text-sm font-medium transition ${form.paymentMethod === "pix" ? "border-primary bg-primary/5" : "border-border"}`} onClick={() => setForm({ ...form, paymentMethod: "pix" })}>
                 💰 Pix<br /><span className="text-xs text-success">5% off</span>
               </button>
-              <button type="button" className={`flex-1 rounded-lg border-2 p-3 text-center text-sm font-medium transition ${form.paymentMethod === "card" ? "border-primary bg-primary/5" : "border-border"}`} onClick={() => setForm({ ...form, paymentMethod: "card" })}>
+              <button type="button" className={`rounded-lg border-2 p-3 text-center text-sm font-medium transition ${form.paymentMethod === "card" ? "border-primary bg-primary/5" : "border-border"}`} onClick={() => setForm({ ...form, paymentMethod: "card" })}>
                 <CreditCard className="mx-auto mb-1 h-4 w-4" />Cartão
               </button>
               {(storeSettings as any)?.checkout_boleto_enabled && (
-                <button type="button" className={`flex-1 rounded-lg border-2 p-3 text-center text-sm font-medium transition ${form.paymentMethod === "boleto" ? "border-primary bg-primary/5" : "border-border"}`} onClick={() => setForm({ ...form, paymentMethod: "boleto" as any })}>
+                <button type="button" className={`col-span-2 rounded-lg border-2 p-3 text-center text-sm font-medium transition ${form.paymentMethod === "boleto" ? "border-primary bg-primary/5" : "border-border"}`} onClick={() => setForm({ ...form, paymentMethod: "boleto" as any })}>
                   🏦 Boleto
                 </button>
               )}
@@ -327,9 +327,11 @@ const CheckoutPageV3 = () => {
           </section>
 
           {/* Submit */}
-          <Button type="submit" className="w-full bg-success hover:bg-success/90 text-success-foreground gap-2" size="lg" disabled={isSubmitting}>
-            <Lock className="h-4 w-4" />
-            {isSubmitting ? "Processando..." : form.paymentMethod === "pix" ? `Pagar via Pix — R$ ${pixTotal.toFixed(2).replace(".", ",")}` : form.paymentMethod === "boleto" ? `Pagar Boleto — R$ ${finalTotal.toFixed(2).replace(".", ",")}` : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
+          <Button type="submit" className="w-full bg-success hover:bg-success/90 text-success-foreground gap-2 text-xs sm:text-sm" size="lg" disabled={isSubmitting}>
+            <Lock className="h-4 w-4 shrink-0" />
+            <span className="truncate">
+              {isSubmitting ? "Processando..." : form.paymentMethod === "pix" ? `Pix — R$ ${pixTotal.toFixed(2).replace(".", ",")}` : form.paymentMethod === "boleto" ? `Boleto — R$ ${finalTotal.toFixed(2).replace(".", ",")}` : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
+            </span>
           </Button>
 
           <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
