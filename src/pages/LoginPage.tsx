@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Lock, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -25,8 +26,26 @@ export default function LoginPage() {
     setIsLoading(false);
     if (error) {
       toast({ title: "Erro ao entrar", description: "Email ou senha incorretos.", variant: "destructive" });
+      return;
+    }
+    // Check MFA status after login
+    const { data: factorsData } = await supabase.auth.mfa.listFactors();
+    const hasVerifiedTOTP = factorsData?.totp?.some((f) => f.status === "verified");
+    if (hasVerifiedTOTP) {
+      navigate("/mfa-verify");
     } else {
-      navigate("/admin");
+      // Check if user is admin — if so, force MFA setup
+      const { data: rolesData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", (await supabase.auth.getUser()).data.user?.id ?? "");
+      const adminRoles = ["super_admin", "suporte", "administrador", "gestor", "financeiro", "admin"];
+      const isAdmin = rolesData?.some((r) => adminRoles.includes(r.role));
+      if (isAdmin) {
+        navigate("/mfa-setup");
+      } else {
+        navigate("/admin");
+      }
     }
   };
 
