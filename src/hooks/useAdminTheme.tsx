@@ -59,12 +59,7 @@ export function useAdminTheme() {
       root.setAttribute("data-admin-theme", theme);
     }
 
-    return () => {
-      root.removeAttribute("data-admin-theme");
-      root.style.removeProperty("--primary");
-      root.style.removeProperty("--sidebar-primary");
-      root.style.removeProperty("--sidebar-background");
-    };
+    // No cleanup — admin theme should persist across route changes to prevent flashing
   }, [theme, settings]);
 
   return { theme, setTheme };

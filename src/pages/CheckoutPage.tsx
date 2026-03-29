@@ -411,9 +411,9 @@ const CheckoutPage = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       <Header />
-      <main className="container px-3 sm:px-6 py-6 md:py-12">
+      <main className="container px-3 sm:px-6 py-6 md:py-12 max-w-full overflow-hidden">
         <Link to="/produtos" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Continuar Comprando
         </Link>
@@ -623,25 +623,25 @@ const CheckoutPage = () => {
                 </div>
 
                 <h2 className="text-lg font-semibold">Pagamento</h2>
-                <div className="flex gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
                   <button
                     type="button"
-                    className={`flex-1 rounded-lg border-2 p-4 text-center text-sm font-medium transition ${form.paymentMethod === "pix" ? "border-primary bg-primary/5" : "border-border"}`}
+                    className={`rounded-lg border-2 p-3 sm:p-4 text-center text-sm font-medium transition ${form.paymentMethod === "pix" ? "border-primary bg-primary/5" : "border-border"}`}
                     onClick={() => setForm({ ...form, paymentMethod: "pix" })}
                   >
                     💰 Pix<br /><span className="text-xs text-success">5% de desconto</span>
                   </button>
                   <button
                     type="button"
-                    className={`flex-1 rounded-lg border-2 p-4 text-center text-sm font-medium transition ${form.paymentMethod === "card" ? "border-primary bg-primary/5" : "border-border"}`}
+                    className={`rounded-lg border-2 p-3 sm:p-4 text-center text-sm font-medium transition ${form.paymentMethod === "card" ? "border-primary bg-primary/5" : "border-border"}`}
                     onClick={() => setForm({ ...form, paymentMethod: "card" })}
                   >
-                    <CreditCard className="mx-auto mb-1 h-5 w-5" />Cartão<br /><span className="text-xs text-muted-foreground">até {storeSettings?.max_installments || 3}x sem juros</span>
+                    <CreditCard className="mx-auto mb-1 h-5 w-5" />Cartão<br /><span className="text-xs text-muted-foreground">até {storeSettings?.max_installments || 3}x s/ juros</span>
                   </button>
                   {(storeSettings as any)?.checkout_boleto_enabled && (
                     <button
                       type="button"
-                      className={`flex-1 rounded-lg border-2 p-4 text-center text-sm font-medium transition ${form.paymentMethod === "boleto" ? "border-primary bg-primary/5" : "border-border"}`}
+                      className={`col-span-2 sm:col-span-1 rounded-lg border-2 p-3 sm:p-4 text-center text-sm font-medium transition ${form.paymentMethod === "boleto" ? "border-primary bg-primary/5" : "border-border"}`}
                       onClick={() => setForm({ ...form, paymentMethod: "boleto" as any })}
                     >
                       🏦 Boleto<br /><span className="text-xs text-muted-foreground">à vista</span>
@@ -661,12 +661,16 @@ const CheckoutPage = () => {
                   />
                 )}
 
-                <div className="flex gap-3">
-                  <Button type="button" variant="outline" onClick={() => setStep(1)}>Voltar</Button>
-                  <Button type="submit" className="flex-1 bg-success hover:bg-success/90 text-success-foreground" size="lg" disabled={isSubmitting}>
-                    {isSubmitting ? "Processando pagamento..." : form.paymentMethod === "pix" ? (
-                      <span>💰 Pagar via Pix — <span className="line-through opacity-70">R$ {finalTotal.toFixed(2).replace(".", ",")}</span> por R$ {pixTotal.toFixed(2).replace(".", ",")}</span>
-                    ) : form.paymentMethod === "boleto" ? `🏦 Pagar Boleto R$ ${finalTotal.toFixed(2).replace(".", ",")}` : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
+                <div className="flex gap-2 sm:gap-3">
+                  <Button type="button" variant="outline" onClick={() => setStep(1)} className="shrink-0">Voltar</Button>
+                  <Button type="submit" className="flex-1 bg-success hover:bg-success/90 text-success-foreground text-xs sm:text-sm min-w-0" size="lg" disabled={isSubmitting}>
+                    {isSubmitting ? "Processando..." : form.paymentMethod === "pix" ? (
+                      <span className="truncate">💰 Pix — R$ {pixTotal.toFixed(2).replace(".", ",")}</span>
+                    ) : form.paymentMethod === "boleto" ? (
+                      <span className="truncate">🏦 Boleto R$ {finalTotal.toFixed(2).replace(".", ",")}</span>
+                    ) : (
+                      <span className="truncate">Pagar R$ {finalTotal.toFixed(2).replace(".", ",")}</span>
+                    )}
                   </Button>
                 </div>
               </form>
