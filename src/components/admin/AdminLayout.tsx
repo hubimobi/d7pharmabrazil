@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState, useMemo } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "./AdminSidebar";
@@ -141,6 +141,42 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
+
+  // MFA guard for admin users — check AAL level
+  const [mfaChecked, setMfaChecked] = useState(false);
+  const [mfaRedirect, setMfaRedirect] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkMFA = async () => {
+      if (!isAdmin) { setMfaChecked(true); return; }
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (!aalData) { setMfaChecked(true); return; }
+      
+      if (aalData.nextLevel === "aal2" && aalData.currentLevel === "aal1") {
+        // User has factor enrolled but hasn't verified this session
+        setMfaRedirect("/mfa-verify");
+      } else if (aalData.nextLevel === "aal1" && aalData.currentLevel === "aal1") {
+        // No factor enrolled — admin must set up
+        const { data: factors } = await supabase.auth.mfa.listFactors();
+        const hasVerified = factors?.totp?.some((f) => f.status === "verified");
+        if (!hasVerified) {
+          setMfaRedirect("/mfa-setup");
+        }
+      }
+      setMfaChecked(true);
+    };
+    checkMFA();
+  }, [isAdmin]);
+
+  if (!mfaChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (mfaRedirect) return <Navigate to={mfaRedirect} replace />;
 
   // If modern theme, render the CRM-style layout
   if (visualTheme === "modern") {
