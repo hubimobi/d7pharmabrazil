@@ -66,6 +66,8 @@ const routeTitleMap: Record<string, string> = {
 export function AdminLayout({ children }: { children: ReactNode }) {
   const { user, loading, isAdmin, isRepresentative, signOut } = useAuth();
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [mfaChecked, setMfaChecked] = useState(false);
+  const [mfaRedirect, setMfaRedirect] = useState<string | null>(null);
   const location = useLocation();
   const { theme, setTheme } = useAdminTheme();
   const { data: storeSettings } = useStoreSettings();
