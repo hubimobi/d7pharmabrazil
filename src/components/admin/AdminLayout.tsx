@@ -119,35 +119,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     fetchNotifications();
   }, [isAdmin]);
 
-  const markAsRead = async (id: string) => {
-    await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
-
-  if (!user) return <Navigate to="/login" replace />;
-  if (!isAdmin && !isRepresentative) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-center p-4 bg-background">
-        <div>
-          <h2 className="text-xl font-bold font-display mb-2">Acesso negado</h2>
-          <p className="text-muted-foreground">Você não tem permissão para acessar esta área.</p>
-        </div>
-      </div>
-    );
-  }
-
   // MFA guard for admin users — check AAL level
-  const [mfaChecked, setMfaChecked] = useState(false);
-  const [mfaRedirect, setMfaRedirect] = useState<string | null>(null);
-
   useEffect(() => {
     const checkMFA = async () => {
       if (!isAdmin) { setMfaChecked(true); return; }
@@ -155,10 +127,8 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       if (!aalData) { setMfaChecked(true); return; }
       
       if (aalData.nextLevel === "aal2" && aalData.currentLevel === "aal1") {
-        // User has factor enrolled but hasn't verified this session
         setMfaRedirect("/mfa-verify");
       } else if (aalData.nextLevel === "aal1" && aalData.currentLevel === "aal1") {
-        // No factor enrolled — admin must set up
         const { data: factors } = await supabase.auth.mfa.listFactors();
         const hasVerified = factors?.totp?.some((f) => f.status === "verified");
         if (!hasVerified) {
@@ -170,7 +140,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     checkMFA();
   }, [isAdmin]);
 
-  if (!mfaChecked) {
+  const markAsRead = async (id: string) => {
+    await supabase.from("admin_notifications").update({ read: true }).eq("id", id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  if (loading || !mfaChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -178,7 +153,18 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  if (!user) return <Navigate to="/login" replace />;
   if (mfaRedirect) return <Navigate to={mfaRedirect} replace />;
+  if (!isAdmin && !isRepresentative) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-center p-4 bg-background">
+        <div>
+          <h2 className="text-xl font-bold font-display mb-2">Acesso negado</h2>
+          <p className="text-muted-foreground">Você não tem permissão para acessar esta área.</p>
+        </div>
+      </div>
+    );
+  }
 
   // If modern theme, render the CRM-style layout
   if (visualTheme === "modern") {
