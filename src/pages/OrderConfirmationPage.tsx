@@ -28,7 +28,7 @@ export default function OrderConfirmationPage() {
     const fetchOrder = async () => {
       try {
         const { data, error } = await supabase.functions.invoke("get-order", {
-          body: { order_id: orderId },
+          body: { order_id: orderId, customer_email: localStorage.getItem("checkout_email") || undefined },
         });
         if (error) throw error;
         if (data?.order) setOrder(data.order as any);
