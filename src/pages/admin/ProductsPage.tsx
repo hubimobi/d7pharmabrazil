@@ -330,6 +330,7 @@ export default function ProductsPage() {
     setNewTestimonial({ author_name: "", content: "", rating: 5, source: "manual" });
     setFaqs([]); setNewFaq({ question: "", answer: "" });
     setImagePreview(null);
+    setEditingTestimonialIdx(null);
   };
 
   const openEdit = async (p: NonNullable<typeof products>[number]) => {
