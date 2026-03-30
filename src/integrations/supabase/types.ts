@@ -2098,6 +2098,337 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_funnel_steps: {
+        Row: {
+          active: boolean
+          created_at: string
+          delay_minutes: number
+          funnel_id: string
+          id: string
+          instance_id: string | null
+          step_order: number
+          template_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          delay_minutes?: number
+          funnel_id: string
+          id?: string
+          instance_id?: string | null
+          step_order?: number
+          template_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          delay_minutes?: number
+          funnel_id?: string
+          id?: string
+          instance_id?: string | null
+          step_order?: number
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_funnel_steps_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_funnel_steps_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_funnel_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_funnels: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          trigger_event: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          trigger_event?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          trigger_event?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_instances: {
+        Row: {
+          active: boolean
+          api_key: string
+          api_url: string
+          created_at: string
+          daily_limit: number
+          id: string
+          instance_name: string
+          last_message_at: string | null
+          last_reset_at: string | null
+          messages_sent_today: number
+          name: string
+          phone_number: string | null
+          qr_code: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          api_key?: string
+          api_url?: string
+          created_at?: string
+          daily_limit?: number
+          id?: string
+          instance_name: string
+          last_message_at?: string | null
+          last_reset_at?: string | null
+          messages_sent_today?: number
+          name?: string
+          phone_number?: string | null
+          qr_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          api_key?: string
+          api_url?: string
+          created_at?: string
+          daily_limit?: number
+          id?: string
+          instance_name?: string
+          last_message_at?: string | null
+          last_reset_at?: string | null
+          messages_sent_today?: number
+          name?: string
+          phone_number?: string | null
+          qr_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_message_log: {
+        Row: {
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          direction: string
+          error_message: string | null
+          funnel_id: string | null
+          funnel_name: string | null
+          id: string
+          instance_id: string | null
+          instance_name: string | null
+          message_content: string
+          status: string
+          step_id: string | null
+        }
+        Insert: {
+          contact_name?: string
+          contact_phone: string
+          created_at?: string
+          direction?: string
+          error_message?: string | null
+          funnel_id?: string | null
+          funnel_name?: string | null
+          id?: string
+          instance_id?: string | null
+          instance_name?: string | null
+          message_content?: string
+          status?: string
+          step_id?: string | null
+        }
+        Update: {
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          direction?: string
+          error_message?: string | null
+          funnel_id?: string | null
+          funnel_name?: string | null
+          id?: string
+          instance_id?: string | null
+          instance_name?: string | null
+          message_content?: string
+          status?: string
+          step_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_message_log_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_message_log_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_message_log_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_funnel_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_message_queue: {
+        Row: {
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          error_message: string | null
+          funnel_id: string | null
+          id: string
+          instance_id: string | null
+          max_retries: number
+          message_content: string
+          priority: number
+          retry_count: number
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          step_id: string | null
+          template_id: string | null
+          variables: Json
+        }
+        Insert: {
+          contact_name?: string
+          contact_phone: string
+          created_at?: string
+          error_message?: string | null
+          funnel_id?: string | null
+          id?: string
+          instance_id?: string | null
+          max_retries?: number
+          message_content?: string
+          priority?: number
+          retry_count?: number
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          step_id?: string | null
+          template_id?: string | null
+          variables?: Json
+        }
+        Update: {
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          error_message?: string | null
+          funnel_id?: string | null
+          id?: string
+          instance_id?: string | null
+          max_retries?: number
+          message_content?: string
+          priority?: number
+          retry_count?: number
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          step_id?: string | null
+          template_id?: string | null
+          variables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_message_queue_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_message_queue_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_message_queue_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_funnel_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_message_queue_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_templates: {
+        Row: {
+          active: boolean
+          category: string
+          content: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          variables: Json
+        }
+        Insert: {
+          active?: boolean
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          variables?: Json
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          variables?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       ai_agents_public: {
