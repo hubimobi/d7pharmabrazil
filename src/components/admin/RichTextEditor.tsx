@@ -89,6 +89,32 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
 
   const insertHR = () => exec("insertHTML", "<hr style='margin:16px 0;border:none;border-top:1px solid #ddd'/>");
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const insertImage = useCallback(async (file: File) => {
+    const ext = file.name.split(".").pop() || "png";
+    const path = `pages/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("images").upload(path, file, { upsert: true });
+    if (error) {
+      toast.error("Erro ao enviar imagem");
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
+    exec("insertHTML", `<img src="${urlData.publicUrl}" alt="imagem" style="max-width:100%;height:auto;margin:12px 0;border-radius:8px" />`);
+  }, [exec]);
+
+  const handleImageUpload = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      insertImage(file);
+      e.target.value = "";
+    }
+  }, [insertImage]);
+
   const ToolBtn = ({ icon: Icon, cmd, val, title }: { icon: any; cmd?: string; val?: string; title: string; onClick?: () => void }) => (
     <Button type="button" variant="ghost" size="icon" className="h-7 w-7" title={title}
       onClick={() => cmd && exec(cmd, val)}>
