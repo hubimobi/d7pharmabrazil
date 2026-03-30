@@ -575,10 +575,10 @@ export default function StoreSettingsPage() {
           <p className="text-sm text-muted-foreground">Configure o cupom de desconto que o cliente recebe ao enviar um depoimento.</p>
           <div>
             <Label>Cupom Vinculado</Label>
-            <Select value={(form as any).feedback_bonus_coupon_id || ""} onValueChange={(v) => update("feedback_bonus_coupon_id" as any, v || null)}>
+            <Select value={(form as any).feedback_bonus_coupon_id || "none"} onValueChange={(v) => update("feedback_bonus_coupon_id" as any, v === "none" ? null : v)}>
               <SelectTrigger><SelectValue placeholder="Selecione um cupom..." /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="none">Nenhum</SelectItem>
                 {coupons?.map((c: any) => (
                   <SelectItem key={c.id} value={c.id}>{c.code} — {c.discount_value}{c.discount_type === "percent" ? "%" : " R$"}</SelectItem>
                 ))}

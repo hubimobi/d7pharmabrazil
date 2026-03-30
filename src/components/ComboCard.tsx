@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ShoppingCart, Zap, Truck, Star, Package } from "lucide-react";
 import CountdownTimer from "@/components/CountdownTimer";
 import { Badge } from "@/components/ui/badge";
@@ -57,8 +57,8 @@ const ComboCard = ({ combo }: { combo: ProductCombo }) => {
         <Badge className="absolute right-3 top-3 z-10 bg-secondary text-secondary-foreground text-[10.4px]">{combo.badge}</Badge>
       )}
 
-      {/* Image */}
-      <div className="relative block aspect-square overflow-hidden bg-muted rounded-2xl">
+      {/* Image — clickable link to combo detail */}
+      <Link to={`/combo/${combo.slug}`} className="relative block aspect-square overflow-hidden bg-muted rounded-2xl">
         {combo.image_url ? (
           <img
             src={combo.image_url}
@@ -89,7 +89,7 @@ const ComboCard = ({ combo }: { combo: ProductCombo }) => {
             COMBO • {combo.product_ids.length} produtos
           </Badge>
         </div>
-      </div>
+      </Link>
 
       {/* Info — same structure as ProductCard */}
       <div className="flex flex-1 flex-col p-3 md:p-4">
@@ -99,9 +99,9 @@ const ComboCard = ({ combo }: { combo: ProductCombo }) => {
           <span className="text-2xs md:text-xs text-muted-foreground">({totalReviews})</span>
         </div>
 
-        <h3 className="mt-1.5 text-xs md:text-sm font-semibold text-foreground line-clamp-2 leading-tight">
+        <Link to={`/combo/${combo.slug}`} className="mt-1.5 text-xs md:text-sm font-semibold text-foreground line-clamp-2 leading-tight hover:text-primary transition-colors">
           {combo.name}
-        </h3>
+        </Link>
 
         {comboProducts.length > 0 && (
           <p className="mt-1 hidden md:block text-[13px] text-muted-foreground line-clamp-2">
