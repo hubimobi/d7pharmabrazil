@@ -87,6 +87,8 @@ export default function ProductsPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { data: storeSettings } = useStoreSettings();
+  const marginGoal = (storeSettings as any)?.goal_profit_margin ?? 30;
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["admin-products"],
