@@ -430,10 +430,15 @@ export default function DesignSettingsPage() {
                   >
                     <ArrowDown className="h-3.5 w-3.5" />
                   </button>
-                  <Switch
-                    checked={(form as any)[key] !== false}
-                    onCheckedChange={(v) => update(key as any, v)}
-                  />
+                  {!ALWAYS_SHOW_SECTIONS.includes(key) && (
+                    <Switch
+                      checked={(form as any)[key] !== false}
+                      onCheckedChange={(v) => update(key as any, v)}
+                    />
+                  )}
+                  {ALWAYS_SHOW_SECTIONS.includes(key) && (
+                    <span className="text-2xs text-muted-foreground px-2">Sempre visível</span>
+                  )}
                 </div>
               </div>
             ))}
