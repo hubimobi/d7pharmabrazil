@@ -1,11 +1,62 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Download } from "lucide-react";
+import {
+  Download, Upload, Search, Edit, Trash2, Plus, FileText, Tags,
+  MapPin, Package, Filter, X, UserPlus
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "sonner";
+
+type LeadTag = "frio" | "morno" | "quente" | "produto_vinculado" | "funil";
+
+const TAG_OPTIONS: Array<{ value: LeadTag; label: string; color: string }> = [
+  { value: "frio", label: "Frio", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  { value: "morno", label: "Morno", color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" },
+  { value: "quente", label: "Quente", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  { value: "produto_vinculado", label: "Produto Vinculado", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
+  { value: "funil", label: "Funil", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+];
+
+function getTagStyle(tag: string) {
+  return TAG_OPTIONS.find((t) => t.value === tag)?.color || "bg-muted text-muted-foreground";
+}
+
+function getTagLabel(tag: string) {
+  return TAG_OPTIONS.find((t) => t.value === tag)?.label || tag;
+}
+
+const BRAZILIAN_STATES = [
+  "AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT",
+  "PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"
+];
 
 export default function LeadsPage() {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [filterTag, setFilterTag] = useState<string>("all");
+  const [showImport, setShowImport] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editingLead, setEditingLead] = useState<any>(null);
+  const [showAddLead, setShowAddLead] = useState(false);
+  const [csvText, setCsvText] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importProductId, setImportProductId] = useState<string>("none");
+  const [importTags, setImportTags] = useState<LeadTag[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [addForm, setAddForm] = useState({
+    name: "", email: "", phone: "", city: "", state: "", tags: [] as LeadTag[], product_id: "none",
+  });
+
   const { data: leads, isLoading } = useQuery({
     queryKey: ["popup-leads"],
     queryFn: async () => {
@@ -14,18 +65,174 @@ export default function LeadsPage() {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 
+  const { data: products } = useQuery({
+    queryKey: ["products-for-leads"],
+    queryFn: async () => {
+      const { data } = await supabase.from("products").select("id, name").eq("active", true).order("name");
+      return (data || []) as Array<{ id: string; name: string }>;
+    },
+  });
+
+  const filtered = (leads || []).filter((lead) => {
+    const matchSearch = !search || [lead.name, lead.email, lead.phone, lead.city, lead.state, lead.product_name]
+      .filter(Boolean).some((field) => String(field).toLowerCase().includes(search.toLowerCase()));
+    const tags: string[] = Array.isArray(lead.tags) ? lead.tags : [];
+    const matchTag = filterTag === "all" || tags.includes(filterTag);
+    return matchSearch && matchTag;
+  });
+
+  const tagCounts = (leads || []).reduce<Record<string, number>>((acc, lead) => {
+    const tags: string[] = Array.isArray(lead.tags) ? lead.tags : [];
+    tags.forEach((tag) => { acc[tag] = (acc[tag] || 0) + 1; });
+    return acc;
+  }, {});
+
+  function toggleTag(list: LeadTag[], tag: LeadTag): LeadTag[] {
+    return list.includes(tag) ? list.filter((t) => t !== tag) : [...list, tag];
+  }
+
+  async function deleteLead(id: string) {
+    if (!confirm("Excluir este lead?")) return;
+    await supabase.from("popup_leads").delete().eq("id", id);
+    toast.success("Lead removido");
+    queryClient.invalidateQueries({ queryKey: ["popup-leads"] });
+  }
+
+  function openEdit(lead: any) {
+    setEditingLead({
+      ...lead,
+      tags: Array.isArray(lead.tags) ? lead.tags : [],
+      product_id: lead.product_id || "none",
+    });
+    setShowEdit(true);
+  }
+
+  async function saveEdit() {
+    if (!editingLead) return;
+    const productName = editingLead.product_id && editingLead.product_id !== "none"
+      ? products?.find((p) => p.id === editingLead.product_id)?.name || ""
+      : null;
+    const tags = editingLead.tags || [];
+    const finalTags = editingLead.product_id && editingLead.product_id !== "none" && !tags.includes("produto_vinculado")
+      ? [...tags, "produto_vinculado"]
+      : tags;
+
+    await supabase.from("popup_leads").update({
+      name: editingLead.name,
+      phone: editingLead.phone,
+      city: editingLead.city,
+      state: editingLead.state,
+      tags: finalTags,
+      product_id: editingLead.product_id === "none" ? null : editingLead.product_id,
+      product_name: productName,
+    } as any).eq("id", editingLead.id);
+    toast.success("Lead atualizado");
+    setShowEdit(false);
+    queryClient.invalidateQueries({ queryKey: ["popup-leads"] });
+  }
+
+  async function addLead() {
+    if (!addForm.email) { toast.error("E-mail é obrigatório"); return; }
+    const productName = addForm.product_id !== "none"
+      ? products?.find((p) => p.id === addForm.product_id)?.name || ""
+      : null;
+    const tags = [...addForm.tags];
+    if (addForm.product_id !== "none" && !tags.includes("produto_vinculado")) tags.push("produto_vinculado");
+
+    await supabase.from("popup_leads").insert({
+      email: addForm.email,
+      name: addForm.name || null,
+      phone: addForm.phone || null,
+      source: "manual",
+      city: addForm.city || null,
+      state: addForm.state || null,
+      tags,
+      product_id: addForm.product_id === "none" ? null : addForm.product_id,
+      product_name: productName,
+    } as any);
+    toast.success("Lead adicionado");
+    setShowAddLead(false);
+    setAddForm({ name: "", email: "", phone: "", city: "", state: "", tags: [], product_id: "none" });
+    queryClient.invalidateQueries({ queryKey: ["popup-leads"] });
+  }
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setCsvText(ev.target?.result as string || "");
+    reader.readAsText(file);
+  }
+
+  async function handleCSVImport() {
+    const lines = csvText.trim().split("\n").filter(Boolean);
+    if (lines.length === 0) { toast.error("Nenhum dado para importar"); return; }
+    setImporting(true);
+
+    const header = lines[0].toLowerCase();
+    const hasHeader = header.includes("email") || header.includes("nome") || header.includes("name");
+    const dataLines = hasHeader ? lines.slice(1) : lines;
+
+    const cols = (hasHeader ? lines[0] : "").toLowerCase().split(/[;,\t]/);
+    const emailIdx = Math.max(cols.findIndex((c) => c.includes("email")), 0);
+    const nameIdx = cols.findIndex((c) => c.includes("nome") || c.includes("name"));
+    const phoneIdx = cols.findIndex((c) => c.includes("phone") || c.includes("telefone") || c.includes("whatsapp") || c.includes("celular"));
+    const cityIdx = cols.findIndex((c) => c.includes("cidade") || c.includes("city"));
+    const stateIdx = cols.findIndex((c) => c.includes("estado") || c.includes("state") || c.includes("uf"));
+
+    const productName = importProductId !== "none"
+      ? products?.find((p) => p.id === importProductId)?.name || ""
+      : null;
+    const baseTags: LeadTag[] = [...importTags];
+    if (importProductId !== "none" && !baseTags.includes("produto_vinculado")) baseTags.push("produto_vinculado");
+
+    let imported = 0;
+    for (const line of dataLines) {
+      const parts = line.split(/[;,\t]/).map((s) => s.trim().replace(/^["']|["']$/g, ""));
+      const email = parts[emailIdx] || "";
+      if (!email || !email.includes("@")) continue;
+
+      const payload: Record<string, unknown> = {
+        email,
+        name: nameIdx >= 0 ? parts[nameIdx] || null : null,
+        phone: phoneIdx >= 0 ? parts[phoneIdx] || null : null,
+        city: cityIdx >= 0 ? parts[cityIdx] || null : null,
+        state: stateIdx >= 0 ? parts[stateIdx] || null : null,
+        source: "csv_import",
+        tags: baseTags,
+        product_id: importProductId === "none" ? null : importProductId,
+        product_name: productName,
+      };
+
+      const { error } = await supabase.from("popup_leads").insert(payload as any);
+      if (!error) imported++;
+    }
+
+    toast.success(`${imported} lead(s) importado(s) com sucesso!`);
+    setImporting(false);
+    setShowImport(false);
+    setCsvText("");
+    setImportProductId("none");
+    setImportTags([]);
+    queryClient.invalidateQueries({ queryKey: ["popup-leads"] });
+  }
+
   const exportCSV = () => {
-    if (!leads?.length) return;
+    if (!filtered?.length) return;
     const rows = [
-      ["Nome", "E-mail", "WhatsApp", "Fonte", "Data"],
-      ...leads.map((l: any) => [
+      ["Nome", "E-mail", "WhatsApp", "Cidade", "Estado", "Tags", "Produto", "Fonte", "Data"],
+      ...filtered.map((l: any) => [
         l.name || "",
         l.email,
         l.phone || "",
+        l.city || "",
+        l.state || "",
+        (Array.isArray(l.tags) ? l.tags.map(getTagLabel).join("; ") : ""),
+        l.product_name || "",
         l.source || "",
         new Date(l.created_at || "").toLocaleDateString("pt-BR"),
       ]),
@@ -44,16 +251,50 @@ export default function LeadsPage() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-2xl font-bold">Leads</h2>
-          <p className="text-sm text-muted-foreground mt-1">Leads capturados pelo popup da loja</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {filtered.length} lead(s) {filterTag !== "all" ? `• filtro: ${getTagLabel(filterTag)}` : ""}
+          </p>
         </div>
-        {(leads?.length || 0) > 0 && (
-          <Button variant="outline" size="sm" onClick={exportCSV} className="gap-2">
-            <Download className="h-4 w-4" />
-            Exportar CSV
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+            <Upload className="h-4 w-4 mr-1" /> Importar CSV
           </Button>
-        )}
+          <Button variant="outline" size="sm" onClick={() => setShowAddLead(true)}>
+            <UserPlus className="h-4 w-4 mr-1" /> Adicionar
+          </Button>
+          {filtered.length > 0 && (
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download className="h-4 w-4 mr-1" /> Exportar
+            </Button>
+          )}
+        </div>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome, e-mail, cidade..." className="pl-9" />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <Button size="sm" variant={filterTag === "all" ? "default" : "outline"} className="h-7 rounded-full text-xs" onClick={() => setFilterTag("all")}>
+            Todos ({leads?.length || 0})
+          </Button>
+          {TAG_OPTIONS.map((tag) => (
+            <Button
+              key={tag.value}
+              size="sm"
+              variant={filterTag === tag.value ? "default" : "outline"}
+              className="h-7 rounded-full text-xs"
+              onClick={() => setFilterTag(filterTag === tag.value ? "all" : tag.value)}
+            >
+              {tag.label} ({tagCounts[tag.value] || 0})
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Table */}
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <Table>
@@ -62,38 +303,239 @@ export default function LeadsPage() {
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead className="hidden md:table-cell">WhatsApp</TableHead>
-                <TableHead className="hidden md:table-cell">Fonte</TableHead>
+                <TableHead className="hidden lg:table-cell">Cidade/UF</TableHead>
+                <TableHead className="hidden md:table-cell">Tags</TableHead>
+                <TableHead className="hidden lg:table-cell">Produto</TableHead>
+                <TableHead className="hidden sm:table-cell">Fonte</TableHead>
                 <TableHead className="hidden sm:table-cell">Data</TableHead>
+                <TableHead className="w-20"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando...</TableCell>
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</TableCell>
                 </TableRow>
-              ) : !leads?.length ? (
+              ) : !filtered.length ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Nenhum lead capturado ainda. Ative o popup para começar a coletar.
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    {search || filterTag !== "all" ? "Nenhum lead encontrado com os filtros aplicados." : "Nenhum lead capturado ainda."}
                   </TableCell>
                 </TableRow>
               ) : (
-                leads.map((lead: any) => (
-                  <TableRow key={lead.id}>
-                    <TableCell className="font-medium">{lead.name || "—"}</TableCell>
-                    <TableCell>{lead.email}</TableCell>
-                    <TableCell className="hidden md:table-cell">{lead.phone || "—"}</TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground">{lead.source || "popup"}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-muted-foreground">
-                      {new Date(lead.created_at || "").toLocaleDateString("pt-BR")}
-                    </TableCell>
-                  </TableRow>
-                ))
+                filtered.map((lead: any) => {
+                  const tags: string[] = Array.isArray(lead.tags) ? lead.tags : [];
+                  return (
+                    <TableRow key={lead.id}>
+                      <TableCell className="font-medium">{lead.name || "—"}</TableCell>
+                      <TableCell className="text-sm">{lead.email}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">{lead.phone || "—"}</TableCell>
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                        {[lead.city, lead.state].filter(Boolean).join(", ") || "—"}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="flex flex-wrap gap-1">
+                          {tags.length > 0 ? tags.map((tag) => (
+                            <span key={tag} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getTagStyle(tag)}`}>
+                              {getTagLabel(tag)}
+                            </span>
+                          )) : <span className="text-muted-foreground text-xs">—</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{lead.product_name || "—"}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{lead.source || "popup"}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                        {new Date(lead.created_at || "").toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(lead)}>
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteLead(lead.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Import CSV Dialog */}
+      <Dialog open={showImport} onOpenChange={setShowImport}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Importar Leads via CSV</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border p-4 space-y-2">
+              <p className="text-sm font-medium">Formato esperado:</p>
+              <p className="text-xs text-muted-foreground">
+                O CSV deve conter pelo menos a coluna <code className="bg-muted px-1 rounded">email</code>. Colunas opcionais: <code className="bg-muted px-1 rounded">nome</code>, <code className="bg-muted px-1 rounded">telefone</code>, <code className="bg-muted px-1 rounded">cidade</code>, <code className="bg-muted px-1 rounded">estado</code>.
+              </p>
+              <p className="text-xs text-muted-foreground">Exemplo sem cabeçalho: <code className="bg-muted px-1 rounded">joao@email.com,João,5511999...,São Paulo,SP</code></p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Vincular a Produto (opcional)</Label>
+              <Select value={importProductId} onValueChange={setImportProductId}>
+                <SelectTrigger><SelectValue placeholder="Nenhum produto" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum produto</SelectItem>
+                  {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Ex: lista de compradores de um produto específico de outro sistema.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tags para todos os importados</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {TAG_OPTIONS.map((tag) => (
+                  <Button
+                    key={tag.value}
+                    type="button"
+                    size="sm"
+                    variant={importTags.includes(tag.value) ? "default" : "outline"}
+                    className="h-7 rounded-full text-xs"
+                    onClick={() => setImportTags((current) => toggleTag(current, tag.value))}
+                  >
+                    {tag.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-4 w-4 mr-1" /> Enviar Arquivo
+              </Button>
+              <input ref={fileInputRef} type="file" accept=".csv,.txt" className="hidden" onChange={handleFileUpload} />
+            </div>
+            <Textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} rows={8}
+              placeholder={"email,nome,telefone,cidade,estado\njoao@email.com,João Silva,5511999999999,São Paulo,SP"} />
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-muted-foreground">{csvText.trim().split("\n").filter(Boolean).length} linha(s)</span>
+              <Button onClick={handleCSVImport} disabled={importing || !csvText.trim()}>
+                {importing ? "Importando..." : "Importar Leads"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Lead Dialog */}
+      <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Adicionar Lead</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Nome</Label><Input value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} /></div>
+              <div><Label>E-mail *</Label><Input value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} type="email" /></div>
+            </div>
+            <div><Label>WhatsApp</Label><Input value={addForm.phone} onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Cidade</Label><Input value={addForm.city} onChange={(e) => setAddForm({ ...addForm, city: e.target.value })} /></div>
+              <div>
+                <Label>Estado</Label>
+                <Select value={addForm.state || "none"} onValueChange={(v) => setAddForm({ ...addForm, state: v === "none" ? "" : v })}>
+                  <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {BRAZILIAN_STATES.map((uf) => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {TAG_OPTIONS.map((tag) => (
+                  <Button key={tag.value} type="button" size="sm"
+                    variant={addForm.tags.includes(tag.value) ? "default" : "outline"}
+                    className="h-7 rounded-full text-xs"
+                    onClick={() => setAddForm({ ...addForm, tags: toggleTag(addForm.tags, tag.value) })}>
+                    {tag.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Produto Vinculado</Label>
+              <Select value={addForm.product_id} onValueChange={(v) => setAddForm({ ...addForm, product_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddLead(false)}>Cancelar</Button>
+            <Button onClick={addLead}>Adicionar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Lead Dialog */}
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Lead</DialogTitle></DialogHeader>
+          {editingLead && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Nome</Label><Input value={editingLead.name || ""} onChange={(e) => setEditingLead({ ...editingLead, name: e.target.value })} /></div>
+                <div><Label>E-mail</Label><Input value={editingLead.email} disabled className="bg-muted" /></div>
+              </div>
+              <div><Label>WhatsApp</Label><Input value={editingLead.phone || ""} onChange={(e) => setEditingLead({ ...editingLead, phone: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Cidade</Label><Input value={editingLead.city || ""} onChange={(e) => setEditingLead({ ...editingLead, city: e.target.value })} /></div>
+                <div>
+                  <Label>Estado</Label>
+                  <Select value={editingLead.state || "none"} onValueChange={(v) => setEditingLead({ ...editingLead, state: v === "none" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">—</SelectItem>
+                      {BRAZILIAN_STATES.map((uf) => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {TAG_OPTIONS.map((tag) => (
+                    <Button key={tag.value} type="button" size="sm"
+                      variant={editingLead.tags?.includes(tag.value) ? "default" : "outline"}
+                      className="h-7 rounded-full text-xs"
+                      onClick={() => setEditingLead({ ...editingLead, tags: toggleTag(editingLead.tags || [], tag.value) })}>
+                      {tag.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Produto Vinculado</Label>
+                <Select value={editingLead.product_id || "none"} onValueChange={(v) => setEditingLead({ ...editingLead, product_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button>
+            <Button onClick={saveEdit}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
