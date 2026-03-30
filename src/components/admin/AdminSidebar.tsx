@@ -54,6 +54,7 @@ const adminSections: MenuSection[] = [
           { title: "Pedidos", url: "/admin/vendas", icon: ShoppingBag },
           { title: "Clientes", url: "/admin/clientes", icon: Contact },
           { title: "Recuperação", url: "/admin/recuperacao", icon: ShoppingCart },
+          { title: "Recompra (+LTV)", url: "/admin/recompra", icon: RefreshCw },
           { title: "Cupons", url: "/admin/cupons", icon: Tag },
           { title: "Checkout", url: "/admin/checkout", icon: Settings2 },
         ],
