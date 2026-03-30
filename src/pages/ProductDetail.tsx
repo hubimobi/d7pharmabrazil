@@ -15,7 +15,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import SEOHead from "@/components/SEOHead";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import UpsellDialog from "@/components/UpsellDialog";
 import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
 import ProductQA from "@/components/ProductQA";
@@ -53,6 +53,19 @@ const ProductDetail = () => {
   const [showUpsell, setShowUpsell] = useState(false);
   const [shippingCep, setShippingCep] = useState("");
   const [shippingOption, setShippingOption] = useState<ShippingOption | null>(null);
+  const buyButtonsRef = useRef<HTMLDivElement>(null);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+
+  useEffect(() => {
+    const el = buyButtonsRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [product]);
 
   const { data: testimonials } = useQuery({
     queryKey: ["product-testimonials", product?.id],
@@ -430,7 +443,7 @@ const ProductDetail = () => {
             )}
 
             {/* Action buttons */}
-            <div className="flex flex-col gap-2">
+            <div ref={buyButtonsRef} className="flex flex-col gap-2">
               {hasSavedData && (
                 <Button size="lg" className="h-14 text-base gap-2 w-full bg-amber-500 hover:bg-amber-600 text-white font-bold animate-pulse-soft" onClick={() => {
                   addItem(product, qty);
@@ -606,6 +619,54 @@ const ProductDetail = () => {
           <ShoppingCart className="h-4 w-4" /> Adicionar
         </Button>
       </div>
+
+      {/* Sticky desktop bottom bar — visible when buy buttons scroll out of view */}
+      {showStickyBar && product && (
+        <div className="fixed bottom-0 inset-x-0 z-50 hidden md:block animate-fade-in">
+          <div className="border-t border-border bg-card/95 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+            <div className="container flex items-center gap-4 py-3">
+              <img
+                src={product.image}
+                alt={product.name}
+                className="h-12 w-12 rounded-xl object-cover border border-border"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{product.name}</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold text-foreground">R$ {product.price.toFixed(2).replace(".", ",")}</span>
+                  <span className="text-xs text-muted-foreground line-through">R$ {product.originalPrice.toFixed(2).replace(".", ",")}</span>
+                  <span className="text-xs text-success font-medium">ou R$ {(product.price * 0.95).toFixed(2).replace(".", ",")} no Pix</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-xl border border-border">
+                <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-3 py-1.5 text-lg font-medium text-muted-foreground hover:text-foreground">−</button>
+                <span className="min-w-[2rem] text-center text-sm font-semibold">{qty}</span>
+                <button onClick={() => setQty(Math.min(product.stock, qty + 1))} className="px-3 py-1.5 text-lg font-medium text-muted-foreground hover:text-foreground">+</button>
+              </div>
+              <Button
+                size="lg"
+                className="h-12 gap-2 rounded-xl px-6"
+                onClick={() => {
+                  addItem(product, qty);
+                  setShowUpsell(true);
+                }}
+              >
+                <ShoppingCart className="h-4 w-4" /> Adicionar ao carrinho
+              </Button>
+              <Button
+                size="lg"
+                className="h-12 gap-2 rounded-xl px-6 bg-success hover:bg-success/90 text-success-foreground"
+                onClick={() => {
+                  addItem(product, qty);
+                  navigate("/checkout");
+                }}
+              >
+                Comprar Agora
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
       <WhatsAppButton />
