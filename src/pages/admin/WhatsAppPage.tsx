@@ -597,8 +597,6 @@ function FunnelsTab() {
     if (mins < 1440) return `${Math.round(mins / 60)}h`;
     return `${Math.round(mins / 1440)}d`;
   }
-    return `${Math.round(mins / 1440)}d`;
-  }
 
   return (
     <div className="space-y-4">
