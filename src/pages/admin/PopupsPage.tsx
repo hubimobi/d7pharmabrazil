@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, Loader2, Eye, EyeOff, Bell } from "lucide-react";
+import { Megaphone, Loader2, Eye, EyeOff, Bell, Upload, Crop, Eraser, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { SalesPopupSettings } from "@/components/admin/SalesPopupSettings";
+import { CropImageDialog } from "@/components/admin/CropImageDialog";
 
 export default function PopupsPage() {
   const queryClient = useQueryClient();
@@ -31,10 +32,10 @@ export default function PopupsPage() {
     },
   });
 
-
-
-
   const [form, setForm] = useState<Partial<StoreSettings> | null>(null);
+  const [cropDialog, setCropDialog] = useState<{ imageUrl: string } | null>(null);
+  const [removingBg, setRemovingBg] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   if (settings && !form) {
     setForm({ ...settings });
@@ -81,8 +82,68 @@ export default function PopupsPage() {
     });
   };
 
+  // Image upload
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const filePath = `popup-banner.${ext}`;
+      await supabase.storage.from("store-assets").remove([filePath]);
+      const { error } = await supabase.storage.from("store-assets").upload(filePath, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(filePath);
+      update("popup_banner_image_url", urlData.publicUrl + "?t=" + Date.now());
+      toast.success("Imagem enviada!");
+    } catch (err: any) {
+      toast.error("Erro ao enviar imagem: " + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
+  // Crop complete
+  const handleCropComplete = useCallback(async (blob: Blob) => {
+    try {
+      const filePath = `popup-banner-cropped.png`;
+      await supabase.storage.from("store-assets").remove([filePath]);
+      const { error } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(filePath);
+      update("popup_banner_image_url", urlData.publicUrl + "?t=" + Date.now());
+      toast.success("Imagem recortada com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao salvar recorte: " + err.message);
+    }
+  }, []);
 
+  // Remove background
+  const handleRemoveBg = useCallback(async (imageUrl: string) => {
+    setRemovingBg(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("remove-background", {
+        body: { image_url: imageUrl },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const binary = atob(data.image_base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "image/png" });
+
+      const filePath = `popup-banner-nobg.png`;
+      await supabase.storage.from("store-assets").remove([filePath]);
+      const { error: uploadError } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("store-assets").getPublicUrl(filePath);
+      update("popup_banner_image_url", urlData.publicUrl + "?t=" + Date.now());
+      toast.success("Fundo removido com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao remover fundo: " + err.message);
+    } finally {
+      setRemovingBg(false);
+    }
+  }, []);
 
   if (loadingSettings || !form) {
     return (
@@ -231,14 +292,71 @@ export default function PopupsPage() {
                     maxLength={300}
                   />
                 </div>
+
+                {/* Image Upload Section */}
                 <div>
-                  <Label>URL da Imagem (opcional)</Label>
-                  <Input
-                    value={form.popup_banner_image_url || ""}
-                    onChange={(e) => update("popup_banner_image_url", e.target.value)}
-                    placeholder="https://..."
-                  />
+                  <Label>Imagem</Label>
+                  <div className="mt-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploading}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleImageUpload(f);
+                      }}
+                    />
+                  </div>
+                  <div className="mt-2">
+                    <Label className="text-xs text-muted-foreground">Ou cole a URL da imagem</Label>
+                    <Input
+                      value={form.popup_banner_image_url || ""}
+                      onChange={(e) => update("popup_banner_image_url", e.target.value)}
+                      placeholder="https://..."
+                    />
+                  </div>
+                  {form.popup_banner_image_url && (
+                    <div className="mt-3 space-y-2">
+                      <img
+                        src={form.popup_banner_image_url}
+                        alt="Preview"
+                        className="h-24 w-24 object-contain rounded-2xl border"
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          onClick={() => setCropDialog({ imageUrl: form.popup_banner_image_url! })}
+                        >
+                          <Crop className="h-4 w-4" /> Recortar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          onClick={() => handleRemoveBg(form.popup_banner_image_url!)}
+                          disabled={removingBg}
+                        >
+                          {removingBg ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eraser className="h-4 w-4" />}
+                          {removingBg ? "Processando..." : "Remover Fundo"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-destructive hover:text-destructive"
+                          onClick={() => update("popup_banner_image_url", "")}
+                        >
+                          <Trash2 className="h-4 w-4" /> Remover
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div>
                     <Label>Texto do Botão</Label>
@@ -279,6 +397,18 @@ export default function PopupsPage() {
         <SalesPopupSettings settings={storeSettings} />
 
       </div>
+
+      {cropDialog && (
+        <CropImageDialog
+          open={!!cropDialog}
+          onOpenChange={(open) => { if (!open) setCropDialog(null); }}
+          imageUrl={cropDialog.imageUrl}
+          onCropComplete={(blob) => {
+            handleCropComplete(blob);
+            setCropDialog(null);
+          }}
+        />
+      )}
     </div>
   );
 }
