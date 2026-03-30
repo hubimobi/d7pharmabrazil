@@ -225,23 +225,22 @@
 
 /* ============================================================
    SQUARE BORDER STYLE OVERRIDE
-   When data-border-style="square" is set on <html>,
-   force all rounded corners to 0.
+   Only applies to storefront elements (header, main, footer).
+   Admin panel is excluded via .admin-panel class.
    ============================================================ */
-[data-border-style="square"] *,
-[data-border-style="square"] *::before,
-[data-border-style="square"] *::after {
+[data-border-style="square"] header:not(.admin-panel *) *,
+[data-border-style="square"] header:not(.admin-panel *) *::before,
+[data-border-style="square"] header:not(.admin-panel *) *::after,
+[data-border-style="square"] main:not(.admin-panel *) *,
+[data-border-style="square"] main:not(.admin-panel *) *::before,
+[data-border-style="square"] main:not(.admin-panel *) *::after,
+[data-border-style="square"] footer:not(.admin-panel *) *,
+[data-border-style="square"] footer:not(.admin-panel *) *::before,
+[data-border-style="square"] footer:not(.admin-panel *) *::after,
+[data-border-style="square"] .storefront *,
+[data-border-style="square"] .storefront *::before,
+[data-border-style="square"] .storefront *::after {
   border-radius: 0 !important;
-}
-
-/* Exclude admin panel from square override */
-[data-admin-theme] * {
-  /* admin keeps its own radius */
-}
-[data-border-style="square"] [data-admin-theme] *,
-[data-border-style="square"] [data-admin-theme] *::before,
-[data-border-style="square"] [data-admin-theme] *::after {
-  border-radius: revert !important;
 }
 
 /* Force mobile layout when ?m param is used */
