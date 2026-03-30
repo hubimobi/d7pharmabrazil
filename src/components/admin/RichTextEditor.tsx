@@ -165,6 +165,10 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
           <Button type="button" variant="ghost" size="icon" className="h-7 w-7" title="Linha Horizontal" onClick={insertHR}>
             <Minus className="h-3.5 w-3.5" />
           </Button>
+          <Button type="button" variant="ghost" size="icon" className="h-7 w-7" title="Inserir Imagem" onClick={handleImageUpload}>
+            <ImagePlus className="h-3.5 w-3.5" />
+          </Button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
         </div>
 
         <TabsContent value="visual" className="mt-0">
