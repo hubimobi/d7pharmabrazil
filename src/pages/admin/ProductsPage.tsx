@@ -431,16 +431,25 @@ export default function ProductsPage() {
                     <Label>Descrição Completa (HTML)</Label>
                     <RichTextEditor value={form.description} onChange={(val) => setForm({ ...form, description: val })} placeholder="Escreva a descrição do produto com formatação rica..." />
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
                     <div className="space-y-2">
                       <Label>Preço de Custo (R$)</Label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
-                        <Input className="pl-10" type="number" step="0.01" min="0" value={form.cost_price} onChange={(e) => setForm({ ...form, cost_price: e.target.value })} placeholder="0,00" />
+                        <Input className="pl-10" type="number" step="0.01" min="0" value={form.cost_price} onChange={(e) => {
+                          const newCost = e.target.value;
+                          const updatedForm = { ...form, cost_price: newCost };
+                          // Auto-suggest price if empty
+                          if (newCost && parseFloat(newCost) > 0 && (!form.price || parseFloat(form.price) === 0)) {
+                            const suggested = parseFloat(newCost) / (1 - marginGoal / 100);
+                            updatedForm.price = suggested.toFixed(2);
+                          }
+                          setForm(updatedForm);
+                        }} placeholder="0,00" />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Preço de Venda (R$) *</Label>
+                      <Label>Preço de Venda (R$) <span className="text-destructive">*</span></Label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
                         <Input className="pl-10" type="number" step="0.01" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required placeholder="0,00" />
