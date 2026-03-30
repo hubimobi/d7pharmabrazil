@@ -165,6 +165,13 @@ const CheckoutPageV3 = () => {
       if (data?.error) throw new Error(data.error);
       setPaymentResult(data);
 
+      // Save customer data for One-Click Buy
+      saveCustomer({
+        name: form.name, cpf: form.cpf, email: form.email, phone: form.phone,
+        cep: form.cep, street: form.street, number: form.number, complement: form.complement,
+        neighborhood: form.neighborhood, city: form.city, state: form.state,
+      });
+
       // GHL sync
       supabase.functions.invoke("ghl-sync", { body: { customer_name: form.name, customer_email: form.email, customer_phone: form.phone, order_id: data.order_id, order_total: paymentValue, items: orderItems, tags: [form.paymentMethod === "pix" ? "pagou-pix" : "pagou-cartao"] } }).catch(() => {});
       // Link attribution
