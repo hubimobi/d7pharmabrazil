@@ -443,7 +443,7 @@ const ProductDetail = () => {
             )}
 
             {/* Action buttons */}
-            <div className="flex flex-col gap-2">
+            <div ref={buyButtonsRef} className="flex flex-col gap-2">
               {hasSavedData && (
                 <Button size="lg" className="h-14 text-base gap-2 w-full bg-amber-500 hover:bg-amber-600 text-white font-bold animate-pulse-soft" onClick={() => {
                   addItem(product, qty);
