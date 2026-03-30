@@ -257,8 +257,8 @@ export default function DoctorsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>CRM</Label>
-                  <Input value={form.crm} onChange={(e) => setForm({ ...form, crm: e.target.value })} />
+                  <Label>Registro Profissional</Label>
+                  <Input value={form.crm} onChange={(e) => setForm({ ...form, crm: e.target.value })} placeholder="CRM, CRN, CREFITO..." />
                 </div>
                 <div className="space-y-2">
                   <Label>Especialidade</Label>
@@ -368,7 +368,7 @@ export default function DoctorsPage() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead className="hidden md:table-cell">E-mail</TableHead>
-                <TableHead className="hidden lg:table-cell">CRM</TableHead>
+                <TableHead className="hidden lg:table-cell">Registro Prof.</TableHead>
                 <TableHead className="hidden lg:table-cell">Especialidade</TableHead>
                 <TableHead className="hidden md:table-cell">Cidade/UF</TableHead>
                 {isAdmin && <TableHead className="hidden lg:table-cell">Representante</TableHead>}
