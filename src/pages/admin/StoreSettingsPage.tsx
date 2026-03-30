@@ -508,6 +508,60 @@ export default function StoreSettingsPage() {
             </div>
           </div>
         </div>
+        {/* Metas da Loja */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Target className="h-5 w-5" /> Metas da Loja</h2>
+          <p className="text-sm text-muted-foreground">Defina as metas para acompanhar o desempenho da loja.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <Label>Meta de Faturamento Mensal (R$)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                <Input className="pl-10" type="number" step="100" min="0" value={(form as any).goal_monthly_revenue || ""} onChange={(e) => update("goal_monthly_revenue" as any, parseFloat(e.target.value) || 0)} placeholder="50000" />
+              </div>
+            </div>
+            <div>
+              <Label>Meta de Conversão (%)</Label>
+              <div className="relative">
+                <Input type="number" step="0.1" min="0" max="100" value={(form as any).goal_conversion_rate || ""} onChange={(e) => update("goal_conversion_rate" as any, parseFloat(e.target.value) || 0)} placeholder="3.5" />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Tráfego → Vendas</p>
+            </div>
+            <div>
+              <Label>Meta Recuperação de Carrinho (%)</Label>
+              <div className="relative">
+                <Input type="number" step="0.1" min="0" max="100" value={(form as any).goal_cart_recovery || ""} onChange={(e) => update("goal_cart_recovery" as any, parseFloat(e.target.value) || 0)} placeholder="15" />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+              </div>
+            </div>
+            <div>
+              <Label>Meta de UpSell (%)</Label>
+              <div className="relative">
+                <Input type="number" step="0.1" min="0" max="100" value={(form as any).goal_upsell || ""} onChange={(e) => update("goal_upsell" as any, parseFloat(e.target.value) || 0)} placeholder="10" />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">% de pedidos com upsell</p>
+            </div>
+            <div>
+              <Label>Meta de LTV (R$)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                <Input className="pl-10" type="number" step="10" min="0" value={(form as any).goal_ltv || ""} onChange={(e) => update("goal_ltv" as any, parseFloat(e.target.value) || 0)} placeholder="500" />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Valor médio por cliente</p>
+            </div>
+            <div>
+              <Label>Meta de Margem de Lucro (%)</Label>
+              <div className="relative">
+                <Input type="number" step="1" min="0" max="100" value={(form as any).goal_profit_margin || ""} onChange={(e) => update("goal_profit_margin" as any, parseFloat(e.target.value) || 0)} placeholder="30" />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Usada no indicador de preço dos produtos</p>
+            </div>
+          </div>
+        </div>
+
         <Button type="submit" size="lg" disabled={mutation.isPending} className="gap-2">
           {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Salvar Configurações
