@@ -672,6 +672,7 @@ const CheckoutPage = () => {
                     )}
                   </Button>
                 </div>
+                <TrustMicroTexts />
               </form>
             )}
           </div>

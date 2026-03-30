@@ -333,9 +333,7 @@ const CheckoutPageV3 = () => {
             </span>
           </Button>
 
-          <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
-            <Lock className="h-3 w-3" /> Pagamento 100% seguro e criptografado
-          </p>
+          <TrustMicroTexts />
         </form>
       </main>
       

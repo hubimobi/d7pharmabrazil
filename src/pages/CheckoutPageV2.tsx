@@ -639,6 +639,7 @@ const CheckoutPageV2 = () => {
                         )}
                       </Button>
                     </div>
+                    <TrustMicroTexts />
                   )}
                 </div>
               )}
