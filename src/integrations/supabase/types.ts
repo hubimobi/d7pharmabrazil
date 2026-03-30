@@ -2140,6 +2140,42 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string
+          source: string
+          tags: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone: string
+          source?: string
+          tags?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string
+          source?: string
+          tags?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_funnel_steps: {
         Row: {
           active: boolean
