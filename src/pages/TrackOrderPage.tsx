@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Package, MapPin, Truck } from "lucide-react";
+import { Search, Package, MapPin, Truck, Gift, MessageCircle, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
