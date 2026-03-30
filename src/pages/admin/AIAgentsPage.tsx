@@ -15,13 +15,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Bot, UserPlus, ShoppingBag, RotateCcw, Heart, TrendingUp,
   Headphones, Calculator, ClipboardList, Stethoscope, Pencil,
-  Loader2, Sparkles, MessageCircle, Database, Users, Cpu,
+  Loader2, Sparkles, MessageCircle, Database, Users, Cpu, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import AIKnowledgeBase from "@/components/admin/AIKnowledgeBase";
 import AIAgentChat from "@/components/admin/AIAgentChat";
 import AIMeetingRoom from "@/components/admin/AIMeetingRoom";
 import AILLMConfig from "@/components/admin/AILLMConfig";
+import AISystemPrompts from "@/components/admin/AISystemPrompts";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Bot, UserPlus, ShoppingBag, RotateCcw, Heart, TrendingUp,
@@ -233,6 +234,7 @@ export default function AIAgentsPage() {
           <TabsTrigger value="knowledge" className="flex items-center gap-1.5"><Database className="h-3.5 w-3.5" /> Base de Conhecimento</TabsTrigger>
           <TabsTrigger value="meeting" className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Sala de Reunião</TabsTrigger>
           <TabsTrigger value="llm" className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5" /> Configuração LLM</TabsTrigger>
+          <TabsTrigger value="prompts" className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> Prompts do Sistema</TabsTrigger>
         </TabsList>
 
         <TabsContent value="agents">
@@ -282,6 +284,7 @@ export default function AIAgentsPage() {
         <TabsContent value="knowledge"><AIKnowledgeBase /></TabsContent>
         <TabsContent value="meeting"><AIMeetingRoom /></TabsContent>
         <TabsContent value="llm"><AILLMConfig /></TabsContent>
+        <TabsContent value="prompts"><AISystemPrompts /></TabsContent>
       </Tabs>
 
       {/* Chat */}

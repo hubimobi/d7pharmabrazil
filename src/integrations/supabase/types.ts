@@ -380,6 +380,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_system_prompts: {
+        Row: {
+          created_at: string
+          id: string
+          system_prompt: string
+          temperature: number
+          tool_key: string
+          tool_label: string
+          updated_at: string
+          user_prompt_template: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          system_prompt?: string
+          temperature?: number
+          tool_key: string
+          tool_label?: string
+          updated_at?: string
+          user_prompt_template?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          system_prompt?: string
+          temperature?: number
+          tool_key?: string
+          tool_label?: string
+          updated_at?: string
+          user_prompt_template?: string
+        }
+        Relationships: []
+      }
       bling_tokens: {
         Row: {
           access_token: string
