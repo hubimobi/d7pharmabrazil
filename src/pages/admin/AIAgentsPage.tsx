@@ -284,6 +284,7 @@ export default function AIAgentsPage() {
         <TabsContent value="knowledge"><AIKnowledgeBase /></TabsContent>
         <TabsContent value="meeting"><AIMeetingRoom /></TabsContent>
         <TabsContent value="llm"><AILLMConfig /></TabsContent>
+        <TabsContent value="prompts"><AISystemPrompts /></TabsContent>
       </Tabs>
 
       {/* Chat */}
