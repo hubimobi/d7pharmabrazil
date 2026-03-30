@@ -1,7 +1,9 @@
 import { useState, useMemo } from "react";
 import ProductCard from "@/components/ProductCard";
+import ComboCard from "@/components/ComboCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { useProducts } from "@/hooks/useProducts";
+import { useCombos } from "@/hooks/useCombos";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 
