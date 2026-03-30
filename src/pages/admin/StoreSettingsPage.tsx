@@ -51,6 +51,13 @@ const benefitIconOptions = [
 export default function StoreSettingsPage() {
   const queryClient = useQueryClient();
   const { data: allProducts } = useProducts();
+  const { data: coupons } = useQuery({
+    queryKey: ["coupons-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("coupons").select("id, code, discount_value, discount_type").eq("active", true).order("code");
+      return data || [];
+    },
+  });
   const [form, setForm] = useState<Partial<StoreSettings> | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingHorizontalLogo, setUploadingHorizontalLogo] = useState(false);
