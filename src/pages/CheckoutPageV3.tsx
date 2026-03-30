@@ -42,6 +42,8 @@ interface PaymentResult {
 
 const CheckoutPageV3 = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { savedCustomer, saveCustomer } = useSavedCustomer();
   const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount } = useCart();
   const { data: storeSettings } = useStoreSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,6 +59,26 @@ const CheckoutPageV3 = () => {
     paymentMethod: "pix" as "pix" | "card" | "boleto",
   });
   const abandonmentSaved = useRef(false);
+
+  // Auto-fill from saved customer data
+  useEffect(() => {
+    if (savedCustomer) {
+      setForm((prev) => ({
+        ...prev,
+        name: savedCustomer.name || prev.name,
+        cpf: savedCustomer.cpf || prev.cpf,
+        email: savedCustomer.email || prev.email,
+        phone: savedCustomer.phone || prev.phone,
+        cep: savedCustomer.cep || prev.cep,
+        street: savedCustomer.street || prev.street,
+        number: savedCustomer.number || prev.number,
+        complement: savedCustomer.complement || prev.complement,
+        neighborhood: savedCustomer.neighborhood || prev.neighborhood,
+        city: savedCustomer.city || prev.city,
+        state: savedCustomer.state || prev.state,
+      }));
+    }
+  }, [savedCustomer]);
 
   const fetchAddress = useCallback(async (cep: string) => {
     setCepLoading(true);
