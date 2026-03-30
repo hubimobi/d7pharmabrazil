@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import {
   MessageSquare, Smartphone, FileText, GitBranch, Users, BarChart3,
@@ -318,6 +319,27 @@ function TemplatesTab() {
   const [editing, setEditing] = useState<WhatsAppTemplate | null>(null);
   const [form, setForm] = useState({ name: "", category: "geral", content: "" });
   const [preview, setPreview] = useState("");
+  const templateTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const cursorPosRef = useRef<number | null>(null);
+
+  function insertAtCursor(text: string) {
+    const textarea = templateTextareaRef.current;
+    const pos = cursorPosRef.current ?? form.content.length;
+    const before = form.content.substring(0, pos);
+    const after = form.content.substring(pos);
+    const newContent = before + text + after;
+    setForm({ ...form, content: newContent });
+    generatePreview(newContent);
+    // Restore cursor after render
+    setTimeout(() => {
+      if (textarea) {
+        const newPos = pos + text.length;
+        textarea.focus();
+        textarea.setSelectionRange(newPos, newPos);
+        cursorPosRef.current = newPos;
+      }
+    }, 0);
+  }
 
   useEffect(() => { loadTemplates(); }, []);
 
@@ -426,17 +448,35 @@ function TemplatesTab() {
               </div>
               <div>
                 <Label>Mensagem (Spintax)</Label>
-                <Textarea value={form.content} onChange={(e) => { setForm({ ...form, content: e.target.value }); generatePreview(e.target.value); }}
+                <Textarea ref={templateTextareaRef} value={form.content}
+                  onChange={(e) => { setForm({ ...form, content: e.target.value }); generatePreview(e.target.value); cursorPosRef.current = e.target.selectionStart; }}
+                  onSelect={(e) => { cursorPosRef.current = (e.target as HTMLTextAreaElement).selectionStart; }}
+                  onBlur={(e) => { cursorPosRef.current = e.target.selectionStart; }}
                   placeholder={`{Oi|Olá|E aí} {Nome}, {tudo bem|como vai}?\n\nVi que você deixou {Produto} no carrinho...\n{Link}`}
                   className="min-h-[180px] font-mono text-xs" />
               </div>
               <div className="flex flex-wrap gap-1">
                 {["{Nome}", "{Produto}", "{Link}", "{Cidade}", "{Nome_da_Empresa}", "{Atendente}"].map((v) => (
                   <Badge key={v} variant="secondary" className="cursor-pointer text-[10px]"
-                    onClick={() => { setForm({ ...form, content: form.content + " " + v }); generatePreview(form.content + " " + v); }}>
+                    onClick={() => insertAtCursor(v)}>
                     {v}
                   </Badge>
                 ))}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Badge variant="outline" className="cursor-pointer text-[10px]">😀 Emoji</Badge>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[280px] p-2" align="start">
+                    <div className="grid grid-cols-8 gap-1 max-h-[200px] overflow-y-auto">
+                      {["😀","😂","😍","🥰","😎","🤩","🙏","👍","👋","🎉","🔥","💪","❤️","💙","💚","💛","🧡","💜","✅","⭐","🏆","💰","🛒","📦","🚚","💳","🎁","📱","💊","🩺","💉","🧪","🌿","🍃","✨","🌟","⚡","🔔","📢","💬","📧","📞","🕐","🗓️","📊","📈","👨‍⚕️","👩‍⚕️"].map((emoji) => (
+                        <button key={emoji} type="button" className="text-lg hover:bg-muted rounded p-1 transition-colors"
+                          onClick={() => insertAtCursor(emoji)}>
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <div>
