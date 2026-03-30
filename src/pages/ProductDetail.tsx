@@ -177,6 +177,16 @@ const ProductDetail = () => {
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Header />
+      {/* Flash Sale Bar */}
+      {product.showCountdown && (
+        <FlashSaleBar
+          countdownMode={product.countdownMode}
+          countdownEndTime={product.countdownEndTime}
+          countdownEndDate={product.countdownEndDate}
+          countdownDurationMinutes={product.countdownDurationMinutes}
+          className="rounded-none"
+        />
+      )}
       <main className="container py-4 md:py-8">
         {/* Breadcrumbs ML-style */}
         <Breadcrumb className="mb-4">
