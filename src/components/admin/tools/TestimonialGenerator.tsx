@@ -59,6 +59,13 @@ export default function TestimonialGenerator() {
       setProductName(product.name);
       setProductDescription(product.shortDescription || product.description || "");
       setProductUrl(`/produto/${product.slug}`);
+      // Benefits will be sent separately
+    }
+  };
+
+  const getSelectedProductBenefits = () => {
+    const product = products?.find((p) => p.id === selectedProductId);
+    return product?.benefits || [];
     }
   };
 
