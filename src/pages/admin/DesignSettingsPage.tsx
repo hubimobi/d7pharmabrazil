@@ -225,18 +225,43 @@ export default function DesignSettingsPage() {
     toast.success(`Cor ${color} aplicada!`);
   };
 
-  const SECTION_TOGGLES = [
-    { key: "section_hero_visible", label: "Hero (Banner Principal)" },
-    { key: "section_featured_visible", label: "Produtos em Destaque" },
-    { key: "section_benefits_visible", label: "Benefícios" },
-    { key: "section_products_visible", label: "Todos os Produtos" },
-    { key: "section_testimonials_visible", label: "Depoimentos" },
-    { key: "section_promo_banners_visible", label: "Banners Promocionais" },
-    { key: "section_guarantee_visible", label: "Garantia de Satisfação" },
-    { key: "section_trust_badges_visible", label: "Selos de Confiança" },
-    { key: "section_mailing_visible", label: "Captura de Mailing" },
-    { key: "section_instagram_visible", label: "Feed Instagram" },
+  const SECTION_TOGGLES_MAP: Record<string, string> = {
+    section_hero_visible: "Hero (Banner Principal)",
+    section_featured_visible: "Produtos em Destaque",
+    section_benefits_visible: "Benefícios",
+    section_products_visible: "Todos os Produtos",
+    section_testimonials_visible: "Depoimentos",
+    section_promo_banners_visible: "Banners Promocionais",
+    section_guarantee_visible: "Garantia de Satisfação",
+    section_trust_badges_visible: "Selos de Confiança",
+    section_mailing_visible: "Captura de Mailing",
+    section_instagram_visible: "Feed Instagram",
+  };
+
+  const DEFAULT_ORDER = Object.keys(SECTION_TOGGLES_MAP);
+  const sectionOrder: string[] = (form as any).section_order && Array.isArray((form as any).section_order)
+    ? (form as any).section_order
+    : DEFAULT_ORDER;
+
+  // Ensure all keys are present
+  const normalizedOrder = [
+    ...sectionOrder.filter((k: string) => k in SECTION_TOGGLES_MAP),
+    ...DEFAULT_ORDER.filter((k) => !sectionOrder.includes(k)),
   ];
+
+  const moveSectionUp = (index: number) => {
+    if (index <= 0) return;
+    const newOrder = [...normalizedOrder];
+    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+    update("section_order" as any, newOrder);
+  };
+
+  const moveSectionDown = (index: number) => {
+    if (index >= normalizedOrder.length - 1) return;
+    const newOrder = [...normalizedOrder];
+    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+    update("section_order" as any, newOrder);
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
