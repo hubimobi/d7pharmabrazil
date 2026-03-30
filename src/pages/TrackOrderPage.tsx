@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Package, MapPin, Truck } from "lucide-react";
+import { Search, Package, MapPin, Truck, Gift, MessageCircle, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -226,6 +226,27 @@ export default function TrackOrderPage() {
                   <p>{order.shipping_address.neighborhood}</p>
                   <p>{order.shipping_address.city} - {order.shipping_address.state}</p>
                   <p>CEP: {order.shipping_address.cep}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Feedback CTA when delivered */}
+            {order.status === "delivered" && (
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="p-6 text-center space-y-3">
+                  <Gift className="h-10 w-10 text-primary mx-auto" />
+                  <h3 className="text-lg font-bold">Dê seu Feedback e Ganhe um Bônus!</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Conte como foi sua experiência e ganhe um cupom de desconto na próxima compra.
+                  </p>
+                  <div className="flex gap-3 justify-center flex-wrap">
+                    <Button asChild className="gap-2">
+                      <a href={`/feedback?pedido=${order.id}&produto=${(order.items as any[])?.[0]?.id || ""}&nome=${encodeURIComponent((order.items as any[])?.[0]?.name || "")}`}>
+                        <Gift className="h-4 w-4" />
+                        Enviar Feedback
+                      </a>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             )}

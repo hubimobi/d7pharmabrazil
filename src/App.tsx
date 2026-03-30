@@ -40,6 +40,7 @@ import UsersPage from "./pages/admin/UsersPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import TrackOrderPage from "./pages/TrackOrderPage";
 import PrescritorPage from "./pages/PrescritorPage";
+import CustomerFeedbackPage from "./pages/CustomerFeedbackPage";
 import StaticPage from "./pages/StaticPage";
 import RecentPurchasePopup from "./components/RecentPurchasePopup";
 import WebchatWidget from "./components/WebchatWidget";
@@ -96,6 +97,7 @@ const App = () => (
               <Route path="/mfa-verify" element={<MFAVerifyPage />} />
               <Route path="/pedido-confirmado/:orderId" element={<OrderConfirmationPage />} />
               <Route path="/acompanhar-pedido" element={<TrackOrderPage />} />
+              <Route path="/feedback" element={<CustomerFeedbackPage />} />
               <Route path="/prescritor" element={<PrescritorPage />} />
               <Route path="/politica-de-privacidade" element={<StaticPage />} />
               <Route path="/termos-de-uso" element={<StaticPage />} />

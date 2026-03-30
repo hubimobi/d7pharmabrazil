@@ -51,6 +51,13 @@ const benefitIconOptions = [
 export default function StoreSettingsPage() {
   const queryClient = useQueryClient();
   const { data: allProducts } = useProducts();
+  const { data: coupons } = useQuery({
+    queryKey: ["coupons-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("coupons").select("id, code, discount_value, discount_type").eq("active", true).order("code");
+      return data || [];
+    },
+  });
   const [form, setForm] = useState<Partial<StoreSettings> | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingHorizontalLogo, setUploadingHorizontalLogo] = useState(false);
@@ -559,6 +566,25 @@ export default function StoreSettingsPage() {
               </div>
               <p className="text-xs text-muted-foreground mt-1">Usada no indicador de preço dos produtos</p>
             </div>
+          </div>
+        </div>
+
+        {/* Bônus por Feedback */}
+        <div className="space-y-4 rounded-lg border p-6">
+          <h3 className="text-lg font-semibold flex items-center gap-2"><Award className="h-5 w-5" /> Bônus por Feedback</h3>
+          <p className="text-sm text-muted-foreground">Configure o cupom de desconto que o cliente recebe ao enviar um depoimento.</p>
+          <div>
+            <Label>Cupom Vinculado</Label>
+            <Select value={(form as any).feedback_bonus_coupon_id || ""} onValueChange={(v) => update("feedback_bonus_coupon_id" as any, v || null)}>
+              <SelectTrigger><SelectValue placeholder="Selecione um cupom..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Nenhum</SelectItem>
+                {coupons?.map((c: any) => (
+                  <SelectItem key={c.id} value={c.id}>{c.code} — {c.discount_value}{c.discount_type === "percent" ? "%" : " R$"}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">O cliente receberá este cupom após enviar seu depoimento com foto.</p>
           </div>
         </div>
 
