@@ -89,7 +89,7 @@ const ComboCard = ({ combo }: { combo: ProductCombo }) => {
             COMBO • {combo.product_ids.length} produtos
           </Badge>
         </div>
-      </div>
+      </Link>
 
       {/* Info — same structure as ProductCard */}
       <div className="flex flex-1 flex-col p-3 md:p-4">
