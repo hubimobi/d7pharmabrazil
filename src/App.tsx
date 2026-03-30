@@ -40,6 +40,7 @@ import UsersPage from "./pages/admin/UsersPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 import TrackOrderPage from "./pages/TrackOrderPage";
 import PrescritorPage from "./pages/PrescritorPage";
+import CustomerFeedbackPage from "./pages/CustomerFeedbackPage";
 import StaticPage from "./pages/StaticPage";
 import RecentPurchasePopup from "./components/RecentPurchasePopup";
 import WebchatWidget from "./components/WebchatWidget";
