@@ -351,6 +351,13 @@ const CheckoutPage = () => {
         }
       }
 
+      // Save customer data for One-Click Buy
+      saveCustomer({
+        name: form.name, cpf: form.cpf, email: form.email, phone: form.phone,
+        cep: form.cep, street: form.street, number: form.number, complement: form.complement,
+        neighborhood: form.neighborhood, city: form.city, state: form.state,
+      });
+
       if (form.paymentMethod === "card" && (data.status === "CONFIRMED" || data.status === "RECEIVED")) {
         toast.success("Pagamento aprovado! 🎉");
         clearCart();
