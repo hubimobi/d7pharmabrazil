@@ -57,8 +57,8 @@ const ComboCard = ({ combo }: { combo: ProductCombo }) => {
         <Badge className="absolute right-3 top-3 z-10 bg-secondary text-secondary-foreground text-[10.4px]">{combo.badge}</Badge>
       )}
 
-      {/* Image */}
-      <div className="relative block aspect-square overflow-hidden bg-muted rounded-2xl">
+      {/* Image — clickable link to combo detail */}
+      <Link to={`/combo/${combo.slug}`} className="relative block aspect-square overflow-hidden bg-muted rounded-2xl">
         {combo.image_url ? (
           <img
             src={combo.image_url}
