@@ -172,11 +172,11 @@ const CheckoutPageV3 = () => {
   if (paymentResult?.pix) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        
         <main className="container max-w-lg py-12">
           <PixPaymentResult encodedImage={paymentResult.pix.encodedImage} payload={paymentResult.pix.payload} expirationDate={paymentResult.pix.expirationDate} total={pixTotal} paymentId={paymentResult.payment_id} orderId={paymentResult.order_id} onConfirmed={() => clearCart()} />
         </main>
-        <Footer />
+        
       </div>
     );
   }
@@ -184,20 +184,20 @@ const CheckoutPageV3 = () => {
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        
         <div className="container py-20 text-center">
           <h1 className="text-2xl font-bold">Seu carrinho está vazio</h1>
           <p className="mt-2 text-muted-foreground">Adicione produtos para continuar</p>
           <Link to="/produtos"><Button className="mt-6">Ver Produtos</Button></Link>
         </div>
-        <Footer />
+        
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      <Header />
+      
       <main className="container max-w-3xl px-3 sm:px-4 py-8">
         <Link to="/produtos" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Voltar
@@ -338,7 +338,7 @@ const CheckoutPageV3 = () => {
           </p>
         </form>
       </main>
-      <Footer />
+      
       {!storeSettings?.hide_chat_on_checkout && <WhatsAppButton />}
     </div>
   );

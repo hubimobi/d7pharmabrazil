@@ -261,7 +261,7 @@ const CheckoutPageV2 = () => {
   if (step === 5 && paymentResult) {
     return (
       <div className="min-h-screen bg-muted/30">
-        <Header />
+        
         <main className="container max-w-lg py-12">
           {paymentResult.pix ? (
             <PixPaymentResult encodedImage={paymentResult.pix.encodedImage} payload={paymentResult.pix.payload} expirationDate={paymentResult.pix.expirationDate} total={pixTotal} paymentId={paymentResult.payment_id} orderId={paymentResult.order_id} onConfirmed={() => clearCart()} />
@@ -274,7 +274,7 @@ const CheckoutPageV2 = () => {
             </div>
           )}
         </main>
-        <Footer />
+        
         <WhatsAppButton />
       </div>
     );
@@ -283,13 +283,13 @@ const CheckoutPageV2 = () => {
   if (items.length === 0 && step < 5) {
     return (
       <div className="min-h-screen">
-        <Header />
+        
         <div className="container py-20 text-center">
           <h1 className="text-2xl font-bold">Seu carrinho está vazio</h1>
           <p className="mt-2 text-muted-foreground">Adicione produtos para continuar</p>
           <Link to="/produtos"><Button className="mt-6">Ver Produtos</Button></Link>
         </div>
-        <Footer />
+        
       </div>
     );
   }
@@ -299,7 +299,7 @@ const CheckoutPageV2 = () => {
 
   return (
     <div className="min-h-screen bg-muted/30 overflow-x-hidden">
-      <Header />
+      
 
       {/* Urgency Bar */}
       <div className="bg-gradient-to-r from-[hsl(var(--primary)/0.95)] to-[hsl(var(--primary))] py-2 px-3 sm:px-4">
@@ -835,7 +835,7 @@ const CheckoutPageV2 = () => {
       )}
       {step <= 3 && <div className="h-20 md:hidden" />}
 
-      <Footer />
+      
       {!storeSettings?.hide_chat_on_checkout && <WhatsAppButton />}
     </div>
   );

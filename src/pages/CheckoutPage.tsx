@@ -361,7 +361,7 @@ const CheckoutPage = () => {
   if (step === 3 && paymentResult) {
     return (
       <div className="min-h-screen">
-        <Header />
+        
         <main className="container max-w-lg py-12">
           {paymentResult.pix ? (
             <PixPaymentResult
@@ -389,7 +389,7 @@ const CheckoutPage = () => {
             </div>
           )}
         </main>
-        <Footer />
+        
         <WhatsAppButton />
       </div>
     );
@@ -398,20 +398,20 @@ const CheckoutPage = () => {
   if (items.length === 0 && step !== 3) {
     return (
       <div className="min-h-screen">
-        <Header />
+        
         <div className="container py-20 text-center">
           <h1 className="text-2xl font-bold">Seu carrinho está vazio</h1>
           <p className="mt-2 text-muted-foreground">Adicione produtos para continuar</p>
           <Link to="/produtos"><Button className="mt-6">Ver Produtos</Button></Link>
         </div>
-        <Footer />
+        
       </div>
     );
   }
 
   return (
     <div className="min-h-screen overflow-x-hidden">
-      <Header />
+      
       <main className="container px-3 sm:px-6 py-6 md:py-12 max-w-full overflow-hidden">
         <Link to="/produtos" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Continuar Comprando
@@ -767,7 +767,7 @@ const CheckoutPage = () => {
       )}
       {step <= 2 && <div className="h-20 md:hidden" />}
 
-      <Footer />
+      
       {!storeSettings?.hide_chat_on_checkout && <WhatsAppButton />}
     </div>
   );
