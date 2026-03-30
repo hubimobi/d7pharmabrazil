@@ -85,7 +85,7 @@ function toggleFunnelRole(roles: string[] | null | undefined, role: FunnelRole):
 }
 
 function replaceTemplateVariables(text: string, vars: Record<string, string>): string {
-  return Object.entries(vars).reduce((result, [key, value]) => result.replaceAll(`{${key}}`, value), text);
+  return Object.entries(vars).reduce((result, [key, value]) => result.split(`{${key}}`).join(value), text);
 }
 
 function isWholeMultiple(value: number, divisor: number) {
@@ -671,7 +671,7 @@ function FunnelsTab() {
     link: "https://loja.com/checkout",
     cidade: "São Paulo",
   });
-  const simulationTimersRef = useRef<Array<ReturnType<typeof window.setTimeout>>>([]);
+  const simulationTimersRef = useRef<number[]>([]);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -793,7 +793,7 @@ function FunnelsTab() {
   }
 
   function stopSimulation() {
-    simulationTimersRef.current.forEach((timer) => clearTimeout(timer));
+    simulationTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     simulationTimersRef.current = [];
     setTestRunning(false);
   }
@@ -1465,16 +1465,16 @@ function ContactsTab() {
                 </div>
                 <ScrollArea className="h-[400px]">
                   {selectedLogs.length > 0 ? (
-                    <div className="space-y-3 bg-[#e5ddd5] rounded-lg p-4">
+                    <div className="space-y-3 rounded-lg bg-muted/40 p-4">
                       {selectedLogs.map((log) => (
                         <div key={log.id} className={`flex ${log.direction === "outbound" ? "justify-end" : "justify-start"}`}>
-                          <div className={`max-w-[80%] rounded-lg p-3 shadow-sm ${log.direction === "outbound" ? "bg-[#dcf8c6]" : "bg-white"}`}>
+                          <div className={`max-w-[80%] rounded-lg p-3 shadow-sm ${log.direction === "outbound" ? "bg-primary/10" : "bg-card"}`}>
                             <p className="text-sm whitespace-pre-wrap">{log.message_content}</p>
                             <div className="flex items-center justify-end gap-1 mt-1">
                               <span className="text-[10px] text-muted-foreground">{new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
-                              {log.status === "sent" ? <CheckCircle className="h-3 w-3 text-blue-500" /> : <XCircle className="h-3 w-3 text-red-500" />}
+                              {log.status === "sent" ? <CheckCircle className="h-3 w-3 text-primary" /> : <XCircle className="h-3 w-3 text-destructive" />}
                             </div>
-                            {log.error_message && <p className="text-[10px] text-red-500 mt-1">{log.error_message}</p>}
+                            {log.error_message && <p className="text-[10px] text-destructive mt-1">{log.error_message}</p>}
                           </div>
                         </div>
                       ))}
