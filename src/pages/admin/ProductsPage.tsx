@@ -183,7 +183,10 @@ export default function ProductsPage() {
             author_name: t.author_name,
             content: t.content,
             rating: t.rating,
-          }));
+            author_image_url: t.author_image_url || null,
+            product_image_url: t.product_image_url || null,
+            source: t.source || "manual",
+          } as any));
           const { error } = await supabase.from("product_testimonials").insert(rows);
           if (error) throw error;
         }
