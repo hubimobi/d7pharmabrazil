@@ -1152,28 +1152,37 @@ export type Database = {
       }
       product_testimonials: {
         Row: {
+          author_image_url: string | null
           author_name: string
           content: string
           created_at: string
           id: string
           product_id: string
+          product_image_url: string | null
           rating: number
+          source: string
         }
         Insert: {
+          author_image_url?: string | null
           author_name: string
           content: string
           created_at?: string
           id?: string
           product_id: string
+          product_image_url?: string | null
           rating?: number
+          source?: string
         }
         Update: {
+          author_image_url?: string | null
           author_name?: string
           content?: string
           created_at?: string
           id?: string
           product_id?: string
+          product_image_url?: string | null
           rating?: number
+          source?: string
         }
         Relationships: [
           {
@@ -1708,6 +1717,7 @@ export type Database = {
           email: string | null
           facebook: string | null
           favicon_url: string | null
+          feedback_bonus_coupon_id: string | null
           free_shipping_enabled: boolean | null
           free_shipping_min_value: number | null
           free_shipping_regions: string | null
@@ -1843,6 +1853,7 @@ export type Database = {
           email?: string | null
           facebook?: string | null
           favicon_url?: string | null
+          feedback_bonus_coupon_id?: string | null
           free_shipping_enabled?: boolean | null
           free_shipping_min_value?: number | null
           free_shipping_regions?: string | null
@@ -1978,6 +1989,7 @@ export type Database = {
           email?: string | null
           facebook?: string | null
           favicon_url?: string | null
+          feedback_bonus_coupon_id?: string | null
           free_shipping_enabled?: boolean | null
           free_shipping_min_value?: number | null
           free_shipping_regions?: string | null
@@ -2068,6 +2080,20 @@ export type Database = {
           youtube?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "store_settings_feedback_bonus_coupon_id_fkey"
+            columns: ["feedback_bonus_coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_settings_feedback_bonus_coupon_id_fkey"
+            columns: ["feedback_bonus_coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "store_settings_tenant_id_fkey"
             columns: ["tenant_id"]
