@@ -90,6 +90,7 @@ const App = () => (
               <Route path="/" element={<BlingRedirect />} />
               <Route path="/produtos" element={<ProductsPage />} />
               <Route path="/produto/:slug" element={<ProductDetail />} />
+              <Route path="/combo/:slug" element={<ComboDetail />} />
               <Route path="/checkout" element={<CheckoutRouter />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />

@@ -99,9 +99,9 @@ const ComboCard = ({ combo }: { combo: ProductCombo }) => {
           <span className="text-2xs md:text-xs text-muted-foreground">({totalReviews})</span>
         </div>
 
-        <h3 className="mt-1.5 text-xs md:text-sm font-semibold text-foreground line-clamp-2 leading-tight">
+        <Link to={`/combo/${combo.slug}`} className="mt-1.5 text-xs md:text-sm font-semibold text-foreground line-clamp-2 leading-tight hover:text-primary transition-colors">
           {combo.name}
-        </h3>
+        </Link>
 
         {comboProducts.length > 0 && (
           <p className="mt-1 hidden md:block text-[13px] text-muted-foreground line-clamp-2">
