@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard, Copy, MessageCircle, ChevronDown, ChevronUp, HelpCircle, Headphones, Package } from "lucide-react";
 import CountdownTimer from "@/components/CountdownTimer";
+import FlashSaleBar from "@/components/FlashSaleBar";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -176,6 +177,16 @@ const ProductDetail = () => {
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Header />
+      {/* Flash Sale Bar */}
+      {product.showCountdown && (
+        <FlashSaleBar
+          countdownMode={product.countdownMode}
+          countdownEndTime={product.countdownEndTime}
+          countdownEndDate={product.countdownEndDate}
+          countdownDurationMinutes={product.countdownDurationMinutes}
+          className="rounded-none"
+        />
+      )}
       <main className="container py-4 md:py-8">
         {/* Breadcrumbs ML-style */}
         <Breadcrumb className="mb-4">
@@ -399,7 +410,13 @@ const ProductDetail = () => {
 
             {/* Countdown */}
             {product.showCountdown && (
-              <CountdownTimer label="🔥 Preço promocional expira em" />
+              <CountdownTimer
+                label="🔥 Preço promocional expira em"
+                countdownMode={product.countdownMode}
+                countdownEndTime={product.countdownEndTime}
+                countdownEndDate={product.countdownEndDate}
+                countdownDurationMinutes={product.countdownDurationMinutes}
+              />
             )}
 
             {/* Quantity selector */}

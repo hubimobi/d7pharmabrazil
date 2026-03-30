@@ -82,7 +82,16 @@ const ProductCard = ({ product }: { product: Product }) => {
               <Truck className="h-3 w-3" /> Frete Grátis
             </span>
           )}
-          {product.showCountdown && <CountdownTimer label="Oferta expira em" className="mt-2" />}
+          {product.showCountdown && (
+            <CountdownTimer
+              label="Oferta expira em"
+              className="mt-2"
+              countdownMode={product.countdownMode}
+              countdownEndTime={product.countdownEndTime}
+              countdownEndDate={product.countdownEndDate}
+              countdownDurationMinutes={product.countdownDurationMinutes}
+            />
+          )}
           <div className="mt-3 flex flex-col gap-1.5">
             <Button
               className="w-full gap-1.5 text-[11.2px] uppercase tracking-wide font-semibold rounded-full"

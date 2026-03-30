@@ -21,6 +21,10 @@ export interface Product {
   width: number;
   length: number;
   showCountdown: boolean;
+  countdownMode: string;
+  countdownEndTime: string | null;
+  countdownEndDate: string | null;
+  countdownDurationMinutes: number;
   featured: boolean;
   groupName: string;
   seoTitle: string;
@@ -64,6 +68,10 @@ function mapDbProduct(p: any): Product {
     width: Number(p.width) || 15,
     length: Number(p.length) || 20,
     showCountdown: p.show_countdown !== false,
+    countdownMode: p.countdown_mode || "end_of_day",
+    countdownEndTime: p.countdown_end_time || null,
+    countdownEndDate: p.countdown_end_date || null,
+    countdownDurationMinutes: p.countdown_duration_minutes || 60,
     featured: p.featured === true,
     groupName: p.group_name || "",
     seoTitle: p.seo_title || "",

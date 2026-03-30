@@ -29,6 +29,10 @@ interface ProdForm {
   group_name: string; manufacturer: string;
   sku: string; ncm: string; gtin: string; unit: string;
   show_countdown: boolean;
+  countdown_mode: string;
+  countdown_end_time: string;
+  countdown_end_date: string;
+  countdown_duration_minutes: string;
   featured: boolean;
   seo_title: string; seo_description: string; seo_keywords: string;
 }
@@ -41,6 +45,10 @@ const emptyForm: ProdForm = {
   group_name: "", manufacturer: "",
   sku: "", ncm: "", gtin: "", unit: "UN",
   show_countdown: true,
+  countdown_mode: "end_of_day",
+  countdown_end_time: "",
+  countdown_end_date: "",
+  countdown_duration_minutes: "60",
   featured: false,
   seo_title: "", seo_description: "", seo_keywords: "",
 };
@@ -127,6 +135,10 @@ export default function ProductsPage() {
         price: parseFloat(form.price), original_price: parseFloat(form.original_price),
         badge: form.badge || null, stock: parseInt(form.stock) || 0, benefits,
         show_countdown: form.show_countdown,
+        countdown_mode: form.countdown_mode,
+        countdown_end_time: form.countdown_end_time || null,
+        countdown_end_date: form.countdown_end_date || null,
+        countdown_duration_minutes: parseInt(form.countdown_duration_minutes) || 60,
         featured: form.featured,
         weight: parseFloat(form.weight) || 0.3,
         height: parseFloat(form.height) || 5,
@@ -236,6 +248,10 @@ export default function ProductsPage() {
         stock: p.stock,
         benefits: p.benefits as any,
         show_countdown: p.show_countdown,
+        countdown_mode: (p as any).countdown_mode || "end_of_day",
+        countdown_end_time: (p as any).countdown_end_time,
+        countdown_end_date: (p as any).countdown_end_date,
+        countdown_duration_minutes: (p as any).countdown_duration_minutes || 60,
         featured: p.featured,
         weight: p.weight,
         height: p.height,
@@ -318,6 +334,10 @@ export default function ProductsPage() {
       gtin: (p as any).gtin ?? "",
       unit: (p as any).unit ?? "UN",
       show_countdown: (p as any).show_countdown !== false,
+      countdown_mode: (p as any).countdown_mode ?? "end_of_day",
+      countdown_end_time: (p as any).countdown_end_time ?? "",
+      countdown_end_date: (p as any).countdown_end_date ? new Date((p as any).countdown_end_date).toISOString().slice(0, 16) : "",
+      countdown_duration_minutes: String((p as any).countdown_duration_minutes ?? 60),
       featured: (p as any).featured === true,
       seo_title: (p as any).seo_title ?? "",
       seo_description: (p as any).seo_description ?? "",
@@ -427,6 +447,41 @@ export default function ProductsPage() {
                     </div>
                     <Switch id="show_countdown" checked={form.show_countdown} onCheckedChange={(checked) => setForm({ ...form, show_countdown: checked })} />
                   </div>
+                  {form.show_countdown && (
+                    <div className="space-y-3 rounded-lg border border-border p-3">
+                      <div className="space-y-2">
+                        <Label className="font-medium">Modo do Contador</Label>
+                        <select
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={form.countdown_mode}
+                          onChange={(e) => setForm({ ...form, countdown_mode: e.target.value })}
+                        >
+                          <option value="end_of_day">Até o final do dia (todos os dias)</option>
+                          <option value="daily_until">Até horário específico (todos os dias)</option>
+                          <option value="specific_datetime">Até data e hora específicas</option>
+                          <option value="after_access">X minutos após o usuário acessar</option>
+                        </select>
+                      </div>
+                      {form.countdown_mode === "daily_until" && (
+                        <div className="space-y-2">
+                          <Label>Horário limite (HH:MM)</Label>
+                          <Input type="time" value={form.countdown_end_time} onChange={(e) => setForm({ ...form, countdown_end_time: e.target.value })} />
+                        </div>
+                      )}
+                      {form.countdown_mode === "specific_datetime" && (
+                        <div className="space-y-2">
+                          <Label>Data e Hora final</Label>
+                          <Input type="datetime-local" value={form.countdown_end_date} onChange={(e) => setForm({ ...form, countdown_end_date: e.target.value })} />
+                        </div>
+                      )}
+                      {form.countdown_mode === "after_access" && (
+                        <div className="space-y-2">
+                          <Label>Duração em minutos</Label>
+                          <Input type="number" value={form.countdown_duration_minutes} onChange={(e) => setForm({ ...form, countdown_duration_minutes: e.target.value })} placeholder="60" />
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between rounded-lg border border-border p-3">
                     <div>
                       <Label htmlFor="featured" className="font-medium">Produto Destaque</Label>
