@@ -223,6 +223,27 @@
   }
 }
 
+/* ============================================================
+   SQUARE BORDER STYLE OVERRIDE
+   When data-border-style="square" is set on <html>,
+   force all rounded corners to 0.
+   ============================================================ */
+[data-border-style="square"] *,
+[data-border-style="square"] *::before,
+[data-border-style="square"] *::after {
+  border-radius: 0 !important;
+}
+
+/* Exclude admin panel from square override */
+[data-admin-theme] * {
+  /* admin keeps its own radius */
+}
+[data-border-style="square"] [data-admin-theme] *,
+[data-border-style="square"] [data-admin-theme] *::before,
+[data-border-style="square"] [data-admin-theme] *::after {
+  border-radius: revert !important;
+}
+
 /* Force mobile layout when ?m param is used */
 .force-mobile-layout {
   max-width: 480px;

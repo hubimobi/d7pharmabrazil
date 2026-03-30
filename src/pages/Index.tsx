@@ -21,6 +21,8 @@ const FinalCTA = lazy(() => import("@/components/FinalCTA"));
 const InstagramFeed = lazy(() => import("@/components/InstagramFeed"));
 
 const DEFAULT_ORDER = [
+  "section_highlight_banner",
+  "section_flash_sale",
   "section_hero_visible",
   "section_featured_visible",
   "section_benefits_visible",
@@ -33,7 +35,9 @@ const DEFAULT_ORDER = [
   "section_instagram_visible",
 ];
 
-const SECTION_COMPONENTS: Record<string, { component: React.ComponentType; lazy?: boolean }> = {
+const SECTION_COMPONENTS: Record<string, { component: React.ComponentType; lazy?: boolean; alwaysShow?: boolean }> = {
+  section_highlight_banner: { component: HighlightBanner, alwaysShow: true },
+  section_flash_sale: { component: FlashSaleCarousel, alwaysShow: true },
   section_hero_visible: { component: HeroSection },
   section_featured_visible: { component: FeaturedCarousel },
   section_benefits_visible: { component: BenefitsSection },
@@ -50,7 +54,11 @@ const Index = () => {
   const { data: settings } = useStoreSettings();
   const s = settings as any;
 
-  const show = (key: string) => s?.[key] !== false;
+  const show = (key: string) => {
+    const sec = SECTION_COMPONENTS[key];
+    if (sec?.alwaysShow) return true;
+    return s?.[key] !== false;
+  };
 
   const sectionOrder: string[] = useMemo(() => {
     const order = s?.section_order;
@@ -67,8 +75,6 @@ const Index = () => {
       <NotificationBar />
       <Header />
       <main>
-        <HighlightBanner />
-        <FlashSaleCarousel />
         {sectionOrder.map((key) => {
           if (!show(key)) return null;
           const sec = SECTION_COMPONENTS[key];

@@ -64,13 +64,14 @@ export default function DesignTokenApplier() {
 
     // Border style (rounded vs square)
     const borderStyle = (settings as any).design_border_style || "rounded";
+    root.setAttribute("data-border-style", borderStyle);
     if (borderStyle === "square") {
       root.style.setProperty("--theme-radius-card", "0px");
       root.style.setProperty("--theme-radius-section", "0px");
       root.style.setProperty("--theme-radius-button", "0px");
       root.style.setProperty("--radius", "0px");
     } else {
-      // Reset to theme defaults by removing overrides
+      root.removeAttribute("data-border-style");
       root.style.removeProperty("--theme-radius-card");
       root.style.removeProperty("--theme-radius-section");
       root.style.removeProperty("--theme-radius-button");
