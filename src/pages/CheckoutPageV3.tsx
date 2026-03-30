@@ -27,7 +27,7 @@ import ShippingCalculator, { ShippingOption } from "@/components/checkout/Shippi
 import CreditCardForm, { CreditCardData, getInstallmentOptions } from "@/components/checkout/CreditCardForm";
 import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useSavedCustomer } from "@/hooks/useSavedCustomer";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { getActiveRef } from "@/pages/LinkRedirectPage";
 
