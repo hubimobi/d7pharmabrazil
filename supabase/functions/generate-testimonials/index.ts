@@ -32,11 +32,15 @@ REGRAS CRÍTICAS:
 
 Responda SEMPRE em JSON válido.`;
 
+    const benefitsList = Array.isArray(benefits) && benefits.length > 0
+      ? `\n\nBENEFÍCIOS DO PRODUTO (use como DORES RESOLVIDAS — cada benefício representa uma dor real que o cliente tinha ANTES de usar o produto. Foque os testemunhos nessas dores e em como o produto resolveu cada uma delas):\n${benefits.map((b: string, i: number) => `${i + 1}. ${b}`).join("\n")}`
+      : "";
+
     const userPrompt = `Gere ${quantity} testemunhos ultra-realistas para este produto:
 
 ${productName ? `Nome: ${productName}` : ""}
 ${productDescription ? `Descrição: ${productDescription}` : ""}
-${productUrl ? `URL: ${productUrl}` : ""}
+${productUrl ? `URL: ${productUrl}` : ""}${benefitsList}
 
 Para cada testemunho, crie uma persona variada (mãe preocupada, adulto com rotina corrida, pessoa cética, etc).
 

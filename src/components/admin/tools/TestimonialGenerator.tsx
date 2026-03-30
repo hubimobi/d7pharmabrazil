@@ -78,7 +78,7 @@ export default function TestimonialGenerator() {
     setResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("generate-testimonials", {
-        body: { productUrl, productName, productDescription, quantity },
+        body: { productUrl, productName, productDescription, quantity, benefits: getSelectedProductBenefits() },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
