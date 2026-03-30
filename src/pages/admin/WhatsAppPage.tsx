@@ -329,7 +329,8 @@ function TemplatesTab() {
   function generatePreview(content: string) {
     let text = content;
     text = text.replace(/\{Nome\}/g, "João").replace(/\{Produto\}/g, "Creatina 300g")
-      .replace(/\{Link\}/g, "https://loja.com/checkout").replace(/\{Cidade\}/g, "São Paulo");
+      .replace(/\{Link\}/g, "https://loja.com/checkout").replace(/\{Cidade\}/g, "São Paulo")
+      .replace(/\{Nome_da_Empresa\}/g, "D7 Pharma").replace(/\{Atendente\}/g, "Ana");
     setPreview(parseSpintax(text));
   }
 

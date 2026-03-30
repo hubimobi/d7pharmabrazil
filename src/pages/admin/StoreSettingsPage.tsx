@@ -247,6 +247,16 @@ export default function StoreSettingsPage() {
               <Input placeholder="(11) 98888-8888" value={(form as any).whatsapp_support || ""} onChange={(e) => update("whatsapp_support" as any, e.target.value)} />
               <p className="text-xs text-muted-foreground mt-1">Usado no botão "Fale Conosco" e suporte via WhatsApp</p>
             </div>
+            <div>
+              <Label>Nome da Empresa (Divulgação)</Label>
+              <Input placeholder="Ex: D7 Pharma" value={(form as any).display_name || ""} onChange={(e) => update("display_name" as any, e.target.value)} />
+              <p className="text-xs text-muted-foreground mt-1">Nome usado em comunicações e templates WhatsApp</p>
+            </div>
+            <div>
+              <Label>Nome da Atendente Principal</Label>
+              <Input placeholder="Ex: Ana" value={(form as any).attendant_name || ""} onChange={(e) => update("attendant_name" as any, e.target.value)} />
+              <p className="text-xs text-muted-foreground mt-1">Nome usado como atendente nos templates WhatsApp</p>
+            </div>
           </div>
         </div>
 
