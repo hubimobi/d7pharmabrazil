@@ -345,6 +345,7 @@ export default function ProductsPage() {
       seo_title: (p as any).seo_title ?? "",
       seo_description: (p as any).seo_description ?? "",
       seo_keywords: (p as any).seo_keywords ?? "",
+      upsell_product_ids: Array.isArray((p as any).upsell_product_ids) ? (p as any).upsell_product_ids : [],
     });
 
     // Load testimonials
