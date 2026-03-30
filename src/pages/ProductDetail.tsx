@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard, Copy, MessageCircle, ChevronDown, ChevronUp, HelpCircle, Headphones, Package } from "lucide-react";
 import CountdownTimer from "@/components/CountdownTimer";
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +14,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import SEOHead from "@/components/SEOHead";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import UpsellDialog from "@/components/UpsellDialog";
 import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
 import ProductQA from "@/components/ProductQA";
@@ -29,10 +29,33 @@ import {
 
 const ProductDetail = () => {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
   const { data: product, isLoading } = useProduct(slug);
   const { addItem } = useCart();
   const navigate = useNavigate();
   const { data: settings } = useStoreSettings();
+  const directCheckoutDone = useRef(false);
+
+  // Direct checkout: ?ck=1&m or ?ck=2 etc. — auto-add to cart and redirect
+  const ckParam = searchParams.get("ck");
+  useEffect(() => {
+    if (ckParam && product && !directCheckoutDone.current) {
+      directCheckoutDone.current = true;
+      addItem({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image || "/placeholder.svg",
+        originalPrice: product.originalPrice,
+        weight: product.weight || 0.3,
+        height: product.height || 10,
+        width: product.width || 10,
+        length: product.length || 10,
+      });
+      const mParam = searchParams.has("m") ? "&m" : "";
+      navigate(`/checkout?ck=${ckParam}${mParam}`, { replace: true });
+    }
+  }, [ckParam, product, addItem, navigate, searchParams]);
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showUpsell, setShowUpsell] = useState(false);
