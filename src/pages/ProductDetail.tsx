@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard, Copy, MessageCircle, ChevronDown, ChevronUp, HelpCircle, Headphones, Package } from "lucide-react";
 import CountdownTimer from "@/components/CountdownTimer";
+import FlashSaleBar from "@/components/FlashSaleBar";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
