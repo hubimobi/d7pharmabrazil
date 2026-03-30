@@ -59,7 +59,13 @@ export default function TestimonialGenerator() {
       setProductName(product.name);
       setProductDescription(product.shortDescription || product.description || "");
       setProductUrl(`/produto/${product.slug}`);
+      // Benefits will be sent separately
     }
+  };
+
+  const getSelectedProductBenefits = () => {
+    const product = products?.find((p) => p.id === selectedProductId);
+    return product?.benefits || [];
   };
 
   const handleGenerate = async () => {
@@ -71,7 +77,7 @@ export default function TestimonialGenerator() {
     setResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("generate-testimonials", {
-        body: { productUrl, productName, productDescription, quantity },
+        body: { productUrl, productName, productDescription, quantity, benefits: getSelectedProductBenefits() },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
