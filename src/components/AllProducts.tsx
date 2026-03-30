@@ -7,7 +7,11 @@ import { useCombos } from "@/hooks/useCombos";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 8;
+
+type MixedItem =
+  | { type: "product"; data: any }
+  | { type: "combo"; data: any };
 
 const AllProducts = () => {
   const { data: products, isLoading } = useProducts();
@@ -21,14 +25,32 @@ const AllProducts = () => {
     return Array.from(set).sort() as string[];
   }, [products]);
 
-  const filtered = useMemo(() => {
-    if (!products) return [];
-    if (groupFilter === "all") return products;
-    return products.filter((p: any) => p.groupName === groupFilter);
-  }, [products, groupFilter]);
+  const hasCombos = combos && combos.length > 0;
 
-  const visible = filtered.slice(0, visibleCount);
-  const hasMore = visibleCount < filtered.length;
+  const mixedItems: MixedItem[] = useMemo(() => {
+    const items: MixedItem[] = [];
+
+    if (groupFilter === "combos") {
+      (combos ?? []).forEach((c) => items.push({ type: "combo", data: c }));
+      return items;
+    }
+
+    // Add combos first when showing all
+    if (groupFilter === "all" && combos) {
+      combos.forEach((c) => items.push({ type: "combo", data: c }));
+    }
+
+    const filteredProducts = groupFilter === "all"
+      ? (products ?? [])
+      : (products ?? []).filter((p: any) => p.groupName === groupFilter);
+
+    filteredProducts.forEach((p) => items.push({ type: "product", data: p }));
+
+    return items;
+  }, [products, combos, groupFilter]);
+
+  const visible = mixedItems.slice(0, visibleCount);
+  const hasMore = visibleCount < mixedItems.length;
 
   return (
     <section className="py-12 md:py-24">
@@ -43,7 +65,7 @@ const AllProducts = () => {
               Conheça nossa linha completa de suplementos
             </p>
           </div>
-          {groups.length > 1 && (
+          {(groups.length > 0 || hasCombos) && (
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
               <button
                 onClick={() => { setGroupFilter("all"); setVisibleCount(PAGE_SIZE); }}
@@ -55,6 +77,18 @@ const AllProducts = () => {
               >
                 Todos
               </button>
+              {hasCombos && (
+                <button
+                  onClick={() => { setGroupFilter("combos"); setVisibleCount(PAGE_SIZE); }}
+                  className={`flex-shrink-0 rounded-full px-5 py-2 text-[11.2px] font-semibold uppercase tracking-wide transition-all whitespace-nowrap ${
+                    groupFilter === "combos"
+                      ? "bg-foreground text-background shadow-sm"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  🔥 Combos
+                </button>
+              )}
               {groups.map((g) => (
                 <button
                   key={g}
@@ -78,20 +112,14 @@ const AllProducts = () => {
           </div>
         ) : (
           <>
-            {combos && combos.length > 0 && groupFilter === "all" && (
-              <div className="mt-8 mb-4">
-                <h3 className="text-lg font-bold text-foreground mb-3">🔥 Combos</h3>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-                  {combos.map((combo) => (
-                    <ComboCard key={combo.id} combo={combo} />
-                  ))}
-                </div>
-              </div>
-            )}
             <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-              {visible.map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
+              {visible.map((item) =>
+                item.type === "combo" ? (
+                  <ComboCard key={`combo-${item.data.id}`} combo={item.data} />
+                ) : (
+                  <ProductCard key={`prod-${item.data.id}`} product={item.data} />
+                )
+              )}
             </div>
             {hasMore && (
               <div className="mt-10 text-center">
@@ -100,7 +128,7 @@ const AllProducts = () => {
                 </Button>
               </div>
             )}
-            {!isLoading && filtered.length === 0 && (
+            {!isLoading && mixedItems.length === 0 && (
               <p className="mt-16 text-center text-muted-foreground">Nenhum produto encontrado.</p>
             )}
           </>
