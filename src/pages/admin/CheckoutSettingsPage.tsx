@@ -155,6 +155,23 @@ export default function CheckoutSettingsPage() {
               </button>
             ))}
           </div>
+
+          {/* URL params info */}
+          <div className="mt-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/50 p-4">
+            <p className="text-sm font-semibold text-foreground mb-2">🔗 Links Diretos para Checkout</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Use parâmetros na URL do produto para redirecionar direto ao checkout desejado. O produto é adicionado ao carrinho automaticamente.
+            </p>
+            <div className="space-y-1.5 text-xs font-mono bg-card rounded-md p-3 border border-border">
+              <p><span className="text-primary font-bold">?ck=1</span> → Checkout 1 (Padrão)</p>
+              <p><span className="text-primary font-bold">?ck=2</span> → Checkout 2 (Multi-etapas)</p>
+              <p><span className="text-primary font-bold">?ck=3</span> → Checkout 3 (Simplificado)</p>
+              <p><span className="text-primary font-bold">&m</span> → Força layout mobile (ex: <span className="text-muted-foreground">?ck=1&m</span>)</p>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Exemplo: <code className="bg-muted px-1.5 py-0.5 rounded text-primary">/produto/meu-produto?ck=2&m</code>
+            </p>
+          </div>
         </CardContent>
       </Card>
 

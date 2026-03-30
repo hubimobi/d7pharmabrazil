@@ -217,3 +217,56 @@
     scrollbar-width: none;
   }
 }
+
+/* Force mobile layout when ?m param is used */
+.force-mobile-layout {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.force-mobile-layout .container {
+  max-width: 100% !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+}
+
+/* Force single-column layout */
+.force-mobile-layout .lg\:grid-cols-3,
+.force-mobile-layout .lg\:grid-cols-\[1fr_360px\] {
+  grid-template-columns: 1fr !important;
+}
+
+/* Show mobile-only elements, hide desktop-only */
+.force-mobile-layout .hidden.sm\:flex,
+.force-mobile-layout .hidden.sm\:block,
+.force-mobile-layout .hidden.sm\:inline,
+.force-mobile-layout .hidden.md\:flex,
+.force-mobile-layout .hidden.md\:block {
+  display: none !important;
+}
+
+.force-mobile-layout .sm\:hidden {
+  display: flex !important;
+}
+
+/* Show fixed bottom bar */
+.force-mobile-layout .md\:hidden {
+  display: flex !important;
+}
+
+/* Force mobile text sizes */
+.force-mobile-layout .sm\:text-2xl,
+.force-mobile-layout .md\:text-2xl {
+  font-size: 1.25rem !important;
+}
+
+/* Force mobile padding */
+.force-mobile-layout .sm\:p-7 {
+  padding: 1.25rem !important;
+}
+
+.force-mobile-layout .md\:py-12,
+.force-mobile-layout .md\:py-8 {
+  padding-top: 1.5rem !important;
+  padding-bottom: 1.5rem !important;
+}
