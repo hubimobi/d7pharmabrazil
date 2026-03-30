@@ -592,8 +592,11 @@ function FunnelsTab() {
   }
 
   function formatDelay(mins: number) {
+    if (mins < 1) return `${Math.round(mins * 60)} seg`;
     if (mins < 60) return `${mins} min`;
     if (mins < 1440) return `${Math.round(mins / 60)}h`;
+    return `${Math.round(mins / 1440)}d`;
+  }
     return `${Math.round(mins / 1440)}d`;
   }
 
