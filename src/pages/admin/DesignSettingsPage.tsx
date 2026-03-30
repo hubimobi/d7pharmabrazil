@@ -226,6 +226,8 @@ export default function DesignSettingsPage() {
   };
 
   const SECTION_TOGGLES_MAP: Record<string, string> = {
+    section_highlight_banner: "Banner de Destaque",
+    section_flash_sale: "Ofertas Relâmpago",
     section_hero_visible: "Hero (Banner Principal)",
     section_featured_visible: "Produtos em Destaque",
     section_benefits_visible: "Benefícios",
@@ -237,6 +239,9 @@ export default function DesignSettingsPage() {
     section_mailing_visible: "Captura de Mailing",
     section_instagram_visible: "Feed Instagram",
   };
+
+  // Sections that are always visible (no toggle)
+  const ALWAYS_SHOW_SECTIONS = ["section_highlight_banner", "section_flash_sale"];
 
   const DEFAULT_ORDER = Object.keys(SECTION_TOGGLES_MAP);
   const sectionOrder: string[] = (form as any).section_order && Array.isArray((form as any).section_order)
