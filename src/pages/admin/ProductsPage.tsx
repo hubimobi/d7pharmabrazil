@@ -322,7 +322,7 @@ export default function ProductsPage() {
   const resetForm = () => {
     setForm(emptyForm); setEditId(null); setImageFile(null);
     setExtraFiles([]); setExistingExtras([]); setTestimonials([]);
-    setNewTestimonial({ author_name: "", content: "", rating: 5 });
+    setNewTestimonial({ author_name: "", content: "", rating: 5, source: "manual" });
     setFaqs([]); setNewFaq({ question: "", answer: "" });
     setImagePreview(null);
   };
