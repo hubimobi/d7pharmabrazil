@@ -2268,6 +2268,7 @@ export type Database = {
           api_url: string
           created_at: string
           daily_limit: number
+          funnel_roles: Json
           id: string
           instance_name: string
           last_message_at: string | null
@@ -2285,6 +2286,7 @@ export type Database = {
           api_url?: string
           created_at?: string
           daily_limit?: number
+          funnel_roles?: Json
           id?: string
           instance_name: string
           last_message_at?: string | null
@@ -2302,6 +2304,7 @@ export type Database = {
           api_url?: string
           created_at?: string
           daily_limit?: number
+          funnel_roles?: Json
           id?: string
           instance_name?: string
           last_message_at?: string | null

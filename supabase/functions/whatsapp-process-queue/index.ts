@@ -45,6 +45,26 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ processed: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const funnelIds = Array.from(new Set(messages.map((msg) => msg.funnel_id).filter(Boolean)));
+    const funnelTypeById = new Map<string, string>();
+
+    if (funnelIds.length > 0) {
+      const { data: funnelData } = await supabase
+        .from("whatsapp_funnels")
+        .select("id, type")
+        .in("id", funnelIds);
+
+      for (const funnel of funnelData || []) {
+        funnelTypeById.set(funnel.id, funnel.type);
+      }
+    }
+
+    const normalizeRoles = (roles: unknown): string[] => {
+      if (!Array.isArray(roles) || roles.length === 0) return ["all"];
+      const values = roles.filter((role): role is string => typeof role === "string");
+      return values.includes("all") ? ["all"] : values;
+    };
+
     let processed = 0;
     let errors = 0;
 
@@ -60,14 +80,19 @@ Deno.serve(async (req) => {
         instance = data;
       }
       if (!instance) {
+        const funnelType = msg.funnel_id ? funnelTypeById.get(msg.funnel_id) : null;
         const { data: avail } = await supabase
           .from("whatsapp_instances")
           .select("*")
           .eq("active", true)
           .eq("status", "connected")
           .order("messages_sent_today", { ascending: true })
-          .limit(1);
-        instance = avail?.[0];
+          .limit(20);
+
+        instance = (avail || []).find((candidate) => {
+          const roles = normalizeRoles(candidate.funnel_roles);
+          return roles.includes("all") || (!!funnelType && roles.includes(funnelType));
+        });
       }
 
       if (!instance || instance.messages_sent_today >= instance.daily_limit) {
