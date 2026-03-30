@@ -1558,7 +1558,7 @@ function QueueTab() {
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-1">{item.message_content}</p>
                   <p className="text-[10px] text-muted-foreground">Agendado: {new Date(item.scheduled_at).toLocaleString("pt-BR")}</p>
-                  {item.error_message && <p className="text-[10px] text-red-500 line-clamp-1">{item.error_message}</p>}
+                  {item.error_message && <p className="text-[10px] text-destructive line-clamp-1">{item.error_message}</p>}
                 </div>
                 <div className="flex gap-1">
                   {item.status === "failed" && (
@@ -1581,7 +1581,7 @@ export default function WhatsAppPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
-          <MessageSquare className="h-6 w-6 text-green-600" /> WhatsApp Automação
+          <MessageSquare className="h-6 w-6 text-primary" /> WhatsApp Automação
         </h1>
         <p className="text-sm text-muted-foreground">Envio automatizado via Evolution API com rotação e spintax</p>
       </div>
