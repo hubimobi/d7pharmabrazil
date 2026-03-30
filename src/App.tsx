@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import ProductsPage from "./pages/ProductsPage";
 import ProductDetail from "./pages/ProductDetail";
 import CheckoutRouter from "./pages/CheckoutRouter";
+import ComboDetail from "./pages/ComboDetail";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
