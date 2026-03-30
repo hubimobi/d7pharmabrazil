@@ -75,8 +75,6 @@ const Index = () => {
       <NotificationBar />
       <Header />
       <main>
-        <HighlightBanner />
-        <FlashSaleCarousel />
         {sectionOrder.map((key) => {
           if (!show(key)) return null;
           const sec = SECTION_COMPONENTS[key];
