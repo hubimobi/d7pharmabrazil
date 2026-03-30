@@ -48,7 +48,9 @@ interface PaymentResult {
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount } = useCart();
+  const [searchParams] = useSearchParams();
+  const isOneClick = searchParams.get("oneclick") === "1";
+  const { savedCustomer, saveCustomer, hasSavedData } = useSavedCustomer();
   const { data: storeSettings } = useStoreSettings();
   const [step, setStep] = useState(1);
   const [couponInput, setCouponInput] = useState("");
