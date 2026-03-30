@@ -1199,6 +1199,7 @@ export type Database = {
           tenant_id: string | null
           unit: string
           updated_at: string
+          upsell_product_ids: Json
           weight: number
           width: number
         }
@@ -1238,6 +1239,7 @@ export type Database = {
           tenant_id?: string | null
           unit?: string
           updated_at?: string
+          upsell_product_ids?: Json
           weight?: number
           width?: number
         }
@@ -1277,6 +1279,7 @@ export type Database = {
           tenant_id?: string | null
           unit?: string
           updated_at?: string
+          upsell_product_ids?: Json
           weight?: number
           width?: number
         }
