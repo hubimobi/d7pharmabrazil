@@ -52,6 +52,7 @@ const emptyForm: ProdForm = {
   countdown_duration_minutes: "60",
   featured: false,
   seo_title: "", seo_description: "", seo_keywords: "",
+  upsell_product_ids: [],
 };
 
 interface Testimonial {
