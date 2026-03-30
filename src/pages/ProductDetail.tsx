@@ -431,13 +431,21 @@ const ProductDetail = () => {
 
             {/* Action buttons */}
             <div className="flex flex-col gap-2">
+              {hasSavedData && (
+                <Button size="lg" className="h-14 text-base gap-2 w-full bg-amber-500 hover:bg-amber-600 text-white font-bold animate-pulse-soft" onClick={() => {
+                  addItem(product, qty);
+                  navigate("/checkout?oneclick=1");
+                }}>
+                  <Zap className="h-5 w-5" /> Comprar com 1 Clique
+                </Button>
+              )}
               <Button size="lg" className="h-14 text-base gap-2 w-full" onClick={() => {
                 addItem(product, qty);
                 setShowUpsell(true);
               }}>
                 <ShoppingCart className="h-5 w-5" /> Adicionar ao Carrinho
               </Button>
-              <Button size="lg" className="h-14 text-base gap-2 w-full bg-success hover:bg-success/90 text-success-foreground animate-pulse-soft" onClick={() => {
+              <Button size="lg" className="h-14 text-base gap-2 w-full bg-success hover:bg-success/90 text-success-foreground" onClick={() => {
                 addItem(product, qty);
                 navigate("/checkout");
               }}>
