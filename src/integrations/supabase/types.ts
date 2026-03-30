@@ -1388,6 +1388,120 @@ export type Database = {
           },
         ]
       }
+      repurchase_funnel: {
+        Row: {
+          aviso_15_sent_at: string | null
+          aviso_30_sent_at: string | null
+          aviso_5_sent_at: string | null
+          coupon_code: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          delivery_confirmed_at: string | null
+          discount_percent: number | null
+          feedback_response: string | null
+          feedback_sent_at: string | null
+          id: string
+          order_id: string
+          product_duration_days: number | null
+          product_id: string | null
+          product_name: string
+          recompra_order_id: string | null
+          stage: string
+          stage_changed_at: string
+          updated_at: string
+        }
+        Insert: {
+          aviso_15_sent_at?: string | null
+          aviso_30_sent_at?: string | null
+          aviso_5_sent_at?: string | null
+          coupon_code?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          delivery_confirmed_at?: string | null
+          discount_percent?: number | null
+          feedback_response?: string | null
+          feedback_sent_at?: string | null
+          id?: string
+          order_id: string
+          product_duration_days?: number | null
+          product_id?: string | null
+          product_name?: string
+          recompra_order_id?: string | null
+          stage?: string
+          stage_changed_at?: string
+          updated_at?: string
+        }
+        Update: {
+          aviso_15_sent_at?: string | null
+          aviso_30_sent_at?: string | null
+          aviso_5_sent_at?: string | null
+          coupon_code?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          delivery_confirmed_at?: string | null
+          discount_percent?: number | null
+          feedback_response?: string | null
+          feedback_sent_at?: string | null
+          id?: string
+          order_id?: string
+          product_duration_days?: number | null
+          product_id?: string | null
+          product_name?: string
+          recompra_order_id?: string | null
+          stage?: string
+          stage_changed_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repurchase_funnel_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repurchase_funnel_recompra_order_id_fkey"
+            columns: ["recompra_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      repurchase_goals: {
+        Row: {
+          created_at: string
+          goal_count: number
+          id: string
+          month: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          goal_count?: number
+          id?: string
+          month: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          goal_count?: number
+          id?: string
+          month?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       short_links: {
         Row: {
           active: boolean
