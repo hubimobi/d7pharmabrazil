@@ -54,7 +54,11 @@ const Index = () => {
   const { data: settings } = useStoreSettings();
   const s = settings as any;
 
-  const show = (key: string) => s?.[key] !== false;
+  const show = (key: string) => {
+    const sec = SECTION_COMPONENTS[key];
+    if (sec?.alwaysShow) return true;
+    return s?.[key] !== false;
+  };
 
   const sectionOrder: string[] = useMemo(() => {
     const order = s?.section_order;
