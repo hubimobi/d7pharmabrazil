@@ -2,11 +2,13 @@ import { useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Bold, Italic, Underline, Strikethrough,
   Heading1, Heading2, Heading3,
   List, ListOrdered, Table, Link, Code, AlignLeft, AlignCenter,
-  Undo2, Redo2, Type, Minus
+  Undo2, Redo2, Type, Minus, ImagePlus
 } from "lucide-react";
 
 interface RichTextEditorProps {
