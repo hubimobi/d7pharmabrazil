@@ -1134,6 +1134,10 @@ export type Database = {
           active: boolean
           badge: string | null
           benefits: Json
+          countdown_duration_minutes: number | null
+          countdown_end_date: string | null
+          countdown_end_time: string | null
+          countdown_mode: string
           created_at: string
           description: string
           extra_images: Json
@@ -1169,6 +1173,10 @@ export type Database = {
           active?: boolean
           badge?: string | null
           benefits?: Json
+          countdown_duration_minutes?: number | null
+          countdown_end_date?: string | null
+          countdown_end_time?: string | null
+          countdown_mode?: string
           created_at?: string
           description?: string
           extra_images?: Json
@@ -1204,6 +1212,10 @@ export type Database = {
           active?: boolean
           badge?: string | null
           benefits?: Json
+          countdown_duration_minutes?: number | null
+          countdown_end_date?: string | null
+          countdown_end_time?: string | null
+          countdown_mode?: string
           created_at?: string
           description?: string
           extra_images?: Json
