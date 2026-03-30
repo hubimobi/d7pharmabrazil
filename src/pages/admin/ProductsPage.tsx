@@ -492,7 +492,6 @@ export default function ProductsPage() {
                       </div>
                     );
                   })()}
-                  </div>
                   <div className="space-y-2"><Label>Badge</Label><Input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="ex: Mais Vendido" /></div>
                   <div className="flex items-center justify-between rounded-lg border border-border p-3 mt-2">
                     <div>
