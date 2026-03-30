@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Palette, Save, Loader2, FlaskConical, Truck, ShieldCheck, TrendingUp, Wand2, Sun, Moon, Building2, Layout, Layers, BookOpen, RectangleHorizontal, SquareIcon } from "lucide-react";
+import { Palette, Save, Loader2, FlaskConical, Truck, ShieldCheck, TrendingUp, Wand2, Sun, Moon, Building2, Layout, Layers, BookOpen, RectangleHorizontal, SquareIcon, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
 import { useAdminTheme, type AdminTheme } from "@/hooks/useAdminTheme";
 
@@ -225,18 +225,43 @@ export default function DesignSettingsPage() {
     toast.success(`Cor ${color} aplicada!`);
   };
 
-  const SECTION_TOGGLES = [
-    { key: "section_hero_visible", label: "Hero (Banner Principal)" },
-    { key: "section_featured_visible", label: "Produtos em Destaque" },
-    { key: "section_benefits_visible", label: "Benefícios" },
-    { key: "section_products_visible", label: "Todos os Produtos" },
-    { key: "section_testimonials_visible", label: "Depoimentos" },
-    { key: "section_promo_banners_visible", label: "Banners Promocionais" },
-    { key: "section_guarantee_visible", label: "Garantia de Satisfação" },
-    { key: "section_trust_badges_visible", label: "Selos de Confiança" },
-    { key: "section_mailing_visible", label: "Captura de Mailing" },
-    { key: "section_instagram_visible", label: "Feed Instagram" },
+  const SECTION_TOGGLES_MAP: Record<string, string> = {
+    section_hero_visible: "Hero (Banner Principal)",
+    section_featured_visible: "Produtos em Destaque",
+    section_benefits_visible: "Benefícios",
+    section_products_visible: "Todos os Produtos",
+    section_testimonials_visible: "Depoimentos",
+    section_promo_banners_visible: "Banners Promocionais",
+    section_guarantee_visible: "Garantia de Satisfação",
+    section_trust_badges_visible: "Selos de Confiança",
+    section_mailing_visible: "Captura de Mailing",
+    section_instagram_visible: "Feed Instagram",
+  };
+
+  const DEFAULT_ORDER = Object.keys(SECTION_TOGGLES_MAP);
+  const sectionOrder: string[] = (form as any).section_order && Array.isArray((form as any).section_order)
+    ? (form as any).section_order
+    : DEFAULT_ORDER;
+
+  // Ensure all keys are present
+  const normalizedOrder = [
+    ...sectionOrder.filter((k: string) => k in SECTION_TOGGLES_MAP),
+    ...DEFAULT_ORDER.filter((k) => !sectionOrder.includes(k)),
   ];
+
+  const moveSectionUp = (index: number) => {
+    if (index <= 0) return;
+    const newOrder = [...normalizedOrder];
+    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+    update("section_order" as any, newOrder);
+  };
+
+  const moveSectionDown = (index: number) => {
+    if (index >= normalizedOrder.length - 1) return;
+    const newOrder = [...normalizedOrder];
+    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+    update("section_order" as any, newOrder);
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -265,6 +290,7 @@ export default function DesignSettingsPage() {
       section_mailing_visible: (form as any).section_mailing_visible,
       section_instagram_visible: (form as any).section_instagram_visible,
       design_border_style: (form as any).design_border_style,
+      section_order: normalizedOrder,
     } as any);
   };
 
@@ -372,16 +398,38 @@ export default function DesignSettingsPage() {
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <div>
             <h2 className="text-lg font-semibold">Seções da Home</h2>
-            <p className="text-sm text-muted-foreground">Escolha quais seções exibir na página inicial.</p>
+            <p className="text-sm text-muted-foreground">Ative, desative e reordene as seções da página inicial. Use as setas para alterar a posição.</p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {SECTION_TOGGLES.map((s) => (
-              <div key={s.key} className="flex items-center justify-between rounded-lg border border-border p-3">
-                <Label className="text-sm font-medium cursor-pointer">{s.label}</Label>
-                <Switch
-                  checked={(form as any)[s.key] !== false}
-                  onCheckedChange={(v) => update(s.key as any, v)}
-                />
+          <div className="grid gap-2">
+            {normalizedOrder.map((key, index) => (
+              <div key={key} className="flex items-center gap-2 rounded-lg border border-border p-3 bg-card hover:bg-muted/30 transition-colors">
+                <GripVertical className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+                <span className="text-xs font-mono text-muted-foreground w-5 text-center flex-shrink-0">{index + 1}</span>
+                <Label className="text-sm font-medium flex-1 cursor-pointer">{SECTION_TOGGLES_MAP[key]}</Label>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveSectionUp(index)}
+                    disabled={index === 0}
+                    className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Mover para cima"
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveSectionDown(index)}
+                    disabled={index === normalizedOrder.length - 1}
+                    className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Mover para baixo"
+                  >
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </button>
+                  <Switch
+                    checked={(form as any)[key] !== false}
+                    onCheckedChange={(v) => update(key as any, v)}
+                  />
+                </div>
               </div>
             ))}
           </div>

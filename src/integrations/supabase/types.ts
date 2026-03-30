@@ -1783,6 +1783,7 @@ export type Database = {
           section_hero_visible: boolean
           section_instagram_visible: boolean
           section_mailing_visible: boolean
+          section_order: Json | null
           section_products_visible: boolean
           section_promo_banners_visible: boolean
           section_testimonials_visible: boolean
@@ -1919,6 +1920,7 @@ export type Database = {
           section_hero_visible?: boolean
           section_instagram_visible?: boolean
           section_mailing_visible?: boolean
+          section_order?: Json | null
           section_products_visible?: boolean
           section_promo_banners_visible?: boolean
           section_testimonials_visible?: boolean
@@ -2055,6 +2057,7 @@ export type Database = {
           section_hero_visible?: boolean
           section_instagram_visible?: boolean
           section_mailing_visible?: boolean
+          section_order?: Json | null
           section_products_visible?: boolean
           section_promo_banners_visible?: boolean
           section_testimonials_visible?: boolean

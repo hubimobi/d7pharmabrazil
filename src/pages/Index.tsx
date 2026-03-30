@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useMemo, ReactNode } from "react";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import SEOHead from "@/components/SEOHead";
@@ -20,11 +20,46 @@ const TrustBadges = lazy(() => import("@/components/TrustBadges"));
 const FinalCTA = lazy(() => import("@/components/FinalCTA"));
 const InstagramFeed = lazy(() => import("@/components/InstagramFeed"));
 
+const DEFAULT_ORDER = [
+  "section_hero_visible",
+  "section_featured_visible",
+  "section_benefits_visible",
+  "section_products_visible",
+  "section_testimonials_visible",
+  "section_promo_banners_visible",
+  "section_guarantee_visible",
+  "section_trust_badges_visible",
+  "section_mailing_visible",
+  "section_instagram_visible",
+];
+
+const SECTION_COMPONENTS: Record<string, { component: React.ComponentType; lazy?: boolean }> = {
+  section_hero_visible: { component: HeroSection },
+  section_featured_visible: { component: FeaturedCarousel },
+  section_benefits_visible: { component: BenefitsSection },
+  section_products_visible: { component: AllProducts },
+  section_testimonials_visible: { component: TestimonialsSection, lazy: true },
+  section_promo_banners_visible: { component: PromoBanners, lazy: true },
+  section_guarantee_visible: { component: GuaranteeSection, lazy: true },
+  section_trust_badges_visible: { component: TrustBadges, lazy: true },
+  section_mailing_visible: { component: FinalCTA, lazy: true },
+  section_instagram_visible: { component: InstagramFeed, lazy: true },
+};
+
 const Index = () => {
   const { data: settings } = useStoreSettings();
   const s = settings as any;
 
   const show = (key: string) => s?.[key] !== false;
+
+  const sectionOrder: string[] = useMemo(() => {
+    const order = s?.section_order;
+    if (Array.isArray(order) && order.length > 0) {
+      const all = [...order.filter((k: string) => k in SECTION_COMPONENTS), ...DEFAULT_ORDER.filter((k) => !order.includes(k))];
+      return all;
+    }
+    return DEFAULT_ORDER;
+  }, [s?.section_order]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -32,20 +67,22 @@ const Index = () => {
       <NotificationBar />
       <Header />
       <main>
-        {show("section_hero_visible") && <HeroSection />}
-        {show("section_featured_visible") && <FeaturedCarousel />}
         <HighlightBanner />
         <FlashSaleCarousel />
-        {show("section_benefits_visible") && <BenefitsSection />}
-        {show("section_products_visible") && <AllProducts />}
-        <Suspense fallback={null}>
-          {show("section_testimonials_visible") && <TestimonialsSection />}
-          {show("section_promo_banners_visible") && <PromoBanners />}
-          {show("section_guarantee_visible") && <GuaranteeSection />}
-          {show("section_trust_badges_visible") && <TrustBadges />}
-          {show("section_mailing_visible") && <FinalCTA />}
-          {show("section_instagram_visible") && <InstagramFeed />}
-        </Suspense>
+        {sectionOrder.map((key) => {
+          if (!show(key)) return null;
+          const sec = SECTION_COMPONENTS[key];
+          if (!sec) return null;
+          const Component = sec.component;
+          if (sec.lazy) {
+            return (
+              <Suspense key={key} fallback={null}>
+                <Component />
+              </Suspense>
+            );
+          }
+          return <Component key={key} />;
+        })}
       </main>
       <Footer />
       <WhatsAppButton />
