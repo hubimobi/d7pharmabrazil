@@ -33,6 +33,7 @@ const ProductDetail = () => {
   const [searchParams] = useSearchParams();
   const { data: product, isLoading } = useProduct(slug);
   const { addItem } = useCart();
+  const { hasSavedData } = useSavedCustomer();
   const navigate = useNavigate();
   const { data: settings } = useStoreSettings();
   const directCheckoutDone = useRef(false);
