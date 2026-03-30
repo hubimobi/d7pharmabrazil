@@ -66,7 +66,6 @@ export default function TestimonialGenerator() {
   const getSelectedProductBenefits = () => {
     const product = products?.find((p) => p.id === selectedProductId);
     return product?.benefits || [];
-    }
   };
 
   const handleGenerate = async () => {
