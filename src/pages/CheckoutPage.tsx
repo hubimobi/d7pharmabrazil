@@ -37,6 +37,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { Progress } from "@/components/ui/progress";
 import { useSavedCustomer } from "@/hooks/useSavedCustomer";
+import { getActiveRef } from "@/pages/LinkRedirectPage";
 
 interface PaymentResult {
   payment_id: string;
