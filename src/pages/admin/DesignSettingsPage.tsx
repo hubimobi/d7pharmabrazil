@@ -624,6 +624,45 @@ export default function DesignSettingsPage() {
           </div>
         </div>
 
+        {/* Estilo de Bordas */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Estilo de Bordas</h2>
+          <p className="text-sm text-muted-foreground">Defina se os elementos da loja (cards, banners, botões, imagens) terão cantos arredondados ou quadrados.</p>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { value: "rounded", label: "Arredondado", desc: "Cantos suaves e modernos", Icon: RectangleHorizontal },
+              { value: "square", label: "Quadrado", desc: "Cantos retos e geométricos", Icon: SquareIcon },
+            ].map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex flex-col items-center gap-3 rounded-xl border p-5 cursor-pointer transition-all ${
+                  ((form as any).design_border_style || "rounded") === opt.value
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border hover:border-primary/30"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="border_style"
+                  value={opt.value}
+                  checked={((form as any).design_border_style || "rounded") === opt.value}
+                  onChange={() => update("design_border_style" as any, opt.value)}
+                  className="sr-only"
+                />
+                {/* Preview */}
+                <div className="flex gap-2">
+                  <div className={`h-16 w-24 bg-primary/15 border border-primary/20 ${opt.value === "rounded" ? "rounded-xl" : "rounded-none"}`} />
+                  <div className={`h-16 w-16 bg-muted border border-border ${opt.value === "rounded" ? "rounded-xl" : "rounded-none"}`} />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-sm">{opt.label}</p>
+                  <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* Estilo de Ícones */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <h2 className="text-lg font-semibold">Estilo dos Ícones</h2>
