@@ -624,7 +624,7 @@ const ProductDetail = () => {
       {showStickyBar && product && (
         <div className="fixed bottom-0 inset-x-0 z-50 hidden md:block animate-fade-in">
           <div className="border-t border-border bg-card/95 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-            <div className="container flex items-center gap-4 py-3">
+            <div className="container flex items-center justify-center gap-4 py-3 pr-24">
               <img
                 src={product.image}
                 alt={product.name}
