@@ -5,6 +5,10 @@ interface CountdownTimerProps {
   /** Target date or hours from now (default: end of today) */
   targetDate?: Date;
   hoursFromNow?: number;
+  countdownMode?: string;
+  countdownEndTime?: string | null;
+  countdownEndDate?: string | null;
+  countdownDurationMinutes?: number;
   label?: string;
   className?: string;
 }
@@ -15,17 +19,56 @@ function getEndOfDay(): Date {
   return d;
 }
 
+function resolveTarget(
+  targetDate?: Date,
+  hoursFromNow?: number,
+  mode?: string,
+  endTime?: string | null,
+  endDate?: string | null,
+  durationMinutes?: number
+): Date {
+  if (targetDate) return targetDate;
+  if (hoursFromNow) return new Date(Date.now() + hoursFromNow * 3600000);
+
+  const now = new Date();
+  switch (mode) {
+    case "daily_until": {
+      if (!endTime) return getEndOfDay();
+      const [h, m] = endTime.split(":").map(Number);
+      const t = new Date();
+      t.setHours(h, m, 0, 0);
+      if (t <= now) t.setDate(t.getDate() + 1);
+      return t;
+    }
+    case "specific_datetime":
+      return endDate ? new Date(endDate) : getEndOfDay();
+    case "after_access": {
+      const key = `countdown_start_${window.location.pathname}`;
+      let start = sessionStorage.getItem(key);
+      if (!start) {
+        start = String(Date.now());
+        sessionStorage.setItem(key, start);
+      }
+      return new Date(Number(start) + (durationMinutes || 60) * 60000);
+    }
+    default:
+      return getEndOfDay();
+  }
+}
+
 export default function CountdownTimer({
   targetDate,
   hoursFromNow,
+  countdownMode,
+  countdownEndTime,
+  countdownEndDate,
+  countdownDurationMinutes,
   label = "Oferta expira em",
   className = "",
 }: CountdownTimerProps) {
-  const [target] = useState<Date>(() => {
-    if (targetDate) return targetDate;
-    if (hoursFromNow) return new Date(Date.now() + hoursFromNow * 3600000);
-    return getEndOfDay();
-  });
+  const [target] = useState<Date>(() =>
+    resolveTarget(targetDate, hoursFromNow, countdownMode, countdownEndTime, countdownEndDate, countdownDurationMinutes)
+  );
 
   const [timeLeft, setTimeLeft] = useState(() => calcTimeLeft(target));
 

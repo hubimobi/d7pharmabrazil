@@ -400,7 +400,13 @@ const ProductDetail = () => {
 
             {/* Countdown */}
             {product.showCountdown && (
-              <CountdownTimer label="🔥 Preço promocional expira em" />
+              <CountdownTimer
+                label="🔥 Preço promocional expira em"
+                countdownMode={product.countdownMode}
+                countdownEndTime={product.countdownEndTime}
+                countdownEndDate={product.countdownEndDate}
+                countdownDurationMinutes={product.countdownDurationMinutes}
+              />
             )}
 
             {/* Quantity selector */}
