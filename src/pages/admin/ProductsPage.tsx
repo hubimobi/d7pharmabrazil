@@ -29,6 +29,10 @@ interface ProdForm {
   group_name: string; manufacturer: string;
   sku: string; ncm: string; gtin: string; unit: string;
   show_countdown: boolean;
+  countdown_mode: string;
+  countdown_end_time: string;
+  countdown_end_date: string;
+  countdown_duration_minutes: string;
   featured: boolean;
   seo_title: string; seo_description: string; seo_keywords: string;
 }
@@ -41,6 +45,10 @@ const emptyForm: ProdForm = {
   group_name: "", manufacturer: "",
   sku: "", ncm: "", gtin: "", unit: "UN",
   show_countdown: true,
+  countdown_mode: "end_of_day",
+  countdown_end_time: "",
+  countdown_end_date: "",
+  countdown_duration_minutes: "60",
   featured: false,
   seo_title: "", seo_description: "", seo_keywords: "",
 };
