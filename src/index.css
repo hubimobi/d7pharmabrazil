@@ -135,6 +135,11 @@
   }
 }
 
+@keyframes floating-pulse {
+  0%, 4%, 100% { transform: scale(1); }
+  2% { transform: scale(1.25); }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
