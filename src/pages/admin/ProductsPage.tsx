@@ -35,6 +35,7 @@ interface ProdForm {
   countdown_duration_minutes: string;
   featured: boolean;
   seo_title: string; seo_description: string; seo_keywords: string;
+  upsell_product_ids: string[];
 }
 
 const emptyForm: ProdForm = {
