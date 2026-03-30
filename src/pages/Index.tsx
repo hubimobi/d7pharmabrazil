@@ -34,6 +34,7 @@ const Index = () => {
       <main>
         {show("section_hero_visible") && <HeroSection />}
         {show("section_featured_visible") && <FeaturedCarousel />}
+        <HighlightBanner />
         <FlashSaleCarousel />
         {show("section_benefits_visible") && <BenefitsSection />}
         {show("section_products_visible") && <AllProducts />}
