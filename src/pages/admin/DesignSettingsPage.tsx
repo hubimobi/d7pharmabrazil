@@ -290,6 +290,7 @@ export default function DesignSettingsPage() {
       section_mailing_visible: (form as any).section_mailing_visible,
       section_instagram_visible: (form as any).section_instagram_visible,
       design_border_style: (form as any).design_border_style,
+      section_order: normalizedOrder,
     } as any);
   };
 
