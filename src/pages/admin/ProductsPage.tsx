@@ -40,7 +40,7 @@ interface ProdForm {
 
 const emptyForm: ProdForm = {
   name: "", slug: "", short_description: "", description: "",
-  price: "", original_price: "", badge: "", stock: "",
+  price: "", original_price: "", cost_price: "", badge: "", stock: "",
   benefits: "",
   weight: "0.3", height: "5", width: "15", length: "20",
   group_name: "", manufacturer: "",
