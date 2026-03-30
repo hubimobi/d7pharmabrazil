@@ -298,10 +298,10 @@ export default function RepurchasePage() {
                         {format(new Date(entry.stage_changed_at), "dd/MM/yy")}
                       </div>
                       <div className="flex gap-1 mt-1">
-                        {entry.feedback_sent_at && <Mail className="h-3 w-3 text-purple-400" title="Feedback enviado" />}
-                        {entry.aviso_30_sent_at && <MessageCircle className="h-3 w-3 text-yellow-500" title="Aviso 30d" />}
-                        {entry.aviso_15_sent_at && <Mail className="h-3 w-3 text-orange-500" title="Aviso 15d" />}
-                        {entry.aviso_5_sent_at && <Gift className="h-3 w-3 text-red-500" title="Aviso 5d + brinde" />}
+                        {entry.feedback_sent_at && <span title="Feedback enviado"><Mail className="h-3 w-3 text-purple-400" /></span>}
+                        {entry.aviso_30_sent_at && <span title="Aviso 30d"><MessageCircle className="h-3 w-3 text-yellow-500" /></span>}
+                        {entry.aviso_15_sent_at && <span title="Aviso 15d"><Mail className="h-3 w-3 text-orange-500" /></span>}
+                        {entry.aviso_5_sent_at && <span title="Aviso 5d + brinde"><Gift className="h-3 w-3 text-red-500" /></span>}
                       </div>
                     </CardContent>
                   </Card>
