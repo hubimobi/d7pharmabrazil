@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import SEOHead from "@/components/SEOHead";
 import FeaturedCarousel from "@/components/FeaturedCarousel";
+import HighlightBanner from "@/components/HighlightBanner";
 import BenefitsSection from "@/components/BenefitsSection";
 import AllProducts from "@/components/AllProducts";
 import FlashSaleCarousel from "@/components/FlashSaleCarousel";
