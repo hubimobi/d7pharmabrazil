@@ -61,6 +61,9 @@ interface Testimonial {
   author_name: string;
   content: string;
   rating: number;
+  author_image_url?: string;
+  product_image_url?: string;
+  source?: string;
 }
 
 interface FaqItem {
