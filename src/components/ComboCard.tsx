@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ShoppingCart, Zap, Truck, Star, Package } from "lucide-react";
 import CountdownTimer from "@/components/CountdownTimer";
 import { Badge } from "@/components/ui/badge";
