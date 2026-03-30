@@ -319,6 +319,27 @@ function TemplatesTab() {
   const [editing, setEditing] = useState<WhatsAppTemplate | null>(null);
   const [form, setForm] = useState({ name: "", category: "geral", content: "" });
   const [preview, setPreview] = useState("");
+  const templateTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const cursorPosRef = useRef<number | null>(null);
+
+  function insertAtCursor(text: string) {
+    const textarea = templateTextareaRef.current;
+    const pos = cursorPosRef.current ?? form.content.length;
+    const before = form.content.substring(0, pos);
+    const after = form.content.substring(pos);
+    const newContent = before + text + after;
+    setForm({ ...form, content: newContent });
+    generatePreview(newContent);
+    // Restore cursor after render
+    setTimeout(() => {
+      if (textarea) {
+        const newPos = pos + text.length;
+        textarea.focus();
+        textarea.setSelectionRange(newPos, newPos);
+        cursorPosRef.current = newPos;
+      }
+    }, 0);
+  }
 
   useEffect(() => { loadTemplates(); }, []);
 
