@@ -94,6 +94,7 @@ export interface StoreSettings {
   design_bg_color: string;
   design_icon_style: string;
   design_nav_color: string;
+  design_border_style: string;
   design_bg_gradient: string;
   design_footer_gradient: string;
   // Sales popup
