@@ -767,84 +767,367 @@ function FunnelsTab() {
 // ==================== CONTACTS TAB ====================
 function ContactsTab() {
   const [logs, setLogs] = useState<MessageLog[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
+  const [importSource, setImportSource] = useState<string | null>(null);
+  const [csvText, setCsvText] = useState("");
+  const [manualName, setManualName] = useState("");
+  const [manualPhone, setManualPhone] = useState("");
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadLogs(); }, []);
+  useEffect(() => { loadAll(); }, []);
 
-  async function loadLogs() {
-    const { data } = await supabase.from("whatsapp_message_log").select("*").order("created_at", { ascending: false }).limit(500);
-    setLogs((data || []) as unknown as MessageLog[]);
+  async function loadAll() {
+    const [{ data: logData }, { data: contactData }] = await Promise.all([
+      supabase.from("whatsapp_message_log").select("*").order("created_at", { ascending: false }).limit(500),
+      supabase.from("whatsapp_contacts").select("*").order("created_at", { ascending: false }),
+    ]);
+    setLogs((logData || []) as unknown as MessageLog[]);
+    setContacts(contactData || []);
   }
 
-  const contacts = Array.from(new Map(logs.map((l) => [l.contact_phone, { phone: l.contact_phone, name: l.contact_name, lastMessage: l.created_at }])).values());
+  // Merge DB contacts with log contacts
+  const allContacts = (() => {
+    const map = new Map<string, { phone: string; name: string; lastMessage: string; source: string }>();
+    contacts.forEach((c) => map.set(c.phone, { phone: c.phone, name: c.name, lastMessage: c.updated_at, source: c.source }));
+    logs.forEach((l) => {
+      if (!map.has(l.contact_phone)) {
+        map.set(l.contact_phone, { phone: l.contact_phone, name: l.contact_name, lastMessage: l.created_at, source: "mensagem" });
+      }
+    });
+    return Array.from(map.values());
+  })();
 
-  const filtered = contacts.filter((c) =>
+  const filtered = allContacts.filter((c) =>
     c.phone.includes(search) || c.name.toLowerCase().includes(search.toLowerCase())
   );
 
   const selectedLogs = logs.filter((l) => l.contact_phone === selectedPhone).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
+  function normalizePhone(raw: string): string {
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length >= 10 && !digits.startsWith("55")) return `55${digits}`;
+    return digits;
+  }
+
+  async function importContacts(items: { phone: string; name: string; source: string }[]) {
+    if (items.length === 0) { toast.error("Nenhum contato para importar"); return; }
+    setImporting(true);
+    let imported = 0;
+    for (const item of items) {
+      const phone = normalizePhone(item.phone);
+      if (phone.length < 10) continue;
+      const { error } = await supabase.from("whatsapp_contacts").upsert(
+        { phone, name: item.name || phone, source: item.source },
+        { onConflict: "phone" }
+      );
+      if (!error) imported++;
+    }
+    toast.success(`${imported} contato(s) importado(s) com sucesso!`);
+    setImporting(false);
+    setShowImport(false);
+    setImportSource(null);
+    setCsvText("");
+    loadAll();
+  }
+
+  function handleCSVImport() {
+    const lines = csvText.trim().split("\n").filter(Boolean);
+    const items = lines.map((line) => {
+      const parts = line.split(/[;,\t]/).map((s) => s.trim().replace(/^["']|["']$/g, ""));
+      return { phone: parts[0] || "", name: parts[1] || "", source: "csv" };
+    }).filter((i) => i.phone);
+    importContacts(items);
+  }
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setCsvText(ev.target?.result as string || "");
+    };
+    reader.readAsText(file);
+  }
+
+  async function handleManualAdd() {
+    if (!manualPhone) { toast.error("Informe o telefone"); return; }
+    await importContacts([{ phone: manualPhone, name: manualName, source: "manual" }]);
+    setManualName("");
+    setManualPhone("");
+  }
+
+  async function deleteContact(phone: string) {
+    await supabase.from("whatsapp_contacts").delete().eq("phone", phone);
+    toast.success("Contato removido");
+    loadAll();
+  }
+
+  const sourceLabels: Record<string, string> = {
+    csv: "CSV", manual: "Manual", whatsapp_group: "Grupo WhatsApp",
+    google_contacts: "Google", whatsapp_device: "Dispositivo", mensagem: "Mensagem",
+  };
+
   return (
-    <div className="grid md:grid-cols-[300px_1fr] gap-4 min-h-[500px]">
-      {/* Contact List */}
-      <div className="space-y-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar telefone..." className="pl-9" />
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold">Contatos</h3>
+          <Badge variant="secondary">{allContacts.length}</Badge>
         </div>
-        <ScrollArea className="h-[450px]">
-          <div className="space-y-1">
-            {filtered.map((c) => (
-              <button key={c.phone} onClick={() => setSelectedPhone(c.phone)}
-                className={`w-full text-left p-3 rounded-lg transition-colors ${selectedPhone === c.phone ? "bg-primary/10 border border-primary/20" : "hover:bg-muted"}`}>
-                <p className="font-medium text-sm">{c.name || c.phone}</p>
-                <p className="text-xs text-muted-foreground">{c.phone}</p>
-                <p className="text-[10px] text-muted-foreground">{new Date(c.lastMessage).toLocaleString("pt-BR")}</p>
-              </button>
-            ))}
-            {filtered.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Nenhum contato encontrado</p>}
-          </div>
-        </ScrollArea>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => { setShowImport(true); setImportSource(null); }}>
+            <Upload className="h-4 w-4 mr-1" /> Importar Contatos
+          </Button>
+          <Button size="sm" onClick={() => { setShowImport(true); setImportSource("manual"); }}>
+            <UserPlus className="h-4 w-4 mr-1" /> Adicionar
+          </Button>
+        </div>
       </div>
 
-      {/* Chat Timeline */}
-      <Card>
-        <CardContent className="p-4">
-          {selectedPhone ? (
-            <div>
-              <div className="flex items-center gap-2 mb-4 pb-3 border-b">
-                <Users className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-medium">{selectedLogs[0]?.contact_name || selectedPhone}</p>
-                  <p className="text-xs text-muted-foreground">{selectedPhone}</p>
-                </div>
-              </div>
-              <ScrollArea className="h-[400px]">
-                <div className="space-y-3 bg-[#e5ddd5] rounded-lg p-4">
-                  {selectedLogs.map((log) => (
-                    <div key={log.id} className={`flex ${log.direction === "outbound" ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[80%] rounded-lg p-3 shadow-sm ${log.direction === "outbound" ? "bg-[#dcf8c6]" : "bg-white"}`}>
-                        <p className="text-sm whitespace-pre-wrap">{log.message_content}</p>
-                        <div className="flex items-center justify-end gap-1 mt-1">
-                          <span className="text-[10px] text-muted-foreground">{new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
-                          {log.status === "sent" ? <CheckCircle className="h-3 w-3 text-blue-500" /> : <XCircle className="h-3 w-3 text-red-500" />}
-                        </div>
-                        {log.error_message && <p className="text-[10px] text-red-500 mt-1">{log.error_message}</p>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-[450px] text-muted-foreground">
-              <MessageSquare className="h-12 w-12 mb-3 opacity-40" />
-              <p>Selecione um contato para ver o histórico</p>
+      {/* Import Dialog */}
+      <Dialog open={showImport} onOpenChange={(v) => { setShowImport(v); if (!v) setImportSource(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {importSource === "manual" ? "Adicionar Contato" : importSource ? `Importar via ${sourceLabels[importSource] || importSource}` : "Importar Contatos"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {!importSource && (
+            <div className="grid grid-cols-2 gap-3 py-2">
+              <button onClick={() => setImportSource("whatsapp_group")}
+                className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition text-center">
+                <Users className="h-8 w-8 text-primary" />
+                <span className="text-sm font-medium">Grupo do WhatsApp</span>
+                <span className="text-xs text-muted-foreground">Importar membros de um grupo</span>
+              </button>
+              <button onClick={() => setImportSource("google_contacts")}
+                className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition text-center">
+                <Mail className="h-8 w-8 text-primary" />
+                <span className="text-sm font-medium">Contatos do Google</span>
+                <span className="text-xs text-muted-foreground">Exportar do Google e importar CSV</span>
+              </button>
+              <button onClick={() => setImportSource("csv")}
+                className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition text-center">
+                <FileText className="h-8 w-8 text-primary" />
+                <span className="text-sm font-medium">Lista em CSV</span>
+                <span className="text-xs text-muted-foreground">Telefone e nome separados por vírgula</span>
+              </button>
+              <button onClick={() => setImportSource("whatsapp_device")}
+                className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition text-center">
+                <Smartphone className="h-8 w-8 text-primary" />
+                <span className="text-sm font-medium">Seu WhatsApp</span>
+                <span className="text-xs text-muted-foreground">Sincronizar contatos via instância</span>
+              </button>
             </div>
           )}
-        </CardContent>
-      </Card>
+
+          {importSource === "manual" && (
+            <div className="space-y-3">
+              <div><Label>Nome</Label><Input value={manualName} onChange={(e) => setManualName(e.target.value)} placeholder="Nome do contato" /></div>
+              <div><Label>Telefone *</Label><Input value={manualPhone} onChange={(e) => setManualPhone(e.target.value)} placeholder="5511999999999" inputMode="tel" /></div>
+              <Button className="w-full" onClick={handleManualAdd} disabled={importing}>
+                {importing ? "Salvando..." : "Adicionar Contato"}
+              </Button>
+            </div>
+          )}
+
+          {importSource === "csv" && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Cole a lista ou envie um arquivo CSV. Formato: <code className="text-xs bg-muted px-1 rounded">telefone,nome</code> (um por linha).</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-4 w-4 mr-1" /> Enviar Arquivo
+                </Button>
+                <input ref={fileInputRef} type="file" accept=".csv,.txt" className="hidden" onChange={handleFileUpload} />
+              </div>
+              <Textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} rows={8} placeholder={"5511999999999,João Silva\n5521888888888,Maria Santos"} />
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-muted-foreground">{csvText.trim().split("\n").filter(Boolean).length} linha(s)</span>
+                <Button onClick={handleCSVImport} disabled={importing || !csvText.trim()}>
+                  {importing ? "Importando..." : "Importar"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {importSource === "google_contacts" && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-border p-4 space-y-2">
+                <p className="text-sm font-medium">Como exportar do Google Contacts:</p>
+                <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                  <li>Acesse <a href="https://contacts.google.com" target="_blank" rel="noopener" className="text-primary underline">contacts.google.com</a></li>
+                  <li>Selecione os contatos desejados</li>
+                  <li>Clique em <strong>Exportar</strong> → <strong>CSV do Google</strong></li>
+                  <li>Envie o arquivo aqui</li>
+                </ol>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-4 w-4 mr-1" /> Enviar CSV do Google
+                </Button>
+                <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    const text = ev.target?.result as string || "";
+                    const lines = text.split("\n").filter(Boolean);
+                    const header = lines[0]?.toLowerCase() || "";
+                    const nameIdx = header.split(",").findIndex((h) => h.includes("name") || h.includes("nome"));
+                    const phoneIdx = header.split(",").findIndex((h) => h.includes("phone") || h.includes("telefone") || h.includes("mobile"));
+                    if (phoneIdx < 0) { toast.error("Coluna de telefone não encontrada no CSV"); return; }
+                    const items = lines.slice(1).map((line) => {
+                      const cols = line.split(",").map((s) => s.trim().replace(/^["']|["']$/g, ""));
+                      return { phone: cols[phoneIdx] || "", name: cols[nameIdx >= 0 ? nameIdx : 0] || "", source: "google_contacts" };
+                    }).filter((i) => i.phone.replace(/\D/g, "").length >= 8);
+                    importContacts(items);
+                  };
+                  reader.readAsText(file);
+                }} />
+              </div>
+              <Textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} rows={6} placeholder="Ou cole os dados aqui: telefone,nome (um por linha)" />
+              {csvText.trim() && (
+                <Button onClick={() => {
+                  const lines = csvText.trim().split("\n").filter(Boolean);
+                  const items = lines.map((line) => {
+                    const parts = line.split(/[;,\t]/).map((s) => s.trim().replace(/^["']|["']$/g, ""));
+                    return { phone: parts[0] || "", name: parts[1] || "", source: "google_contacts" };
+                  }).filter((i) => i.phone);
+                  importContacts(items);
+                }} disabled={importing}>
+                  {importing ? "Importando..." : "Importar"}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {importSource === "whatsapp_group" && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-border p-4 space-y-2">
+                <p className="text-sm font-medium">Como importar de um grupo:</p>
+                <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                  <li>Abra o grupo no WhatsApp Web</li>
+                  <li>Clique no nome do grupo → ver participantes</li>
+                  <li>Copie a lista de participantes (número e nome)</li>
+                  <li>Cole abaixo no formato: <code className="bg-muted px-1 rounded text-xs">telefone,nome</code></li>
+                </ol>
+              </div>
+              <Textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} rows={8} placeholder={"5511999999999,Membro 1\n5521888888888,Membro 2"} />
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-muted-foreground">{csvText.trim().split("\n").filter(Boolean).length} contato(s)</span>
+                <Button onClick={() => {
+                  const lines = csvText.trim().split("\n").filter(Boolean);
+                  const items = lines.map((line) => {
+                    const parts = line.split(/[;,\t]/).map((s) => s.trim().replace(/^["']|["']$/g, ""));
+                    return { phone: parts[0] || "", name: parts[1] || "", source: "whatsapp_group" };
+                  }).filter((i) => i.phone);
+                  importContacts(items);
+                }} disabled={importing || !csvText.trim()}>
+                  {importing ? "Importando..." : "Importar"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {importSource === "whatsapp_device" && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
+                <p className="text-sm text-foreground">Esta funcionalidade sincroniza os contatos da sua instância do WhatsApp conectada via Evolution API.</p>
+                <p className="text-xs text-muted-foreground mt-2">Certifique-se de que sua instância está ativa e conectada na aba "Instâncias".</p>
+              </div>
+              <Button className="w-full" disabled>
+                <Smartphone className="h-4 w-4 mr-1" /> Sincronizar Contatos (em breve)
+              </Button>
+              <Separator />
+              <p className="text-xs text-muted-foreground">Enquanto isso, exporte seus contatos pelo WhatsApp e importe via CSV:</p>
+              <Button variant="outline" size="sm" onClick={() => setImportSource("csv")}>
+                <FileText className="h-4 w-4 mr-1" /> Importar via CSV
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Contact list + Chat */}
+      <div className="grid md:grid-cols-[300px_1fr] gap-4 min-h-[500px]">
+        {/* Contact List */}
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar contato..." className="pl-9" />
+          </div>
+          <ScrollArea className="h-[450px]">
+            <div className="space-y-1">
+              {filtered.map((c) => (
+                <div key={c.phone} className={`flex items-center gap-2 p-3 rounded-lg transition-colors cursor-pointer ${selectedPhone === c.phone ? "bg-primary/10 border border-primary/20" : "hover:bg-muted"}`}>
+                  <button onClick={() => setSelectedPhone(c.phone)} className="flex-1 text-left min-w-0">
+                    <p className="font-medium text-sm truncate">{c.name || c.phone}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground">{c.phone}</p>
+                      <Badge variant="outline" className="text-[9px] px-1 py-0">{sourceLabels[c.source] || c.source}</Badge>
+                    </div>
+                  </button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100" onClick={() => deleteContact(c.phone)}>
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+              {filtered.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Nenhum contato encontrado</p>}
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Chat Timeline */}
+        <Card>
+          <CardContent className="p-4">
+            {selectedPhone ? (
+              <div>
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b">
+                  <Users className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium">{selectedLogs[0]?.contact_name || allContacts.find(c => c.phone === selectedPhone)?.name || selectedPhone}</p>
+                    <p className="text-xs text-muted-foreground">{selectedPhone}</p>
+                  </div>
+                </div>
+                <ScrollArea className="h-[400px]">
+                  {selectedLogs.length > 0 ? (
+                    <div className="space-y-3 bg-[#e5ddd5] rounded-lg p-4">
+                      {selectedLogs.map((log) => (
+                        <div key={log.id} className={`flex ${log.direction === "outbound" ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[80%] rounded-lg p-3 shadow-sm ${log.direction === "outbound" ? "bg-[#dcf8c6]" : "bg-white"}`}>
+                            <p className="text-sm whitespace-pre-wrap">{log.message_content}</p>
+                            <div className="flex items-center justify-end gap-1 mt-1">
+                              <span className="text-[10px] text-muted-foreground">{new Date(log.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                              {log.status === "sent" ? <CheckCircle className="h-3 w-3 text-blue-500" /> : <XCircle className="h-3 w-3 text-red-500" />}
+                            </div>
+                            {log.error_message && <p className="text-[10px] text-red-500 mt-1">{log.error_message}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
+                      <MessageSquare className="h-10 w-10 mb-2 opacity-30" />
+                      <p className="text-sm">Nenhuma mensagem com este contato</p>
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[450px] text-muted-foreground">
+                <MessageSquare className="h-12 w-12 mb-3 opacity-40" />
+                <p>Selecione um contato para ver o histórico</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
