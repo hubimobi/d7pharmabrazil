@@ -234,6 +234,7 @@ export default function AIAgentsPage() {
           <TabsTrigger value="knowledge" className="flex items-center gap-1.5"><Database className="h-3.5 w-3.5" /> Base de Conhecimento</TabsTrigger>
           <TabsTrigger value="meeting" className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Sala de Reunião</TabsTrigger>
           <TabsTrigger value="llm" className="flex items-center gap-1.5"><Cpu className="h-3.5 w-3.5" /> Configuração LLM</TabsTrigger>
+          <TabsTrigger value="prompts" className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> Prompts do Sistema</TabsTrigger>
         </TabsList>
 
         <TabsContent value="agents">
