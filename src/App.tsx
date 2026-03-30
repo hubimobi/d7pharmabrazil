@@ -126,6 +126,7 @@ const App = () => (
               <Route path="/admin/combos" element={<AdminLayout><CombosPage /></AdminLayout>} />
               <Route path="/admin/ferramentas" element={<AdminLayout><ToolsPage /></AdminLayout>} />
               <Route path="/admin/recompra" element={<AdminLayout><RepurchasePage /></AdminLayout>} />
+              <Route path="/admin/whatsapp" element={<AdminLayout><WhatsAppPage /></AdminLayout>} />
               <Route path="/l/:code" element={<LinkRedirectPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

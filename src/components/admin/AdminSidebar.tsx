@@ -102,6 +102,7 @@ const adminSections: MenuSection[] = [
   {
     label: "SISTEMA",
     items: [
+      { title: "WhatsApp", url: "/admin/whatsapp", icon: MessageSquare },
       { title: "Ferramentas", url: "/admin/ferramentas", icon: Wrench },
       { title: "Agentes de IA", url: "/admin/agentes-ia", icon: Sparkles },
       { title: "Usuários", url: "/admin/usuarios", icon: UserCog },
