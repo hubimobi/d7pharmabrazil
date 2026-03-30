@@ -2,9 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Loader2, Download, ImageIcon, Sparkles } from "lucide-react";
+import { Copy, Check, ImageIcon, Sparkles } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
 import { useProducts } from "@/hooks/useProducts";
 import { toast } from "sonner";
 
@@ -55,8 +54,8 @@ export default function ImageGenerator() {
   const [objective, setObjective] = useState("product_hero");
   const [style, setStyle] = useState("photographic");
   const [selectedProductId, setSelectedProductId] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [images, setImages] = useState<string[]>([]);
+  const [generatedPrompts, setGeneratedPrompts] = useState<string[]>([]);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const { data: products } = useProducts();
 
   const selectedProduct = products?.find((p) => p.id === selectedProductId);
@@ -69,45 +68,37 @@ export default function ImageGenerator() {
     if (selectedProduct) {
       parts.push(`Produto: ${selectedProduct.name}`);
       if (selectedProduct.shortDescription) parts.push(`Descrição: ${selectedProduct.shortDescription}`);
-      if (selectedProduct.benefits?.length) parts.push(`Benefícios: ${selectedProduct.benefits.slice(0, 3).join(", ")}`);
+      if (selectedProduct.benefits?.length) parts.push(`Benefícios: ${selectedProduct.benefits.slice(0, 5).join(", ")}`);
     }
 
     if (prompt.trim()) parts.push(`Detalhes adicionais: ${prompt}`);
 
     parts.push("Sem texto na imagem, sem marcas d'água, sem logos sobrepostos");
-    return parts.join(". ");
+    return parts.join(". ") + ".";
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
     if (!selectedProductId && !prompt.trim()) {
       toast.error("Selecione um produto ou descreva a imagem");
       return;
     }
-    setLoading(true);
-    try {
-      const fullPrompt = buildPrompt();
-      const { data, error } = await supabase.functions.invoke("generate-image", {
-        body: { prompt: fullPrompt },
-      });
-      if (error) throw error;
-      if (data?.imageUrl) {
-        setImages((prev) => [data.imageUrl, ...prev]);
-        toast.success("Imagem gerada!");
-      } else if (data?.error) {
-        throw new Error(data.error);
-      }
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao gerar imagem");
-    } finally {
-      setLoading(false);
-    }
+    const fullPrompt = buildPrompt();
+    setGeneratedPrompts((prev) => [fullPrompt, ...prev]);
+    toast.success("Prompt gerado! Copie e use no Gemini ou GPT.");
+  };
+
+  const copyToClipboard = (text: string, index: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    toast.success("Prompt copiado!");
+    setTimeout(() => setCopiedIndex(null), 2000);
   };
 
   return (
     <div className="space-y-6">
       <Card className="p-6 bg-white border border-gray-200 rounded-2xl">
-        <h2 className="text-lg font-semibold mb-1">🎨 Criador de Imagens com IA</h2>
-        <p className="text-sm text-gray-500 mb-6">Selecione o produto, objetivo e estilo para gerar imagens otimizadas.</p>
+        <h2 className="text-lg font-semibold mb-1">🎨 Gerador de Prompts de Imagem</h2>
+        <p className="text-sm text-gray-500 mb-6">Selecione produto, objetivo e estilo para gerar prompts otimizados para Gemini ou GPT.</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
@@ -163,37 +154,43 @@ export default function ImageGenerator() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{selectedProduct.name}</p>
               <p className="text-xs text-gray-500 truncate">{selectedProduct.shortDescription}</p>
+              {selectedProduct.benefits?.length > 0 && (
+                <p className="text-xs text-gray-400 truncate mt-0.5">Benefícios: {selectedProduct.benefits.slice(0, 3).join(", ")}</p>
+              )}
             </div>
           </div>
         )}
 
-        <Button onClick={handleGenerate} disabled={loading} className="w-full md:w-auto">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-          Gerar Imagem
+        <Button onClick={handleGenerate} className="w-full md:w-auto">
+          <Sparkles className="h-4 w-4 mr-2" />
+          Gerar Prompt
         </Button>
       </Card>
 
-      {images.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {images.map((url, i) => (
-            <Card key={i} className="overflow-hidden rounded-2xl border border-gray-200">
-              <img src={url} alt={`Imagem gerada ${i + 1}`} className="w-full aspect-square object-cover" />
-              <div className="p-3 flex justify-end">
-                <Button size="sm" variant="outline" asChild>
-                  <a href={url} download target="_blank" rel="noopener noreferrer">
-                    <Download className="h-3 w-3 mr-1" /> Baixar
-                  </a>
-                </Button>
-              </div>
+      {generatedPrompts.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="font-semibold text-lg">📋 Prompts Gerados</h3>
+          {generatedPrompts.map((p, i) => (
+            <Card key={i} className="p-4 bg-white border border-gray-200 rounded-2xl">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3 font-mono bg-gray-50 p-3 rounded-lg border border-gray-100">{p}</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => copyToClipboard(p, i)}
+                className="text-xs"
+              >
+                {copiedIndex === i ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                {copiedIndex === i ? "Copiado!" : "Copiar Prompt"}
+              </Button>
             </Card>
           ))}
         </div>
       )}
 
-      {images.length === 0 && !loading && (
+      {generatedPrompts.length === 0 && (
         <Card className="p-12 text-center bg-white border border-dashed border-gray-300 rounded-2xl">
           <ImageIcon className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-400">As imagens geradas aparecerão aqui</p>
+          <p className="text-gray-400">Os prompts gerados aparecerão aqui</p>
         </Card>
       )}
     </div>
