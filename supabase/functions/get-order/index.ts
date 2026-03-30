@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { order_id } = await req.json();
+    const { order_id, customer_email } = await req.json();
 
     if (!order_id) {
       return new Response(
@@ -36,6 +36,25 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Erro ao buscar pedido" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Require email verification to prevent data exposure
+    if (data && customer_email) {
+      if (data.customer_email?.toLowerCase() !== customer_email.toLowerCase()) {
+        return new Response(
+          JSON.stringify({ order: null }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Strip sensitive fields if no email verification provided
+    if (data && !customer_email) {
+      // Only return minimal info without email verification
+      return new Response(
+        JSON.stringify({ order: { id: data.id, status: data.status, created_at: data.created_at } }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

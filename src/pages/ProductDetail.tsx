@@ -1,4 +1,5 @@
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard, Copy, MessageCircle, ChevronDown, ChevronUp, HelpCircle, Headphones, Package } from "lucide-react";
 import CountdownTimer from "@/components/CountdownTimer";
 import FlashSaleBar from "@/components/FlashSaleBar";
@@ -287,7 +288,7 @@ const ProductDetail = () => {
                   <div className={`relative overflow-hidden transition-all duration-300 ${!descExpanded ? "max-h-48" : ""}`}>
                     {product.description.startsWith("<") ? (
                       <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold [&_hr]:my-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-foreground [&_a]:text-primary [&_a]:underline"
-                        dangerouslySetInnerHTML={{ __html: product.description }} />
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.description) }} />
                     ) : (
                       <p className="text-muted-foreground">{product.description}</p>
                     )}
@@ -546,7 +547,7 @@ const ProductDetail = () => {
                 <div className={`relative overflow-hidden transition-all duration-300 ${!descExpanded ? "max-h-48" : ""}`}>
                   {product.description.startsWith("<") ? (
                     <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold"
-                      dangerouslySetInnerHTML={{ __html: product.description }} />
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.description) }} />
                   ) : (
                     <p className="text-muted-foreground">{product.description}</p>
                   )}

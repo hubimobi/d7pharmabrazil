@@ -1,4 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard, Copy, MessageCircle, ChevronDown, ChevronUp, Headphones, Package } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -208,7 +209,7 @@ export default function ComboDetail() {
                   <div className={`relative overflow-hidden transition-all duration-300 ${!descExpanded ? "max-h-48" : ""}`}>
                     {combo.description.startsWith("<") ? (
                       <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert"
-                        dangerouslySetInnerHTML={{ __html: combo.description }} />
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(combo.description) }} />
                     ) : (
                       <p className="text-muted-foreground">{combo.description}</p>
                     )}
@@ -426,7 +427,7 @@ export default function ComboDetail() {
               <div className="rounded-xl bg-muted/50 p-4">
                 <h2 className="text-lg font-bold text-foreground mb-3">Sobre este Combo</h2>
                 {combo.description.startsWith("<") ? (
-                  <div className="prose prose-sm max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: combo.description }} />
+                  <div className="prose prose-sm max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: sanitizeHtml(combo.description) }} />
                 ) : (
                   <p className="text-muted-foreground text-sm">{combo.description}</p>
                 )}

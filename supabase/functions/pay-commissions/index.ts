@@ -9,6 +9,20 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Auth check - financeiro/admin only
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+    const isAdmin = (roles || []).some((r: any) => ["admin","super_admin","administrador","financeiro"].includes(r.role));
+    if (!isAdmin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
     const { representative_id, representative_name, representative_pix, commission_ids, total, type } = await req.json();
 
     if (!representative_id || !commission_ids?.length || !total) {
@@ -24,9 +38,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "ASAAS_API_KEY não configurada" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const paymentType = type === "prescriber" ? "Prescritor" : "Representante";
 

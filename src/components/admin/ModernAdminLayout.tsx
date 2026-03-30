@@ -168,7 +168,7 @@ export function ModernAdminLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen flex" style={{ background: "#eef0f8", fontFamily: "'Inter', system-ui, sans-serif", WebkitFontSmoothing: "antialiased" }}>
+    <div className="admin-panel min-h-screen flex" style={{ background: "#eef0f8", fontFamily: "'Inter', system-ui, sans-serif", WebkitFontSmoothing: "antialiased" }}>
       {/* ===== SIDEBAR ===== */}
       <aside
         className="hidden md:flex flex-col fixed inset-y-0 left-0 z-30"

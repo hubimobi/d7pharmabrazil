@@ -1,4 +1,5 @@
 import { useLocation } from "react-router-dom";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
@@ -41,7 +42,7 @@ export default function StaticPage() {
             <h1 className="text-3xl font-bold mb-8">{page.title}</h1>
             <div
               className="prose prose-sm sm:prose max-w-none dark:prose-invert [&_table]:w-full [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_th]:font-semibold"
-              dangerouslySetInnerHTML={{ __html: page.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(page.content) }}
             />
           </article>
         ) : (
