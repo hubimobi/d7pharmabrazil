@@ -15,7 +15,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import SEOHead from "@/components/SEOHead";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import UpsellDialog from "@/components/UpsellDialog";
 import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
 import ProductQA from "@/components/ProductQA";
