@@ -992,33 +992,56 @@ export type Database = {
       }
       popup_leads: {
         Row: {
+          city: string | null
           created_at: string | null
           email: string
           ghl_synced: boolean | null
           id: string
           name: string | null
           phone: string | null
+          product_id: string | null
+          product_name: string | null
           source: string | null
+          state: string | null
+          tags: Json
         }
         Insert: {
+          city?: string | null
           created_at?: string | null
           email: string
           ghl_synced?: boolean | null
           id?: string
           name?: string | null
           phone?: string | null
+          product_id?: string | null
+          product_name?: string | null
           source?: string | null
+          state?: string | null
+          tags?: Json
         }
         Update: {
+          city?: string | null
           created_at?: string | null
           email?: string
           ghl_synced?: boolean | null
           id?: string
           name?: string | null
           phone?: string | null
+          product_id?: string | null
+          product_name?: string | null
           source?: string | null
+          state?: string | null
+          tags?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "popup_leads_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_combos: {
         Row: {
