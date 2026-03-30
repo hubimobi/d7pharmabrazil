@@ -20,8 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/hooks/useCart";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
 import CreditCardForm, { CreditCardData, getInstallmentOptions } from "@/components/checkout/CreditCardForm";
