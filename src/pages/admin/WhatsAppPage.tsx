@@ -18,7 +18,7 @@ import {
   MessageSquare, Smartphone, FileText, GitBranch, Users, BarChart3,
   Plus, RefreshCw, QrCode, Wifi, WifiOff, Trash2, Edit, Play, Pause,
   Send, Clock, AlertTriangle, CheckCircle, XCircle, Eye, Search,
-  Zap, Settings2, Shuffle
+  Zap, Settings2, Shuffle, Upload, Phone, Mail, UserPlus, Download
 } from "lucide-react";
 
 // ==================== TYPES ====================
