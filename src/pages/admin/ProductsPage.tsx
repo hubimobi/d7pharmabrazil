@@ -295,7 +295,10 @@ export default function ProductsPage() {
             author_name: t.author_name,
             content: t.content,
             rating: t.rating,
-          }))
+            author_image_url: t.author_image_url,
+            product_image_url: t.product_image_url,
+            source: t.source || "manual",
+          } as any))
         );
       }
 
