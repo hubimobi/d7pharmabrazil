@@ -81,7 +81,7 @@ export default function ProductsPage() {
   const [extraFiles, setExtraFiles] = useState<File[]>([]);
   const [existingExtras, setExistingExtras] = useState<string[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
-  const [newTestimonial, setNewTestimonial] = useState<Testimonial>({ author_name: "", content: "", rating: 5 });
+  const [newTestimonial, setNewTestimonial] = useState<Testimonial>({ author_name: "", content: "", rating: 5, source: "manual" });
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
   const [newFaq, setNewFaq] = useState<FaqItem>({ question: "", answer: "" });
   const [cropOpen, setCropOpen] = useState(false);
