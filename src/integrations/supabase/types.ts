@@ -1190,6 +1190,7 @@ export type Database = {
           active: boolean
           badge: string | null
           benefits: Json
+          cost_price: number
           countdown_duration_minutes: number | null
           countdown_end_date: string | null
           countdown_end_time: string | null
@@ -1230,6 +1231,7 @@ export type Database = {
           active?: boolean
           badge?: string | null
           benefits?: Json
+          cost_price?: number
           countdown_duration_minutes?: number | null
           countdown_end_date?: string | null
           countdown_end_time?: string | null
@@ -1270,6 +1272,7 @@ export type Database = {
           active?: boolean
           badge?: string | null
           benefits?: Json
+          cost_price?: number
           countdown_duration_minutes?: number | null
           countdown_end_date?: string | null
           countdown_end_time?: string | null
@@ -1707,6 +1710,12 @@ export type Database = {
           free_shipping_enabled: boolean | null
           free_shipping_min_value: number | null
           free_shipping_regions: string | null
+          goal_cart_recovery: number | null
+          goal_conversion_rate: number | null
+          goal_ltv: number | null
+          goal_monthly_revenue: number | null
+          goal_profit_margin: number | null
+          goal_upsell: number | null
           gtm_id: string | null
           hero_badges: Json | null
           hero_btn1_bg_color: string | null
@@ -1835,6 +1844,12 @@ export type Database = {
           free_shipping_enabled?: boolean | null
           free_shipping_min_value?: number | null
           free_shipping_regions?: string | null
+          goal_cart_recovery?: number | null
+          goal_conversion_rate?: number | null
+          goal_ltv?: number | null
+          goal_monthly_revenue?: number | null
+          goal_profit_margin?: number | null
+          goal_upsell?: number | null
           gtm_id?: string | null
           hero_badges?: Json | null
           hero_btn1_bg_color?: string | null
@@ -1963,6 +1978,12 @@ export type Database = {
           free_shipping_enabled?: boolean | null
           free_shipping_min_value?: number | null
           free_shipping_regions?: string | null
+          goal_cart_recovery?: number | null
+          goal_conversion_rate?: number | null
+          goal_ltv?: number | null
+          goal_monthly_revenue?: number | null
+          goal_profit_margin?: number | null
+          goal_upsell?: number | null
           gtm_id?: string | null
           hero_badges?: Json | null
           hero_btn1_bg_color?: string | null
