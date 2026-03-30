@@ -136,6 +136,7 @@ export default function ProductsPage() {
         name: form.name, slug: form.slug,
         short_description: form.short_description, description: form.description,
         price: parseFloat(form.price), original_price: parseFloat(form.original_price),
+        cost_price: parseFloat(form.cost_price) || 0,
         badge: form.badge || null, stock: parseInt(form.stock) || 0, benefits,
         show_countdown: form.show_countdown,
         countdown_mode: form.countdown_mode,
