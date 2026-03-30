@@ -62,8 +62,16 @@ Deno.serve(async (req) => {
       if (tpl) finalMessage = tpl.content;
     }
 
+    // Fetch store display_name and attendant_name
+    const { data: storeSettings } = await supabase.from("store_settings").select("display_name, attendant_name, store_name").limit(1).single();
+    const mergedVars = {
+      ...variables,
+      Nome_da_Empresa: storeSettings?.display_name || storeSettings?.store_name || "",
+      Atendente: storeSettings?.attendant_name || "",
+    };
+
     // Replace variables then parse spintax
-    finalMessage = replaceVariables(finalMessage, variables);
+    finalMessage = replaceVariables(finalMessage, mergedVars);
     finalMessage = parseSpintax(finalMessage);
 
     if (!finalMessage) {

@@ -111,6 +111,9 @@ export interface StoreSettings {
   visual_theme: string;
   // Checkout version
   checkout_version: string;
+  // Company display
+  display_name: string;
+  attendant_name: string;
 }
 
 export function useStoreSettings() {

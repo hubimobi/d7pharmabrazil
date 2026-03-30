@@ -1641,6 +1641,7 @@ export type Database = {
           address_number: string | null
           address_state: string | null
           address_street: string | null
+          attendant_name: string | null
           benefits_items: Json
           benefits_subtitle: string
           benefits_title: string
@@ -1673,6 +1674,7 @@ export type Database = {
           design_nav_color: string | null
           design_text_color: string | null
           design_title_color: string | null
+          display_name: string | null
           email: string | null
           facebook: string | null
           favicon_url: string | null
@@ -1767,6 +1769,7 @@ export type Database = {
           address_number?: string | null
           address_state?: string | null
           address_street?: string | null
+          attendant_name?: string | null
           benefits_items?: Json
           benefits_subtitle?: string
           benefits_title?: string
@@ -1799,6 +1802,7 @@ export type Database = {
           design_nav_color?: string | null
           design_text_color?: string | null
           design_title_color?: string | null
+          display_name?: string | null
           email?: string | null
           facebook?: string | null
           favicon_url?: string | null
@@ -1893,6 +1897,7 @@ export type Database = {
           address_number?: string | null
           address_state?: string | null
           address_street?: string | null
+          attendant_name?: string | null
           benefits_items?: Json
           benefits_subtitle?: string
           benefits_title?: string
@@ -1925,6 +1930,7 @@ export type Database = {
           design_nav_color?: string | null
           design_text_color?: string | null
           design_title_color?: string | null
+          display_name?: string | null
           email?: string | null
           facebook?: string | null
           favicon_url?: string | null
