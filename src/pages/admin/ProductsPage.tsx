@@ -720,26 +720,60 @@ export default function ProductsPage() {
                 </TabsContent>
 
                 <TabsContent value="testimonials" className="space-y-4 mt-4">
-                  {testimonials.map((t, i) => (
-                    <div key={i} className="flex items-start gap-3 rounded-lg border p-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">{t.author_name}</span>
-                          <span className="flex text-amber-500">
-                            {Array.from({ length: t.rating }).map((_, j) => <Star key={j} className="h-3 w-3 fill-current" />)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">{t.content}</p>
+                  {/* Feedback link */}
+                  {editId && (
+                    <div className="rounded-lg border border-dashed p-3 bg-muted/30 space-y-2">
+                      <p className="text-sm font-medium">📩 Link para Feedback do Cliente</p>
+                      <div className="flex gap-2">
+                        <Input readOnly value={`${window.location.origin}/feedback?pedido=&produto=${editId}&nome=${encodeURIComponent(form.name)}`} className="text-xs" />
+                        <Button type="button" variant="outline" size="sm" onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/feedback?pedido=&produto=${editId}&nome=${encodeURIComponent(form.name)}`);
+                          toast({ title: "Link copiado!" });
+                        }}>Copiar</Button>
                       </div>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeTestimonial(i)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <p className="text-xs text-muted-foreground">Envie esse link por WhatsApp ou email para o cliente deixar seu depoimento.</p>
+                    </div>
+                  )}
+
+                  {testimonials.map((t, i) => (
+                    <div key={i} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-start gap-3">
+                        {t.author_image_url && (
+                          <img src={t.author_image_url} alt="" className="h-10 w-10 rounded-full object-cover flex-shrink-0" />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm">{t.author_name}</span>
+                            <span className="flex text-amber-500">
+                              {Array.from({ length: t.rating }).map((_, j) => <Star key={j} className="h-3 w-3 fill-current" />)}
+                            </span>
+                            <Badge variant={t.source === "ai" ? "secondary" : t.source === "customer" ? "default" : "outline"} className="text-[10px]">
+                              {t.source === "ai" ? "🤖 IA" : t.source === "customer" ? "👤 Cliente" : "✍️ Manual"}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{t.content}</p>
+                          {t.product_image_url && (
+                            <img src={t.product_image_url} alt="" className="h-16 w-16 rounded-lg object-cover mt-2" />
+                          )}
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <Button type="button" variant="ghost" size="icon" onClick={() => {
+                            setEditingTestimonialIdx(i);
+                            setNewTestimonial({ ...t });
+                          }}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeTestimonial(i)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   ))}
 
                   <div className="space-y-3 rounded-lg border border-dashed p-4">
-                    <p className="text-sm font-medium">Adicionar Depoimento</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <p className="text-sm font-medium">{editingTestimonialIdx !== null ? "Editar Depoimento" : "Adicionar Depoimento"}</p>
+                    <div className="grid grid-cols-3 gap-3">
                       <Input placeholder="Nome do autor" value={newTestimonial.author_name}
                         onChange={(e) => setNewTestimonial({ ...newTestimonial, author_name: e.target.value })} />
                       <div className="flex items-center gap-2">
@@ -747,12 +781,51 @@ export default function ProductsPage() {
                         <Input type="number" min={1} max={5} className="w-16" value={newTestimonial.rating}
                           onChange={(e) => setNewTestimonial({ ...newTestimonial, rating: parseInt(e.target.value) || 5 })} />
                       </div>
+                      <Select value={newTestimonial.source || "manual"} onValueChange={(v) => setNewTestimonial({ ...newTestimonial, source: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manual">✍️ Manual</SelectItem>
+                          <SelectItem value="ai">🤖 Gerado por IA</SelectItem>
+                          <SelectItem value="customer">👤 Cliente</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <Textarea placeholder="Texto do depoimento..." value={newTestimonial.content}
                       onChange={(e) => setNewTestimonial({ ...newTestimonial, content: e.target.value })} rows={2} />
-                    <Button type="button" variant="outline" size="sm" onClick={addTestimonial}>
-                      <Plus className="h-4 w-4 mr-1" /> Adicionar
-                    </Button>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Foto do Autor (URL)</Label>
+                        <Input placeholder="https://..." value={newTestimonial.author_image_url || ""}
+                          onChange={(e) => setNewTestimonial({ ...newTestimonial, author_image_url: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Foto do Produto (URL)</Label>
+                        <Input placeholder="https://..." value={newTestimonial.product_image_url || ""}
+                          onChange={(e) => setNewTestimonial({ ...newTestimonial, product_image_url: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => {
+                        if (!newTestimonial.author_name || !newTestimonial.content) return;
+                        if (editingTestimonialIdx !== null) {
+                          const updated = [...testimonials];
+                          updated[editingTestimonialIdx] = { ...newTestimonial };
+                          setTestimonials(updated);
+                          setEditingTestimonialIdx(null);
+                        } else {
+                          setTestimonials([...testimonials, { ...newTestimonial }]);
+                        }
+                        setNewTestimonial({ author_name: "", content: "", rating: 5, source: "manual" });
+                      }}>
+                        <Plus className="h-4 w-4 mr-1" /> {editingTestimonialIdx !== null ? "Salvar" : "Adicionar"}
+                      </Button>
+                      {editingTestimonialIdx !== null && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => {
+                          setEditingTestimonialIdx(null);
+                          setNewTestimonial({ author_name: "", content: "", rating: 5, source: "manual" });
+                        }}>Cancelar</Button>
+                      )}
+                    </div>
                   </div>
                 </TabsContent>
 
