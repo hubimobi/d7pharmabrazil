@@ -26,7 +26,7 @@ interface WhatsAppInstance {
   id: string; name: string; instance_name: string; api_url: string; api_key: string;
   status: string; qr_code: string | null; phone_number: string | null;
   daily_limit: number; messages_sent_today: number; active: boolean;
-  last_message_at: string | null; created_at: string;
+  last_message_at: string | null; created_at: string; funnel_roles?: string[];
 }
 interface WhatsAppTemplate {
   id: string; name: string; category: string; content: string;
@@ -48,6 +48,88 @@ interface MessageLog {
 interface QueueItem {
   id: string; contact_phone: string; contact_name: string; message_content: string;
   status: string; scheduled_at: string; retry_count: number; error_message: string | null;
+}
+
+type FunnelRole = "all" | "recuperacao" | "recompra" | "upsell" | "novidades";
+type DelayUnit = "s" | "m" | "h" | "d";
+
+const FUNNEL_ROLE_OPTIONS: Array<{ value: FunnelRole; label: string }> = [
+  { value: "all", label: "Todos" },
+  { value: "recuperacao", label: "Recuperação" },
+  { value: "recompra", label: "Recompra" },
+  { value: "upsell", label: "Upsell" },
+  { value: "novidades", label: "Novidades" },
+];
+
+function normalizeFunnelRoles(roles?: string[] | null): FunnelRole[] {
+  const validRoles = (roles || []).filter((role): role is FunnelRole =>
+    FUNNEL_ROLE_OPTIONS.some((option) => option.value === role as FunnelRole)
+  );
+
+  if (validRoles.length === 0 || validRoles.includes("all")) return ["all"];
+  return validRoles;
+}
+
+function toggleFunnelRole(roles: string[] | null | undefined, role: FunnelRole): FunnelRole[] {
+  const current = normalizeFunnelRoles(roles);
+
+  if (role === "all") return ["all"];
+
+  const withoutAll = current.filter((item) => item !== "all");
+  if (withoutAll.includes(role)) {
+    const next = withoutAll.filter((item) => item !== role);
+    return next.length ? next : ["all"];
+  }
+
+  return [...withoutAll, role];
+}
+
+function replaceTemplateVariables(text: string, vars: Record<string, string>): string {
+  return Object.entries(vars).reduce((result, [key, value]) => result.replaceAll(`{${key}}`, value), text);
+}
+
+function isWholeMultiple(value: number, divisor: number) {
+  const ratio = value / divisor;
+  return Math.abs(ratio - Math.round(ratio)) < 0.000001;
+}
+
+function getDelayUnit(mins: number): DelayUnit {
+  if (mins > 0 && mins < 1) return "s";
+  if (mins >= 1440 && isWholeMultiple(mins, 1440)) return "d";
+  if (mins >= 60 && isWholeMultiple(mins, 60)) return "h";
+  return "m";
+}
+
+function getDelayValue(mins: number, unit = getDelayUnit(mins)): string {
+  if (unit === "d") return String(Math.round(mins / 1440));
+  if (unit === "h") return String(Math.round(mins / 60));
+  if (unit === "s") return String(Math.round(mins * 60));
+  return String(Math.round(mins));
+}
+
+function toDelayMinutes(value: string, unit: DelayUnit): number {
+  const normalized = value.replace(",", ".").trim();
+  const numeric = Number(normalized);
+  if (!Number.isFinite(numeric) || numeric < 0) return 0;
+
+  if (unit === "d") return numeric * 1440;
+  if (unit === "h") return numeric * 60;
+  if (unit === "s") return numeric / 60;
+  return numeric;
+}
+
+function formatDelay(mins: number) {
+  if (mins < 1) return `${Math.round(mins * 60)} seg`;
+  if (mins < 60) return `${Math.round(mins)} min`;
+  if (mins < 1440) return `${Math.round(mins / 60)}h`;
+  return `${Math.round(mins / 1440)}d`;
+}
+
+function formatOffset(seconds: number) {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
+  if (seconds < 86400) return `${Math.round(seconds / 3600)}h`;
+  return `${Math.round(seconds / 86400)}d`;
 }
 
 // ==================== SPINTAX PREVIEW ====================
@@ -156,7 +238,12 @@ function DashboardTab() {
 function InstancesTab() {
   const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", api_url: "", api_key: "" });
+  const [form, setForm] = useState<{ name: string; api_url: string; api_key: string; funnel_roles: FunnelRole[] }>({
+    name: "",
+    api_url: "",
+    api_key: "",
+    funnel_roles: ["all"],
+  });
   const [loading, setLoading] = useState(false);
   const [qrDialog, setQrDialog] = useState<{ open: boolean; qr: string | null; id: string }>({ open: false, qr: null, id: "" });
 
@@ -173,18 +260,30 @@ function InstancesTab() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("whatsapp-instance", {
-        body: { action: "create", name: form.name, api_url: form.api_url, api_key: form.api_key },
+        body: {
+          action: "create",
+          name: form.name,
+          api_url: form.api_url,
+          api_key: form.api_key,
+          funnel_roles: normalizeFunnelRoles(form.funnel_roles),
+        },
       });
       if (res.error) throw new Error(res.error.message);
       toast.success("Instância criada!");
       if (res.data?.qrcode) {
         setQrDialog({ open: true, qr: res.data.qrcode, id: res.data.instance?.id });
       }
-      setForm({ name: "", api_url: "", api_key: "" });
+      setForm({ name: "", api_url: "", api_key: "", funnel_roles: ["all"] });
       setShowAdd(false);
       loadInstances();
     } catch (e: any) { toast.error(e.message); }
     setLoading(false);
+  }
+
+  async function updateInstanceRoles(inst: WhatsAppInstance, role: FunnelRole) {
+    const nextRoles = toggleFunnelRole(inst.funnel_roles, role);
+    await supabase.from("whatsapp_instances").update({ funnel_roles: nextRoles } as any).eq("id", inst.id);
+    loadInstances();
   }
 
   async function getQR(inst: WhatsAppInstance) {
@@ -267,6 +366,26 @@ function InstancesTab() {
                     <span>• Último envio: {new Date(inst.last_message_at).toLocaleString("pt-BR")}</span>
                   )}
                 </div>
+                <div className="mb-3 space-y-1">
+                  <p className="text-[10px] font-medium text-muted-foreground">Usar em:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {FUNNEL_ROLE_OPTIONS.map((role) => {
+                      const selected = normalizeFunnelRoles(inst.funnel_roles).includes(role.value);
+                      return (
+                        <Button
+                          key={role.value}
+                          type="button"
+                          size="sm"
+                          variant={selected ? "default" : "outline"}
+                          className="h-7 rounded-full px-2 text-[10px]"
+                          onClick={() => updateInstanceRoles(inst, role.value)}
+                        >
+                          {role.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => getQR(inst)}><QrCode className="h-3.5 w-3.5 mr-1" /> QR Code</Button>
                   <Button size="sm" variant="outline" onClick={() => checkStatus(inst)}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Status</Button>
@@ -286,6 +405,30 @@ function InstancesTab() {
             <div><Label>Nome</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: WhatsApp Vendas 1" /></div>
             <div><Label>URL da Evolution API</Label><Input value={form.api_url} onChange={(e) => setForm({ ...form, api_url: e.target.value })} placeholder="https://sua-evolution-api.com" /></div>
             <div><Label>API Key</Label><Input value={form.api_key} onChange={(e) => setForm({ ...form, api_key: e.target.value })} placeholder="Chave da sua Evolution API" type="password" /></div>
+            <div className="space-y-2">
+              <Label>Função deste WhatsApp</Label>
+              <div className="flex flex-wrap gap-2">
+                {FUNNEL_ROLE_OPTIONS.map((role) => {
+                  const selected = normalizeFunnelRoles(form.funnel_roles).includes(role.value);
+                  return (
+                    <Button
+                      key={role.value}
+                      type="button"
+                      size="sm"
+                      variant={selected ? "default" : "outline"}
+                      className="rounded-full"
+                      onClick={() => setForm((current) => ({
+                        ...current,
+                        funnel_roles: toggleFunnelRole(current.funnel_roles, role.value),
+                      }))}
+                    >
+                      {role.label}
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">Você pode deixar este número para todos os funis ou limitar por tipo.</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdd(false)}>Cancelar</Button>
@@ -514,8 +657,42 @@ function FunnelsTab() {
   const [editing, setEditing] = useState<WhatsAppFunnel | null>(null);
   const [form, setForm] = useState({ name: "", type: "recuperacao", trigger_event: "carrinho_abandonado" });
   const [showSteps, setShowSteps] = useState<string | null>(null);
+  const [delayDrafts, setDelayDrafts] = useState<Record<string, { value: string; unit: DelayUnit }>>({});
+  const [showTestDialog, setShowTestDialog] = useState(false);
+  const [testFunnel, setTestFunnel] = useState<WhatsAppFunnel | null>(null);
+  const [testAccelerated, setTestAccelerated] = useState(true);
+  const [testRunning, setTestRunning] = useState(false);
+  const [testMessages, setTestMessages] = useState<Array<{ id: string; offsetLabel: string; templateName: string; instanceLabel: string; message: string }>>([]);
+  const [testPreview, setTestPreview] = useState<Array<{ id: string; offsetLabel: string; configuredLabel: string; templateName: string; instanceLabel: string; message: string; offsetSeconds: number }>>([]);
+  const [testForm, setTestForm] = useState({
+    nome: "Cliente Teste",
+    telefone: "5511999999999",
+    produto: "Produto Exemplo",
+    link: "https://loja.com/checkout",
+    cidade: "São Paulo",
+  });
+  const simulationTimersRef = useRef<Array<ReturnType<typeof window.setTimeout>>>([]);
 
   useEffect(() => { loadAll(); }, []);
+
+  useEffect(() => {
+    setDelayDrafts((current) => {
+      const next: Record<string, { value: string; unit: DelayUnit }> = {};
+      for (const step of steps) {
+        if (current[step.id]) {
+          next[step.id] = current[step.id];
+        }
+      }
+      return next;
+    });
+  }, [steps]);
+
+  useEffect(() => {
+    if (!showTestDialog || !testFunnel) return;
+    stopSimulation();
+    setTestPreview(buildTestSequence(testFunnel, testAccelerated));
+    setTestMessages([]);
+  }, [showTestDialog, testFunnel, testAccelerated, steps, templates, instances, testForm.nome, testForm.telefone, testForm.produto, testForm.link, testForm.cidade]);
 
   async function loadAll() {
     const [{ data: f }, { data: t }, { data: i }, { data: s }] = await Promise.all([
@@ -591,11 +768,113 @@ function FunnelsTab() {
     loadAll();
   }
 
-  function formatDelay(mins: number) {
-    if (mins < 1) return `${Math.round(mins * 60)} seg`;
-    if (mins < 60) return `${mins} min`;
-    if (mins < 1440) return `${Math.round(mins / 60)}h`;
-    return `${Math.round(mins / 1440)}d`;
+  function getEligibleInstances(funnelType: string) {
+    return instances.filter((instance) => {
+      const roles = normalizeFunnelRoles(instance.funnel_roles);
+      return roles.includes("all") || roles.includes(funnelType as FunnelRole);
+    });
+  }
+
+  function getDelayDraft(step: FunnelStep) {
+    return delayDrafts[step.id] || {
+      value: getDelayValue(step.delay_minutes),
+      unit: getDelayUnit(step.delay_minutes),
+    };
+  }
+
+  async function saveDelayDraft(step: FunnelStep, nextDraft?: { value: string; unit: DelayUnit }) {
+    const draft = nextDraft || getDelayDraft(step);
+    const delayMinutes = toDelayMinutes(draft.value, draft.unit);
+    setDelayDrafts((current) => ({
+      ...current,
+      [step.id]: { value: getDelayValue(delayMinutes, draft.unit), unit: draft.unit },
+    }));
+    await updateStep(step.id, { delay_minutes: delayMinutes });
+  }
+
+  function stopSimulation() {
+    simulationTimersRef.current.forEach((timer) => clearTimeout(timer));
+    simulationTimersRef.current = [];
+    setTestRunning(false);
+  }
+
+  function buildTestSequence(funnel: WhatsAppFunnel, accelerated: boolean) {
+    const funnelSteps = steps
+      .filter((step) => step.funnel_id === funnel.id && step.active)
+      .sort((a, b) => a.step_order - b.step_order);
+    const variables = {
+      Nome: testForm.nome,
+      Produto: testForm.produto,
+      Link: testForm.link,
+      Cidade: testForm.cidade,
+      Nome_da_Empresa: "D7 Pharma",
+      Atendente: "Atendente",
+    };
+
+    let cumulativeConfiguredSeconds = 0;
+
+    return funnelSteps.map((step, index) => {
+      const template = templates.find((item) => item.id === step.template_id);
+      const eligibleInstances = getEligibleInstances(funnel.type);
+      cumulativeConfiguredSeconds += Math.round(Number(step.delay_minutes || 0) * 60);
+      const offsetSeconds = accelerated ? index * 10 : cumulativeConfiguredSeconds;
+      const message = parseSpintax(replaceTemplateVariables(template?.content || "", variables));
+      const selectedInstance = instances.find((instance) => instance.id === step.instance_id);
+      const instanceLabel = selectedInstance?.name || (eligibleInstances[0]?.name ? `Auto (${eligibleInstances[0].name})` : `Auto (${funnelTypes[funnel.type] || funnel.type})`);
+
+      return {
+        id: step.id,
+        configuredLabel: formatDelay(Number(step.delay_minutes || 0)),
+        offsetLabel: accelerated ? formatOffset(offsetSeconds) : formatOffset(cumulativeConfiguredSeconds),
+        templateName: template?.name || "Sem template",
+        instanceLabel,
+        message: message || "Etapa sem template configurado.",
+        offsetSeconds,
+      };
+    });
+  }
+
+  function openTestModal(funnel: WhatsAppFunnel) {
+    setTestFunnel(funnel);
+    setShowTestDialog(true);
+  }
+
+  function runTestSimulation() {
+    if (!testFunnel) return;
+
+    stopSimulation();
+    const sequence = buildTestSequence(testFunnel, testAccelerated);
+    setTestPreview(sequence);
+    setTestMessages([]);
+
+    if (sequence.length === 0) {
+      toast.error("Adicione pelo menos uma etapa ativa para testar o funil.");
+      return;
+    }
+
+    const totalConfiguredSeconds = sequence[sequence.length - 1]?.offsetSeconds || 0;
+    if (!testAccelerated && totalConfiguredSeconds > 120) {
+      setTestMessages(sequence.map(({ id, offsetLabel, templateName, instanceLabel, message }) => ({ id, offsetLabel, templateName, instanceLabel, message })));
+      toast.info("Cronograma exibido no tempo configurado. Ative o modo acelerado para executar automaticamente de 10 em 10 segundos.");
+      return;
+    }
+
+    setTestRunning(true);
+    sequence.forEach((item) => {
+      const timer = window.setTimeout(() => {
+        setTestMessages((current) => [...current, {
+          id: item.id,
+          offsetLabel: item.offsetLabel,
+          templateName: item.templateName,
+          instanceLabel: item.instanceLabel,
+          message: item.message,
+        }]);
+      }, item.offsetSeconds * 1000);
+      simulationTimersRef.current.push(timer);
+    });
+
+    const finalTimer = window.setTimeout(() => setTestRunning(false), (sequence[sequence.length - 1]?.offsetSeconds || 0) * 1000 + 300);
+    simulationTimersRef.current.push(finalTimer);
   }
 
   return (
@@ -627,6 +906,9 @@ function FunnelsTab() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => openTestModal(f)}>
+                        <Play className="h-3.5 w-3.5 mr-1" /> Testar
+                      </Button>
                       <Button size="sm" variant={f.active ? "default" : "outline"} onClick={() => toggleFunnel(f)}>
                         {f.active ? <><Pause className="h-3.5 w-3.5 mr-1" /> Pausar</> : <><Play className="h-3.5 w-3.5 mr-1" /> Ativar</>}
                       </Button>
@@ -651,53 +933,41 @@ function FunnelsTab() {
                           </div>
                           <div className="flex-1 grid grid-cols-3 gap-2">
                             <div>
-                              <Label className="text-[10px]">Delay</Label>
+                              <Label className="text-[10px]">Atraso</Label>
                               <div className="flex gap-1">
-                                <Input type="number" min={0}
-                                  value={
-                                    step.delay_minutes >= 1440 && step.delay_minutes % 1440 === 0
-                                      ? step.delay_minutes / 1440
-                                      : step.delay_minutes >= 60 && step.delay_minutes % 60 === 0
-                                        ? step.delay_minutes / 60
-                                        : step.delay_minutes < 1
-                                          ? Math.round(step.delay_minutes * 60)
-                                          : step.delay_minutes
-                                  }
+                                <Input type="number" min={0} step={1}
+                                  value={getDelayDraft(step).value}
                                   className="h-8 text-xs w-16"
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value) || 0;
-                                    const unit = step.delay_minutes >= 1440 && step.delay_minutes % 1440 === 0
-                                      ? "d" : step.delay_minutes >= 60 && step.delay_minutes % 60 === 0
-                                        ? "h" : step.delay_minutes < 1 ? "s" : "m";
-                                    const mins = unit === "d" ? val * 1440 : unit === "h" ? val * 60 : unit === "s" ? val / 60 : val;
-                                    updateStep(step.id, { delay_minutes: mins });
+                                  onChange={(e) => setDelayDrafts((current) => ({
+                                    ...current,
+                                    [step.id]: { ...getDelayDraft(step), value: e.target.value },
+                                  }))}
+                                  onBlur={() => saveDelayDraft(step)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      saveDelayDraft(step);
+                                    }
                                   }}
                                 />
-                                <select
-                                  className="h-8 text-xs rounded border border-input bg-background px-1"
-                                  value={
-                                    step.delay_minutes >= 1440 && step.delay_minutes % 1440 === 0
-                                      ? "d" : step.delay_minutes >= 60 && step.delay_minutes % 60 === 0
-                                        ? "h" : step.delay_minutes < 1 ? "s" : "m"
-                                  }
-                                  onChange={(e) => {
-                                    const oldUnit = step.delay_minutes >= 1440 && step.delay_minutes % 1440 === 0
-                                      ? "d" : step.delay_minutes >= 60 && step.delay_minutes % 60 === 0
-                                        ? "h" : step.delay_minutes < 1 ? "s" : "m";
-                                    const oldVal = oldUnit === "d" ? step.delay_minutes / 1440
-                                      : oldUnit === "h" ? step.delay_minutes / 60
-                                        : oldUnit === "s" ? Math.round(step.delay_minutes * 60)
-                                          : step.delay_minutes;
-                                    const newUnit = e.target.value;
-                                    const mins = newUnit === "d" ? oldVal * 1440 : newUnit === "h" ? oldVal * 60 : newUnit === "s" ? oldVal / 60 : oldVal;
-                                    updateStep(step.id, { delay_minutes: mins });
+                                <Select
+                                  value={getDelayDraft(step).unit}
+                                  onValueChange={(value: DelayUnit) => {
+                                    const nextDraft = { ...getDelayDraft(step), unit: value };
+                                    setDelayDrafts((current) => ({ ...current, [step.id]: nextDraft }));
+                                    saveDelayDraft(step, nextDraft);
                                   }}
                                 >
-                                  <option value="s">seg</option>
-                                  <option value="m">min</option>
-                                  <option value="h">horas</option>
-                                  <option value="d">dias</option>
-                                </select>
+                                  <SelectTrigger className="h-8 w-[84px] text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="s">Seg</SelectItem>
+                                    <SelectItem value="m">Min</SelectItem>
+                                    <SelectItem value="h">Horas</SelectItem>
+                                    <SelectItem value="d">Dias</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
                             <div>
@@ -712,8 +982,8 @@ function FunnelsTab() {
                               <Select value={step.instance_id || "auto"} onValueChange={(v) => updateStep(step.id, { instance_id: v === "auto" ? null : v })}>
                                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="auto">🔄 Automático</SelectItem>
-                                  {instances.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                                  <SelectItem value="auto">🔄 Automático do tipo do funil</SelectItem>
+                                  {getEligibleInstances(f.type).map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
                                 </SelectContent>
                               </Select>
                             </div>
@@ -758,6 +1028,104 @@ function FunnelsTab() {
             <Button variant="outline" onClick={() => setShowEditor(false)}>Cancelar</Button>
             <Button onClick={saveFunnel}>Salvar Funil</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showTestDialog} onOpenChange={(open) => {
+        setShowTestDialog(open);
+        if (!open) stopSimulation();
+      }}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Teste de Funil {testFunnel ? `• ${testFunnel.name}` : ""}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+            <div className="space-y-4">
+              <div className="space-y-3 rounded-xl border p-4">
+                <div>
+                  <Label>Nome</Label>
+                  <Input value={testForm.nome} onChange={(e) => setTestForm((current) => ({ ...current, nome: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Telefone</Label>
+                  <Input value={testForm.telefone} onChange={(e) => setTestForm((current) => ({ ...current, telefone: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Produto</Label>
+                  <Input value={testForm.produto} onChange={(e) => setTestForm((current) => ({ ...current, produto: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Link</Label>
+                  <Input value={testForm.link} onChange={(e) => setTestForm((current) => ({ ...current, link: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Cidade</Label>
+                  <Input value={testForm.cidade} onChange={(e) => setTestForm((current) => ({ ...current, cidade: e.target.value }))} />
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium">Modo acelerado</p>
+                    <p className="text-xs text-muted-foreground">Executa uma etapa a cada 10 segundos sem disparo real.</p>
+                  </div>
+                  <Switch checked={testAccelerated} onCheckedChange={setTestAccelerated} />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={runTestSimulation} className="flex-1 min-w-[140px]">
+                    <Play className="h-4 w-4 mr-1" /> Executar teste
+                  </Button>
+                  <Button variant="outline" onClick={stopSimulation} disabled={!testRunning && testMessages.length === 0}>
+                    <Pause className="h-4 w-4 mr-1" /> Parar
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border p-4">
+                <p className="text-sm font-medium mb-3">Cronograma</p>
+                <div className="space-y-2">
+                  {testPreview.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhuma etapa ativa para simular.</p>
+                  ) : testPreview.map((item, index) => (
+                    <div key={item.id} className="rounded-lg bg-muted/50 p-3 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">Etapa {index + 1} • {item.templateName}</span>
+                        <Badge variant="outline">{item.offsetLabel}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Atraso configurado: {item.configuredLabel} • Instância: {item.instanceLabel}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border p-4">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Interface de Teste</p>
+                  <p className="text-xs text-muted-foreground">Simulação local sem enviar mensagens no WhatsApp.</p>
+                </div>
+                {testRunning && <Badge>Executando</Badge>}
+              </div>
+              <ScrollArea className="h-[520px] rounded-xl bg-muted/40 p-4">
+                <div className="space-y-3">
+                  {testMessages.length === 0 ? (
+                    <div className="flex h-[440px] items-center justify-center text-center text-sm text-muted-foreground">
+                      Clique em <strong className="mx-1">Executar teste</strong> para simular a sequência.
+                    </div>
+                  ) : testMessages.map((item) => (
+                    <div key={`${item.id}-${item.offsetLabel}`} className="flex justify-end">
+                      <div className="max-w-[85%] rounded-2xl bg-background p-3 shadow-sm">
+                        <div className="mb-2 flex items-center gap-2">
+                          <Badge variant="secondary">{item.offsetLabel}</Badge>
+                          <span className="text-[11px] text-muted-foreground">{item.templateName} • {item.instanceLabel}</span>
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm">{item.message}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

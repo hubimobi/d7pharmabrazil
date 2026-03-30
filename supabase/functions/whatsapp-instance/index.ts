@@ -12,6 +12,7 @@ const ActionSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   api_url: z.string().url().optional(),
   api_key: z.string().min(1).optional(),
+  funnel_roles: z.array(z.enum(["all", "recuperacao", "recompra", "upsell", "novidades"])).optional(),
 });
 
 Deno.serve(async (req) => {
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), { status: 400, headers: corsHeaders });
     }
 
-    const { action, instance_id, name, api_url, api_key } = parsed.data;
+    const { action, instance_id, name, api_url, api_key, funnel_roles } = parsed.data;
 
     if (action === "create") {
       if (!api_url || !api_key || !name) {
@@ -72,6 +73,7 @@ Deno.serve(async (req) => {
         instance_name: instanceName,
         api_url,
         api_key,
+        funnel_roles: funnel_roles && funnel_roles.length > 0 ? (funnel_roles.includes("all") ? ["all"] : funnel_roles) : ["all"],
         status: qrCode ? "qr_ready" : "disconnected",
         qr_code: qrCode,
       }).select().single();
