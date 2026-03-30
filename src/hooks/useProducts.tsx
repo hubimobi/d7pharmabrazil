@@ -21,6 +21,10 @@ export interface Product {
   width: number;
   length: number;
   showCountdown: boolean;
+  countdownMode: string;
+  countdownEndTime: string | null;
+  countdownEndDate: string | null;
+  countdownDurationMinutes: number;
   featured: boolean;
   groupName: string;
   seoTitle: string;
