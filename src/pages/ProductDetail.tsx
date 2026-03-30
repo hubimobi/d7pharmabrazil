@@ -53,6 +53,19 @@ const ProductDetail = () => {
   const [showUpsell, setShowUpsell] = useState(false);
   const [shippingCep, setShippingCep] = useState("");
   const [shippingOption, setShippingOption] = useState<ShippingOption | null>(null);
+  const buyButtonsRef = useRef<HTMLDivElement>(null);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+
+  useEffect(() => {
+    const el = buyButtonsRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [product]);
 
   const { data: testimonials } = useQuery({
     queryKey: ["product-testimonials", product?.id],
