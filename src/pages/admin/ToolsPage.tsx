@@ -1,0 +1,55 @@
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ImageIcon, Video, Megaphone, MessageSquareQuote } from "lucide-react";
+import TestimonialGenerator from "@/components/admin/tools/TestimonialGenerator";
+import ImageGenerator from "@/components/admin/tools/ImageGenerator";
+import VideoGenerator from "@/components/admin/tools/VideoGenerator";
+import AdsGenerator from "@/components/admin/tools/AdsGenerator";
+
+export default function ToolsPage() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold" style={{ color: "var(--admin-title)" }}>
+          Ferramentas
+        </h1>
+        <p className="text-sm" style={{ color: "var(--admin-subtitle)" }}>
+          Ferramentas de criação com IA para marketing e vendas
+        </p>
+      </div>
+
+      <Tabs defaultValue="testimonials" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 h-auto gap-2 bg-transparent p-0">
+          {[
+            { value: "testimonials", label: "Testemunhos", icon: MessageSquareQuote },
+            { value: "images", label: "Imagens", icon: ImageIcon },
+            { value: "videos", label: "Vídeos", icon: Video },
+            { value: "ads", label: "ADS / Copy", icon: Megaphone },
+          ].map((tab) => (
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl border data-[state=active]:border-blue-500 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-all"
+            >
+              <tab.icon className="h-4 w-4" />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        <TabsContent value="testimonials" className="mt-6">
+          <TestimonialGenerator />
+        </TabsContent>
+        <TabsContent value="images" className="mt-6">
+          <ImageGenerator />
+        </TabsContent>
+        <TabsContent value="videos" className="mt-6">
+          <VideoGenerator />
+        </TabsContent>
+        <TabsContent value="ads" className="mt-6">
+          <AdsGenerator />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

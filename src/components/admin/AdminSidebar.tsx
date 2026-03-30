@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Stethoscope, BarChart3, LogOut, Package,
   DollarSign, Store, Plug, ShoppingCart, Tag, ImageIcon, Megaphone,
   ShoppingBag, Contact, Mail, FileText, Palette, Settings2, Sparkles,
-  UserCog, Link2, ChevronDown, ChevronRight,
+  UserCog, Link2, ChevronDown, ChevronRight, Wrench,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -101,6 +101,7 @@ const adminSections: MenuSection[] = [
   {
     label: "SISTEMA",
     items: [
+      { title: "Ferramentas", url: "/admin/ferramentas", icon: Wrench },
       { title: "Agentes de IA", url: "/admin/agentes-ia", icon: Sparkles },
       { title: "Usuários", url: "/admin/usuarios", icon: UserCog },
       { title: "Configurações", url: "/admin/configuracoes", icon: Store },
