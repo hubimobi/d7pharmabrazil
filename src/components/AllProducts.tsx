@@ -11,6 +11,7 @@ const PAGE_SIZE = 6;
 
 const AllProducts = () => {
   const { data: products, isLoading } = useProducts();
+  const { data: combos } = useCombos();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [groupFilter, setGroupFilter] = useState("all");
 
