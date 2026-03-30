@@ -50,6 +50,7 @@ import LinkRedirectPage from "./pages/LinkRedirectPage";
 import LinksPage from "./pages/admin/LinksPage";
 import CombosPage from "./pages/admin/CombosPage";
 import ToolsPage from "./pages/admin/ToolsPage";
+import RepurchasePage from "./pages/admin/RepurchasePage";
 import ScrollToTop from "./components/ScrollToTop";
 import FloatingCheckoutButton from "./components/FloatingCheckoutButton";
 const queryClient = new QueryClient();
@@ -123,6 +124,7 @@ const App = () => (
               <Route path="/admin/links" element={<AdminLayout><LinksPage /></AdminLayout>} />
               <Route path="/admin/combos" element={<AdminLayout><CombosPage /></AdminLayout>} />
               <Route path="/admin/ferramentas" element={<AdminLayout><ToolsPage /></AdminLayout>} />
+              <Route path="/admin/recompra" element={<AdminLayout><RepurchasePage /></AdminLayout>} />
               <Route path="/l/:code" element={<LinkRedirectPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

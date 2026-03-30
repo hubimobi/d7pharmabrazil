@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Stethoscope, BarChart3, LogOut, Package,
   DollarSign, Store, Plug, ShoppingCart, Tag, ImageIcon, Megaphone,
   ShoppingBag, Contact, Mail, FileText, Palette, Settings2, Sparkles,
-  UserCog, Link2, ChevronDown, ChevronRight, Wrench,
+  UserCog, Link2, ChevronDown, ChevronRight, Wrench, RefreshCw,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -54,6 +54,7 @@ const adminSections: MenuSection[] = [
           { title: "Pedidos", url: "/admin/vendas", icon: ShoppingBag },
           { title: "Clientes", url: "/admin/clientes", icon: Contact },
           { title: "Recuperação", url: "/admin/recuperacao", icon: ShoppingCart },
+          { title: "Recompra (+LTV)", url: "/admin/recompra", icon: RefreshCw },
           { title: "Cupons", url: "/admin/cupons", icon: Tag },
           { title: "Checkout", url: "/admin/checkout", icon: Settings2 },
         ],
