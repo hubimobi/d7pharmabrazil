@@ -622,24 +622,26 @@ const CheckoutPageV2 = () => {
                     </div>
                   )}
                   {step === 3 && (
-                    <div className="flex gap-3">
-                      <Button variant="outline" onClick={() => goToStep(2)}>Voltar</Button>
-                      <Button
-                        className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground text-base"
-                        size="lg" disabled={isSubmitting} onClick={handleSubmit}>
-                        {isSubmitting ? "Processando..." : (
-                          <>
-                            <Lock className="h-4 w-4" />
-                            {form.paymentMethod === "pix"
-                              ? `Pagar via Pix R$ ${pixTotal.toFixed(2).replace(".", ",")}`
-                              : form.paymentMethod === "boleto"
-                              ? `Gerar Boleto R$ ${finalTotal.toFixed(2).replace(".", ",")}`
-                              : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    <TrustMicroTexts />
+                    <>
+                      <div className="flex gap-3">
+                        <Button variant="outline" onClick={() => goToStep(2)}>Voltar</Button>
+                        <Button
+                          className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground text-base"
+                          size="lg" disabled={isSubmitting} onClick={handleSubmit}>
+                          {isSubmitting ? "Processando..." : (
+                            <>
+                              <Lock className="h-4 w-4" />
+                              {form.paymentMethod === "pix"
+                                ? `Pagar via Pix R$ ${pixTotal.toFixed(2).replace(".", ",")}`
+                                : form.paymentMethod === "boleto"
+                                ? `Gerar Boleto R$ ${finalTotal.toFixed(2).replace(".", ",")}`
+                                : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <TrustMicroTexts />
+                    </>
                   )}
                 </div>
               )}
