@@ -374,7 +374,7 @@ const CheckoutPageV2 = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">CPF</Label>
-                        <Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: formatCPF(e.target.value) })} placeholder="000.000.000-00" />
+                        <Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: formatCPF(e.target.value) })} placeholder="000.000.000-00" inputMode="numeric" />
                       </div>
                     </div>
 
@@ -386,7 +386,7 @@ const CheckoutPageV2 = () => {
 
                     <div className="mt-3 space-y-1.5">
                       <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">WhatsApp</Label>
-                      <Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" />
+                      <Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" inputMode="tel" />
                       <p className="text-xs text-muted-foreground">📱 Atualizações do pedido via WhatsApp</p>
                     </div>
 
@@ -416,7 +416,7 @@ const CheckoutPageV2 = () => {
                       <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">CEP</Label>
                       <div className="relative max-w-[200px]">
                         <Input
-                          required value={form.cep} placeholder="00000-000"
+                          required value={form.cep} placeholder="00000-000" inputMode="numeric"
                           className="text-lg font-semibold tracking-wider"
                           onChange={(e) => {
                             const raw = e.target.value.replace(/\D/g, "").slice(0, 8);

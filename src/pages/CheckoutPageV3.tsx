@@ -251,9 +251,9 @@ const CheckoutPageV3 = () => {
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Seus Dados</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <div><Label className="text-xs">Nome Completo *</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-9 text-sm" /></div>
-              <div><Label className="text-xs">CPF *</Label><Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: formatCPF(e.target.value) })} placeholder="000.000.000-00" className="h-9 text-sm" /></div>
+              <div><Label className="text-xs">CPF *</Label><Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: formatCPF(e.target.value) })} placeholder="000.000.000-00" inputMode="numeric" className="h-9 text-sm" /></div>
               <div><Label className="text-xs">Email *</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-9 text-sm" /></div>
-              <div><Label className="text-xs">Telefone *</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" className="h-9 text-sm" /></div>
+              <div><Label className="text-xs">Telefone *</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" inputMode="tel" className="h-9 text-sm" /></div>
             </div>
           </section>
 
@@ -264,7 +264,7 @@ const CheckoutPageV3 = () => {
               <div>
                 <Label className="text-xs">CEP *</Label>
                 <div className="relative">
-                  <Input required value={form.cep} placeholder="00000-000" className="h-9 text-sm" onChange={(e) => {
+                  <Input required value={form.cep} placeholder="00000-000" inputMode="numeric" className="h-9 text-sm" onChange={(e) => {
                     const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
                     const formatted = raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw;
                     setForm({ ...form, cep: formatted });
