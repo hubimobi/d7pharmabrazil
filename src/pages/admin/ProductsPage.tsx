@@ -326,6 +326,7 @@ export default function ProductsPage() {
     setForm({
       name: p.name, slug: p.slug, short_description: p.short_description,
       description: p.description, price: String(p.price), original_price: String(p.original_price),
+      cost_price: String((p as any).cost_price ?? 0),
       badge: p.badge ?? "", stock: String(p.stock), benefits,
       weight: String((p as any).weight ?? 0.3),
       height: String((p as any).height ?? 5),
