@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Palette, Save, Loader2, FlaskConical, Truck, ShieldCheck, TrendingUp, Wand2, Sun, Moon, Building2, Layout, Layers, BookOpen } from "lucide-react";
+import { Palette, Save, Loader2, FlaskConical, Truck, ShieldCheck, TrendingUp, Wand2, Sun, Moon, Building2, Layout, Layers, BookOpen, RectangleHorizontal, SquareIcon } from "lucide-react";
 import type { StoreSettings } from "@/hooks/useStoreSettings";
 import { useAdminTheme, type AdminTheme } from "@/hooks/useAdminTheme";
 
@@ -264,6 +264,7 @@ export default function DesignSettingsPage() {
       section_trust_badges_visible: (form as any).section_trust_badges_visible,
       section_mailing_visible: (form as any).section_mailing_visible,
       section_instagram_visible: (form as any).section_instagram_visible,
+      design_border_style: (form as any).design_border_style,
     } as any);
   };
 
@@ -620,6 +621,45 @@ export default function DesignSettingsPage() {
             <p className="text-sm mt-1" style={{ fontFamily: form.design_font || "Inter", color: form.design_text_color || "#374151" }}>
               Este é um exemplo de como o texto ficará com a fonte e cores selecionadas.
             </p>
+          </div>
+        </div>
+
+        {/* Estilo de Bordas */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Estilo de Bordas</h2>
+          <p className="text-sm text-muted-foreground">Defina se os elementos da loja (cards, banners, botões, imagens) terão cantos arredondados ou quadrados.</p>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { value: "rounded", label: "Arredondado", desc: "Cantos suaves e modernos", Icon: RectangleHorizontal },
+              { value: "square", label: "Quadrado", desc: "Cantos retos e geométricos", Icon: SquareIcon },
+            ].map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex flex-col items-center gap-3 rounded-xl border p-5 cursor-pointer transition-all ${
+                  ((form as any).design_border_style || "rounded") === opt.value
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border hover:border-primary/30"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="border_style"
+                  value={opt.value}
+                  checked={((form as any).design_border_style || "rounded") === opt.value}
+                  onChange={() => update("design_border_style" as any, opt.value)}
+                  className="sr-only"
+                />
+                {/* Preview */}
+                <div className="flex gap-2">
+                  <div className={`h-16 w-24 bg-primary/15 border border-primary/20 ${opt.value === "rounded" ? "rounded-xl" : "rounded-none"}`} />
+                  <div className={`h-16 w-16 bg-muted border border-border ${opt.value === "rounded" ? "rounded-xl" : "rounded-none"}`} />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-sm">{opt.label}</p>
+                  <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                </div>
+              </label>
+            ))}
           </div>
         </div>
 

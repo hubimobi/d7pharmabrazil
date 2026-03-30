@@ -1693,6 +1693,7 @@ export type Database = {
           cta_title: string | null
           design_bg_color: string | null
           design_bg_gradient: string | null
+          design_border_style: string
           design_font: string | null
           design_footer_color: string | null
           design_footer_gradient: string | null
@@ -1827,6 +1828,7 @@ export type Database = {
           cta_title?: string | null
           design_bg_color?: string | null
           design_bg_gradient?: string | null
+          design_border_style?: string
           design_font?: string | null
           design_footer_color?: string | null
           design_footer_gradient?: string | null
@@ -1961,6 +1963,7 @@ export type Database = {
           cta_title?: string | null
           design_bg_color?: string | null
           design_bg_gradient?: string | null
+          design_border_style?: string
           design_font?: string | null
           design_footer_color?: string | null
           design_footer_gradient?: string | null
