@@ -23,7 +23,7 @@ import CreatableSelect from "@/components/admin/CreatableSelect";
 
 interface ProdForm {
   name: string; slug: string; short_description: string; description: string;
-  price: string; original_price: string; badge: string; stock: string;
+  price: string; original_price: string; cost_price: string; badge: string; stock: string;
   benefits: string;
   weight: string; height: string; width: string; length: string;
   group_name: string; manufacturer: string;
