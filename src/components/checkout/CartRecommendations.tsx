@@ -16,10 +16,20 @@ export default function CartRecommendations({ cartItems, showOnlyUpsell = false 
 
   if (!allProducts || allProducts.length <= 1) return null;
 
-  // Cross-sell: products NOT in cart
-  const crossSell = allProducts
-    .filter((p) => !cartIds.has(p.id) && p.stock > 0)
-    .slice(0, 3);
+  // Collect configured upsell product IDs from cart items
+  const configuredUpsellIds = new Set<string>();
+  cartItems.forEach((i) => {
+    i.product.upsellProductIds?.forEach((id) => configuredUpsellIds.add(id));
+  });
+
+  // Cross-sell: prefer configured upsell products, then fallback to others
+  const configuredCrossSell = allProducts.filter(
+    (p) => configuredUpsellIds.has(p.id) && !cartIds.has(p.id) && p.stock > 0
+  );
+  const fallbackCrossSell = allProducts.filter(
+    (p) => !cartIds.has(p.id) && !configuredUpsellIds.has(p.id) && p.stock > 0
+  );
+  const crossSell = [...configuredCrossSell, ...fallbackCrossSell].slice(0, 3);
 
   // Upsell: if any item has qty < 3, suggest "leve 3 pague 2" style
   const upsellItems = cartItems

@@ -193,6 +193,7 @@ export default function RecentPurchasePopup() {
       seoDescription: "",
       seoKeywords: "",
       sku: "",
+      upsellProductIds: Array.isArray((matchedProduct as any).upsell_product_ids) ? (matchedProduct as any).upsell_product_ids : [],
       benefits: (matchedProduct.benefits as string[]) || [],
     };
     addItem(p, 1);

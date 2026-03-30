@@ -35,6 +35,7 @@ interface ProdForm {
   countdown_duration_minutes: string;
   featured: boolean;
   seo_title: string; seo_description: string; seo_keywords: string;
+  upsell_product_ids: string[];
 }
 
 const emptyForm: ProdForm = {
@@ -51,6 +52,7 @@ const emptyForm: ProdForm = {
   countdown_duration_minutes: "60",
   featured: false,
   seo_title: "", seo_description: "", seo_keywords: "",
+  upsell_product_ids: [],
 };
 
 interface Testimonial {
@@ -150,6 +152,7 @@ export default function ProductsPage() {
         seo_title: form.seo_title || null,
         seo_description: form.seo_description || null,
         seo_keywords: form.seo_keywords || null,
+        upsell_product_ids: form.upsell_product_ids,
       };
       if (image_url) payload.image_url = image_url;
 
@@ -342,6 +345,7 @@ export default function ProductsPage() {
       seo_title: (p as any).seo_title ?? "",
       seo_description: (p as any).seo_description ?? "",
       seo_keywords: (p as any).seo_keywords ?? "",
+      upsell_product_ids: Array.isArray((p as any).upsell_product_ids) ? (p as any).upsell_product_ids : [],
     });
 
     // Load testimonials
@@ -490,6 +494,38 @@ export default function ProductsPage() {
                     <Switch id="featured" checked={form.featured} onCheckedChange={(checked) => setForm({ ...form, featured: checked })} />
                   </div>
                   <div className="space-y-2"><Label>Benefícios (um por linha)</Label><Textarea value={form.benefits} onChange={(e) => setForm({ ...form, benefits: e.target.value })} rows={4} /></div>
+
+                  {/* Upsell Products */}
+                  <div className="space-y-2">
+                    <Label className="font-medium">Produtos de Upsell</Label>
+                    <p className="text-xs text-muted-foreground">Selecione quais produtos serão sugeridos como upsell no checkout, página do produto e mensagens de WhatsApp.</p>
+                    <div className="space-y-2 max-h-48 overflow-y-auto rounded-lg border border-border p-3">
+                      {products?.filter(pr => pr.id !== editId && pr.active).map(pr => (
+                        <label key={pr.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded p-1.5 transition">
+                          <Checkbox
+                            checked={form.upsell_product_ids.includes(pr.id)}
+                            onCheckedChange={(checked) => {
+                              setForm(prev => ({
+                                ...prev,
+                                upsell_product_ids: checked
+                                  ? [...prev.upsell_product_ids, pr.id]
+                                  : prev.upsell_product_ids.filter(id => id !== pr.id),
+                              }));
+                            }}
+                          />
+                          <img src={pr.image_url || ""} alt="" className="h-8 w-8 rounded object-contain bg-muted" />
+                          <span className="text-sm truncate">{pr.name}</span>
+                          <span className="text-xs text-muted-foreground ml-auto">R$ {Number(pr.price).toFixed(2).replace(".", ",")}</span>
+                        </label>
+                      ))}
+                      {(!products || products.filter(pr => pr.id !== editId && pr.active).length === 0) && (
+                        <p className="text-sm text-muted-foreground text-center py-2">Nenhum outro produto ativo disponível</p>
+                      )}
+                    </div>
+                    {form.upsell_product_ids.length > 0 && (
+                      <p className="text-xs text-primary font-medium">{form.upsell_product_ids.length} produto(s) selecionado(s)</p>
+                    )}
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="dimensions" className="space-y-4 mt-4">

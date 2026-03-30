@@ -31,6 +31,7 @@ export interface Product {
   seoDescription: string;
   seoKeywords: string;
   sku: string;
+  upsellProductIds: string[];
 }
 
 // Fallback images for products without uploaded images
@@ -78,6 +79,7 @@ function mapDbProduct(p: any): Product {
     seoDescription: p.seo_description || "",
     seoKeywords: p.seo_keywords || "",
     sku: p.sku || "",
+    upsellProductIds: Array.isArray(p.upsell_product_ids) ? p.upsell_product_ids : [],
   };
 }
 
