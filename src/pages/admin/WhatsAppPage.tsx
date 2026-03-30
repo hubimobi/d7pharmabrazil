@@ -592,8 +592,11 @@ function FunnelsTab() {
   }
 
   function formatDelay(mins: number) {
+    if (mins < 1) return `${Math.round(mins * 60)} seg`;
     if (mins < 60) return `${mins} min`;
     if (mins < 1440) return `${Math.round(mins / 60)}h`;
+    return `${Math.round(mins / 1440)}d`;
+  }
     return `${Math.round(mins / 1440)}d`;
   }
 
@@ -652,9 +655,51 @@ function FunnelsTab() {
                             <div>
                               <Label className="text-[10px]">Delay</Label>
                               <div className="flex gap-1">
-                                <Input type="number" value={step.delay_minutes} className="h-8 text-xs"
-                                  onChange={(e) => updateStep(step.id, { delay_minutes: parseInt(e.target.value) || 0 })} />
-                                <span className="text-xs text-muted-foreground self-center">min</span>
+                                <Input type="number" min={0}
+                                  value={
+                                    step.delay_minutes >= 1440 && step.delay_minutes % 1440 === 0
+                                      ? step.delay_minutes / 1440
+                                      : step.delay_minutes >= 60 && step.delay_minutes % 60 === 0
+                                        ? step.delay_minutes / 60
+                                        : step.delay_minutes < 1
+                                          ? Math.round(step.delay_minutes * 60)
+                                          : step.delay_minutes
+                                  }
+                                  className="h-8 text-xs w-16"
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value) || 0;
+                                    const unit = step.delay_minutes >= 1440 && step.delay_minutes % 1440 === 0
+                                      ? "d" : step.delay_minutes >= 60 && step.delay_minutes % 60 === 0
+                                        ? "h" : step.delay_minutes < 1 ? "s" : "m";
+                                    const mins = unit === "d" ? val * 1440 : unit === "h" ? val * 60 : unit === "s" ? val / 60 : val;
+                                    updateStep(step.id, { delay_minutes: mins });
+                                  }}
+                                />
+                                <select
+                                  className="h-8 text-xs rounded border border-input bg-background px-1"
+                                  value={
+                                    step.delay_minutes >= 1440 && step.delay_minutes % 1440 === 0
+                                      ? "d" : step.delay_minutes >= 60 && step.delay_minutes % 60 === 0
+                                        ? "h" : step.delay_minutes < 1 ? "s" : "m"
+                                  }
+                                  onChange={(e) => {
+                                    const oldUnit = step.delay_minutes >= 1440 && step.delay_minutes % 1440 === 0
+                                      ? "d" : step.delay_minutes >= 60 && step.delay_minutes % 60 === 0
+                                        ? "h" : step.delay_minutes < 1 ? "s" : "m";
+                                    const oldVal = oldUnit === "d" ? step.delay_minutes / 1440
+                                      : oldUnit === "h" ? step.delay_minutes / 60
+                                        : oldUnit === "s" ? Math.round(step.delay_minutes * 60)
+                                          : step.delay_minutes;
+                                    const newUnit = e.target.value;
+                                    const mins = newUnit === "d" ? oldVal * 1440 : newUnit === "h" ? oldVal * 60 : newUnit === "s" ? oldVal / 60 : oldVal;
+                                    updateStep(step.id, { delay_minutes: mins });
+                                  }}
+                                >
+                                  <option value="s">seg</option>
+                                  <option value="m">min</option>
+                                  <option value="h">horas</option>
+                                  <option value="d">dias</option>
+                                </select>
                               </div>
                             </div>
                             <div>
