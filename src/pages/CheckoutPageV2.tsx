@@ -7,21 +7,20 @@ const formatCPF = (v: string) => {
   if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 };
-
+import TrustMicroTexts from "@/components/checkout/TrustMicroTexts";
+import { useSavedCustomer } from "@/hooks/useSavedCustomer";
 const formatPhone = (v: string) => {
   const d = v.replace(/\D/g, "").slice(0, 11);
   if (d.length <= 2) return d.length ? `(${d}` : "";
   if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle, Truck, Shield, Clock, Users, Eye, Package, Star, ChevronRight, Lock, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/hooks/useCart";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
 import CreditCardForm, { CreditCardData, getInstallmentOptions } from "@/components/checkout/CreditCardForm";
@@ -54,6 +53,9 @@ const STEPS = [
 
 const CheckoutPageV2 = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isOneClick = searchParams.get("oneclick") === "1";
+  const { savedCustomer, saveCustomer } = useSavedCustomer();
   const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount } = useCart();
   const { data: storeSettings } = useStoreSettings();
   const [step, setStep] = useState(1);
@@ -75,6 +77,27 @@ const CheckoutPageV2 = () => {
   });
   const abandonmentSaved = useRef(false);
   const [cepLoading, setCepLoading] = useState(false);
+
+  // Auto-fill from saved customer data
+  useEffect(() => {
+    if (savedCustomer) {
+      setForm((prev) => ({
+        ...prev,
+        name: savedCustomer.name || prev.name,
+        cpf: savedCustomer.cpf || prev.cpf,
+        email: savedCustomer.email || prev.email,
+        phone: savedCustomer.phone || prev.phone,
+        cep: savedCustomer.cep || prev.cep,
+        street: savedCustomer.street || prev.street,
+        number: savedCustomer.number || prev.number,
+        complement: savedCustomer.complement || prev.complement,
+        neighborhood: savedCustomer.neighborhood || prev.neighborhood,
+        city: savedCustomer.city || prev.city,
+        state: savedCustomer.state || prev.state,
+      }));
+      if (isOneClick) goToStep(3);
+    }
+  }, [savedCustomer, isOneClick]);
 
   // Timer
   const [timerSeconds, setTimerSeconds] = useState(14 * 60 + 32);
@@ -227,6 +250,12 @@ const CheckoutPageV2 = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setPaymentResult(data);
+      // Save customer data for One-Click Buy
+      saveCustomer({
+        name: form.name, cpf: form.cpf, email: form.email, phone: form.phone,
+        cep: form.cep, street: form.street, number: form.number, complement: form.complement,
+        neighborhood: form.neighborhood, city: form.city, state: form.state,
+      });
       // GHL sync
       supabase.functions.invoke("ghl-sync", {
         body: { customer_name: form.name, customer_email: form.email, customer_phone: form.phone, order_id: data.order_id, order_total: form.paymentMethod === "pix" ? pixTotal : finalTotal, items: items.map((i) => ({ name: i.product.name, quantity: i.quantity, price: i.product.price })), tags: form.paymentMethod === "pix" ? ["pagou-pix"] : ["pagou-cartao"] },
@@ -263,7 +292,7 @@ const CheckoutPageV2 = () => {
   if (step === 5 && paymentResult) {
     return (
       <div className="min-h-screen bg-muted/30">
-        <Header />
+        
         <main className="container max-w-lg py-12">
           {paymentResult.pix ? (
             <PixPaymentResult encodedImage={paymentResult.pix.encodedImage} payload={paymentResult.pix.payload} expirationDate={paymentResult.pix.expirationDate} total={pixTotal} paymentId={paymentResult.payment_id} orderId={paymentResult.order_id} onConfirmed={() => clearCart()} />
@@ -276,7 +305,7 @@ const CheckoutPageV2 = () => {
             </div>
           )}
         </main>
-        <Footer />
+        
         <WhatsAppButton />
       </div>
     );
@@ -285,13 +314,13 @@ const CheckoutPageV2 = () => {
   if (items.length === 0 && step < 5) {
     return (
       <div className="min-h-screen">
-        <Header />
+        
         <div className="container py-20 text-center">
           <h1 className="text-2xl font-bold">Seu carrinho está vazio</h1>
           <p className="mt-2 text-muted-foreground">Adicione produtos para continuar</p>
           <Link to="/produtos"><Button className="mt-6">Ver Produtos</Button></Link>
         </div>
-        <Footer />
+        
       </div>
     );
   }
@@ -301,7 +330,7 @@ const CheckoutPageV2 = () => {
 
   return (
     <div className="min-h-screen bg-muted/30 overflow-x-hidden">
-      <Header />
+      
 
       {/* Urgency Bar */}
       <div className="bg-gradient-to-r from-[hsl(var(--primary)/0.95)] to-[hsl(var(--primary))] py-2 px-3 sm:px-4">
@@ -376,7 +405,7 @@ const CheckoutPageV2 = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">CPF</Label>
-                        <Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: formatCPF(e.target.value) })} placeholder="000.000.000-00" />
+                        <Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: formatCPF(e.target.value) })} placeholder="000.000.000-00" inputMode="numeric" />
                       </div>
                     </div>
 
@@ -388,7 +417,7 @@ const CheckoutPageV2 = () => {
 
                     <div className="mt-3 space-y-1.5">
                       <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">WhatsApp</Label>
-                      <Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" />
+                      <Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" inputMode="tel" />
                       <p className="text-xs text-muted-foreground">📱 Atualizações do pedido via WhatsApp</p>
                     </div>
 
@@ -418,7 +447,7 @@ const CheckoutPageV2 = () => {
                       <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">CEP</Label>
                       <div className="relative max-w-[200px]">
                         <Input
-                          required value={form.cep} placeholder="00000-000"
+                          required value={form.cep} placeholder="00000-000" inputMode="numeric"
                           className="text-lg font-semibold tracking-wider"
                           onChange={(e) => {
                             const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
@@ -624,23 +653,26 @@ const CheckoutPageV2 = () => {
                     </div>
                   )}
                   {step === 3 && (
-                    <div className="flex gap-3">
-                      <Button variant="outline" onClick={() => goToStep(2)}>Voltar</Button>
-                      <Button
-                        className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground text-base"
-                        size="lg" disabled={isSubmitting} onClick={handleSubmit}>
-                        {isSubmitting ? "Processando..." : (
-                          <>
-                            <Lock className="h-4 w-4" />
-                            {form.paymentMethod === "pix"
-                              ? `Pagar via Pix R$ ${pixTotal.toFixed(2).replace(".", ",")}`
-                              : form.paymentMethod === "boleto"
-                              ? `Gerar Boleto R$ ${finalTotal.toFixed(2).replace(".", ",")}`
-                              : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                    <>
+                      <div className="flex gap-3">
+                        <Button variant="outline" onClick={() => goToStep(2)}>Voltar</Button>
+                        <Button
+                          className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground text-base"
+                          size="lg" disabled={isSubmitting} onClick={handleSubmit}>
+                          {isSubmitting ? "Processando..." : (
+                            <>
+                              <Lock className="h-4 w-4" />
+                              {form.paymentMethod === "pix"
+                                ? `Pagar via Pix R$ ${pixTotal.toFixed(2).replace(".", ",")}`
+                                : form.paymentMethod === "boleto"
+                                ? `Gerar Boleto R$ ${finalTotal.toFixed(2).replace(".", ",")}`
+                                : `Pagar R$ ${finalTotal.toFixed(2).replace(".", ",")}`}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <TrustMicroTexts />
+                    </>
                   )}
                 </div>
               )}
@@ -837,7 +869,7 @@ const CheckoutPageV2 = () => {
       )}
       {step <= 3 && <div className="h-20 md:hidden" />}
 
-      <Footer />
+      
       {!storeSettings?.hide_chat_on_checkout && <WhatsAppButton />}
     </div>
   );

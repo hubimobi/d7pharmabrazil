@@ -101,7 +101,7 @@ export default function CreditCardForm({
         <Label>Número do Cartão *</Label>
         <Input
           required
-          placeholder="0000 0000 0000 0000"
+          placeholder="0000 0000 0000 0000" inputMode="numeric"
           value={formatCardNumber(card.number)}
           onChange={(e) => onChange({ ...card, number: e.target.value.replace(/\D/g, "").slice(0, 16) })}
           maxLength={19}
@@ -113,7 +113,7 @@ export default function CreditCardForm({
           <Label>Mês *</Label>
           <Input
             required
-            placeholder="MM"
+            placeholder="MM" inputMode="numeric"
             value={card.expiryMonth}
             onChange={(e) => onChange({ ...card, expiryMonth: e.target.value.replace(/\D/g, "").slice(0, 2) })}
             maxLength={2}
@@ -123,7 +123,7 @@ export default function CreditCardForm({
           <Label>Ano *</Label>
           <Input
             required
-            placeholder="AAAA"
+            placeholder="AAAA" inputMode="numeric"
             value={card.expiryYear}
             onChange={(e) => onChange({ ...card, expiryYear: e.target.value.replace(/\D/g, "").slice(0, 4) })}
             maxLength={4}
@@ -133,7 +133,7 @@ export default function CreditCardForm({
           <Label>CVV *</Label>
           <Input
             required
-            placeholder="000"
+            placeholder="000" inputMode="numeric"
             value={card.ccv}
             onChange={(e) => onChange({ ...card, ccv: e.target.value.replace(/\D/g, "").slice(0, 4) })}
             maxLength={4}

@@ -14,14 +14,14 @@ const formatPhone = (v: string) => {
   if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/hooks/useCart";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { Shield, ShieldCheck } from "lucide-react";
+import TrustMicroTexts from "@/components/checkout/TrustMicroTexts";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
 import CreditCardForm, { CreditCardData, getInstallmentOptions } from "@/components/checkout/CreditCardForm";
@@ -36,6 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { Progress } from "@/components/ui/progress";
+import { useSavedCustomer } from "@/hooks/useSavedCustomer";
 import { getActiveRef } from "@/pages/LinkRedirectPage";
 
 interface PaymentResult {
@@ -48,6 +49,9 @@ interface PaymentResult {
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isOneClick = searchParams.get("oneclick") === "1";
+  const { savedCustomer, saveCustomer, hasSavedData } = useSavedCustomer();
   const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount } = useCart();
   const { data: storeSettings } = useStoreSettings();
   const [step, setStep] = useState(1);
@@ -69,6 +73,27 @@ const CheckoutPage = () => {
   });
   const abandonmentSaved = useRef(false);
   const [cepLoading, setCepLoading] = useState(false);
+
+  // Auto-fill from saved customer data
+  useEffect(() => {
+    if (savedCustomer) {
+      setForm((prev) => ({
+        ...prev,
+        name: savedCustomer.name || prev.name,
+        cpf: savedCustomer.cpf || prev.cpf,
+        email: savedCustomer.email || prev.email,
+        phone: savedCustomer.phone || prev.phone,
+        cep: savedCustomer.cep || prev.cep,
+        street: savedCustomer.street || prev.street,
+        number: savedCustomer.number || prev.number,
+        complement: savedCustomer.complement || prev.complement,
+        neighborhood: savedCustomer.neighborhood || prev.neighborhood,
+        city: savedCustomer.city || prev.city,
+        state: savedCustomer.state || prev.state,
+      }));
+      if (isOneClick) setStep(2);
+    }
+  }, [savedCustomer, isOneClick]);
 
   const fetchAddress = useCallback(async (cep: string) => {
     setCepLoading(true);
@@ -326,6 +351,13 @@ const CheckoutPage = () => {
         }
       }
 
+      // Save customer data for One-Click Buy
+      saveCustomer({
+        name: form.name, cpf: form.cpf, email: form.email, phone: form.phone,
+        cep: form.cep, street: form.street, number: form.number, complement: form.complement,
+        neighborhood: form.neighborhood, city: form.city, state: form.state,
+      });
+
       if (form.paymentMethod === "card" && (data.status === "CONFIRMED" || data.status === "RECEIVED")) {
         toast.success("Pagamento aprovado! 🎉");
         clearCart();
@@ -362,7 +394,7 @@ const CheckoutPage = () => {
   if (step === 3 && paymentResult) {
     return (
       <div className="min-h-screen">
-        <Header />
+        
         <main className="container max-w-lg py-12">
           {paymentResult.pix ? (
             <PixPaymentResult
@@ -390,7 +422,7 @@ const CheckoutPage = () => {
             </div>
           )}
         </main>
-        <Footer />
+        
         <WhatsAppButton />
       </div>
     );
@@ -399,20 +431,20 @@ const CheckoutPage = () => {
   if (items.length === 0 && step !== 3) {
     return (
       <div className="min-h-screen">
-        <Header />
+        
         <div className="container py-20 text-center">
           <h1 className="text-2xl font-bold">Seu carrinho está vazio</h1>
           <p className="mt-2 text-muted-foreground">Adicione produtos para continuar</p>
           <Link to="/produtos"><Button className="mt-6">Ver Produtos</Button></Link>
         </div>
-        <Footer />
+        
       </div>
     );
   }
 
   return (
     <div className="min-h-screen overflow-x-hidden">
-      <Header />
+      
       <main className="container px-3 sm:px-6 py-6 md:py-12 max-w-full overflow-hidden">
         <Link to="/produtos" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Continuar Comprando
@@ -521,9 +553,9 @@ const CheckoutPage = () => {
                 <h2 className="text-lg font-semibold">Dados Pessoais</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div><Label>Nome Completo *</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-                  <div><Label>CPF *</Label><Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: formatCPF(e.target.value) })} placeholder="000.000.000-00" /></div>
+                  <div><Label>CPF *</Label><Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: formatCPF(e.target.value) })} placeholder="000.000.000-00" inputMode="numeric" /></div>
                   <div><Label>Email *</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-                  <div><Label>Telefone *</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" /></div>
+                  <div><Label>Telefone *</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" inputMode="tel" /></div>
                 </div>
 
                 <h2 className="text-lg font-semibold">Endereço</h2>
@@ -534,7 +566,7 @@ const CheckoutPage = () => {
                       <Input
                         required
                         value={form.cep}
-                        placeholder="00000-000"
+                        placeholder="00000-000" inputMode="numeric"
                         onChange={(e) => {
                           const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
                           const formatted = raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw;
@@ -673,6 +705,7 @@ const CheckoutPage = () => {
                     )}
                   </Button>
                 </div>
+                <TrustMicroTexts />
               </form>
             )}
           </div>
@@ -768,7 +801,7 @@ const CheckoutPage = () => {
       )}
       {step <= 2 && <div className="h-20 md:hidden" />}
 
-      <Footer />
+      
       {!storeSettings?.hide_chat_on_checkout && <WhatsAppButton />}
     </div>
   );

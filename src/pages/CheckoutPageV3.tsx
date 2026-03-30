@@ -14,20 +14,21 @@ const formatPhone = (v: string) => {
   if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Trash2, Minus, Plus, ArrowLeft, CreditCard, CheckCircle, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/hooks/useCart";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { Shield, ShieldCheck } from "lucide-react";
+import TrustMicroTexts from "@/components/checkout/TrustMicroTexts";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
 import CreditCardForm, { CreditCardData, getInstallmentOptions } from "@/components/checkout/CreditCardForm";
 import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useSavedCustomer } from "@/hooks/useSavedCustomer";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { getActiveRef } from "@/pages/LinkRedirectPage";
 
@@ -41,6 +42,8 @@ interface PaymentResult {
 
 const CheckoutPageV3 = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { savedCustomer, saveCustomer } = useSavedCustomer();
   const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount } = useCart();
   const { data: storeSettings } = useStoreSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,6 +59,26 @@ const CheckoutPageV3 = () => {
     paymentMethod: "pix" as "pix" | "card" | "boleto",
   });
   const abandonmentSaved = useRef(false);
+
+  // Auto-fill from saved customer data
+  useEffect(() => {
+    if (savedCustomer) {
+      setForm((prev) => ({
+        ...prev,
+        name: savedCustomer.name || prev.name,
+        cpf: savedCustomer.cpf || prev.cpf,
+        email: savedCustomer.email || prev.email,
+        phone: savedCustomer.phone || prev.phone,
+        cep: savedCustomer.cep || prev.cep,
+        street: savedCustomer.street || prev.street,
+        number: savedCustomer.number || prev.number,
+        complement: savedCustomer.complement || prev.complement,
+        neighborhood: savedCustomer.neighborhood || prev.neighborhood,
+        city: savedCustomer.city || prev.city,
+        state: savedCustomer.state || prev.state,
+      }));
+    }
+  }, [savedCustomer]);
 
   const fetchAddress = useCallback(async (cep: string) => {
     setCepLoading(true);
@@ -142,6 +165,13 @@ const CheckoutPageV3 = () => {
       if (data?.error) throw new Error(data.error);
       setPaymentResult(data);
 
+      // Save customer data for One-Click Buy
+      saveCustomer({
+        name: form.name, cpf: form.cpf, email: form.email, phone: form.phone,
+        cep: form.cep, street: form.street, number: form.number, complement: form.complement,
+        neighborhood: form.neighborhood, city: form.city, state: form.state,
+      });
+
       // GHL sync
       supabase.functions.invoke("ghl-sync", { body: { customer_name: form.name, customer_email: form.email, customer_phone: form.phone, order_id: data.order_id, order_total: paymentValue, items: orderItems, tags: [form.paymentMethod === "pix" ? "pagou-pix" : "pagou-cartao"] } }).catch(() => {});
       // Link attribution
@@ -173,11 +203,11 @@ const CheckoutPageV3 = () => {
   if (paymentResult?.pix) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        
         <main className="container max-w-lg py-12">
           <PixPaymentResult encodedImage={paymentResult.pix.encodedImage} payload={paymentResult.pix.payload} expirationDate={paymentResult.pix.expirationDate} total={pixTotal} paymentId={paymentResult.payment_id} orderId={paymentResult.order_id} onConfirmed={() => clearCart()} />
         </main>
-        <Footer />
+        
       </div>
     );
   }
@@ -185,20 +215,20 @@ const CheckoutPageV3 = () => {
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        
         <div className="container py-20 text-center">
           <h1 className="text-2xl font-bold">Seu carrinho está vazio</h1>
           <p className="mt-2 text-muted-foreground">Adicione produtos para continuar</p>
           <Link to="/produtos"><Button className="mt-6">Ver Produtos</Button></Link>
         </div>
-        <Footer />
+        
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      <Header />
+      
       <main className="container max-w-3xl px-3 sm:px-4 py-8">
         <Link to="/produtos" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Voltar
@@ -252,9 +282,9 @@ const CheckoutPageV3 = () => {
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Seus Dados</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <div><Label className="text-xs">Nome Completo *</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="h-9 text-sm" /></div>
-              <div><Label className="text-xs">CPF *</Label><Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: formatCPF(e.target.value) })} placeholder="000.000.000-00" className="h-9 text-sm" /></div>
+              <div><Label className="text-xs">CPF *</Label><Input required value={form.cpf} onChange={(e) => setForm({ ...form, cpf: formatCPF(e.target.value) })} placeholder="000.000.000-00" inputMode="numeric" className="h-9 text-sm" /></div>
               <div><Label className="text-xs">Email *</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-9 text-sm" /></div>
-              <div><Label className="text-xs">Telefone *</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" className="h-9 text-sm" /></div>
+              <div><Label className="text-xs">Telefone *</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" inputMode="tel" className="h-9 text-sm" /></div>
             </div>
           </section>
 
@@ -265,7 +295,7 @@ const CheckoutPageV3 = () => {
               <div>
                 <Label className="text-xs">CEP *</Label>
                 <div className="relative">
-                  <Input required value={form.cep} placeholder="00000-000" className="h-9 text-sm" onChange={(e) => {
+                  <Input required value={form.cep} placeholder="00000-000" inputMode="numeric" className="h-9 text-sm" onChange={(e) => {
                     const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
                     const formatted = raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw;
                     setForm({ ...form, cep: formatted });
@@ -334,12 +364,10 @@ const CheckoutPageV3 = () => {
             </span>
           </Button>
 
-          <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
-            <Lock className="h-3 w-3" /> Pagamento 100% seguro e criptografado
-          </p>
+          <TrustMicroTexts />
         </form>
       </main>
-      <Footer />
+      
       {!storeSettings?.hide_chat_on_checkout && <WhatsAppButton />}
     </div>
   );
