@@ -225,21 +225,15 @@
 
 /* ============================================================
    SQUARE BORDER STYLE OVERRIDE
-   Only applies to storefront elements (header, main, footer).
-   Admin panel is excluded via .admin-panel class.
+   When data-border-style="square" is set on <html>,
+   force all corners to 0 on storefront pages.
+   Admin panel (.admin-panel) is excluded.
    ============================================================ */
-[data-border-style="square"] header:not(.admin-panel *) *,
-[data-border-style="square"] header:not(.admin-panel *) *::before,
-[data-border-style="square"] header:not(.admin-panel *) *::after,
-[data-border-style="square"] main:not(.admin-panel *) *,
-[data-border-style="square"] main:not(.admin-panel *) *::before,
-[data-border-style="square"] main:not(.admin-panel *) *::after,
-[data-border-style="square"] footer:not(.admin-panel *) *,
-[data-border-style="square"] footer:not(.admin-panel *) *::before,
-[data-border-style="square"] footer:not(.admin-panel *) *::after,
-[data-border-style="square"] .storefront *,
-[data-border-style="square"] .storefront *::before,
-[data-border-style="square"] .storefront *::after {
+[data-border-style="square"] :not(.admin-panel):not(.admin-panel *) {
+  border-radius: 0 !important;
+}
+[data-border-style="square"] :not(.admin-panel):not(.admin-panel *)::before,
+[data-border-style="square"] :not(.admin-panel):not(.admin-panel *)::after {
   border-radius: 0 !important;
 }
 
