@@ -448,7 +448,10 @@ function TemplatesTab() {
               </div>
               <div>
                 <Label>Mensagem (Spintax)</Label>
-                <Textarea ref={templateTextareaRef} value={form.content} onChange={(e) => { setForm({ ...form, content: e.target.value }); generatePreview(e.target.value); }}
+                <Textarea ref={templateTextareaRef} value={form.content}
+                  onChange={(e) => { setForm({ ...form, content: e.target.value }); generatePreview(e.target.value); cursorPosRef.current = e.target.selectionStart; }}
+                  onSelect={(e) => { cursorPosRef.current = (e.target as HTMLTextAreaElement).selectionStart; }}
+                  onBlur={(e) => { cursorPosRef.current = e.target.selectionStart; }}
                   placeholder={`{Oi|Olá|E aí} {Nome}, {tudo bem|como vai}?\n\nVi que você deixou {Produto} no carrinho...\n{Link}`}
                   className="min-h-[180px] font-mono text-xs" />
               </div>
