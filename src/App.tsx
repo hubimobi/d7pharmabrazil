@@ -49,6 +49,7 @@ import TrackingScripts from "./components/TrackingScripts";
 import LinkRedirectPage from "./pages/LinkRedirectPage";
 import LinksPage from "./pages/admin/LinksPage";
 import CombosPage from "./pages/admin/CombosPage";
+import ToolsPage from "./pages/admin/ToolsPage";
 import ScrollToTop from "./components/ScrollToTop";
 import FloatingCheckoutButton from "./components/FloatingCheckoutButton";
 const queryClient = new QueryClient();
