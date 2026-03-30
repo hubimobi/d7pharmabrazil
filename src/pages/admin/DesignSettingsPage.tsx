@@ -398,16 +398,38 @@ export default function DesignSettingsPage() {
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <div>
             <h2 className="text-lg font-semibold">Seções da Home</h2>
-            <p className="text-sm text-muted-foreground">Escolha quais seções exibir na página inicial.</p>
+            <p className="text-sm text-muted-foreground">Ative, desative e reordene as seções da página inicial. Use as setas para alterar a posição.</p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {SECTION_TOGGLES.map((s) => (
-              <div key={s.key} className="flex items-center justify-between rounded-lg border border-border p-3">
-                <Label className="text-sm font-medium cursor-pointer">{s.label}</Label>
-                <Switch
-                  checked={(form as any)[s.key] !== false}
-                  onCheckedChange={(v) => update(s.key as any, v)}
-                />
+          <div className="grid gap-2">
+            {normalizedOrder.map((key, index) => (
+              <div key={key} className="flex items-center gap-2 rounded-lg border border-border p-3 bg-card hover:bg-muted/30 transition-colors">
+                <GripVertical className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+                <span className="text-xs font-mono text-muted-foreground w-5 text-center flex-shrink-0">{index + 1}</span>
+                <Label className="text-sm font-medium flex-1 cursor-pointer">{SECTION_TOGGLES_MAP[key]}</Label>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveSectionUp(index)}
+                    disabled={index === 0}
+                    className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Mover para cima"
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveSectionDown(index)}
+                    disabled={index === normalizedOrder.length - 1}
+                    className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Mover para baixo"
+                  >
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </button>
+                  <Switch
+                    checked={(form as any)[key] !== false}
+                    onCheckedChange={(v) => update(key as any, v)}
+                  />
+                </div>
               </div>
             ))}
           </div>
