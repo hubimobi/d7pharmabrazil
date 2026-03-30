@@ -578,7 +578,7 @@ export default function StoreSettingsPage() {
             <Select value={(form as any).feedback_bonus_coupon_id || ""} onValueChange={(v) => update("feedback_bonus_coupon_id" as any, v || null)}>
               <SelectTrigger><SelectValue placeholder="Selecione um cupom..." /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="none">Nenhum</SelectItem>
                 {coupons?.map((c: any) => (
                   <SelectItem key={c.id} value={c.id}>{c.code} — {c.discount_value}{c.discount_type === "percent" ? "%" : " R$"}</SelectItem>
                 ))}
