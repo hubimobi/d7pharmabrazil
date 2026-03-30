@@ -380,7 +380,7 @@ export default function ProductsPage() {
   const addTestimonial = () => {
     if (!newTestimonial.author_name || !newTestimonial.content) return;
     setTestimonials([...testimonials, { ...newTestimonial }]);
-    setNewTestimonial({ author_name: "", content: "", rating: 5 });
+    setNewTestimonial({ author_name: "", content: "", rating: 5, source: "manual" });
   };
 
   const removeTestimonial = (idx: number) => {
