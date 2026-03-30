@@ -88,6 +88,7 @@ export default function ProductsPage() {
   const [cropOpen, setCropOpen] = useState(false);
   const [cropImageUrl, setCropImageUrl] = useState("");
   const [removingBg, setRemovingBg] = useState(false);
+  const [editingTestimonialIdx, setEditingTestimonialIdx] = useState<number | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
