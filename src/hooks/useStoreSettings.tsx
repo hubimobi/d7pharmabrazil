@@ -114,6 +114,13 @@ export interface StoreSettings {
   // Company display
   display_name: string;
   attendant_name: string;
+  // Store goals
+  goal_monthly_revenue: number;
+  goal_conversion_rate: number;
+  goal_cart_recovery: number;
+  goal_upsell: number;
+  goal_ltv: number;
+  goal_profit_margin: number;
 }
 
 export function useStoreSettings() {

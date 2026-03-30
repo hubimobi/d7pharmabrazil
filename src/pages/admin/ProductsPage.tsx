@@ -13,7 +13,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus, Link2, Check, Eye, Download, ArrowUpRight, RefreshCw, Search, MoreHorizontal, Power, PowerOff, Copy } from "lucide-react";
+import { Plus, Pencil, Upload, Trash2, Star, X, Truck, Loader2, Package, Crop, ImageMinus, Link2, Check, Eye, Download, ArrowUpRight, RefreshCw, Search, MoreHorizontal, Power, PowerOff, Copy, TrendingUp, TrendingDown, CheckCircle, AlertTriangle } from "lucide-react";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
@@ -23,7 +24,7 @@ import CreatableSelect from "@/components/admin/CreatableSelect";
 
 interface ProdForm {
   name: string; slug: string; short_description: string; description: string;
-  price: string; original_price: string; badge: string; stock: string;
+  price: string; original_price: string; cost_price: string; badge: string; stock: string;
   benefits: string;
   weight: string; height: string; width: string; length: string;
   group_name: string; manufacturer: string;
@@ -40,7 +41,7 @@ interface ProdForm {
 
 const emptyForm: ProdForm = {
   name: "", slug: "", short_description: "", description: "",
-  price: "", original_price: "", badge: "", stock: "",
+  price: "", original_price: "", cost_price: "", badge: "", stock: "",
   benefits: "",
   weight: "0.3", height: "5", width: "15", length: "20",
   group_name: "", manufacturer: "",
@@ -86,6 +87,8 @@ export default function ProductsPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { data: storeSettings } = useStoreSettings();
+  const marginGoal = (storeSettings as any)?.goal_profit_margin ?? 30;
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["admin-products"],
@@ -135,6 +138,7 @@ export default function ProductsPage() {
         name: form.name, slug: form.slug,
         short_description: form.short_description, description: form.description,
         price: parseFloat(form.price), original_price: parseFloat(form.original_price),
+        cost_price: parseFloat(form.cost_price) || 0,
         badge: form.badge || null, stock: parseInt(form.stock) || 0, benefits,
         show_countdown: form.show_countdown,
         countdown_mode: form.countdown_mode,
@@ -325,6 +329,7 @@ export default function ProductsPage() {
     setForm({
       name: p.name, slug: p.slug, short_description: p.short_description,
       description: p.description, price: String(p.price), original_price: String(p.original_price),
+      cost_price: String((p as any).cost_price ?? 0),
       badge: p.badge ?? "", stock: String(p.stock), benefits,
       weight: String((p as any).weight ?? 0.3),
       height: String((p as any).height ?? 5),
@@ -426,9 +431,16 @@ export default function ProductsPage() {
                     <Label>Descrição Completa (HTML)</Label>
                     <RichTextEditor value={form.description} onChange={(val) => setForm({ ...form, description: val })} placeholder="Escreva a descrição do produto com formatação rica..." />
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
-                      <Label>Preço (R$) *</Label>
+                      <Label>Preço de Custo (R$)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                        <Input className="pl-10" type="number" step="0.01" min="0" value={form.cost_price} onChange={(e) => setForm({ ...form, cost_price: e.target.value })} placeholder="0,00" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Preço de Venda (R$) *</Label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
                         <Input className="pl-10" type="number" step="0.01" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required placeholder="0,00" />
@@ -443,6 +455,43 @@ export default function ProductsPage() {
                     </div>
                     <div className="space-y-2"><Label>Estoque</Label><Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
                   </div>
+                  {/* Margin indicator */}
+                  {parseFloat(form.cost_price) > 0 && parseFloat(form.price) > 0 && (() => {
+                    const cost = parseFloat(form.cost_price);
+                    const sale = parseFloat(form.price);
+                    const margin = ((sale - cost) / sale) * 100;
+                    const isOk = margin >= marginGoal;
+                    const isTooHigh = margin > marginGoal * 2;
+                    const isLow = margin < marginGoal;
+                    const suggestedPrice = cost / (1 - marginGoal / 100);
+                    return (
+                      <div className={`flex items-center gap-3 rounded-lg border p-3 ${isOk && !isTooHigh ? 'border-green-500/30 bg-green-50 dark:bg-green-950/20' : isTooHigh ? 'border-yellow-500/30 bg-yellow-50 dark:bg-yellow-950/20' : 'border-red-500/30 bg-red-50 dark:bg-red-950/20'}`}>
+                        {isOk && !isTooHigh ? (
+                          <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
+                        ) : isTooHigh ? (
+                          <TrendingUp className="h-5 w-5 text-yellow-600 shrink-0" />
+                        ) : (
+                          <TrendingDown className="h-5 w-5 text-red-600 shrink-0" />
+                        )}
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">
+                            Margem de Lucro: <span className="font-bold">{margin.toFixed(1)}%</span>
+                            <span className="text-muted-foreground ml-2">(Meta: {marginGoal}%)</span>
+                          </p>
+                          {isLow && (
+                            <p className="text-xs text-red-600 mt-0.5">
+                              ⚠️ Abaixo da meta. Preço sugerido: <span className="font-semibold">R$ {suggestedPrice.toFixed(2)}</span>
+                            </p>
+                          )}
+                          {isTooHigh && (
+                            <p className="text-xs text-yellow-600 mt-0.5">
+                              Margem muito acima da meta — verifique competitividade
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div className="space-y-2"><Label>Badge</Label><Input value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} placeholder="ex: Mais Vendido" /></div>
                   <div className="flex items-center justify-between rounded-lg border border-border p-3 mt-2">
                     <div>
