@@ -427,7 +427,7 @@ export default function ComboDetail() {
               <div className="rounded-xl bg-muted/50 p-4">
                 <h2 className="text-lg font-bold text-foreground mb-3">Sobre este Combo</h2>
                 {combo.description.startsWith("<") ? (
-                  <div className="prose prose-sm max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: combo.description }} />
+                  <div className="prose prose-sm max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: sanitizeHtml(combo.description) }} />
                 ) : (
                   <p className="text-muted-foreground text-sm">{combo.description}</p>
                 )}
