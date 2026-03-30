@@ -21,6 +21,8 @@ const FinalCTA = lazy(() => import("@/components/FinalCTA"));
 const InstagramFeed = lazy(() => import("@/components/InstagramFeed"));
 
 const DEFAULT_ORDER = [
+  "section_highlight_banner",
+  "section_flash_sale",
   "section_hero_visible",
   "section_featured_visible",
   "section_benefits_visible",
