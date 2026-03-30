@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import SEOHead from "@/components/SEOHead";
 import FeaturedCarousel from "@/components/FeaturedCarousel";
+import HighlightBanner from "@/components/HighlightBanner";
 import BenefitsSection from "@/components/BenefitsSection";
 import AllProducts from "@/components/AllProducts";
 import FlashSaleCarousel from "@/components/FlashSaleCarousel";
@@ -33,6 +34,7 @@ const Index = () => {
       <main>
         {show("section_hero_visible") && <HeroSection />}
         {show("section_featured_visible") && <FeaturedCarousel />}
+        <HighlightBanner />
         <FlashSaleCarousel />
         {show("section_benefits_visible") && <BenefitsSection />}
         {show("section_products_visible") && <AllProducts />}
