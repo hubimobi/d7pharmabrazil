@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Star, Copy, Check, Save, RefreshCw } from "lucide-react";
+import { Loader2, Star, Copy, Check, Save, RefreshCw, Pencil, X, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useProducts } from "@/hooks/useProducts";
@@ -51,6 +51,10 @@ export default function TestimonialGenerator() {
   const [result, setResult] = useState<GeneratedData | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [savingIndex, setSavingIndex] = useState<number | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editHeadline, setEditHeadline] = useState("");
+  const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
 
   const handleProductSelect = (id: string) => {
     setSelectedProductId(id);
@@ -59,7 +63,6 @@ export default function TestimonialGenerator() {
       setProductName(product.name);
       setProductDescription(product.shortDescription || product.description || "");
       setProductUrl(`/produto/${product.slug}`);
-      // Benefits will be sent separately
     }
   };
 
@@ -89,6 +92,75 @@ export default function TestimonialGenerator() {
       toast.error(e.message || "Erro ao gerar testemunhos");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startEditing = (index: number, t: Testimonial) => {
+    setEditingIndex(index);
+    setEditText(t.testimonial_text);
+    setEditHeadline(t.headline);
+  };
+
+  const cancelEditing = () => {
+    setEditingIndex(null);
+    setEditText("");
+    setEditHeadline("");
+  };
+
+  const saveEdit = (index: number) => {
+    if (!result) return;
+    const updated = { ...result };
+    updated.testimonials = [...updated.testimonials];
+    updated.testimonials[index] = {
+      ...updated.testimonials[index],
+      testimonial_text: editText,
+      headline: editHeadline,
+    };
+    setResult(updated);
+    setEditingIndex(null);
+    toast.success("Testemunho atualizado!");
+  };
+
+  const applyHeadlineVariation = (index: number, variation: string) => {
+    if (!result) return;
+    const updated = { ...result };
+    updated.testimonials = [...updated.testimonials];
+    updated.testimonials[index] = {
+      ...updated.testimonials[index],
+      headline: variation,
+    };
+    setResult(updated);
+    toast.success("Headline aplicada!");
+  };
+
+  const regenerateSingle = async (index: number, headlineHint?: string) => {
+    if (!result) return;
+    const t = result.testimonials[index];
+    setRegeneratingIndex(index);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-testimonials", {
+        body: {
+          productUrl,
+          productName,
+          productDescription,
+          quantity: 1,
+          benefits: getSelectedProductBenefits(),
+          regenerateHint: headlineHint || t.headline,
+          personaHint: `${t.persona.name}, ${t.persona.age} anos, ${t.persona.city}`,
+        },
+      });
+      if (error) throw error;
+      if (data?.success && data?.data?.testimonials?.[0]) {
+        const updated = { ...result };
+        updated.testimonials = [...updated.testimonials];
+        updated.testimonials[index] = data.data.testimonials[0];
+        setResult(updated);
+        toast.success("Testemunho regenerado!");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao regenerar");
+    } finally {
+      setRegeneratingIndex(null);
     }
   };
 
@@ -254,53 +326,122 @@ export default function TestimonialGenerator() {
                 ))}
               </div>
 
-              <p className="text-sm italic text-gray-700 mb-3">"{t.headline}"</p>
-              <p className="text-sm text-gray-600 mb-4 whitespace-pre-wrap">{t.testimonial_text}</p>
+              {editingIndex === i ? (
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Headline</label>
+                    <Input
+                      value={editHeadline}
+                      onChange={(e) => setEditHeadline(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-1 block">Texto do testemunho</label>
+                    <Textarea
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      rows={4}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => saveEdit(i)} className="text-xs">
+                      <Check className="h-3 w-3 mr-1" /> Salvar Edição
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={cancelEditing} className="text-xs">
+                      <X className="h-3 w-3 mr-1" /> Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm italic text-gray-700 mb-3">"{t.headline}"</p>
+                  <p className="text-sm text-gray-600 mb-4 whitespace-pre-wrap">{t.testimonial_text}</p>
+                </>
+              )}
 
-              {t.headline_variations && t.headline_variations.length > 0 && (
+              {t.headline_variations && t.headline_variations.length > 0 && editingIndex !== i && (
                 <div className="mb-3">
-                  <p className="text-xs font-medium text-gray-500 mb-1">Variações de headline:</p>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Variações de headline (clique para aplicar ou regenerar):</p>
                   <div className="flex flex-wrap gap-1">
                     {t.headline_variations.map((h, hi) => (
-                      <Badge key={hi} variant="outline" className="text-xs cursor-pointer hover:bg-gray-100"
-                        onClick={() => copyToClipboard(h, i * 100 + hi)}>
-                        {h}
-                      </Badge>
+                      <div key={hi} className="flex items-center gap-0.5">
+                        <Badge
+                          variant="outline"
+                          className="text-xs cursor-pointer hover:bg-primary/10 hover:border-primary transition-colors"
+                          onClick={() => applyHeadlineVariation(i, h)}
+                        >
+                          {h}
+                        </Badge>
+                        <button
+                          onClick={() => regenerateSingle(i, h)}
+                          disabled={regeneratingIndex === i}
+                          className="p-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-primary transition-colors"
+                          title="Regenerar com esta headline"
+                        >
+                          {regeneratingIndex === i ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RotateCcw className="h-3 w-3" />
+                          )}
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {t.image_prompt && (
+              {t.image_prompt && editingIndex !== i && (
                 <details className="mb-3">
                   <summary className="text-xs text-blue-600 cursor-pointer">Ver prompt de imagem</summary>
                   <p className="text-xs text-gray-500 mt-1 bg-gray-50 p-2 rounded">{t.image_prompt}</p>
                 </details>
               )}
 
-              <div className="flex gap-2 pt-2 border-t border-gray-100">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => copyToClipboard(t.testimonial_text, i)}
-                  className="text-xs"
-                >
-                  {copiedIndex === i ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
-                  {copiedIndex === i ? "Copiado" : "Copiar"}
-                </Button>
-                {selectedProductId && (
+              {editingIndex !== i && (
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => saveToProduct(t, i)}
-                    disabled={savingIndex === i}
+                    onClick={() => startEditing(i, t)}
                     className="text-xs"
                   >
-                    {savingIndex === i ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
-                    Salvar no Produto
+                    <Pencil className="h-3 w-3 mr-1" /> Editar
                   </Button>
-                )}
-              </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => regenerateSingle(i)}
+                    disabled={regeneratingIndex === i}
+                    className="text-xs"
+                  >
+                    {regeneratingIndex === i ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
+                    Regenerar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => copyToClipboard(t.testimonial_text, i)}
+                    className="text-xs"
+                  >
+                    {copiedIndex === i ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                    {copiedIndex === i ? "Copiado" : "Copiar"}
+                  </Button>
+                  {selectedProductId && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => saveToProduct(t, i)}
+                      disabled={savingIndex === i}
+                      className="text-xs"
+                    >
+                      {savingIndex === i ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
+                      Salvar no Produto
+                    </Button>
+                  )}
+                </div>
+              )}
             </Card>
           ))}
         </div>
