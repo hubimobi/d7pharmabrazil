@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { useProducts } from "@/hooks/useProducts";
 
 export default function AdsGenerator() {
-  const { products } = useProducts();
+  const { data: products } = useProducts();
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productName, setProductName] = useState("");
   const [productDescription, setProductDescription] = useState("");

@@ -41,7 +41,7 @@ interface GeneratedData {
 }
 
 export default function TestimonialGenerator() {
-  const { products } = useProducts();
+  const { data: products } = useProducts();
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productUrl, setProductUrl] = useState("");
   const [productName, setProductName] = useState("");
