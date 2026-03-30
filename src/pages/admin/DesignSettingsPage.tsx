@@ -264,6 +264,7 @@ export default function DesignSettingsPage() {
       section_trust_badges_visible: (form as any).section_trust_badges_visible,
       section_mailing_visible: (form as any).section_mailing_visible,
       section_instagram_visible: (form as any).section_instagram_visible,
+      design_border_style: (form as any).design_border_style,
     } as any);
   };
 
