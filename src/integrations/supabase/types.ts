@@ -987,6 +987,60 @@ export type Database = {
         }
         Relationships: []
       }
+      product_combos: {
+        Row: {
+          active: boolean
+          badge: string | null
+          created_at: string
+          description: string
+          featured: boolean
+          id: string
+          image_url: string | null
+          name: string
+          original_price: number
+          price: number
+          product_ids: Json
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          badge?: string | null
+          created_at?: string
+          description?: string
+          featured?: boolean
+          id?: string
+          image_url?: string | null
+          name: string
+          original_price?: number
+          price?: number
+          product_ids?: Json
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          badge?: string | null
+          created_at?: string
+          description?: string
+          featured?: boolean
+          id?: string
+          image_url?: string | null
+          name?: string
+          original_price?: number
+          price?: number
+          product_ids?: Json
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_faqs: {
         Row: {
           answer: string

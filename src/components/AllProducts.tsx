@@ -1,7 +1,9 @@
 import { useState, useMemo } from "react";
 import ProductCard from "@/components/ProductCard";
+import ComboCard from "@/components/ComboCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { useProducts } from "@/hooks/useProducts";
+import { useCombos } from "@/hooks/useCombos";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 
@@ -9,6 +11,7 @@ const PAGE_SIZE = 6;
 
 const AllProducts = () => {
   const { data: products, isLoading } = useProducts();
+  const { data: combos } = useCombos();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [groupFilter, setGroupFilter] = useState("all");
 
@@ -75,6 +78,16 @@ const AllProducts = () => {
           </div>
         ) : (
           <>
+            {combos && combos.length > 0 && groupFilter === "all" && (
+              <div className="mt-8 mb-4">
+                <h3 className="text-lg font-bold text-foreground mb-3">🔥 Combos</h3>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+                  {combos.map((combo) => (
+                    <ComboCard key={combo.id} combo={combo} />
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {visible.map((p) => (
                 <ProductCard key={p.id} product={p} />

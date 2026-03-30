@@ -68,6 +68,7 @@ const adminSections: MenuSection[] = [
         icon: Package,
         children: [
           { title: "Produtos", url: "/admin/produtos", icon: Package },
+          { title: "Combos", url: "/admin/combos", icon: Package },
           { title: "Prescritores", url: "/admin/prescritores", icon: Stethoscope },
           { title: "Representantes", url: "/admin/representantes", icon: Users },
         ],
