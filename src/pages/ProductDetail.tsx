@@ -41,17 +41,7 @@ const ProductDetail = () => {
   useEffect(() => {
     if (ckParam && product && !directCheckoutDone.current) {
       directCheckoutDone.current = true;
-      addItem({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image || "/placeholder.svg",
-        originalPrice: product.originalPrice,
-        weight: product.weight || 0.3,
-        height: product.height || 10,
-        width: product.width || 10,
-        length: product.length || 10,
-      });
+      addItem(product);
       const mParam = searchParams.has("m") ? "&m" : "";
       navigate(`/checkout?ck=${ckParam}${mParam}`, { replace: true });
     }
