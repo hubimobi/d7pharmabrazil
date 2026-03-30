@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Bot, UserPlus, ShoppingBag, RotateCcw, Heart, TrendingUp,
   Headphones, Calculator, ClipboardList, Stethoscope, Pencil,
-  Loader2, Sparkles, MessageCircle, Database, Users, Cpu,
+  Loader2, Sparkles, MessageCircle, Database, Users, Cpu, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import AIKnowledgeBase from "@/components/admin/AIKnowledgeBase";
