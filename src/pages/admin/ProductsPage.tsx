@@ -152,6 +152,7 @@ export default function ProductsPage() {
         seo_title: form.seo_title || null,
         seo_description: form.seo_description || null,
         seo_keywords: form.seo_keywords || null,
+        upsell_product_ids: form.upsell_product_ids,
       };
       if (image_url) payload.image_url = image_url;
 
