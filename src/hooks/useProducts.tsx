@@ -31,6 +31,7 @@ export interface Product {
   seoDescription: string;
   seoKeywords: string;
   sku: string;
+  upsellProductIds: string[];
 }
 
 // Fallback images for products without uploaded images
