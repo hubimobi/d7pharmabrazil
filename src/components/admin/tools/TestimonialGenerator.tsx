@@ -57,7 +57,7 @@ export default function TestimonialGenerator() {
     const product = products?.find((p) => p.id === id);
     if (product) {
       setProductName(product.name);
-      setProductDescription(product.short_description || product.description || "");
+      setProductDescription(product.shortDescription || product.description || "");
       setProductUrl(`/produto/${product.slug}`);
     }
   };
