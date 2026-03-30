@@ -74,6 +74,27 @@ const CheckoutPage = () => {
   const abandonmentSaved = useRef(false);
   const [cepLoading, setCepLoading] = useState(false);
 
+  // Auto-fill from saved customer data
+  useEffect(() => {
+    if (savedCustomer) {
+      setForm((prev) => ({
+        ...prev,
+        name: savedCustomer.name || prev.name,
+        cpf: savedCustomer.cpf || prev.cpf,
+        email: savedCustomer.email || prev.email,
+        phone: savedCustomer.phone || prev.phone,
+        cep: savedCustomer.cep || prev.cep,
+        street: savedCustomer.street || prev.street,
+        number: savedCustomer.number || prev.number,
+        complement: savedCustomer.complement || prev.complement,
+        neighborhood: savedCustomer.neighborhood || prev.neighborhood,
+        city: savedCustomer.city || prev.city,
+        state: savedCustomer.state || prev.state,
+      }));
+      if (isOneClick) setStep(2);
+    }
+  }, [savedCustomer, isOneClick]);
+
   const fetchAddress = useCallback(async (cep: string) => {
     setCepLoading(true);
     try {
