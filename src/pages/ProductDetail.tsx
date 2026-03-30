@@ -620,6 +620,54 @@ const ProductDetail = () => {
         </Button>
       </div>
 
+      {/* Sticky desktop bottom bar — visible when buy buttons scroll out of view */}
+      {showStickyBar && product && (
+        <div className="fixed bottom-0 inset-x-0 z-50 hidden md:block animate-fade-in">
+          <div className="border-t border-border bg-card/95 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+            <div className="container flex items-center gap-4 py-3">
+              <img
+                src={product.image}
+                alt={product.name}
+                className="h-12 w-12 rounded-xl object-cover border border-border"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{product.name}</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold text-foreground">R$ {product.price.toFixed(2).replace(".", ",")}</span>
+                  <span className="text-xs text-muted-foreground line-through">R$ {product.originalPrice.toFixed(2).replace(".", ",")}</span>
+                  <span className="text-xs text-success font-medium">ou R$ {(product.price * 0.95).toFixed(2).replace(".", ",")} no Pix</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-xl border border-border">
+                <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-3 py-1.5 text-lg font-medium text-muted-foreground hover:text-foreground">−</button>
+                <span className="min-w-[2rem] text-center text-sm font-semibold">{qty}</span>
+                <button onClick={() => setQty(Math.min(product.stock, qty + 1))} className="px-3 py-1.5 text-lg font-medium text-muted-foreground hover:text-foreground">+</button>
+              </div>
+              <Button
+                size="lg"
+                className="h-12 gap-2 rounded-xl px-6"
+                onClick={() => {
+                  addItem(product, qty);
+                  setShowUpsell(true);
+                }}
+              >
+                <ShoppingCart className="h-4 w-4" /> Adicionar ao carrinho
+              </Button>
+              <Button
+                size="lg"
+                className="h-12 gap-2 rounded-xl px-6 bg-success hover:bg-success/90 text-success-foreground"
+                onClick={() => {
+                  addItem(product, qty);
+                  navigate("/checkout");
+                }}
+              >
+                Comprar Agora
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
       <WhatsAppButton />
       {product && <UpsellDialog open={showUpsell} onOpenChange={setShowUpsell} product={product} currentQty={qty} onAddMore={(extra) => addItem(product, extra)} />}
