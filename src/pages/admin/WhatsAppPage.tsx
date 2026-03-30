@@ -430,7 +430,7 @@ function TemplatesTab() {
                   className="min-h-[180px] font-mono text-xs" />
               </div>
               <div className="flex flex-wrap gap-1">
-                {["{Nome}", "{Produto}", "{Link}", "{Cidade}"].map((v) => (
+                {["{Nome}", "{Produto}", "{Link}", "{Cidade}", "{Nome_da_Empresa}", "{Atendente}"].map((v) => (
                   <Badge key={v} variant="secondary" className="cursor-pointer text-[10px]"
                     onClick={() => { setForm({ ...form, content: form.content + " " + v }); generatePreview(form.content + " " + v); }}>
                     {v}
