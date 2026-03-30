@@ -22,6 +22,7 @@ import AIKnowledgeBase from "@/components/admin/AIKnowledgeBase";
 import AIAgentChat from "@/components/admin/AIAgentChat";
 import AIMeetingRoom from "@/components/admin/AIMeetingRoom";
 import AILLMConfig from "@/components/admin/AILLMConfig";
+import AISystemPrompts from "@/components/admin/AISystemPrompts";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Bot, UserPlus, ShoppingBag, RotateCcw, Heart, TrendingUp,
