@@ -257,8 +257,8 @@ export default function DoctorsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>CRM</Label>
-                  <Input value={form.crm} onChange={(e) => setForm({ ...form, crm: e.target.value })} />
+                  <Label>Registro Profissional</Label>
+                  <Input value={form.crm} onChange={(e) => setForm({ ...form, crm: e.target.value })} placeholder="CRM, CRN, CREFITO..." />
                 </div>
                 <div className="space-y-2">
                   <Label>Especialidade</Label>
