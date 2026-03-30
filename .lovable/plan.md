@@ -1,39 +1,40 @@
 
+## Personalizar Páginas de Erro (404 e similares)
 
-## Fix: RLS Policy Always True
+### O que será feito
 
-### Problem
-Two tables have overly permissive INSERT policies using `WITH CHECK (true)` for `anon,authenticated` roles:
-1. **`link_clicks`** — "Anyone can insert clicks" allows inserting any data without validation
-2. **`link_conversions`** — "Anyone can insert conversions" allows inserting any data without validation
+Redesenhar a página `NotFound.tsx` para seguir o padrão visual da loja, com textos em português, logo dinâmica carregada das configurações da loja, e visual alinhado ao design system existente.
 
-Service-role policies on `integration_logs`, `admin_notifications`, and `bling_tokens` also use `true`, but these are safe because `service_role` bypasses RLS entirely.
+### Alterações
 
-### Plan
+**`src/pages/NotFound.tsx`** — Reescrever completamente:
+- Importar `useStoreSettings` para obter `logo_url`, `store_name` e cores da loja
+- Exibir a logo da loja centralizada acima do código de erro
+- Traduzir todos os textos para português ("Página não encontrada", "Voltar para a loja", etc.)
+- Aplicar o visual editorial da loja: glassmorphism card, gradientes, tipografia Space Grotesk
+- Adicionar botões para "Voltar à Página Inicial" e "Ver Produtos"
+- Incluir uma mensagem amigável e humanizada
+- Usar as CSS variables do tema (`--design-title`, `--design-text`, etc.)
 
-**Single migration** to drop and recreate the two policies with proper validation:
+### Estrutura visual
 
-1. **`link_clicks`** — Require `short_link_id IS NOT NULL`
-2. **`link_conversions`** — Require `short_link_id IS NOT NULL`
-
-### Technical Details
-
-```sql
--- link_clicks: tighten INSERT
-DROP POLICY "Anyone can insert clicks" ON public.link_clicks;
-CREATE POLICY "Anyone can insert clicks" ON public.link_clicks
-  FOR INSERT TO anon, authenticated
-  WITH CHECK (short_link_id IS NOT NULL);
-
--- link_conversions: tighten INSERT
-DROP POLICY "Anyone can insert conversions" ON public.link_conversions;
-CREATE POLICY "Anyone can insert conversions" ON public.link_conversions
-  FOR INSERT TO anon, authenticated
-  WITH CHECK (short_link_id IS NOT NULL);
+```text
+┌─────────────────────────────┐
+│                             │
+│        [Logo da Loja]       │
+│                             │
+│           404               │
+│   Página não encontrada     │
+│                             │
+│  "Parece que esta página    │
+│   não existe ou foi movida" │
+│                             │
+│  [Voltar ao Início]  [Produtos] │
+│                             │
+└─────────────────────────────┘
 ```
 
-No code changes needed — the existing frontend already provides `short_link_id` when inserting clicks/conversions.
-
-### Leaked Password Finding
-The other finding (Leaked Password Protection Disabled) is an auth configuration setting that will be enabled via the auth configuration tool.
-
+### Detalhes técnicos
+- Um único arquivo modificado: `src/pages/NotFound.tsx`
+- Usa hooks existentes (`useStoreSettings`) — sem dependências novas
+- Fallback para texto "Loja" caso as settings não carreguem
