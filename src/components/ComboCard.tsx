@@ -10,7 +10,7 @@ import { useCart } from "@/hooks/useCart";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 
 const ComboCard = ({ combo }: { combo: ProductCombo }) => {
-  const { addItem } = useCart();
+  const { addItem, setComboDiscount } = useCart();
   const navigate = useNavigate();
   const { data: allProducts } = useProducts();
   const { data: settings } = useStoreSettings();

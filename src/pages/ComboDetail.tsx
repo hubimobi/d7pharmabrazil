@@ -119,10 +119,20 @@ export default function ComboDetail() {
 
   const handleAddCombo = () => {
     comboProducts.forEach((p) => addItem(p, qty));
+    const individualTotal = comboProducts.reduce((sum, p) => sum + p.price * qty, 0);
+    const comboDiscountValue = Math.max(0, individualTotal - combo.price * qty);
+    if (comboDiscountValue > 0) {
+      setComboDiscount(comboDiscountValue);
+    }
   };
 
   const handleQuickBuy = () => {
     comboProducts.forEach((p) => addItem(p, qty));
+    const individualTotal = comboProducts.reduce((sum, p) => sum + p.price * qty, 0);
+    const comboDiscountValue = Math.max(0, individualTotal - combo.price * qty);
+    if (comboDiscountValue > 0) {
+      setComboDiscount(comboDiscountValue);
+    }
     navigate("/checkout");
   };
 
