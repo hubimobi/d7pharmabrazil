@@ -4,11 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Copy, Check, UserCog, Sparkles, Users, Trophy, Globe, FileText, Package } from "lucide-react";
+import { Loader2, Copy, Check, UserCog, Sparkles, Users, Trophy, Globe, FileText, Package, Download, Table2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useProducts } from "@/hooks/useProducts";
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface CopyBlock {
   label: string;
