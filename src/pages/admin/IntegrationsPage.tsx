@@ -377,6 +377,9 @@ export default function IntegrationsPage() {
 
         {/* TikTok Shop */}
         <TikTokShopCard />
+
+        {/* Google Meu Negócio */}
+        <GoogleBusinessCard />
       </div>
 
       {/* Manual Bling Sync */}
