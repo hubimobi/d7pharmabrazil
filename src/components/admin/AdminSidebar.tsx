@@ -4,6 +4,7 @@ import {
   DollarSign, Store, Plug, ShoppingCart, Tag, ImageIcon, Megaphone,
   ShoppingBag, Contact, Mail, FileText, Palette, Settings2, Sparkles,
   UserCog, Link2, ChevronDown, ChevronRight, Wrench, RefreshCw, MessageSquare,
+  Star,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
