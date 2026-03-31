@@ -4,6 +4,7 @@ import {
   DollarSign, Store, Plug, ShoppingCart, Tag, ImageIcon, Megaphone,
   ShoppingBag, Contact, Mail, FileText, Palette, Settings2, Sparkles,
   UserCog, Link2, ChevronDown, ChevronRight, Wrench, RefreshCw, MessageSquare,
+  Star,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -85,6 +86,7 @@ const adminSections: MenuSection[] = [
         children: [
           { title: "Banners", url: "/admin/banner", icon: ImageIcon },
           { title: "PopUps", url: "/admin/popups", icon: Megaphone },
+          { title: "Feedbacks", url: "/admin/feedbacks", icon: Star },
           { title: "Leads", url: "/admin/leads", icon: Mail },
           { title: "Links", url: "/admin/links", icon: Link2 },
           { title: "Páginas", url: "/admin/paginas", icon: FileText },

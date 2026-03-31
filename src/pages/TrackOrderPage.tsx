@@ -20,6 +20,7 @@ const statusSteps = [
 interface OrderResult {
   id: string;
   customer_name: string;
+  customer_email?: string;
   items: any[];
   total: number;
   status: string;
@@ -241,7 +242,7 @@ export default function TrackOrderPage() {
                   </p>
                   <div className="flex gap-3 justify-center flex-wrap">
                     <Button asChild className="gap-2">
-                      <a href={`/feedback?pedido=${order.id}&produto=${(order.items as any[])?.[0]?.id || ""}&nome=${encodeURIComponent((order.items as any[])?.[0]?.name || "")}`}>
+                      <a href={`/feedback?pedido=${order.id}&email=${encodeURIComponent(order.customer_email || email)}`}>
                         <Gift className="h-4 w-4" />
                         Enviar Feedback
                       </a>

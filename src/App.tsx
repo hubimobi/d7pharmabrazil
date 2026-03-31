@@ -54,6 +54,7 @@ import CombosPage from "./pages/admin/CombosPage";
 import ToolsPage from "./pages/admin/ToolsPage";
 import RepurchasePage from "./pages/admin/RepurchasePage";
 import WhatsAppPage from "./pages/admin/WhatsAppPage";
+import FeedbackApprovalPage from "./pages/admin/FeedbackApprovalPage";
 import ScrollToTop from "./components/ScrollToTop";
 import FloatingCheckoutButton from "./components/FloatingCheckoutButton";
 const queryClient = new QueryClient();
@@ -131,6 +132,7 @@ const App = () => (
               <Route path="/admin/ferramentas" element={<AdminLayout><ToolsPage /></AdminLayout>} />
               <Route path="/admin/recompra" element={<AdminLayout><RepurchasePage /></AdminLayout>} />
               <Route path="/admin/whatsapp" element={<AdminLayout><WhatsAppPage /></AdminLayout>} />
+              <Route path="/admin/feedbacks" element={<AdminLayout><FeedbackApprovalPage /></AdminLayout>} />
               <Route path="/l/:code" element={<LinkRedirectPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

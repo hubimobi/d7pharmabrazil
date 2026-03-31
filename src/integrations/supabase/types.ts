@@ -1152,11 +1152,13 @@ export type Database = {
       }
       product_testimonials: {
         Row: {
+          approved: boolean
           author_image_url: string | null
           author_name: string
           content: string
           created_at: string
           id: string
+          order_id: string | null
           product_id: string
           product_image_url: string | null
           product_image_urls: Json | null
@@ -1164,11 +1166,13 @@ export type Database = {
           source: string
         }
         Insert: {
+          approved?: boolean
           author_image_url?: string | null
           author_name: string
           content: string
           created_at?: string
           id?: string
+          order_id?: string | null
           product_id: string
           product_image_url?: string | null
           product_image_urls?: Json | null
@@ -1176,11 +1180,13 @@ export type Database = {
           source?: string
         }
         Update: {
+          approved?: boolean
           author_image_url?: string | null
           author_name?: string
           content?: string
           created_at?: string
           id?: string
+          order_id?: string | null
           product_id?: string
           product_image_url?: string | null
           product_image_urls?: Json | null
@@ -1188,6 +1194,13 @@ export type Database = {
           source?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "product_testimonials_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_testimonials_product_id_fkey"
             columns: ["product_id"]
@@ -1730,6 +1743,8 @@ export type Database = {
           goal_monthly_revenue: number | null
           goal_profit_margin: number | null
           goal_upsell: number | null
+          google_business_place_id: string | null
+          google_business_review_url: string | null
           gtm_id: string | null
           hero_badges: Json | null
           hero_btn1_bg_color: string | null
@@ -1868,6 +1883,8 @@ export type Database = {
           goal_monthly_revenue?: number | null
           goal_profit_margin?: number | null
           goal_upsell?: number | null
+          google_business_place_id?: string | null
+          google_business_review_url?: string | null
           gtm_id?: string | null
           hero_badges?: Json | null
           hero_btn1_bg_color?: string | null
@@ -2006,6 +2023,8 @@ export type Database = {
           goal_monthly_revenue?: number | null
           goal_profit_margin?: number | null
           goal_upsell?: number | null
+          google_business_place_id?: string | null
+          google_business_review_url?: string | null
           gtm_id?: string | null
           hero_badges?: Json | null
           hero_btn1_bg_color?: string | null

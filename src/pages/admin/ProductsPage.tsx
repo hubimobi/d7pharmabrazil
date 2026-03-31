@@ -788,14 +788,7 @@ export default function ProductsPage() {
                   {editId && (
                     <div className="rounded-lg border border-dashed p-3 bg-muted/30 space-y-2">
                       <p className="text-sm font-medium">📩 Link para Feedback do Cliente</p>
-                      <div className="flex gap-2">
-                        <Input readOnly value={`${window.location.origin}/feedback?pedido=&produto=${editId}&nome=${encodeURIComponent(form.name)}`} className="text-xs" />
-                        <Button type="button" variant="outline" size="sm" onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/feedback?pedido=&produto=${editId}&nome=${encodeURIComponent(form.name)}`);
-                          toast({ title: "Link copiado!" });
-                        }}>Copiar</Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Envie esse link por WhatsApp ou email para o cliente deixar seu depoimento.</p>
+                      <p className="text-xs text-muted-foreground">O link de feedback é enviado automaticamente ao cliente pela página de rastreio do pedido. Gerencie os feedbacks recebidos em <strong>Marketing → Feedbacks</strong>.</p>
                     </div>
                   )}
 

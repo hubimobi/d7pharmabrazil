@@ -377,6 +377,9 @@ export default function IntegrationsPage() {
 
         {/* TikTok Shop */}
         <TikTokShopCard />
+
+        {/* Google Meu Negócio */}
+        <GoogleBusinessCard />
       </div>
 
       {/* Manual Bling Sync */}
@@ -993,6 +996,77 @@ function TikTokShopCard() {
             </li>
           </ul>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GoogleBusinessCard() {
+  const { data: settings } = useStoreSettings();
+  const qc = useQueryClient();
+  const [placeId, setPlaceId] = useState((settings as any)?.google_business_place_id || "");
+  const [reviewUrl, setReviewUrl] = useState((settings as any)?.google_business_review_url || "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setPlaceId((settings as any)?.google_business_place_id || "");
+      setReviewUrl((settings as any)?.google_business_review_url || "");
+    }
+  }, [settings]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("store_settings").update({
+        google_business_place_id: placeId,
+        google_business_review_url: reviewUrl,
+      } as any).eq("id", (settings as any)?.id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["store-settings"] });
+      toast.success("Configurações do Google salvas!");
+    } catch (err: any) {
+      toast.error("Erro: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isConfigured = !!reviewUrl;
+
+  return (
+    <Card className={!isConfigured ? "opacity-75" : ""}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          Google Meu Negócio
+          {isConfigured ? (
+            <Badge variant="default">Configurado</Badge>
+          ) : (
+            <Badge variant="outline">Não configurado</Badge>
+          )}
+        </CardTitle>
+        <CardDescription>
+          Vincule avaliações do Google Meu Negócio para redirecionar feedbacks aprovados.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>Place ID do Google</Label>
+          <Input placeholder="ChIJ..." value={placeId} onChange={(e) => setPlaceId(e.target.value)} />
+          <p className="text-xs text-muted-foreground">
+            Encontre em <a href="https://developers.google.com/maps/documentation/places/web-service/place-id-finder" target="_blank" rel="noopener noreferrer" className="text-primary underline">Place ID Finder</a>
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label>URL de Avaliação do Google</Label>
+          <Input placeholder="https://search.google.com/local/writereview?placeid=..." value={reviewUrl} onChange={(e) => setReviewUrl(e.target.value)} />
+          <p className="text-xs text-muted-foreground">
+            Gere em: <code className="bg-muted px-1 rounded">https://search.google.com/local/writereview?placeid=SEU_PLACE_ID</code>
+          </p>
+        </div>
+        <Button onClick={handleSave} disabled={saving} size="sm">
+          {saving ? "Salvando..." : "Salvar Configurações"}
+        </Button>
       </CardContent>
     </Card>
   );

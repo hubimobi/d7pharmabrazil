@@ -78,6 +78,7 @@ const ProductDetail = () => {
         .from("product_testimonials")
         .select("*")
         .eq("product_id", product!.id)
+        .eq("approved", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
