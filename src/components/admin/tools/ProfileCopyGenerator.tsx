@@ -17,7 +17,16 @@ interface QuestionRow {
   jornada: string;
   pergunta: string;
   resposta: string;
+  copy: string;
+  cta_copy: string;
 }
+
+const COPY_METHOD_OPTIONS = [
+  { value: "venda", label: "V.E.N.D.A", desc: "Validação → Explicação → Nova visão → Direção → Abertura → Saída" },
+  { value: "aida", label: "A.I.D.A", desc: "Atenção → Interesse → Desejo → Ação" },
+  { value: "corte", label: "C.O.R.T.E", desc: "Confronto → Oportunidade → Risco → Transição → Engajamento" },
+  { value: "ccp", label: "C.C.P", desc: "Cabeça (Head) → Corpo (Body) → Pés (CTA)" },
+];
 
 interface CopyBlock {
   label: string;
@@ -143,6 +152,7 @@ export default function ProfileCopyGenerator() {
   const [questionsResult, setQuestionsResult] = useState<QuestionRow[] | null>(null);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [showQuestionsTable, setShowQuestionsTable] = useState(false);
+  const [copyMethod, setCopyMethod] = useState("venda");
 
   const handleProductSelect = (id: string) => {
     setSelectedProductId(id);
@@ -177,9 +187,8 @@ export default function ProfileCopyGenerator() {
     try {
       const payload = getBodyPayload();
       const mode = platform === "caixinha_pergunta" ? "caixinha_pergunta" : "quizz_conversao";
-      const profileType = discProfile !== "D" && discProfile !== "all" ? "disc" : (oceanTrait !== "openness" ? "ocean" : "disc");
       const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
-        body: { ...payload, discProfile, oceanTrait, funnelStage, platform, mode },
+        body: { ...payload, discProfile, oceanTrait, funnelStage, platform, mode, copyMethod: platform === "caixinha_pergunta" ? copyMethod : undefined },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -198,16 +207,22 @@ export default function ProfileCopyGenerator() {
 
   const exportQuestionsCSV = () => {
     if (!questionsResult?.length) { toast.error("Nenhuma pergunta gerada"); return; }
-    const headers = ["Perfil", "Jornada", "Pergunta", "Resposta"];
+    const isCaixinha = platform === "caixinha_pergunta";
+    const headers = isCaixinha ? ["Perfil", "Jornada", "Pergunta", "Resposta", "Copy", "CTA"] : ["Perfil", "Jornada", "Pergunta", "Resposta"];
     const csvContent = [
       headers.join(","),
-      ...questionsResult.map(r => [r.perfil, r.jornada, r.pergunta, r.resposta].map(v => `"${(v || "").replace(/"/g, '""')}"`).join(","))
+      ...questionsResult.map(r => {
+        const cols = isCaixinha
+          ? [r.perfil, r.jornada, r.pergunta, r.resposta, r.copy || "", r.cta_copy || ""]
+          : [r.perfil, r.jornada, r.pergunta, r.resposta];
+        return cols.map(v => `"${(v || "").replace(/"/g, '""')}"`).join(",");
+      })
     ].join("\n");
     const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${platform === "caixinha_pergunta" ? "caixinha_perguntas" : "quizz_conversao"}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `${isCaixinha ? "caixinha_perguntas" : "quizz_conversao"}_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     toast.success("CSV exportado!");
@@ -518,6 +533,30 @@ export default function ProfileCopyGenerator() {
             </Select>
           </div>
         </div>
+
+        {/* Copy Method selector for Caixinha */}
+        {platform === "caixinha_pergunta" && (
+          <div className="mb-4 p-4 rounded-xl border border-pink-200 bg-pink-50/50">
+            <label className="text-sm font-medium mb-2 block text-pink-800">Método de Resposta</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              {COPY_METHOD_OPTIONS.map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setCopyMethod(m.value)}
+                  className={`p-3 rounded-lg border text-left transition-all ${
+                    copyMethod === m.value
+                      ? "border-pink-500 bg-pink-100 ring-2 ring-pink-300"
+                      : "border-gray-200 bg-white hover:border-pink-300"
+                  }`}
+                >
+                  <p className={`text-sm font-bold ${copyMethod === m.value ? "text-pink-800" : "text-gray-700"}`}>{m.label}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{m.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
           <Button onClick={handleGenerate} disabled={isLoading} className="w-full sm:w-auto">
@@ -891,6 +930,12 @@ export default function ProfileCopyGenerator() {
                     <TableHead className="text-xs whitespace-nowrap">Jornada</TableHead>
                     <TableHead className="text-xs">Pergunta</TableHead>
                     <TableHead className="text-xs">Resposta</TableHead>
+                    {platform === "caixinha_pergunta" && (
+                      <>
+                        <TableHead className="text-xs">Copy</TableHead>
+                        <TableHead className="text-xs">CTA</TableHead>
+                      </>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -902,6 +947,12 @@ export default function ProfileCopyGenerator() {
                       <TableCell className="text-xs whitespace-nowrap">{row.jornada}</TableCell>
                       <TableCell className="text-sm font-medium">{row.pergunta}</TableCell>
                       <TableCell className="text-xs text-muted-foreground max-w-[250px]">{row.resposta}</TableCell>
+                      {platform === "caixinha_pergunta" && (
+                        <>
+                          <TableCell className="text-xs max-w-[300px] whitespace-pre-wrap">{row.copy}</TableCell>
+                          <TableCell className="text-xs font-medium text-indigo-700 max-w-[150px]">{row.cta_copy}</TableCell>
+                        </>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -918,7 +969,9 @@ export default function ProfileCopyGenerator() {
                   <span className="text-[10px] text-muted-foreground">{row.jornada}</span>
                 </div>
                 <p className="text-sm font-semibold mb-1">"{row.pergunta}"</p>
-                <p className="text-xs text-muted-foreground">{row.resposta}</p>
+                <p className="text-xs text-muted-foreground mb-1">{row.resposta}</p>
+                {row.copy && <p className="text-xs text-gray-700 whitespace-pre-wrap border-t border-gray-100 pt-1 mt-1">{row.copy}</p>}
+                {row.cta_copy && <p className="text-xs font-medium text-indigo-700 mt-1">{row.cta_copy}</p>}
                 <Button
                   size="sm"
                   variant="ghost"
