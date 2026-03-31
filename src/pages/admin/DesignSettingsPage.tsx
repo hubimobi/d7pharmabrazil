@@ -297,6 +297,7 @@ export default function DesignSettingsPage() {
       section_instagram_visible: (form as any).section_instagram_visible,
       design_border_style: (form as any).design_border_style,
       section_order: normalizedOrder,
+      products_sidebar_enabled: (form as any).products_sidebar_enabled,
     } as any);
   };
 
