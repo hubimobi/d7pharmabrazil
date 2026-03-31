@@ -930,6 +930,12 @@ export default function ProfileCopyGenerator() {
                     <TableHead className="text-xs whitespace-nowrap">Jornada</TableHead>
                     <TableHead className="text-xs">Pergunta</TableHead>
                     <TableHead className="text-xs">Resposta</TableHead>
+                    {platform === "caixinha_pergunta" && (
+                      <>
+                        <TableHead className="text-xs">Copy</TableHead>
+                        <TableHead className="text-xs">CTA</TableHead>
+                      </>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -941,6 +947,12 @@ export default function ProfileCopyGenerator() {
                       <TableCell className="text-xs whitespace-nowrap">{row.jornada}</TableCell>
                       <TableCell className="text-sm font-medium">{row.pergunta}</TableCell>
                       <TableCell className="text-xs text-muted-foreground max-w-[250px]">{row.resposta}</TableCell>
+                      {platform === "caixinha_pergunta" && (
+                        <>
+                          <TableCell className="text-xs max-w-[300px] whitespace-pre-wrap">{row.copy}</TableCell>
+                          <TableCell className="text-xs font-medium text-indigo-700 max-w-[150px]">{row.cta_copy}</TableCell>
+                        </>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
