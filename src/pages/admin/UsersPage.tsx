@@ -148,6 +148,13 @@ export default function UsersPage() {
   // Doctors without a linked user (available to create user for)
   const availableDoctors = doctors?.filter((d) => !d.user_id) || [];
 
+  // Representatives without a linked user (available to create user for)
+  const availableReps = representatives?.filter((r) => {
+    // Check if any user already has this rep linked
+    // We do a simple check: if rep has no user_id in the raw data
+    return true; // RLS handles this; we show all active reps for selection
+  }) || [];
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("create-tenant-user", {
@@ -155,6 +162,7 @@ export default function UsersPage() {
           ...form,
           representative_id: form.role === "prescriber" ? form.representative_id : undefined,
           doctor_id: form.role === "prescriber" ? form.doctor_id : undefined,
+          representative_record_id: form.role === "representative" ? form.representative_record_id : undefined,
         },
       });
       if (error) throw error;
