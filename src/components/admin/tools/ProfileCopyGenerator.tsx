@@ -391,8 +391,8 @@ export default function ProfileCopyGenerator() {
     toast.success("CSV exportado com sucesso!");
   };
 
-  const hasAnyResult = !!(result || allDiscResult || allOceanResult);
-  const isLoading = loading || loadingAll || loadingOcean;
+  const hasAnyResult = !!(result || allDiscResult || allOceanResult || questionsResult);
+  const isLoading = loading || loadingAll || loadingOcean || loadingQuestions;
 
   return (
     <div className="space-y-6">
