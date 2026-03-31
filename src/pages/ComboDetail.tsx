@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard, Copy, MessageCircle, ChevronDown, ChevronUp, Headphones, Package } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -33,6 +33,7 @@ export default function ComboDetail() {
   const { data: allProducts } = useProducts();
   const { addItem, setComboDiscount } = useCart();
   const { data: settings } = useStoreSettings();
+  const [searchParams] = useSearchParams();
 
   const combo = combos?.find((c) => c.slug === slug);
   const comboProducts = combo
@@ -133,7 +134,9 @@ export default function ComboDetail() {
     if (comboDiscountValue > 0) {
       setComboDiscount(comboDiscountValue);
     }
-    navigate("/checkout");
+    const cupom = searchParams.get("cupom") || searchParams.get("Cupom") || searchParams.get("CUPOM");
+    const cupomParam = cupom ? `?cupom=${encodeURIComponent(cupom)}` : "";
+    navigate(`/checkout${cupomParam}`);
   };
 
   return (

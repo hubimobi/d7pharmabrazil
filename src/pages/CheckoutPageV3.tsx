@@ -162,7 +162,7 @@ const CheckoutPageV3 = () => {
       const payload: any = {
         customer_name: form.name, customer_email: form.email, customer_cpf: form.cpf, customer_phone: form.phone,
         billing_type: form.paymentMethod === "pix" ? "PIX" : form.paymentMethod === "boleto" ? "BOLETO" : "CREDIT_CARD",
-        value: paymentValue, items: orderItems, doctor_id: null,
+        value: paymentValue, items: orderItems, doctor_id: getActiveRef()?.doctorId || null,
         shipping_address: { street: form.street, number: form.number, complement: form.complement, neighborhood: form.neighborhood, city: form.city, state: form.state, cep: form.cep },
         coupon_code: coupon || null,
       };
@@ -190,6 +190,15 @@ const CheckoutPageV3 = () => {
       if (ref && data.order_id) {
         supabase.from("link_conversions").insert({ short_link_id: ref.linkId, order_id: data.order_id, order_total: paymentValue }).then(() => {});
         supabase.rpc("increment_link_conversions", { link_id: ref.linkId }).then(() => {});
+        // GA4 purchase attributed
+        if (typeof window !== "undefined" && (window as any).gtag) {
+          (window as any).gtag("event", "purchase_attributed", {
+            link_code: ref.code,
+            link_id: ref.linkId,
+            order_id: data.order_id,
+            order_total: paymentValue,
+          });
+        }
       }
 
       if (form.paymentMethod === "card" && (data.status === "CONFIRMED" || data.status === "RECEIVED")) {
