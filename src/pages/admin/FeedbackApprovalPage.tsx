@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Star, CheckCircle, XCircle, Trash2, ExternalLink, Eye, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Star, CheckCircle, XCircle, Trash2, ExternalLink, Eye, Clock, Award } from "lucide-react";
 import { toast } from "sonner";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 
