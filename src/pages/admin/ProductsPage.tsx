@@ -63,7 +63,10 @@ interface Testimonial {
   content: string;
   rating: number;
   author_image_url?: string;
+  author_image_file?: File;
   product_image_url?: string;
+  product_image_urls?: string[];
+  product_image_files?: File[];
   source?: string;
 }
 
