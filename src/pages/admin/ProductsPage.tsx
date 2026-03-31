@@ -110,6 +110,34 @@ export default function ProductsPage() {
     },
   });
 
+  // Doctors with coupons for link generator
+  const { data: doctorsWithCoupons } = useQuery({
+    queryKey: ["doctors-coupons-for-links"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("coupons")
+        .select("code, doctor_id, doctors(id, name)")
+        .not("doctor_id", "is", null)
+        .eq("active", true);
+      return (data || []).map((c: any) => ({
+        doctor_id: c.doctor_id,
+        doctor_name: c.doctors?.name || "—",
+        coupon_code: c.code,
+      }));
+    },
+  });
+
+  const linkGenUrl = (() => {
+    if (!linkGenProduct) return "";
+    const base = window.location.origin;
+    const doctor = doctorsWithCoupons?.find((d) => d.doctor_id === linkGenDoctor);
+    const params = new URLSearchParams();
+    if (doctor) params.set("cupom", doctor.coupon_code);
+    if (linkGenCheckout) params.set("ck", linkGenCheckout);
+    const qs = params.toString();
+    return `${base}/produto/${linkGenProduct.slug}${qs ? `?${qs}` : ""}`;
+  })();
+
   const save = useMutation({
     mutationFn: async () => {
       // Validate SKU uniqueness
