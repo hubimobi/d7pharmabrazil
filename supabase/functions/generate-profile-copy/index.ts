@@ -44,7 +44,7 @@ serve(async (req) => {
     const isAdmin = (roles || []).some((r: any) => ["admin","super_admin","administrador","suporte","gestor","financeiro"].includes(r.role));
     if (!isAdmin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform } = await req.json();
+    const { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform, mode } = await req.json();
 
     if (!productName) {
       return new Response(JSON.stringify({ error: "Nome do produto é obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -86,7 +86,42 @@ REGRAS OBRIGATÓRIAS:
 - Cada copy deve ser pronta para copiar e colar
 - Responda SEMPRE em JSON válido`;
 
-    const userPrompt = `Gere copies de alta conversão para:
+    let userPrompt: string;
+
+    if (mode === "all_disc") {
+      userPrompt = `Gere UMA copy de alta conversão para CADA perfil DISC (D, I, S, C) para o mesmo produto.
+
+PRODUTO: ${productName}
+DESCRIÇÃO: ${productDescription || "N/A"}
+BENEFÍCIOS: ${benefits || "N/A"}
+PLATAFORMA: ${platform || "geral"}
+TRAÇO OCEAN: ${oceanMap[oceanTrait] || oceanTrait}
+FASE DO FUNIL: ${funnelMap[funnelStage] || funnelStage}
+
+Para cada perfil, adapte o tom, os gatilhos e a linguagem. Também estime uma performance de conversão de 0 a 100 para cada perfil.
+
+Retorne JSON com esta estrutura EXATA:
+{
+  "profiles": {
+    "D": {
+      "profile_summary": "Como a copy foi adaptada para Dominância",
+      "headline": "...",
+      "subheadline": "...",
+      "body_blocks": ["bloco 1", "bloco 2", "bloco 3"],
+      "cta": "...",
+      "triggers_used": ["gatilho 1", "gatilho 2"],
+      "estimated_performance": 85,
+      "tone": "descrição curta do tom usado"
+    },
+    "I": { ... mesmo formato ... },
+    "S": { ... mesmo formato ... },
+    "C": { ... mesmo formato ... }
+  },
+  "best_profile": "D ou I ou S ou C — qual tem maior potencial de conversão",
+  "comparison_notes": "Análise comparativa entre os 4 perfis"
+}`;
+    } else {
+      userPrompt = `Gere copies de alta conversão para:
 
 PRODUTO: ${productName}
 DESCRIÇÃO: ${productDescription || "N/A"}
@@ -130,7 +165,7 @@ Retorne JSON com esta estrutura EXATA:
   "avoid_words": ["palavras a evitar para esse perfil"],
   "power_words": ["palavras de poder recomendadas"]
 }`;
-
+    }
     const temperature = customPrompt?.temperature || 0.8;
 
     let response = await fetch(llm.apiUrl, {

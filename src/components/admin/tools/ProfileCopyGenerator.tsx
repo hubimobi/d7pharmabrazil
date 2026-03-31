@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Copy, Check, UserCog, Sparkles } from "lucide-react";
+import { Loader2, Copy, Check, UserCog, Sparkles, Users, Trophy } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -27,12 +27,43 @@ interface ProfileCopyResult {
   power_words: string[];
 }
 
+interface AllDiscProfile {
+  profile_summary: string;
+  headline: string;
+  subheadline: string;
+  body_blocks: string[];
+  cta: string;
+  triggers_used: string[];
+  estimated_performance: number;
+  tone: string;
+}
+
+interface AllDiscResult {
+  profiles: Record<string, AllDiscProfile>;
+  best_profile: string;
+  comparison_notes: string;
+}
+
 const DISC_OPTIONS = [
-  { value: "D", label: "D — Dominância", desc: "Direto, resultado, rápido" },
-  { value: "I", label: "I — Influência", desc: "Emocional, empolgante, social" },
-  { value: "S", label: "S — Estabilidade", desc: "Seguro, confiável, tranquilo" },
-  { value: "C", label: "C — Conformidade", desc: "Lógico, técnico, detalhado" },
+  { value: "D", label: "D — Dominância", desc: "Direto, resultado, rápido", color: "bg-red-100 text-red-800 border-red-300" },
+  { value: "I", label: "I — Influência", desc: "Emocional, empolgante, social", color: "bg-yellow-100 text-yellow-800 border-yellow-300" },
+  { value: "S", label: "S — Estabilidade", desc: "Seguro, confiável, tranquilo", color: "bg-green-100 text-green-800 border-green-300" },
+  { value: "C", label: "C — Conformidade", desc: "Lógico, técnico, detalhado", color: "bg-blue-100 text-blue-800 border-blue-300" },
 ];
+
+const DISC_COLORS: Record<string, { bar: string; badge: string; bg: string }> = {
+  D: { bar: "bg-red-500", badge: "bg-red-100 text-red-800 border-red-300", bg: "border-red-200" },
+  I: { bar: "bg-yellow-500", badge: "bg-yellow-100 text-yellow-800 border-yellow-300", bg: "border-yellow-200" },
+  S: { bar: "bg-green-500", badge: "bg-green-100 text-green-800 border-green-300", bg: "border-green-200" },
+  C: { bar: "bg-blue-500", badge: "bg-blue-100 text-blue-800 border-blue-300", bg: "border-blue-200" },
+};
+
+const DISC_NAMES: Record<string, string> = {
+  D: "Dominância",
+  I: "Influência",
+  S: "Estabilidade",
+  C: "Conformidade",
+};
 
 const OCEAN_OPTIONS = [
   { value: "openness", label: "Abertura", desc: "Inovação e criatividade" },
@@ -69,7 +100,9 @@ export default function ProfileCopyGenerator() {
   const [funnelStage, setFunnelStage] = useState("curious");
   const [platform, setPlatform] = useState("geral");
   const [loading, setLoading] = useState(false);
+  const [loadingAll, setLoadingAll] = useState(false);
   const [result, setResult] = useState<ProfileCopyResult | null>(null);
+  const [allDiscResult, setAllDiscResult] = useState<AllDiscResult | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const handleProductSelect = (id: string) => {
@@ -87,6 +120,7 @@ export default function ProfileCopyGenerator() {
     if (!productName) { toast.error("Informe o produto"); return; }
     setLoading(true);
     setResult(null);
+    setAllDiscResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
         body: { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform },
@@ -106,13 +140,39 @@ export default function ProfileCopyGenerator() {
     }
   };
 
-  const copyFull = (copy: CopyBlock, key: string) => {
+  const handleGenerateAllDisc = async () => {
+    if (!productName) { toast.error("Informe o produto"); return; }
+    setLoadingAll(true);
+    setAllDiscResult(null);
+    setResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
+        body: { productName, productDescription, benefits, oceanTrait, funnelStage, platform, mode: "all_disc" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.success && data.data?.profiles) {
+        setAllDiscResult(data.data);
+        toast.success("Variações por perfil geradas!");
+      } else {
+        toast.error("Resposta inesperada da IA");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao gerar");
+    } finally {
+      setLoadingAll(false);
+    }
+  };
+
+  const copyFull = (copy: { headline: string; subheadline: string; body_blocks: string[]; cta: string }, key: string) => {
     const full = `${copy.headline}\n\n${copy.subheadline}\n\n${copy.body_blocks.join("\n\n")}\n\n${copy.cta}`;
     navigator.clipboard.writeText(full);
     setCopiedKey(key);
     toast.success("Copy copiada!");
     setTimeout(() => setCopiedKey(null), 2000);
   };
+
+  const isLoading = loading || loadingAll;
 
   return (
     <div className="space-y-6">
@@ -126,7 +186,6 @@ export default function ProfileCopyGenerator() {
           Gere copies de alta conversão personalizadas por perfil DISC, OCEAN e fase do funil.
         </p>
 
-        {/* Product */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="text-sm font-medium mb-1 block">Selecionar Produto</label>
@@ -156,7 +215,6 @@ export default function ProfileCopyGenerator() {
           </div>
         </div>
 
-        {/* Profile Selectors */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div>
             <label className="text-sm font-medium mb-1 block">Perfil DISC</label>
@@ -213,16 +271,123 @@ export default function ProfileCopyGenerator() {
           </div>
         </div>
 
-        <Button onClick={handleGenerate} disabled={loading} className="w-full md:w-auto">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-          {loading ? "Gerando Copies..." : "Gerar Copy por Perfil"}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button onClick={handleGenerate} disabled={isLoading} className="w-full sm:w-auto">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            {loading ? "Gerando..." : "Gerar Copy por Perfil"}
+          </Button>
+          <Button onClick={handleGenerateAllDisc} disabled={isLoading} variant="outline" className="w-full sm:w-auto border-indigo-300 text-indigo-700 hover:bg-indigo-50">
+            {loadingAll ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Users className="h-4 w-4 mr-2" />}
+            {loadingAll ? "Gerando 4 perfis..." : "Gerar Variações por Perfil Automaticamente"}
+          </Button>
+        </div>
       </Card>
 
-      {/* Results */}
+      {/* ===== ALL DISC COMPARISON VIEW ===== */}
+      {allDiscResult && (
+        <>
+          {/* Performance Comparison Bar */}
+          <Card className="p-5 bg-white border border-gray-200 rounded-2xl">
+            <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-yellow-500" />
+              Comparação de Performance Estimada
+            </h3>
+            <div className="space-y-3">
+              {(["D", "I", "S", "C"] as const).map((key) => {
+                const profile = allDiscResult.profiles[key];
+                if (!profile) return null;
+                const perf = profile.estimated_performance || 0;
+                const isBest = allDiscResult.best_profile?.includes(key);
+                return (
+                  <div key={key} className="flex items-center gap-3">
+                    <Badge className={`text-xs border w-20 justify-center ${DISC_COLORS[key].badge}`}>
+                      {key} — {DISC_NAMES[key]}
+                    </Badge>
+                    <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden relative">
+                      <div
+                        className={`h-full rounded-full transition-all ${DISC_COLORS[key].bar}`}
+                        style={{ width: `${perf}%` }}
+                      />
+                      {isBest && (
+                        <Trophy className="h-3 w-3 text-yellow-600 absolute right-2 top-1" />
+                      )}
+                    </div>
+                    <span className="text-sm font-bold w-12 text-right">{perf}%</span>
+                  </div>
+                );
+              })}
+            </div>
+            {allDiscResult.comparison_notes && (
+              <p className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-100">
+                {allDiscResult.comparison_notes}
+              </p>
+            )}
+          </Card>
+
+          {/* Side-by-side D/I/S/C Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(["D", "I", "S", "C"] as const).map((key) => {
+              const profile = allDiscResult.profiles[key];
+              if (!profile) return null;
+              const isBest = allDiscResult.best_profile?.includes(key);
+              return (
+                <Card key={key} className={`p-5 bg-white border-2 rounded-2xl ${isBest ? DISC_COLORS[key].bg + " ring-2 ring-offset-1 ring-yellow-400" : "border-gray-200"}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Badge className={`text-xs border ${DISC_COLORS[key].badge}`}>
+                        {key} — {DISC_NAMES[key]}
+                      </Badge>
+                      {isBest && <Badge className="text-[10px] bg-yellow-100 text-yellow-800 border-yellow-300">⭐ Melhor</Badge>}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={() => copyFull(profile, `disc-${key}`)}
+                    >
+                      {copiedKey === `disc-${key}` ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                      Copiar
+                    </Button>
+                  </div>
+
+                  {profile.tone && (
+                    <p className="text-[10px] text-gray-400 mb-2 italic">Tom: {profile.tone}</p>
+                  )}
+
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-[10px] font-medium text-gray-400">Headline:</p>
+                      <p className="text-sm font-bold text-gray-900">{profile.headline}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium text-gray-400">Subheadline:</p>
+                      <p className="text-xs text-gray-700">{profile.subheadline}</p>
+                    </div>
+                    {profile.body_blocks?.map((block, bi) => (
+                      <p key={bi} className="text-xs text-gray-600 whitespace-pre-wrap">{block}</p>
+                    ))}
+                    <div className="pt-2 border-t border-gray-100">
+                      <p className="text-[10px] font-medium text-gray-400">CTA:</p>
+                      <p className="text-xs font-bold text-indigo-700">{profile.cta}</p>
+                    </div>
+                    {profile.triggers_used?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {profile.triggers_used.map((t, ti) => (
+                          <Badge key={ti} variant="outline" className="text-[9px]">{t}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* ===== SINGLE PROFILE RESULTS ===== */}
       {result && (
         <>
-          {/* Profile Summary */}
           {result.profile_summary && (
             <Card className="p-5 bg-indigo-50 border border-indigo-200 rounded-2xl">
               <h3 className="text-sm font-semibold text-indigo-800 mb-1">🧠 Perfil Comportamental</h3>
@@ -230,22 +395,15 @@ export default function ProfileCopyGenerator() {
             </Card>
           )}
 
-          {/* Copies */}
           {result.copies?.map((copy, i) => (
             <Card key={i} className="p-5 bg-white border border-gray-200 rounded-2xl">
               <div className="flex items-center justify-between mb-3">
                 <Badge variant="secondary" className="text-xs">{copy.label}</Badge>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs"
-                  onClick={() => copyFull(copy, `copy-${i}`)}
-                >
+                <Button size="sm" variant="outline" className="text-xs" onClick={() => copyFull(copy, `copy-${i}`)}>
                   {copiedKey === `copy-${i}` ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
                   Copiar Tudo
                 </Button>
               </div>
-
               <div className="space-y-3">
                 <div>
                   <p className="text-xs font-medium text-gray-500">Headline:</p>
@@ -277,7 +435,6 @@ export default function ProfileCopyGenerator() {
             </Card>
           ))}
 
-          {/* Tone Guide & Words */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {result.tone_guide && (
               <Card className="p-4 bg-white border border-gray-200 rounded-2xl">
