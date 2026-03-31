@@ -151,7 +151,11 @@ export default function UsersPage() {
   const createMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("create-tenant-user", {
-        body: { ...form, representative_id: form.role === "prescriber" ? form.representative_id : undefined },
+        body: {
+          ...form,
+          representative_id: form.role === "prescriber" ? form.representative_id : undefined,
+          doctor_id: form.role === "prescriber" ? form.doctor_id : undefined,
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
