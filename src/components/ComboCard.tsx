@@ -32,10 +32,21 @@ const ComboCard = ({ combo }: { combo: ProductCombo }) => {
 
   const handleAddCombo = () => {
     comboProducts.forEach((p) => addItem(p, 1));
+    // Apply combo discount: difference between sum of individual prices and combo price
+    const individualTotal = comboProducts.reduce((sum, p) => sum + p.price, 0);
+    const comboDiscountValue = Math.max(0, individualTotal - combo.price);
+    if (comboDiscountValue > 0) {
+      setComboDiscount(comboDiscountValue);
+    }
   };
 
   const handleQuickBuy = () => {
     comboProducts.forEach((p) => addItem(p, 1));
+    const individualTotal = comboProducts.reduce((sum, p) => sum + p.price, 0);
+    const comboDiscountValue = Math.max(0, individualTotal - combo.price);
+    if (comboDiscountValue > 0) {
+      setComboDiscount(comboDiscountValue);
+    }
     navigate("/checkout");
   };
 
