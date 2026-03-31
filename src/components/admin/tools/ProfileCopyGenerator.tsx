@@ -157,6 +157,11 @@ export default function ProfileCopyGenerator() {
     if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
     if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
     if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
+
+    // Auto-route to batch modes based on "all" selections
+    if (discProfile === "all") { handleGenerateAllDisc(); return; }
+    if (oceanTrait === "all") { handleGenerateAllOcean(); return; }
+
     setLoading(true);
     setResult(null);
     setAllDiscResult(null);
