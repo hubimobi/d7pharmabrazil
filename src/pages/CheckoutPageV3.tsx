@@ -162,7 +162,7 @@ const CheckoutPageV3 = () => {
       const payload: any = {
         customer_name: form.name, customer_email: form.email, customer_cpf: form.cpf, customer_phone: form.phone,
         billing_type: form.paymentMethod === "pix" ? "PIX" : form.paymentMethod === "boleto" ? "BOLETO" : "CREDIT_CARD",
-        value: paymentValue, items: orderItems, doctor_id: null,
+        value: paymentValue, items: orderItems, doctor_id: getActiveRef()?.doctorId || null,
         shipping_address: { street: form.street, number: form.number, complement: form.complement, neighborhood: form.neighborhood, city: form.city, state: form.state, cep: form.cep },
         coupon_code: coupon || null,
       };
