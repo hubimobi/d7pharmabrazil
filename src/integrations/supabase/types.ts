@@ -1159,6 +1159,7 @@ export type Database = {
           id: string
           product_id: string
           product_image_url: string | null
+          product_image_urls: Json | null
           rating: number
           source: string
         }
@@ -1170,6 +1171,7 @@ export type Database = {
           id?: string
           product_id: string
           product_image_url?: string | null
+          product_image_urls?: Json | null
           rating?: number
           source?: string
         }
@@ -1181,6 +1183,7 @@ export type Database = {
           id?: string
           product_id?: string
           product_image_url?: string | null
+          product_image_urls?: Json | null
           rating?: number
           source?: string
         }
