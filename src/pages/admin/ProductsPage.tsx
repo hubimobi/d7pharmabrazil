@@ -93,7 +93,7 @@ export default function ProductsPage() {
   const [removingBg, setRemovingBg] = useState(false);
   const [editingTestimonialIdx, setEditingTestimonialIdx] = useState<number | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [linkGenProduct, setLinkGenProduct] = useState<{ id: string; slug: string; name: string } | null>(null);
+  const [linkGenProduct, setLinkGenProduct] = useState<{ id: string; slug: string; name: string; isCombo?: boolean } | null>(null);
   const [linkGenDoctor, setLinkGenDoctor] = useState("");
   const [linkGenCheckout, setLinkGenCheckout] = useState("");
   const { toast } = useToast();
