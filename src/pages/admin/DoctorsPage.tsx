@@ -384,6 +384,7 @@ export default function DoctorsPage() {
                 <TableHead className="hidden lg:table-cell">Especialidade</TableHead>
                 <TableHead className="hidden md:table-cell">Cidade/UF</TableHead>
                 {isAdmin && <TableHead className="hidden lg:table-cell">Representante</TableHead>}
+                <TableHead>Cupom</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-24">Ações</TableHead>
               </TableRow>
