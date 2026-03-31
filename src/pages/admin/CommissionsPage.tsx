@@ -13,10 +13,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DollarSign, TrendingUp, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
-const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-  pending: { label: "Gerada", variant: "outline" },
-  awaiting: { label: "Aguardando", variant: "secondary" },
-  paid: { label: "Paga", variant: "default" },
+const STATUS_MAP: Record<string, { label: string; className: string }> = {
+  pending: { label: "Pendente", className: "bg-amber-100 text-amber-800 border-amber-200" },
+  awaiting: { label: "Aguardando", className: "bg-blue-100 text-blue-800 border-blue-200" },
+  paid: { label: "Paga", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
 };
 
 const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
