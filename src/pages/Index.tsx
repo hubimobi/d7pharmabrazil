@@ -55,8 +55,6 @@ const Index = () => {
   const s = settings as any;
 
   const show = (key: string) => {
-    const sec = SECTION_COMPONENTS[key];
-    if (sec?.alwaysShow) return true;
     return s?.[key] !== false;
   };
 

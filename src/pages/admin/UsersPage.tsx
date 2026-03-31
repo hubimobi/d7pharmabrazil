@@ -74,7 +74,7 @@ const DEFAULT_ACCESS: Record<string, Record<string, { view: boolean; edit: boole
   suporte: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: true, edit: ["orders", "customers", "leads"].includes(s.key) }])),
   gestor: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: !["users", "integrations"].includes(s.key), edit: ["orders", "products", "customers", "coupons", "representatives", "doctors", "leads", "banners"].includes(s.key) }])),
   financeiro: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: ["dashboard", "orders", "commissions", "reports", "customers"].includes(s.key), edit: ["commissions"].includes(s.key) }])),
-  representative: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: ["dashboard", "doctors", "commissions", "links"].includes(s.key), edit: ["doctors", "links"].includes(s.key) }])),
+  representative: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: ["dashboard", "doctors", "commissions", "links", "coupons", "orders"].includes(s.key), edit: ["doctors", "links"].includes(s.key) }])),
   prescriber: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: ["dashboard", "commissions"].includes(s.key), edit: false }])),
 };
 
