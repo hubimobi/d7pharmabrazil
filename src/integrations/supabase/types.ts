@@ -1492,6 +1492,7 @@ export type Database = {
           phone: string | null
           pix: string | null
           region: string | null
+          short_code: string
           tenant_id: string | null
           updated_at: string
           user_id: string | null
@@ -1505,6 +1506,7 @@ export type Database = {
           phone?: string | null
           pix?: string | null
           region?: string | null
+          short_code: string
           tenant_id?: string | null
           updated_at?: string
           user_id?: string | null
@@ -1518,6 +1520,7 @@ export type Database = {
           phone?: string | null
           pix?: string | null
           region?: string | null
+          short_code?: string
           tenant_id?: string | null
           updated_at?: string
           user_id?: string | null
