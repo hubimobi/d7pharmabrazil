@@ -429,6 +429,12 @@ export default function CombosPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" title="Copiar link" onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/combo/${c.slug}`);
+                          toast({ title: "Link copiado!" });
+                        }}>
+                          <Link2 className="h-4 w-4" />
+                        </Button>
                         <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
