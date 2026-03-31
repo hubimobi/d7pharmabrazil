@@ -31,7 +31,7 @@ export default function ComboDetail() {
   const navigate = useNavigate();
   const { data: combos, isLoading } = useCombos();
   const { data: allProducts } = useProducts();
-  const { addItem } = useCart();
+  const { addItem, setComboDiscount } = useCart();
   const { data: settings } = useStoreSettings();
 
   const combo = combos?.find((c) => c.slug === slug);
