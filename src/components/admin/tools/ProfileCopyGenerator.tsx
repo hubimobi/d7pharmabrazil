@@ -181,6 +181,7 @@ export default function ProfileCopyGenerator() {
     if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
     setLoadingAll(true);
     setAllDiscResult(null);
+    setAllOceanResult(null);
     setResult(null);
     try {
       const payload = getBodyPayload();
