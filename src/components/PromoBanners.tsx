@@ -71,14 +71,12 @@ const PromoBanners = () => {
                   className="w-[40%] sm:w-[38%] flex items-center justify-center p-3 md:p-4"
                   style={{ backgroundColor: banner.image_bg_color || banner.bg_color || "#f5f5f5" }}
                 >
-                  <div className="w-full h-full rounded-xl overflow-hidden">
-                    <img
-                      src={banner.image_url}
-                      alt={banner.title}
-                      className="w-full h-full object-contain"
-                      loading="lazy"
-                    />
-                  </div>
+                  <img
+                    src={banner.image_url}
+                    alt={banner.title}
+                    className="w-full h-full object-contain rounded-xl"
+                    loading="lazy"
+                  />
                 </div>
               )}
             </div>
