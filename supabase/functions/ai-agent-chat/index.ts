@@ -85,6 +85,17 @@ serve(async (req) => {
 
     const systemPrompt = (agent.system_prompt || "Você é um assistente útil.") + kbContext;
 
+    // Determine provider info for logging
+    let providerName = "lovable";
+    if (apiUrl.includes("x.ai")) providerName = "xai";
+    else if (apiUrl.includes("openai.com")) providerName = "openai";
+    else if (apiUrl.includes("anthropic.com")) providerName = "anthropic";
+
+    // Estimate input tokens
+    const allMessages = [{ role: "system", content: systemPrompt }, ...messages];
+    const inputChars = allMessages.reduce((sum: number, m: any) => sum + (m.content?.length || 0), 0);
+    const estimatedInputTokens = Math.ceil(inputChars / 4);
+
     let response = await fetch(apiUrl, {
       method: "POST",
       headers: {
@@ -93,13 +104,13 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
+        messages: allMessages,
         stream: true,
       }),
     });
+
+    let usedModel = model;
+    let usedProvider = providerName;
 
     // Fallback to Lovable AI if external provider fails
     if (!response.ok && apiUrl !== "https://ai.gateway.lovable.dev/v1/chat/completions") {
@@ -109,6 +120,8 @@ serve(async (req) => {
       
       const fallbackKey = Deno.env.get("LOVABLE_API_KEY") || "";
       const fallbackModel = "google/gemini-3-flash-preview";
+      usedModel = fallbackModel;
+      usedProvider = "lovable";
       response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -117,10 +130,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: fallbackModel,
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...messages,
-          ],
+          messages: allMessages,
           stream: true,
         }),
       });
@@ -144,6 +154,20 @@ serve(async (req) => {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Log estimated token usage (fire-and-forget)
+    // For streaming, we estimate output tokens from a typical response (~500 tokens)
+    const estimatedOutputTokens = 500;
+    sb.from("ai_token_usage").insert({
+      agent_id: agent_id,
+      agent_name: agent.name || "",
+      provider: usedProvider,
+      model: usedModel,
+      input_tokens: estimatedInputTokens,
+      output_tokens: estimatedOutputTokens,
+      total_tokens: estimatedInputTokens + estimatedOutputTokens,
+      function_name: "ai-agent-chat",
+    }).then(() => {}).catch((e: any) => console.error("Token log error:", e));
 
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
