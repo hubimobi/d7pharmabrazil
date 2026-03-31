@@ -65,6 +65,22 @@ const DISC_NAMES: Record<string, string> = {
   C: "Conformidade",
 };
 
+const OCEAN_COLORS: Record<string, { bar: string; badge: string; bg: string }> = {
+  openness: { bar: "bg-purple-500", badge: "bg-purple-100 text-purple-800 border-purple-300", bg: "border-purple-200" },
+  conscientiousness: { bar: "bg-teal-500", badge: "bg-teal-100 text-teal-800 border-teal-300", bg: "border-teal-200" },
+  extraversion: { bar: "bg-orange-500", badge: "bg-orange-100 text-orange-800 border-orange-300", bg: "border-orange-200" },
+  agreeableness: { bar: "bg-pink-500", badge: "bg-pink-100 text-pink-800 border-pink-300", bg: "border-pink-200" },
+  neuroticism: { bar: "bg-gray-500", badge: "bg-gray-100 text-gray-800 border-gray-300", bg: "border-gray-200" },
+};
+
+const OCEAN_NAMES: Record<string, string> = {
+  openness: "Abertura",
+  conscientiousness: "Conscienciosidade",
+  extraversion: "Extroversão",
+  agreeableness: "Amabilidade",
+  neuroticism: "Neuroticismo",
+};
+
 const OCEAN_OPTIONS = [
   { value: "openness", label: "Abertura", desc: "Inovação e criatividade" },
   { value: "conscientiousness", label: "Conscienciosidade", desc: "Disciplina e organização" },
