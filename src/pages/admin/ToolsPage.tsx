@@ -1,10 +1,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ImageIcon, Video, Megaphone, MessageSquareQuote, BarChart3 } from "lucide-react";
+import { ImageIcon, Video, Megaphone, MessageSquareQuote, BarChart3, UserCog } from "lucide-react";
 import TestimonialGenerator from "@/components/admin/tools/TestimonialGenerator";
 import ImageGenerator from "@/components/admin/tools/ImageGenerator";
 import VideoGenerator from "@/components/admin/tools/VideoGenerator";
 import AdsGenerator from "@/components/admin/tools/AdsGenerator";
 import CopyScoreAnalyzer from "@/components/admin/tools/CopyScoreAnalyzer";
+import ProfileCopyGenerator from "@/components/admin/tools/ProfileCopyGenerator";
 
 export default function ToolsPage() {
   return (
@@ -19,21 +20,22 @@ export default function ToolsPage() {
       </div>
 
       <Tabs defaultValue="testimonials" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-auto gap-2 bg-transparent p-0">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto gap-2 bg-transparent p-0">
           {[
             { value: "testimonials", label: "Testemunhos", icon: MessageSquareQuote },
             { value: "images", label: "Imagens", icon: ImageIcon },
             { value: "videos", label: "Vídeos", icon: Video },
             { value: "ads", label: "ADS / Copy", icon: Megaphone },
             { value: "copy-score", label: "Score Copy", icon: BarChart3 },
+            { value: "profile-copy", label: "Copy Perfil", icon: UserCog },
           ].map((tab) => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl border data-[state=active]:border-blue-500 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-all"
+              className="flex items-center gap-2 px-3 py-3 rounded-xl border data-[state=active]:border-blue-500 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-all"
             >
               <tab.icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="hidden sm:inline text-xs">{tab.label}</span>
             </TabsTrigger>
           ))}
         </TabsList>
@@ -52,6 +54,9 @@ export default function ToolsPage() {
         </TabsContent>
         <TabsContent value="copy-score" className="mt-6">
           <CopyScoreAnalyzer />
+        </TabsContent>
+        <TabsContent value="profile-copy" className="mt-6">
+          <ProfileCopyGenerator />
         </TabsContent>
       </Tabs>
     </div>
