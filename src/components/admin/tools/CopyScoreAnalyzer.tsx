@@ -97,7 +97,7 @@ export default function CopyScoreAnalyzer() {
     if (product) {
       const parts = [
         product.name,
-        product.short_description || "",
+        product.shortDescription || "",
         product.description || "",
         ...(Array.isArray(product.benefits) ? (product.benefits as string[]) : []),
       ].filter(Boolean);
