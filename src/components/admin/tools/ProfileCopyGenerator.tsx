@@ -484,6 +484,97 @@ export default function ProfileCopyGenerator() {
         </>
       )}
 
+      {/* ===== ALL OCEAN COMPARISON VIEW ===== */}
+      {allOceanResult && (
+        <>
+          <Card className="p-5 bg-white border border-gray-200 rounded-2xl">
+            <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-purple-500" />
+              Comparação de Performance OCEAN
+            </h3>
+            <div className="space-y-3">
+              {(["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"] as const).map((key) => {
+                const profile = allOceanResult.profiles[key];
+                if (!profile) return null;
+                const perf = profile.estimated_performance || 0;
+                const isBest = allOceanResult.best_profile?.toLowerCase().includes(key);
+                return (
+                  <div key={key} className="flex items-center gap-3">
+                    <Badge className={`text-[10px] border w-28 justify-center ${OCEAN_COLORS[key].badge}`}>
+                      {OCEAN_NAMES[key]}
+                    </Badge>
+                    <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden relative">
+                      <div
+                        className={`h-full rounded-full transition-all ${OCEAN_COLORS[key].bar}`}
+                        style={{ width: `${perf}%` }}
+                      />
+                      {isBest && (
+                        <Trophy className="h-3 w-3 text-yellow-600 absolute right-2 top-1" />
+                      )}
+                    </div>
+                    <span className="text-sm font-bold w-12 text-right">{perf}%</span>
+                  </div>
+                );
+              })}
+            </div>
+            {allOceanResult.comparison_notes && (
+              <p className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-100">
+                {allOceanResult.comparison_notes}
+              </p>
+            )}
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"] as const).map((key) => {
+              const profile = allOceanResult.profiles[key];
+              if (!profile) return null;
+              const isBest = allOceanResult.best_profile?.toLowerCase().includes(key);
+              return (
+                <Card key={key} className={`p-5 bg-white border-2 rounded-2xl ${isBest ? OCEAN_COLORS[key].bg + " ring-2 ring-offset-1 ring-yellow-400" : "border-gray-200"}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Badge className={`text-[10px] border ${OCEAN_COLORS[key].badge}`}>
+                        {OCEAN_NAMES[key]}
+                      </Badge>
+                      {isBest && <Badge className="text-[10px] bg-yellow-100 text-yellow-800 border-yellow-300">⭐ Melhor</Badge>}
+                    </div>
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => copyFull(profile, `ocean-${key}`)}>
+                      {copiedKey === `ocean-${key}` ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                      Copiar
+                    </Button>
+                  </div>
+                  {profile.tone && <p className="text-[10px] text-gray-400 mb-2 italic">Tom: {profile.tone}</p>}
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-[10px] font-medium text-gray-400">Headline:</p>
+                      <p className="text-sm font-bold text-gray-900">{profile.headline}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium text-gray-400">Subheadline:</p>
+                      <p className="text-xs text-gray-700">{profile.subheadline}</p>
+                    </div>
+                    {profile.body_blocks?.map((block, bi) => (
+                      <p key={bi} className="text-xs text-gray-600 whitespace-pre-wrap">{block}</p>
+                    ))}
+                    <div className="pt-2 border-t border-gray-100">
+                      <p className="text-[10px] font-medium text-gray-400">CTA:</p>
+                      <p className="text-xs font-bold text-purple-700">{profile.cta}</p>
+                    </div>
+                    {profile.triggers_used?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {profile.triggers_used.map((t, ti) => (
+                          <Badge key={ti} variant="outline" className="text-[9px]">{t}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       {/* ===== SINGLE PROFILE RESULTS ===== */}
       {result && (
         <>
