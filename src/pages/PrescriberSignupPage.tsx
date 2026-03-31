@@ -108,10 +108,10 @@ export default function PrescriberSignupPage() {
       // Look up representative by short_code (4-char friendly code)
       let representativeId: string | null = null;
       if (repId) {
-        const { data: repByCode } = await supabase
+        const { data: repByCode } = await (supabase
           .from("representatives")
-          .select("id")
-          .eq("short_code" as any, repId.toUpperCase())
+          .select("id") as any)
+          .eq("short_code", repId.toUpperCase())
           .eq("active", true)
           .maybeSingle();
         representativeId = repByCode?.id ?? null;
