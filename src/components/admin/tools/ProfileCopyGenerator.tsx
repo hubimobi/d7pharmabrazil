@@ -17,7 +17,16 @@ interface QuestionRow {
   jornada: string;
   pergunta: string;
   resposta: string;
+  copy: string;
+  cta_copy: string;
 }
+
+const COPY_METHOD_OPTIONS = [
+  { value: "venda", label: "V.E.N.D.A", desc: "Validação → Explicação → Nova visão → Direção → Abertura → Saída" },
+  { value: "aida", label: "A.I.D.A", desc: "Atenção → Interesse → Desejo → Ação" },
+  { value: "corte", label: "C.O.R.T.E", desc: "Confronto → Oportunidade → Risco → Transição → Engajamento" },
+  { value: "ccp", label: "C.C.P", desc: "Cabeça (Head) → Corpo (Body) → Pés (CTA)" },
+];
 
 interface CopyBlock {
   label: string;
