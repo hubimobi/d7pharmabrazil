@@ -401,6 +401,17 @@ export default function DoctorsPage() {
         </DialogContent>
       </Dialog>
 
+      <Tabs value={approvalTab} onValueChange={setApprovalTab}>
+        <TabsList>
+          <TabsTrigger value="all">Todos</TabsTrigger>
+          <TabsTrigger value="pending" className="gap-1">
+            Pendentes {pendingCount > 0 && <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">{pendingCount}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="approved">Aprovados</TabsTrigger>
+          <TabsTrigger value="rejected">Rejeitados</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <Table>
@@ -414,59 +425,72 @@ export default function DoctorsPage() {
                 {isAdmin && <TableHead className="hidden lg:table-cell">Representante</TableHead>}
                 <TableHead>Cupom</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-24">Ações</TableHead>
+                <TableHead className="w-32">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-              ) : !doctors?.length ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum prescritor cadastrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+              ) : !filteredDoctors?.length ? (
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhum prescritor encontrado</TableCell></TableRow>
               ) : (
-                doctors.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium">{doc.name}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">{(doc as any).email ?? "—"}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{doc.crm ?? "—"}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{doc.specialty ?? "—"}</TableCell>
-                    <TableCell className="hidden md:table-cell">{[doc.city, doc.state].filter(Boolean).join("/") || "—"}</TableCell>
-                    {isAdmin && <TableCell className="hidden lg:table-cell">{(doc as any).representatives?.name ?? "—"}</TableCell>}
-                    <TableCell>
-                      {doctorCoupons?.[doc.id] ? (
-                        <div className="flex items-center gap-1">
-                          <span className="font-mono text-xs font-semibold text-primary">{doctorCoupons[doc.id]}</span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => {
-                              navigator.clipboard.writeText(doctorCoupons[doc.id]);
-                              toast.success("Cupom copiado!");
-                            }}
+                filteredDoctors.map((doc) => {
+                  const approvalStatus = (doc as any).approval_status || "approved";
+                  return (
+                    <TableRow key={doc.id}>
+                      <TableCell className="font-medium">{doc.name}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">{(doc as any).email ?? "—"}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{doc.crm ?? "—"}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{doc.specialty ?? "—"}</TableCell>
+                      <TableCell className="hidden md:table-cell">{[doc.city, doc.state].filter(Boolean).join("/") || "—"}</TableCell>
+                      {isAdmin && <TableCell className="hidden lg:table-cell">{(doc as any).representatives?.name ?? "—"}</TableCell>}
+                      <TableCell>
+                        {doctorCoupons?.[doc.id] ? (
+                          <div className="flex items-center gap-1">
+                            <span className="font-mono text-xs font-semibold text-primary">{doctorCoupons[doc.id]}</span>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { navigator.clipboard.writeText(doctorCoupons[doc.id]); toast.success("Cupom copiado!"); }}>
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {approvalStatus === "pending" ? (
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pendente</Badge>
+                        ) : approvalStatus === "rejected" ? (
+                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejeitado</Badge>
+                        ) : (
+                          <Badge
+                            variant={doc.active ? "default" : "secondary"}
+                            className="cursor-pointer"
+                            onClick={() => toggleActive.mutate({ id: doc.id, active: doc.active })}
                           >
-                            <Copy className="h-3 w-3" />
+                            {doc.active ? "Ativo" : "Inativo"}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {approvalStatus === "pending" && (
+                            <>
+                              <Button variant="ghost" size="icon" title="Aprovar" onClick={() => approveDoctor.mutate({ id: doc.id, approve: true })}>
+                                <ShieldCheck className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button variant="ghost" size="icon" title="Rejeitar" onClick={() => approveDoctor.mutate({ id: doc.id, approve: false })}>
+                                <XCircle className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </>
+                          )}
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(doc)}>
+                            <Pencil className="h-4 w-4" />
                           </Button>
                         </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={doc.active ? "default" : "secondary"}
-                        className="cursor-pointer"
-                        onClick={() => toggleActive.mutate({ id: doc.id, active: doc.active })}
-                      >
-                        {doc.active ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(doc)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
