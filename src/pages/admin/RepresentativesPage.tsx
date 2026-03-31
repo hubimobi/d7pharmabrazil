@@ -285,6 +285,18 @@ export default function RepresentativesPage() {
                         <Button variant="ghost" size="icon" title="Ver Comissões" onClick={() => navigate(`/admin/representantes/${rep.id}/comissoes`)}>
                           <Eye className="h-4 w-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Copiar Link de Cadastro"
+                          onClick={() => {
+                            const url = `${window.location.origin}/cadastrar?rep=${rep.id}`;
+                            navigator.clipboard.writeText(url);
+                            toast.success("Link de cadastro copiado!");
+                          }}
+                        >
+                          <Link2 className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => openEdit(rep)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
