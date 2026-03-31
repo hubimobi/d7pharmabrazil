@@ -173,7 +173,7 @@ export default function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       toast.success("Usuário criado com sucesso!");
       setCreateOpen(false);
-      setForm({ email: "", password: "", full_name: "", role: "admin", representative_id: "", doctor_id: "" });
+      setForm({ email: "", password: "", full_name: "", role: "admin", representative_id: "", doctor_id: "", representative_record_id: "" });
     },
     onError: (err: Error) => toast.error(err.message),
   });
