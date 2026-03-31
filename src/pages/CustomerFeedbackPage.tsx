@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,17 +6,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Star, Upload, Gift, CheckCircle, Camera, X } from "lucide-react";
+import { Star, Upload, Gift, CheckCircle, Camera, X, Package } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface OrderProduct {
+  product_id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
 
 export default function CustomerFeedbackPage() {
   const [params] = useSearchParams();
   const orderId = params.get("pedido") || "";
-  const productId = params.get("produto") || "";
-  const productName = params.get("nome") || "";
+  const emailParam = params.get("email") || "";
 
   const { data: settings } = useStoreSettings();
   const [name, setName] = useState("");
@@ -29,6 +36,43 @@ export default function CustomerFeedbackPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [couponCode, setCouponCode] = useState("");
+
+  // Order-linked state
+  const [orderProducts, setOrderProducts] = useState<OrderProduct[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [loadingOrder, setLoadingOrder] = useState(false);
+  const [orderValid, setOrderValid] = useState<boolean | null>(null);
+
+  // Fetch order products on load
+  useEffect(() => {
+    if (!orderId || !emailParam) return;
+    setLoadingOrder(true);
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("get-order", {
+          body: { order_id: orderId, customer_email: emailParam },
+        });
+        if (error || !data || data.error) {
+          setOrderValid(false);
+          return;
+        }
+        setOrderValid(true);
+        setName(data.customer_name || "");
+        const items: OrderProduct[] = (data.items || []).map((i: any) => ({
+          product_id: i.product_id,
+          name: i.name,
+          price: i.price,
+          quantity: i.quantity,
+        }));
+        setOrderProducts(items);
+        if (items.length === 1) setSelectedProductId(items[0].product_id);
+      } catch {
+        setOrderValid(false);
+      } finally {
+        setLoadingOrder(false);
+      }
+    })();
+  }, [orderId, emailParam]);
 
   const handleAuthorFile = (file: File | null) => {
     if (!file) return;
@@ -61,8 +105,8 @@ export default function CustomerFeedbackPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !content || !productId) {
-      toast.error("Preencha todos os campos obrigatórios.");
+    if (!name || !content || !selectedProductId) {
+      toast.error("Preencha todos os campos obrigatórios e selecione o produto.");
       return;
     }
     setSubmitting(true);
@@ -77,7 +121,7 @@ export default function CustomerFeedbackPage() {
       }
 
       const { error } = await supabase.from("product_testimonials").insert({
-        product_id: productId,
+        product_id: selectedProductId,
         author_name: name,
         content,
         rating,
@@ -85,6 +129,8 @@ export default function CustomerFeedbackPage() {
         product_image_url: productImageUrls[0] || null,
         product_image_urls: productImageUrls,
         source: "customer",
+        order_id: orderId || null,
+        approved: false,
       } as any);
       if (error) throw error;
 
@@ -98,7 +144,7 @@ export default function CustomerFeedbackPage() {
       }
 
       setSubmitted(true);
-      toast.success("Feedback enviado com sucesso!");
+      toast.success("Feedback enviado para aprovação!");
     } catch (err: any) {
       toast.error("Erro ao enviar: " + err.message);
     } finally {
@@ -113,7 +159,7 @@ export default function CustomerFeedbackPage() {
         <main className="container max-w-lg py-16 text-center space-y-6">
           <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
           <h1 className="text-2xl font-bold">Obrigado pelo seu feedback!</h1>
-          <p className="text-muted-foreground">Sua avaliação é muito importante para nós.</p>
+          <p className="text-muted-foreground">Sua avaliação será analisada e publicada em breve.</p>
           {couponCode && (
             <Card className="border-primary/30 bg-primary/5">
               <CardContent className="p-6 space-y-3">
@@ -132,6 +178,49 @@ export default function CustomerFeedbackPage() {
     );
   }
 
+  // If no orderId or email, show error
+  if (!orderId || !emailParam) {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <main className="container max-w-lg py-16 text-center space-y-4">
+          <X className="h-16 w-16 text-destructive mx-auto" />
+          <h1 className="text-2xl font-bold">Link inválido</h1>
+          <p className="text-muted-foreground">Este link de feedback requer um pedido e e-mail válidos.</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (loadingOrder) {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <main className="container max-w-lg py-16 text-center">
+          <p className="text-muted-foreground animate-pulse">Carregando dados do pedido...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (orderValid === false) {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <main className="container max-w-lg py-16 text-center space-y-4">
+          <X className="h-16 w-16 text-destructive mx-auto" />
+          <h1 className="text-2xl font-bold">Pedido não encontrado</h1>
+          <p className="text-muted-foreground">Não foi possível localizar o pedido informado.</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const selectedProduct = orderProducts.find((p) => p.product_id === selectedProductId);
+
   return (
     <div className="min-h-screen">
       <Header />
@@ -139,13 +228,36 @@ export default function CustomerFeedbackPage() {
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold">Dê seu Feedback</h1>
           <p className="text-muted-foreground">
-            Conte como foi sua experiência{productName ? ` com ${productName}` : ""} e ganhe um bônus!
+            Conte como foi sua experiência e ganhe um bônus!
           </p>
         </div>
 
         <Card>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Product selection from order */}
+              {orderProducts.length > 1 && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1"><Package className="h-4 w-4" /> Qual produto você deseja avaliar? *</Label>
+                  <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {orderProducts.map((p) => (
+                        <SelectItem key={p.product_id} value={p.product_id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {orderProducts.length === 1 && (
+                <div className="bg-muted rounded-lg p-3 flex items-center gap-2">
+                  <Package className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">{orderProducts[0].name}</span>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Seu Nome *</Label>
                 <Input placeholder="Seu nome" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -221,7 +333,7 @@ export default function CustomerFeedbackPage() {
                 <input id="product-photos" type="file" accept="image/*" multiple className="hidden" onChange={(e) => addProductPhotos(e.target.files)} />
               </div>
 
-              <Button type="submit" className="w-full gap-2" disabled={submitting}>
+              <Button type="submit" className="w-full gap-2" disabled={submitting || !selectedProductId}>
                 {submitting ? "Enviando..." : (
                   <>
                     <Gift className="h-4 w-4" />
