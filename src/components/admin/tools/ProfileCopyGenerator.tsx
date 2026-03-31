@@ -152,6 +152,7 @@ export default function ProfileCopyGenerator() {
   const [questionsResult, setQuestionsResult] = useState<QuestionRow[] | null>(null);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [showQuestionsTable, setShowQuestionsTable] = useState(false);
+  const [copyMethod, setCopyMethod] = useState("venda");
 
   const handleProductSelect = (id: string) => {
     setSelectedProductId(id);
