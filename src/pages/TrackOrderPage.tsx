@@ -20,6 +20,7 @@ const statusSteps = [
 interface OrderResult {
   id: string;
   customer_name: string;
+  customer_email?: string;
   items: any[];
   total: number;
   status: string;
