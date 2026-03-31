@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Pencil, Trash2, Package, Upload, X, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, Upload, X, Search, Link2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ComboForm {
@@ -429,6 +429,12 @@ export default function CombosPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" title="Copiar link" onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/combo/${c.slug}`);
+                          toast({ title: "Link copiado!" });
+                        }}>
+                          <Link2 className="h-4 w-4" />
+                        </Button>
                         <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>
                           <Pencil className="h-4 w-4" />
                         </Button>

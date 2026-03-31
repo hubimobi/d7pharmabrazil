@@ -93,7 +93,7 @@ export default function ProductsPage() {
   const [removingBg, setRemovingBg] = useState(false);
   const [editingTestimonialIdx, setEditingTestimonialIdx] = useState<number | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [linkGenProduct, setLinkGenProduct] = useState<{ id: string; slug: string; name: string } | null>(null);
+  const [linkGenProduct, setLinkGenProduct] = useState<{ id: string; slug: string; name: string; isCombo?: boolean } | null>(null);
   const [linkGenDoctor, setLinkGenDoctor] = useState("");
   const [linkGenCheckout, setLinkGenCheckout] = useState("");
   const { toast } = useToast();
@@ -135,7 +135,8 @@ export default function ProductsPage() {
     if (doctor) params.set("cupom", doctor.coupon_code);
     if (linkGenCheckout && linkGenCheckout !== "default") params.set("ck", linkGenCheckout);
     const qs = params.toString();
-    return `${base}/produto/${linkGenProduct.slug}${qs ? `?${qs}` : ""}`;
+    const prefix = linkGenProduct.isCombo ? "combo" : "produto";
+    return `${base}/${prefix}/${linkGenProduct.slug}${qs ? `?${qs}` : ""}`;
   })();
 
   const save = useMutation({
