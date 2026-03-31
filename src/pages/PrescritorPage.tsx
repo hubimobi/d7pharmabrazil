@@ -33,6 +33,7 @@ export default function PrescritorPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [monthFilter, setMonthFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   // Get doctor record for logged in user
   const { data: doctor } = useQuery({
