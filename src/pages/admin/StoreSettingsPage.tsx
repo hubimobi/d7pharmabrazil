@@ -271,7 +271,7 @@ export default function StoreSettingsPage() {
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <h2 className="text-lg font-semibold flex items-center gap-2"><Image className="h-5 w-5" /> Logo, Logo Horizontal e Favicon</h2>
           <p className="text-xs text-muted-foreground">A <strong>Logo Principal</strong> é usada no favicon e em formatos quadrados. A <strong>Logo Horizontal</strong> aparece no topo do site (tamanho ideal: 480×120px, proporção 4:1 — será recortada automaticamente).</p>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-4">
             {/* Logo Upload */}
             <div className="space-y-2">
               <Label>Logo</Label>
@@ -512,24 +512,6 @@ export default function StoreSettingsPage() {
           </div>
         </div>
 
-        {/* Bônus por Feedback */}
-        <div className="space-y-4 rounded-lg border p-6">
-          <h3 className="text-lg font-semibold flex items-center gap-2"><Award className="h-5 w-5" /> Bônus por Feedback</h3>
-          <p className="text-sm text-muted-foreground">Configure o cupom de desconto que o cliente recebe ao enviar um depoimento.</p>
-          <div>
-            <Label>Cupom Vinculado</Label>
-            <Select value={(form as any).feedback_bonus_coupon_id || "none"} onValueChange={(v) => update("feedback_bonus_coupon_id" as any, v === "none" ? null : v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione um cupom..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhum</SelectItem>
-                {coupons?.map((c: any) => (
-                  <SelectItem key={c.id} value={c.id}>{c.code} — {c.discount_value}{c.discount_type === "percent" ? "%" : " R$"}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground mt-1">O cliente receberá este cupom após enviar seu depoimento com foto.</p>
-          </div>
-        </div>
 
         <Button type="submit" size="lg" disabled={mutation.isPending} className="gap-2">
           {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

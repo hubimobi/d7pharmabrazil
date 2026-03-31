@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Star, CheckCircle, XCircle, Trash2, ExternalLink, Eye, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Star, CheckCircle, XCircle, Trash2, ExternalLink, Eye, Clock, Award } from "lucide-react";
 import { toast } from "sonner";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 
@@ -36,6 +38,13 @@ export default function FeedbackApprovalPage() {
 
   const googleReviewUrl = (settings as any)?.google_business_review_url || "";
 
+  const { data: coupons } = useQuery({
+    queryKey: ["coupons-active"],
+    queryFn: async () => {
+      const { data } = await supabase.from("coupons").select("id, code, discount_value, discount_type").eq("active", true).order("code");
+      return data || [];
+    },
+  });
   const { data: testimonials = [], isLoading } = useQuery({
     queryKey: ["admin-feedbacks", tab],
     queryFn: async () => {
@@ -192,6 +201,35 @@ export default function FeedbackApprovalPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Bônus por Feedback */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2"><Award className="h-5 w-5" /> Bônus por Feedback</CardTitle>
+          <p className="text-sm text-muted-foreground">Configure o cupom de desconto que o cliente recebe ao enviar um depoimento.</p>
+        </CardHeader>
+        <CardContent>
+          <div className="max-w-sm">
+            <Label>Cupom Vinculado</Label>
+            <Select value={(settings as any)?.feedback_bonus_coupon_id || "none"} onValueChange={async (v) => {
+              const val = v === "none" ? null : v;
+              const { error } = await supabase.from("store_settings").update({ feedback_bonus_coupon_id: val } as any).eq("id", (settings as any)?.id);
+              if (error) { toast.error("Erro ao salvar"); return; }
+              toast.success("Cupom de bônus atualizado!");
+              qc.invalidateQueries({ queryKey: ["store-settings"] });
+            }}>
+              <SelectTrigger><SelectValue placeholder="Selecione um cupom..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhum</SelectItem>
+                {coupons?.map((c: any) => (
+                  <SelectItem key={c.id} value={c.id}>{c.code} — {c.discount_value}{c.discount_type === "percent" ? "%" : " R$"}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">O cliente receberá este cupom após enviar seu depoimento com foto.</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Delete confirmation */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
