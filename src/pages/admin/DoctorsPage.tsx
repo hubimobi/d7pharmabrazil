@@ -404,6 +404,26 @@ export default function DoctorsPage() {
                     <TableCell className="hidden md:table-cell">{[doc.city, doc.state].filter(Boolean).join("/") || "—"}</TableCell>
                     {isAdmin && <TableCell className="hidden lg:table-cell">{(doc as any).representatives?.name ?? "—"}</TableCell>}
                     <TableCell>
+                      {doctorCoupons?.[doc.id] ? (
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono text-xs font-semibold text-primary">{doctorCoupons[doc.id]}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              navigator.clipboard.writeText(doctorCoupons[doc.id]);
+                              toast.success("Cupom copiado!");
+                            }}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <Badge
                         variant={doc.active ? "default" : "secondary"}
                         className="cursor-pointer"
