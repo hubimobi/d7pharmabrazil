@@ -38,6 +38,13 @@ export default function FeedbackApprovalPage() {
 
   const googleReviewUrl = (settings as any)?.google_business_review_url || "";
 
+  const { data: coupons } = useQuery({
+    queryKey: ["coupons-active"],
+    queryFn: async () => {
+      const { data } = await supabase.from("coupons").select("id, code, discount_value, discount_type").eq("active", true).order("code");
+      return data || [];
+    },
+  });
   const { data: testimonials = [], isLoading } = useQuery({
     queryKey: ["admin-feedbacks", tab],
     queryFn: async () => {
