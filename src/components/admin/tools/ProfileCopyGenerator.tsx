@@ -94,6 +94,7 @@ const OCEAN_OPTIONS = [
 ];
 
 const FUNNEL_OPTIONS = [
+  { value: "all", label: "Todas as Fases", desc: "Gera para todas as fases do funil" },
   { value: "unaware", label: "Sem Noção", desc: "Não sabe que tem o problema" },
   { value: "curious", label: "Curioso", desc: "Sabe do problema, busca soluções" },
   { value: "ready", label: "Pronto p/ Compra", desc: "Decidido, precisa de um empurrão" },
