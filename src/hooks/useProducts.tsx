@@ -81,6 +81,7 @@ function mapDbProduct(p: any): Product {
     seoKeywords: p.seo_keywords || "",
     sku: p.sku || "",
     upsellProductIds: Array.isArray(p.upsell_product_ids) ? p.upsell_product_ids : [],
+    manufacturer: p.manufacturer || "",
   };
 }
 
