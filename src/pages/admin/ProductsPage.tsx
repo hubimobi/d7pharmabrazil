@@ -773,7 +773,7 @@ export default function ProductsPage() {
                         {t.author_image_url && (
                           <img src={t.author_image_url} alt="" className="h-10 w-10 rounded-full object-cover flex-shrink-0" />
                         )}
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-sm">{t.author_name}</span>
                             <span className="flex text-amber-500">
@@ -784,8 +784,12 @@ export default function ProductsPage() {
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">{t.content}</p>
-                          {t.product_image_url && (
-                            <img src={t.product_image_url} alt="" className="h-16 w-16 rounded-lg object-cover mt-2" />
+                          {(t.product_image_urls?.length || t.product_image_url) && (
+                            <div className="flex gap-2 mt-2">
+                              {(t.product_image_urls?.length ? t.product_image_urls : [t.product_image_url]).filter(Boolean).map((url, pi) => (
+                                <img key={pi} src={url!} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                              ))}
+                            </div>
                           )}
                         </div>
                         <div className="flex gap-1 flex-shrink-0">
