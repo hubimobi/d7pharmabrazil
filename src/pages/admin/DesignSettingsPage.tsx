@@ -759,6 +759,64 @@ export default function DesignSettingsPage() {
           </div>
         </div>
 
+        {/* Captura de Mailing */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Megaphone className="h-5 w-5" /> Captura de Mailing</h2>
+          <p className="text-sm text-muted-foreground">Configure a seção de captura de e-mails exibida na home.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Título</Label>
+              <Input value={(form as any).cta_title || ""} onChange={(e) => update("cta_title" as any, e.target.value)} placeholder="Fique por dentro das novidades" />
+            </div>
+            <div>
+              <Label>Subtítulo</Label>
+              <Textarea rows={2} value={(form as any).cta_subtitle || ""} onChange={(e) => update("cta_subtitle" as any, e.target.value)} placeholder="Cadastre seu e-mail e seja o primeiro..." />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <Label className="text-xs">Cor de Fundo</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input type="color" value={(form as any).mailing_bg_color || "#1a365d"} onChange={(e) => update("mailing_bg_color" as any, e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+                <Input value={(form as any).mailing_bg_color || "#1a365d"} onChange={(e) => update("mailing_bg_color" as any, e.target.value)} className="h-8 text-xs" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Cor do Botão</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input type="color" value={(form as any).mailing_button_color || "#e53e3e"} onChange={(e) => update("mailing_button_color" as any, e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+                <Input value={(form as any).mailing_button_color || "#e53e3e"} onChange={(e) => update("mailing_button_color" as any, e.target.value)} className="h-8 text-xs" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Cor do Título</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input type="color" value={(form as any).mailing_title_color || "#ffffff"} onChange={(e) => update("mailing_title_color" as any, e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+                <Input value={(form as any).mailing_title_color || "#ffffff"} onChange={(e) => update("mailing_title_color" as any, e.target.value)} className="h-8 text-xs" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Cor do Texto</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input type="color" value={(form as any).mailing_text_color || "#ffffffcc"} onChange={(e) => update("mailing_text_color" as any, e.target.value)} className="h-8 w-8 rounded cursor-pointer" />
+                <Input value={(form as any).mailing_text_color || "#ffffffcc"} onChange={(e) => update("mailing_text_color" as any, e.target.value)} className="h-8 text-xs" />
+              </div>
+            </div>
+          </div>
+          {/* Preview */}
+          <div className="rounded-lg p-6 text-center" style={{ backgroundColor: (form as any).mailing_bg_color || "#1a365d" }}>
+            <p className="text-lg font-bold" style={{ color: (form as any).mailing_title_color || "#ffffff" }}>
+              {(form as any).cta_title || "Fique por dentro das novidades"}
+            </p>
+            <p className="text-sm mt-1" style={{ color: (form as any).mailing_text_color || "#ffffffcc" }}>
+              {(form as any).cta_subtitle || "Cadastre seu e-mail..."}
+            </p>
+            <div className="mt-3 inline-block px-6 py-2 rounded-md text-white text-sm font-semibold" style={{ backgroundColor: (form as any).mailing_button_color || "#e53e3e" }}>
+              Quero receber novidades
+            </div>
+          </div>
+        </div>
+
         {/* Preview */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <h2 className="text-lg font-semibold">Prévia</h2>
