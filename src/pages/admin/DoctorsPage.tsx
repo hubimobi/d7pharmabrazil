@@ -70,6 +70,10 @@ export default function DoctorsPage() {
   const [successCoupon, setSuccessCoupon] = useState<{ code: string; name: string; doctorId: string; email: string } | null>(null);
   const [linkedCoupon, setLinkedCoupon] = useState<string | null>(null);
   const [citySearch, setCitySearch] = useState("");
+  const [approvalTab, setApprovalTab] = useState("all");
+  const [successCoupon, setSuccessCoupon] = useState<{ code: string; name: string; doctorId: string; email: string } | null>(null);
+  const [linkedCoupon, setLinkedCoupon] = useState<string | null>(null);
+  const [citySearch, setCitySearch] = useState("");
   const { isAdmin, session } = useAuth();
   const qc = useQueryClient();
 
