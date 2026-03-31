@@ -25,14 +25,14 @@ const DEFAULT_ORDER = [
   "section_flash_sale",
   "section_hero_visible",
   "section_featured_visible",
-  "section_benefits_visible",
-  "section_products_visible",
-  "section_testimonials_visible",
   "section_promo_banners_visible",
+  "section_products_visible",
+  "section_benefits_visible",
+  "section_testimonials_visible",
   "section_guarantee_visible",
+  "section_instagram_visible",
   "section_trust_badges_visible",
   "section_mailing_visible",
-  "section_instagram_visible",
 ];
 
 const SECTION_COMPONENTS: Record<string, { component: React.ComponentType; lazy?: boolean; alwaysShow?: boolean }> = {
