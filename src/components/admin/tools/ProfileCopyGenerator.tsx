@@ -246,7 +246,7 @@ export default function ProfileCopyGenerator() {
           </div>
         )}
 
-        {sourceType === "product" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div>
             <label className="text-sm font-medium mb-1 block">Perfil DISC</label>
             <Select value={discProfile} onValueChange={setDiscProfile}>
