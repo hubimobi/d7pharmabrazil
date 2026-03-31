@@ -115,6 +115,8 @@ const PLATFORM_OPTIONS = [
   { value: "whatsapp", label: "WhatsApp" },
   { value: "email", label: "E-mail Marketing" },
   { value: "landing_page", label: "Landing Page" },
+  { value: "caixinha_pergunta", label: "Caixinha de Pergunta" },
+  { value: "quizz_conversao", label: "Quizz de Conversão" },
 ];
 
 export default function ProfileCopyGenerator() {
