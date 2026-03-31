@@ -1,75 +1,70 @@
 
 
-# Revisão: Vínculos, URLs Personalizados e Fluxo de Compra
-
-## Problemas Encontrados
-
-### 1. Cupom da URL NÃO é repassado no redirect do ProductDetail
-Quando um prescritor gera um link como `/produto/slug?cupom=STR2`, se o cliente clica em "Compra Rápida" ou o link tem `?ck=1`, o redirect para `/checkout` **perde o parâmetro `cupom`**.
-
-**Arquivo**: `src/pages/ProductDetail.tsx` (linhas 43-51)
-```
-navigate(`/checkout?ck=${ckParam}${mParam}`, { replace: true });
-// NÃO inclui ?cupom=XXX
-```
-**Correção**: Preservar o parâmetro `cupom` no redirect:
-```
-const cupom = searchParams.get("cupom") || searchParams.get("Cupom") || searchParams.get("CUPOM");
-const cupomParam = cupom ? `&cupom=${cupom}` : "";
-navigate(`/checkout?ck=${ckParam}${mParam}${cupomParam}`, { replace: true });
-```
-
-### 2. ComboDetail não lê `?cupom=` da URL
-A página `/combo/slug?cupom=STR2` não tem nenhuma lógica para ler o parâmetro `cupom` e repassá-lo ao checkout.
-
-**Arquivo**: `src/pages/ComboDetail.tsx` (linhas 129-136)
-- `handleQuickBuy` navega para `/checkout` sem o cupom
-**Correção**: Ler `searchParams`, preservar `cupom` no `navigate("/checkout?cupom=...")`.
-
-### 3. CheckoutPageV3 NÃO vincula `doctor_id` ao pedido
-O V3 envia `doctor_id: null` sempre (linha 165), diferente de V1 e V2 que usam `selectedDoctorId`. Isso significa que compras pelo checkout V3 **nunca geram comissões** para prescritores.
-
-**Arquivo**: `src/pages/CheckoutPageV3.tsx` (linha 165)
-```
-doctor_id: null,  // BUG: sempre null
-```
-**Correção**: O V3 não tem seleção de prescritor, mas devemos ao menos vincular automaticamente via `getActiveRef()` se houver um doctor_id no localStorage do link.
-
-### 4. Comissões NUNCA são criadas automaticamente
-O `create-payment` salva o pedido com `doctor_id`, mas **nenhum lugar** gera a comissão na tabela `commissions`. O webhook `asaas-webhook` também não cria comissões quando o pagamento é confirmado. As comissões parecem ser criadas manualmente ou por um processo inexistente.
-
-**Arquivo**: `supabase/functions/asaas-webhook/index.ts`
-**Correção**: Quando o pagamento é confirmado (`PAYMENT_CONFIRMED`/`PAYMENT_RECEIVED`) e o pedido tem `doctor_id`, buscar o prescritor → representante → taxa de comissão e inserir na tabela `commissions`.
-
-### 5. Link attribution no V3 não envia GA4 event
-O `CheckoutPageV3` faz link attribution mas não dispara o evento GA4 `purchase_attributed`, diferente do V1.
+# 3 Correções: Home Sections, Regras de Acesso e CSV de Leads
 
 ---
 
-## Plano de Implementação
+## 1. Banner Destaque e Oferta Relâmpago — Respeitar Ordem e Toggle
 
-### Passo 1: Preservar `cupom` nos redirects de produto/combo
-- **ProductDetail.tsx**: No redirect `?ck=`, incluir `&cupom=` se presente
-- **ComboDetail.tsx**: Ler `useSearchParams`, repassar `cupom` no `handleQuickBuy`
+**Problema**: Em `Index.tsx`, `section_highlight_banner` e `section_flash_sale` têm `alwaysShow: true`, ignorando o toggle de ativo/desativo. Em `DesignSettingsPage.tsx`, `ALWAYS_SHOW_SECTIONS` impede que o switch apareça para essas seções.
 
-### Passo 2: Vincular doctor_id no CheckoutPageV3
-- Adicionar `getActiveRef()` no V3 para preencher `doctor_id` automaticamente quando há referência de prescritor no localStorage (vindo de um link compartilhado)
+**Correção**:
+- **`src/pages/Index.tsx`**: Remover `alwaysShow: true` de ambas as seções para que obedeçam `s?.[key] !== false`
+- **`src/pages/admin/DesignSettingsPage.tsx`**: Remover `ALWAYS_SHOW_SECTIONS` ou esvaziar o array, exibindo o Switch para todas as seções
 
-### Passo 3: Gerar comissões automaticamente no webhook
-- No `asaas-webhook/index.ts`, quando pagamento é confirmado e o pedido tem `doctor_id`:
-  1. Buscar doctor → `representative_id`
-  2. Buscar coupon do doctor → `commission_rate` (default 20%)
-  3. Inserir registro em `commissions` com status `pending`
+---
 
-### Passo 4: Adicionar GA4 event no V3
-- No bloco de link attribution do V3, disparar `gtag("event", "purchase_attributed", ...)` igual ao V1
+## 2. Regras de Acesso — Sincronizar com Menus Atuais
 
-### Resumo técnico
+**Problema**: O `MENU_SECTIONS` em `UsersPage.tsx` não contempla todos os menus do sidebar. Faltam:
+
+| Menu no Sidebar | Chave que falta em MENU_SECTIONS |
+|---|---|
+| Recuperação | `recovery` |
+| Recompra (+LTV) | `repurchase` |
+| Combos | `combos` |
+| WhatsApp | `whatsapp` |
+| Ferramentas | `tools` |
+| Feedbacks | `feedbacks` |
+
+**Correção** em `src/pages/admin/UsersPage.tsx`:
+- Adicionar as 6 entradas faltantes ao array `MENU_SECTIONS`
+- Atualizar `DEFAULT_ACCESS` para cada role com as permissões adequadas (ex: `financeiro` não vê `tools`/`whatsapp`, `representative` não vê nenhum desses novos)
+
+---
+
+## 3. Importação CSV com Pareação de Colunas + Exportar/Excluir Lista
+
+**Problema**: A importação atual tenta detectar colunas automaticamente pelo nome do cabeçalho, sem permitir ao usuário confirmar ou ajustar o mapeamento. Não existe funcionalidade de agrupar leads por importação para exportar ou excluir em lote.
+
+**Correção** em `src/pages/admin/LeadsPage.tsx`:
+
+### 3a. Pareação de colunas antes de importar
+- Após o upload/colagem do CSV, exibir um **passo intermediário** com:
+  - Preview das primeiras 3 linhas do CSV
+  - Para cada coluna do CSV, um `<Select>` para mapear ao campo: Nome, E-mail, Telefone, Cidade, Estado, Ignorar
+  - Botão "Confirmar e Importar" que usa o mapeamento manual
+- Adicionar estado `importStep: "upload" | "mapping" | "importing"` para controlar o fluxo em 2 etapas dentro do mesmo dialog
+
+### 3b. Rastreamento de lote de importação
+- Ao importar, gerar um `batch_id` (UUID ou timestamp) e salvar em cada lead importado via campo `source` como `csv_import_BATCH_ID`
+- Adicionar um filtro por "Fonte" no painel de leads
+
+### 3c. Exportar e Excluir lista importada
+- Adicionar um dropdown ou seção "Importações" que lista as importações feitas (agrupando por `source` que contém `csv_import`)
+- Cada grupo mostra: data, quantidade de leads, botão "Exportar" e "Excluir Todos"
+- Excluir Todos deleta todos os leads com aquele `source`/batch
+
+**Nota**: Não será necessária migração de banco — o campo `source` já existe na tabela `popup_leads`.
+
+---
+
+## Resumo técnico
 
 | Arquivo | Mudança |
 |---|---|
-| `src/pages/ProductDetail.tsx` | Preservar `?cupom=` no redirect |
-| `src/pages/ComboDetail.tsx` | Ler e repassar `?cupom=` |
-| `src/pages/CheckoutPageV3.tsx` | Auto-fill `doctor_id` via `getActiveRef()` + GA4 |
-| `supabase/functions/asaas-webhook/index.ts` | Criar comissão automática ao confirmar pagamento |
+| `src/pages/Index.tsx` | Remover `alwaysShow` de highlight_banner e flash_sale |
+| `src/pages/admin/DesignSettingsPage.tsx` | Remover `ALWAYS_SHOW_SECTIONS` ou esvaziar |
+| `src/pages/admin/UsersPage.tsx` | Adicionar menus faltantes + atualizar DEFAULT_ACCESS |
+| `src/pages/admin/LeadsPage.tsx` | Fluxo de pareação CSV em 2 etapas, batch tracking, exportar/excluir por lote |
 
