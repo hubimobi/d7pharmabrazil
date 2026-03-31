@@ -86,6 +86,21 @@ ${faqText ? `\nFAQ:\n${faqText}` : ""}`;
 
     const data = await response.json();
     const answer = data.choices?.[0]?.message?.content || "Não foi possível gerar uma resposta.";
+    const usage = data.usage;
+
+    try {
+      const inputTokens = usage?.prompt_tokens || Math.ceil((systemPrompt.length + question.length) / 4);
+      const outputTokens = usage?.completion_tokens || Math.ceil(answer.length / 4);
+      await sb.from("ai_token_usage").insert({
+        agent_name: "Perguntas sobre Produto",
+        provider: llm.apiUrl.includes("lovable") ? "lovable" : llm.apiUrl.includes("x.ai") ? "xai" : "openai",
+        model: llm.model,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        total_tokens: inputTokens + outputTokens,
+        function_name: "product-qa",
+      });
+    } catch (logErr) { console.error("Token log error:", logErr); }
 
     return new Response(JSON.stringify({ answer }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
