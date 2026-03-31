@@ -161,7 +161,7 @@ PLATAFORMA: ${platform || "geral"}
 
 PERFIL DISC: ${discMap[discProfile] || discProfile}
 TRAÇO OCEAN: ${oceanMap[oceanTrait] || oceanTrait}
-FASE DO FUNIL: ${funnelMap[funnelStage] || funnelStage}
+FASE DO FUNIL: ${funnelStage === "all" ? "TODAS as fases — gere uma copy para cada fase (Sem noção, Curioso, Pronto para comprar, Pós-compra)" : (funnelMap[funnelStage] || funnelStage)}
 
 Retorne JSON com esta estrutura EXATA:
 {
