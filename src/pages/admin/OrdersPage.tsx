@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { RefreshCw, Eye, Package, Search, DollarSign, Truck, CheckCircle } from "lucide-react";
+import { RefreshCw, Eye, Package, Search, DollarSign, Truck, CheckCircle, UserPlus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -19,15 +19,22 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
   shipped: { label: "Enviado", variant: "secondary" },
   delivered: { label: "Finalizado", variant: "default" },
   cancelled: { label: "Cancelado", variant: "destructive" },
+  refunded: { label: "Devolvido", variant: "destructive" },
 };
 
+const fmt = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
+
 export default function OrdersPage() {
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [trackingCode, setTrackingCode] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
+  const [linkDoctorDialog, setLinkDoctorDialog] = useState<any>(null);
+  const [selectedDoctorId, setSelectedDoctorId] = useState("");
+  const [refundDialog, setRefundDialog] = useState<any>(null);
 
   const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ["admin-orders", statusFilter],
@@ -48,6 +55,14 @@ export default function OrdersPage() {
     },
   });
 
+  const { data: doctors } = useQuery({
+    queryKey: ["doctors-list-orders"],
+    queryFn: async () => {
+      const { data } = await supabase.from("doctors").select("id, name, crm, representative_id").eq("active", true).order("name");
+      return data || [];
+    },
+  });
+
   const filteredOrders = (orders || []).filter((o) => {
     if (!search) return true;
     const s = search.toLowerCase();
@@ -59,8 +74,11 @@ export default function OrdersPage() {
     );
   });
 
+  // Totals
+  const totalAll = useMemo(() => (orders || []).reduce((s, o) => s + Number(o.total), 0), [orders]);
+  const totalPaid = useMemo(() => (orders || []).filter(o => o.status === "paid" || o.status === "shipped" || o.status === "delivered").reduce((s, o) => s + Number(o.total), 0), [orders]);
+
   const handleSyncBling = async (orderId: string, force = false) => {
-    // Find the order to check status
     const order = orders?.find(o => o.id === orderId);
     if (order && !force && (order.status === "pending" || order.status === "cancelled")) {
       const confirmed = window.confirm(
@@ -104,7 +122,6 @@ export default function OrdersPage() {
         });
         if (error || data?.error) { fail++; } else { success++; }
       } catch { fail++; }
-      // Delay between requests to avoid Bling API rate-limiting
       if (i < syncableOrders.length - 1) {
         await new Promise(r => setTimeout(r, 500));
       }
@@ -137,6 +154,40 @@ export default function OrdersPage() {
     }
   };
 
+  const handleLinkDoctor = async () => {
+    if (!linkDoctorDialog || !selectedDoctorId) return;
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ doctor_id: selectedDoctorId })
+        .eq("id", linkDoctorDialog.id);
+      if (error) throw error;
+      toast.success("Prescritor vinculado ao pedido!");
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["commissions"] });
+      setLinkDoctorDialog(null);
+      setSelectedDoctorId("");
+    } catch (err: any) {
+      toast.error(`Erro: ${err.message}`);
+    }
+  };
+
+  const handleRefund = async () => {
+    if (!refundDialog) return;
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: "refunded" })
+        .eq("id", refundDialog.id);
+      if (error) throw error;
+      toast.success("Pedido marcado como devolvido!");
+      refetch();
+      setRefundDialog(null);
+    } catch (err: any) {
+      toast.error(`Erro: ${err.message}`);
+    }
+  };
+
   const stats = {
     total: orders?.length || 0,
     paid: orders?.filter((o) => o.status === "paid").length || 0,
@@ -166,17 +217,20 @@ export default function OrdersPage() {
       {/* Stats */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {[
-          { title: "TOTAL PEDIDOS", value: stats.total, icon: DollarSign, iconBg: "bg-primary/10", iconColor: "text-primary" },
-          { title: "PAGOS", value: stats.paid, icon: CheckCircle, iconBg: "bg-green-500/10", iconColor: "text-green-600" },
+          { title: "TOTAL PEDIDOS", value: stats.total, sub: fmt(totalAll), icon: DollarSign, iconBg: "bg-primary/10", iconColor: "text-primary" },
+          { title: "PAGOS", value: stats.paid, sub: fmt(totalPaid), icon: CheckCircle, iconBg: "bg-green-500/10", iconColor: "text-green-600" },
           { title: "ENVIADOS", value: stats.shipped, icon: Truck, iconBg: "bg-blue-500/10", iconColor: "text-blue-600" },
           { title: "FINALIZADOS", value: stats.delivered, icon: Package, iconBg: "bg-emerald-500/10", iconColor: "text-emerald-600" },
         ].map((card) => (
           <Card key={card.title} className="relative overflow-hidden border border-border/50">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <p className="text-xs font-medium tracking-wider text-muted-foreground">{card.title}</p>
                   <p className="text-2xl font-bold text-foreground">{card.value}</p>
+                  {"sub" in card && card.sub && (
+                    <p className="text-sm font-semibold text-muted-foreground">{card.sub}</p>
+                  )}
                 </div>
                 <div className={`h-12 w-12 rounded-xl ${card.iconBg} flex items-center justify-center`}>
                   <card.icon className={`h-6 w-6 ${card.iconColor}`} />
@@ -210,6 +264,7 @@ export default function OrdersPage() {
             <SelectItem value="shipped">Enviado</SelectItem>
             <SelectItem value="delivered">Finalizado</SelectItem>
             <SelectItem value="cancelled">Cancelado</SelectItem>
+            <SelectItem value="refunded">Devolvido</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -290,7 +345,7 @@ export default function OrdersPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-      <Button
+                          <Button
                             variant="ghost"
                             size="icon"
                             title="Sync Bling"
@@ -298,6 +353,16 @@ export default function OrdersPage() {
                           >
                             <RefreshCw className="h-4 w-4" />
                           </Button>
+                          {!order.doctor_id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Vincular Prescritor"
+                              onClick={() => { setLinkDoctorDialog(order); setSelectedDoctorId(""); }}
+                            >
+                              <UserPlus className="h-4 w-4 text-blue-600" />
+                            </Button>
+                          )}
                           {order.status === "pending" && (
                             <Button
                               variant="ghost"
@@ -313,7 +378,6 @@ export default function OrdersPage() {
                                   if (error) throw error;
                                   toast.success("Pedido marcado como pago!");
                                   refetch();
-                                  // Auto-sync Bling
                                   handleSyncBling(order.id, true);
                                 } catch (err: any) {
                                   toast.error(`Erro: ${err.message}`);
@@ -371,6 +435,14 @@ export default function OrdersPage() {
                   <p className="text-muted-foreground">Cupom</p>
                   <p className="font-medium">{selectedOrder.coupon_code || "—"}</p>
                 </div>
+                <div>
+                  <p className="text-muted-foreground">Prescritor</p>
+                  <p className="font-medium">
+                    {selectedOrder.doctor_id
+                      ? doctors?.find(d => d.id === selectedOrder.doctor_id)?.name || selectedOrder.doctor_id.slice(0, 8)
+                      : "—"}
+                  </p>
+                </div>
                 {selectedOrder.tracking_code && (
                   <div className="col-span-2">
                     <p className="text-muted-foreground">Rastreio</p>
@@ -391,8 +463,20 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* Status Update */}
+              {/* Actions */}
               <div className="border-t pt-4 space-y-3">
+                {/* Link to prescriber */}
+                {!selectedOrder.doctor_id && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => { setLinkDoctorDialog(selectedOrder); setSelectedDoctorId(""); setSelectedOrder(null); }}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" /> Vincular Prescritor
+                  </Button>
+                )}
+
+                {/* Status Update */}
                 <Label>Atualizar Status</Label>
                 {selectedOrder.status === "paid" && (
                   <div className="space-y-2">
@@ -419,9 +503,66 @@ export default function OrdersPage() {
                     <CheckCircle className="h-4 w-4 mr-2" /> Marcar como Finalizado
                   </Button>
                 )}
+
+                {/* Refund button */}
+                {["paid", "shipped", "delivered"].includes(selectedOrder.status) && (
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => { setRefundDialog(selectedOrder); setSelectedOrder(null); }}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" /> Devolução
+                  </Button>
+                )}
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Link Doctor Dialog */}
+      <Dialog open={!!linkDoctorDialog} onOpenChange={() => setLinkDoctorDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vincular Prescritor ao Pedido</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Pedido <strong>#{linkDoctorDialog?.id?.slice(0, 8)}</strong> — {linkDoctorDialog?.customer_name}
+          </p>
+          <div className="space-y-2">
+            <Label>Prescritor</Label>
+            <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
+              <SelectTrigger><SelectValue placeholder="Selecione um prescritor..." /></SelectTrigger>
+              <SelectContent>
+                {doctors?.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.name} {d.crm ? `(${d.crm})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkDoctorDialog(null)}>Cancelar</Button>
+            <Button onClick={handleLinkDoctor} disabled={!selectedDoctorId}>Vincular</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Refund Dialog */}
+      <Dialog open={!!refundDialog} onOpenChange={() => setRefundDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Devolução</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Deseja marcar o pedido <strong>#{refundDialog?.id?.slice(0, 8)}</strong> de <strong>{refundDialog?.customer_name}</strong> ({fmt(Number(refundDialog?.total || 0))}) como devolvido?
+          </p>
+          <p className="text-xs text-destructive">Esta ação alterará o status do pedido para "Devolvido".</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRefundDialog(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleRefund}>Confirmar Devolução</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
