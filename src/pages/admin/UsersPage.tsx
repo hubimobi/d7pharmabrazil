@@ -86,7 +86,7 @@ export default function UsersPage() {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserEntry | null>(null);
-  const [form, setForm] = useState({ email: "", password: "", full_name: "", role: "admin", representative_id: "" });
+  const [form, setForm] = useState({ email: "", password: "", full_name: "", role: "admin", representative_id: "", doctor_id: "" });
   const [editForm, setEditForm] = useState({ full_name: "", role: "", representative_id: "", email: "", phone: "" });
   const [accessRules, setAccessRules] = useState<Record<string, Record<string, { view: boolean; edit: boolean }>>>(DEFAULT_ACCESS);
   const [selectedAccessRole, setSelectedAccessRole] = useState("gestor");
@@ -136,10 +136,26 @@ export default function UsersPage() {
     },
   });
 
+  const { data: doctors } = useQuery({
+    queryKey: ["doctors-list-for-users"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("doctors").select("id, name, email, representative_id, user_id").eq("active", true).order("name") as any;
+      if (error) throw error;
+      return data as { id: string; name: string; email: string | null; representative_id: string; user_id: string | null }[];
+    },
+  });
+
+  // Doctors without a linked user (available to create user for)
+  const availableDoctors = doctors?.filter((d) => !d.user_id) || [];
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("create-tenant-user", {
-        body: { ...form, representative_id: form.role === "prescriber" ? form.representative_id : undefined },
+        body: {
+          ...form,
+          representative_id: form.role === "prescriber" ? form.representative_id : undefined,
+          doctor_id: form.role === "prescriber" ? form.doctor_id : undefined,
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -149,7 +165,7 @@ export default function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       toast.success("Usuário criado com sucesso!");
       setCreateOpen(false);
-      setForm({ email: "", password: "", full_name: "", role: "admin", representative_id: "" });
+      setForm({ email: "", password: "", full_name: "", role: "admin", representative_id: "", doctor_id: "" });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -415,16 +431,41 @@ export default function UsersPage() {
               </Select>
             </div>
             {form.role === "prescriber" && (
-              <div>
-                <Label>Representante Vinculado *</Label>
-                <Select value={form.representative_id} onValueChange={(v) => setForm((f) => ({ ...f, representative_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um representante" /></SelectTrigger>
-                  <SelectContent>
-                    {representatives?.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4">
+                <div>
+                  <Label>Prescritor Cadastrado *</Label>
+                  <Select
+                    value={form.doctor_id}
+                    onValueChange={(v) => {
+                      const doc = availableDoctors.find((d) => d.id === v);
+                      if (doc) {
+                        setForm((f) => ({
+                          ...f,
+                          doctor_id: v,
+                          full_name: doc.name,
+                          email: doc.email || "",
+                          representative_id: doc.representative_id,
+                        }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione um prescritor" /></SelectTrigger>
+                    <SelectContent>
+                      {availableDoctors.length === 0 ? (
+                        <SelectItem value="_none" disabled>Nenhum prescritor sem usuário</SelectItem>
+                      ) : (
+                        availableDoctors.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.name} {d.email ? `(${d.email})` : ""}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    O email e nome serão preenchidos automaticamente com os dados do prescritor.
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -432,7 +473,7 @@ export default function UsersPage() {
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
             <Button
               onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || !form.email || !form.password || (form.role === "prescriber" && !form.representative_id)}
+              disabled={createMutation.isPending || !form.email || !form.password || (form.role === "prescriber" && !form.doctor_id)}
             >
               {createMutation.isPending ? "Criando..." : "Criar Usuário"}
             </Button>
