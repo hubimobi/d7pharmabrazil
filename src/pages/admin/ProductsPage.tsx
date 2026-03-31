@@ -824,16 +824,66 @@ export default function ProductsPage() {
                     </div>
                     <Textarea placeholder="Texto do depoimento..." value={newTestimonial.content}
                       onChange={(e) => setNewTestimonial({ ...newTestimonial, content: e.target.value })} rows={2} />
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-3">
                       <div>
-                        <Label className="text-xs">Foto do Autor (URL)</Label>
-                        <Input placeholder="https://..." value={newTestimonial.author_image_url || ""}
-                          onChange={(e) => setNewTestimonial({ ...newTestimonial, author_image_url: e.target.value })} />
+                        <Label className="text-xs">Foto do Autor</Label>
+                        <div className="flex items-center gap-3 mt-1">
+                          {(newTestimonial.author_image_url || newTestimonial.author_image_file) && (
+                            <img src={newTestimonial.author_image_file ? URL.createObjectURL(newTestimonial.author_image_file) : newTestimonial.author_image_url!} alt="" className="h-12 w-12 rounded-full object-cover" />
+                          )}
+                          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => document.getElementById("testimonial-author-photo")?.click()}>
+                            <Upload className="h-4 w-4" /> {newTestimonial.author_image_url || newTestimonial.author_image_file ? "Trocar" : "Enviar Foto"}
+                          </Button>
+                          {(newTestimonial.author_image_url || newTestimonial.author_image_file) && (
+                            <Button type="button" variant="ghost" size="sm" onClick={() => setNewTestimonial({ ...newTestimonial, author_image_url: undefined, author_image_file: undefined })}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <input id="testimonial-author-photo" type="file" accept="image/*" className="hidden" onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) setNewTestimonial({ ...newTestimonial, author_image_file: f, author_image_url: undefined });
+                          }} />
+                        </div>
                       </div>
                       <div>
-                        <Label className="text-xs">Foto do Produto (URL)</Label>
-                        <Input placeholder="https://..." value={newTestimonial.product_image_url || ""}
-                          onChange={(e) => setNewTestimonial({ ...newTestimonial, product_image_url: e.target.value })} />
+                        <Label className="text-xs">Fotos do Produto (até 4)</Label>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {(newTestimonial.product_image_urls || []).map((url, pi) => (
+                            <div key={pi} className="relative group">
+                              <img src={url} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                              <button type="button" onClick={() => {
+                                const urls = [...(newTestimonial.product_image_urls || [])];
+                                urls.splice(pi, 1);
+                                setNewTestimonial({ ...newTestimonial, product_image_urls: urls });
+                              }} className="absolute -top-1 -right-1 rounded-full bg-destructive p-0.5 text-destructive-foreground opacity-0 group-hover:opacity-100 transition">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                          {(newTestimonial.product_image_files || []).map((f, pi) => (
+                            <div key={`new-${pi}`} className="relative group">
+                              <img src={URL.createObjectURL(f)} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                              <button type="button" onClick={() => {
+                                const files = [...(newTestimonial.product_image_files || [])];
+                                files.splice(pi, 1);
+                                setNewTestimonial({ ...newTestimonial, product_image_files: files });
+                              }} className="absolute -top-1 -right-1 rounded-full bg-destructive p-0.5 text-destructive-foreground opacity-0 group-hover:opacity-100 transition">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                          {((newTestimonial.product_image_urls?.length || 0) + (newTestimonial.product_image_files?.length || 0)) < 4 && (
+                            <Button type="button" variant="outline" size="sm" className="gap-1 h-14" onClick={() => document.getElementById("testimonial-product-photos")?.click()}>
+                              <Upload className="h-4 w-4" /> Adicionar
+                            </Button>
+                          )}
+                          <input id="testimonial-product-photos" type="file" accept="image/*" multiple className="hidden" onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            const existing = (newTestimonial.product_image_urls?.length || 0) + (newTestimonial.product_image_files?.length || 0);
+                            const allowed = Math.max(0, 4 - existing);
+                            setNewTestimonial({ ...newTestimonial, product_image_files: [...(newTestimonial.product_image_files || []), ...files.slice(0, allowed)] });
+                          }} />
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-2">
