@@ -427,16 +427,41 @@ export default function UsersPage() {
               </Select>
             </div>
             {form.role === "prescriber" && (
-              <div>
-                <Label>Representante Vinculado *</Label>
-                <Select value={form.representative_id} onValueChange={(v) => setForm((f) => ({ ...f, representative_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um representante" /></SelectTrigger>
-                  <SelectContent>
-                    {representatives?.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4">
+                <div>
+                  <Label>Prescritor Cadastrado *</Label>
+                  <Select
+                    value={form.doctor_id}
+                    onValueChange={(v) => {
+                      const doc = availableDoctors.find((d) => d.id === v);
+                      if (doc) {
+                        setForm((f) => ({
+                          ...f,
+                          doctor_id: v,
+                          full_name: doc.name,
+                          email: doc.email || "",
+                          representative_id: doc.representative_id,
+                        }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione um prescritor" /></SelectTrigger>
+                    <SelectContent>
+                      {availableDoctors.length === 0 ? (
+                        <SelectItem value="_none" disabled>Nenhum prescritor sem usuário</SelectItem>
+                      ) : (
+                        availableDoctors.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.name} {d.email ? `(${d.email})` : ""}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    O email e nome serão preenchidos automaticamente com os dados do prescritor.
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -444,7 +469,7 @@ export default function UsersPage() {
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
             <Button
               onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || !form.email || !form.password || (form.role === "prescriber" && !form.representative_id)}
+              disabled={createMutation.isPending || !form.email || !form.password || (form.role === "prescriber" && !form.doctor_id)}
             >
               {createMutation.isPending ? "Criando..." : "Criar Usuário"}
             </Button>
