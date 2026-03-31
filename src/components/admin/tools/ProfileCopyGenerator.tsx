@@ -366,14 +366,18 @@ export default function ProfileCopyGenerator() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
           <Button onClick={handleGenerate} disabled={isLoading} className="w-full sm:w-auto">
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
             {loading ? "Gerando..." : "Gerar Copy por Perfil"}
           </Button>
           <Button onClick={handleGenerateAllDisc} disabled={isLoading} variant="outline" className="w-full sm:w-auto border-indigo-300 text-indigo-700 hover:bg-indigo-50">
             {loadingAll ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Users className="h-4 w-4 mr-2" />}
-            {loadingAll ? "Gerando 4 perfis..." : "Gerar Variações por Perfil Automaticamente"}
+            {loadingAll ? "Gerando D/I/S/C..." : "Gerar por Perfil DISC"}
+          </Button>
+          <Button onClick={handleGenerateAllOcean} disabled={isLoading} variant="outline" className="w-full sm:w-auto border-purple-300 text-purple-700 hover:bg-purple-50">
+            {loadingOcean ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Users className="h-4 w-4 mr-2" />}
+            {loadingOcean ? "Gerando OCEAN..." : "Gerar por Traço OCEAN"}
           </Button>
         </div>
       </Card>
