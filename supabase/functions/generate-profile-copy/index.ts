@@ -126,7 +126,7 @@ PRODUTO: ${productName}
 DESCRIÇÃO: ${productDescription || "N/A"}
 BENEFÍCIOS: ${benefits || "N/A"}
 PLATAFORMA: ${platform || "geral"}
-FASE DO FUNIL: ${funnelMap[funnelStage] || funnelStage}
+FASE DO FUNIL: ${funnelStage === "all" ? "TODAS as fases (Sem noção, Curioso, Pronto para comprar, Pós-compra) — adapte cada copy para a fase mais adequada ao traço" : (funnelMap[funnelStage] || funnelStage)}
 
 Para cada traço, adapte o tom, os gatilhos e a linguagem. Também estime uma performance de conversão de 0 a 100 para cada traço.
 
