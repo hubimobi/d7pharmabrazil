@@ -93,6 +93,9 @@ export default function ProductsPage() {
   const [removingBg, setRemovingBg] = useState(false);
   const [editingTestimonialIdx, setEditingTestimonialIdx] = useState<number | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [linkGenProduct, setLinkGenProduct] = useState<{ id: string; slug: string; name: string } | null>(null);
+  const [linkGenDoctor, setLinkGenDoctor] = useState("");
+  const [linkGenCheckout, setLinkGenCheckout] = useState("");
   const { toast } = useToast();
   const qc = useQueryClient();
   const { data: storeSettings } = useStoreSettings();
@@ -106,6 +109,34 @@ export default function ProductsPage() {
       return data;
     },
   });
+
+  // Doctors with coupons for link generator
+  const { data: doctorsWithCoupons } = useQuery({
+    queryKey: ["doctors-coupons-for-links"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("coupons")
+        .select("code, doctor_id, doctors(id, name)")
+        .not("doctor_id", "is", null)
+        .eq("active", true);
+      return (data || []).map((c: any) => ({
+        doctor_id: c.doctor_id,
+        doctor_name: c.doctors?.name || "—",
+        coupon_code: c.code,
+      }));
+    },
+  });
+
+  const linkGenUrl = (() => {
+    if (!linkGenProduct) return "";
+    const base = window.location.origin;
+    const doctor = linkGenDoctor && linkGenDoctor !== "none" ? doctorsWithCoupons?.find((d) => d.doctor_id === linkGenDoctor) : null;
+    const params = new URLSearchParams();
+    if (doctor) params.set("cupom", doctor.coupon_code);
+    if (linkGenCheckout && linkGenCheckout !== "default") params.set("ck", linkGenCheckout);
+    const qs = params.toString();
+    return `${base}/produto/${linkGenProduct.slug}${qs ? `?${qs}` : ""}`;
+  })();
 
   const save = useMutation({
     mutationFn: async () => {
@@ -1057,6 +1088,13 @@ export default function ProductsPage() {
                           }}>
                             <Link2 className="h-4 w-4 mr-2" /> Copiar Link
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setLinkGenProduct({ id: p.id, slug: p.slug, name: p.name });
+                            setLinkGenDoctor("");
+                            setLinkGenCheckout("");
+                          }}>
+                            <ArrowUpRight className="h-4 w-4 mr-2" /> Link Personalizado
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => duplicateProduct.mutate(p)}>
                             <Copy className="h-4 w-4 mr-2" /> Duplicar
                           </DropdownMenuItem>
@@ -1101,6 +1139,71 @@ export default function ProductsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Link Personalizado Dialog */}
+      <Dialog open={!!linkGenProduct} onOpenChange={(v) => { if (!v) setLinkGenProduct(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5" /> Link Personalizado
+            </DialogTitle>
+          </DialogHeader>
+          {linkGenProduct && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-xs text-muted-foreground">Produto</Label>
+                <p className="font-medium">{linkGenProduct.name}</p>
+              </div>
+              <div>
+                <Label>Prescritor (cupom automático)</Label>
+                <Select value={linkGenDoctor} onValueChange={setLinkGenDoctor}>
+                  <SelectTrigger><SelectValue placeholder="Nenhum (sem cupom)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {doctorsWithCoupons?.map((d) => (
+                      <SelectItem key={d.doctor_id} value={d.doctor_id}>
+                        {d.doctor_name} ({d.coupon_code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Versão do Checkout</Label>
+                <Select value={linkGenCheckout} onValueChange={setLinkGenCheckout}>
+                  <SelectTrigger><SelectValue placeholder="Padrão (configuração da loja)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Padrão</SelectItem>
+                    <SelectItem value="1">V1 - Clássico</SelectItem>
+                    <SelectItem value="2">V2 - Multi-etapas</SelectItem>
+                    <SelectItem value="3">V3 - Minimalista</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="rounded-lg border border-border bg-muted/50 p-3">
+                <Label className="text-xs text-muted-foreground mb-1 block">Link gerado</Label>
+                <p className="text-sm font-mono break-all">{linkGenUrl}</p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    navigator.clipboard.writeText(linkGenUrl);
+                    toast({ title: "Link copiado!" });
+                  }}
+                >
+                  <Copy className="h-4 w-4 mr-2" /> Copiar Link
+                </Button>
+                <Button variant="outline" asChild>
+                  <a href={linkGenUrl} target="_blank" rel="noopener noreferrer">
+                    <Eye className="h-4 w-4 mr-2" /> Abrir
+                  </a>
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

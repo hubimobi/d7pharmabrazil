@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, TrendingUp, LogOut, UserPlus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DollarSign, TrendingUp, LogOut, UserPlus, Link2, Copy, Check, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -32,6 +33,7 @@ export default function PrescritorPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [monthFilter, setMonthFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   // Get doctor record for logged in user
   const { data: doctor } = useQuery({
@@ -61,6 +63,55 @@ export default function PrescritorPage() {
     },
     enabled: !!doctor,
   });
+
+  // Fetch doctor's coupon
+  const { data: myCoupon } = useQuery({
+    queryKey: ["my-coupon", doctor?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("coupons")
+        .select("code")
+        .eq("doctor_id", doctor!.id)
+        .eq("active", true)
+        .limit(1)
+        .single();
+      return data?.code ?? null;
+    },
+    enabled: !!doctor,
+  });
+
+  // Fetch active products for link generation
+  const { data: products } = useQuery({
+    queryKey: ["prescriber-products"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("products")
+        .select("id, name, slug, image_url, price")
+        .eq("active", true)
+        .order("name");
+      return data ?? [];
+    },
+    enabled: !!doctor,
+  });
+
+  const baseUrl = window.location.origin;
+
+  const generateProductLink = (slug: string) => {
+    if (!myCoupon) return `${baseUrl}/produto/${slug}`;
+    return `${baseUrl}/produto/${slug}?cupom=${myCoupon}`;
+  };
+
+  const generateCheckoutLink = (slug: string) => {
+    if (!myCoupon) return `${baseUrl}/checkout`;
+    return `${baseUrl}/checkout?cupom=${myCoupon}`;
+  };
+
+  const copyLink = (link: string, id: string) => {
+    navigator.clipboard.writeText(link);
+    setCopiedLink(id);
+    toast({ title: "Link copiado!" });
+    setTimeout(() => setCopiedLink(null), 2000);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -245,7 +296,7 @@ export default function PrescritorPage() {
       <main className="container py-8 max-w-4xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">Meus Cashbacks</h1>
+            <h1 className="text-2xl font-bold">Portal do Prescritor</h1>
             <p className="text-sm text-muted-foreground">Olá, {doctor.name}</p>
           </div>
           <Button variant="outline" size="sm" onClick={signOut}>
@@ -253,85 +304,172 @@ export default function PrescritorPage() {
           </Button>
         </div>
 
-        <div className="flex gap-2 mb-6 flex-wrap">
-          <Select value={monthFilter} onValueChange={setMonthFilter}>
-            <SelectTrigger className="w-44"><SelectValue placeholder="Mês" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os meses</SelectItem>
-              {months.map((m) => (
-                <SelectItem key={m} value={m}>{formatMonth(m)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="pending">Gerada</SelectItem>
-              <SelectItem value="awaiting">Aguardando</SelectItem>
-              <SelectItem value="paid">Paga</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Cashback</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent><p className="text-2xl font-bold">{fmt(totalCashback)}</p></CardContent>
+        {/* Coupon badge */}
+        {myCoupon && (
+          <Card className="mb-6">
+            <CardContent className="flex items-center gap-3 py-4">
+              <span className="text-sm text-muted-foreground">Seu cupom:</span>
+              <span className="font-mono font-bold text-lg text-primary">{myCoupon}</span>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyLink(myCoupon, "coupon-code")}>
+                {copiedLink === "coupon-code" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Pago</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent><p className="text-2xl font-bold text-success">{fmt(paidCashback)}</p></CardContent>
-          </Card>
-        </div>
+        )}
 
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Cupom</TableHead>
-                  <TableHead>Valor Produtos</TableHead>
-                  <TableHead>Taxa</TableHead>
-                  <TableHead>Cashback</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-                ) : !filtered?.length ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum cashback encontrado</TableCell></TableRow>
-                ) : (
-                  filtered.map((c) => {
-                    const st = STATUS_MAP[c.status] ?? STATUS_MAP.pending;
-                    return (
-                      <TableRow key={c.id}>
-                        <TableCell className="text-sm">{(c as any).orders?.customer_name ?? "—"}</TableCell>
-                        <TableCell className="text-xs font-mono">{(c as any).orders?.coupon_code ?? "—"}</TableCell>
-                        <TableCell>{fmt(Number(c.order_total))}</TableCell>
-                        <TableCell>{c.commission_rate}%</TableCell>
-                        <TableCell className="font-semibold">{fmt(Number(c.commission_value))}</TableCell>
-                        <TableCell className="text-sm">{new Date(c.created_at).toLocaleDateString("pt-BR")}</TableCell>
-                        <TableCell>
-                          <Badge variant={st.variant}>{st.label}</Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="cashbacks">
+          <TabsList className="mb-4">
+            <TabsTrigger value="cashbacks"><DollarSign className="h-4 w-4 mr-1" /> Cashbacks</TabsTrigger>
+            <TabsTrigger value="links"><Link2 className="h-4 w-4 mr-1" /> Meus Links</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="cashbacks">
+            <div className="flex gap-2 mb-6 flex-wrap">
+              <Select value={monthFilter} onValueChange={setMonthFilter}>
+                <SelectTrigger className="w-44"><SelectValue placeholder="Mês" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os meses</SelectItem>
+                  {months.map((m) => (
+                    <SelectItem key={m} value={m}>{formatMonth(m)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="pending">Gerada</SelectItem>
+                  <SelectItem value="awaiting">Aguardando</SelectItem>
+                  <SelectItem value="paid">Paga</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 mb-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">Total Cashback</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent><p className="text-2xl font-bold">{fmt(totalCashback)}</p></CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">Pago</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent><p className="text-2xl font-bold text-success">{fmt(paidCashback)}</p></CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Cupom</TableHead>
+                      <TableHead>Valor Produtos</TableHead>
+                      <TableHead>Taxa</TableHead>
+                      <TableHead>Cashback</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                    ) : !filtered?.length ? (
+                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum cashback encontrado</TableCell></TableRow>
+                    ) : (
+                      filtered.map((c) => {
+                        const st = STATUS_MAP[c.status] ?? STATUS_MAP.pending;
+                        return (
+                          <TableRow key={c.id}>
+                            <TableCell className="text-sm">{(c as any).orders?.customer_name ?? "—"}</TableCell>
+                            <TableCell className="text-xs font-mono">{(c as any).orders?.coupon_code ?? "—"}</TableCell>
+                            <TableCell>{fmt(Number(c.order_total))}</TableCell>
+                            <TableCell>{c.commission_rate}%</TableCell>
+                            <TableCell className="font-semibold">{fmt(Number(c.commission_value))}</TableCell>
+                            <TableCell className="text-sm">{new Date(c.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                            <TableCell>
+                              <Badge variant={st.variant}>{st.label}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="links">
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Link2 className="h-5 w-5" /> Links de Produtos
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Compartilhe estes links com seus pacientes. O cupom <span className="font-mono font-bold text-primary">{myCoupon || "—"}</span> será aplicado automaticamente.
+                </p>
+              </CardHeader>
+            </Card>
+
+            {!myCoupon ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <p>Nenhum cupom vinculado à sua conta. Entre em contato com o suporte.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {/* General checkout link */}
+                <Card>
+                  <CardContent className="flex items-center gap-3 py-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">Link Geral do Checkout</p>
+                      <p className="text-xs text-muted-foreground truncate">{generateCheckoutLink("")}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => copyLink(generateCheckoutLink(""), "checkout-general")}>
+                      {copiedLink === "checkout-general" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Per-product links */}
+                {products?.map((p) => {
+                  const link = generateProductLink(p.slug);
+                  return (
+                    <Card key={p.id}>
+                      <CardContent className="flex items-center gap-3 py-3">
+                        {p.image_url && (
+                          <img src={p.image_url} alt={p.name} className="w-10 h-10 object-cover rounded" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{p.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{link}</p>
+                        </div>
+                        <span className="text-sm font-semibold text-primary whitespace-nowrap">
+                          R$ {Number(p.price).toFixed(2).replace(".", ",")}
+                        </span>
+                        <Button variant="outline" size="sm" onClick={() => copyLink(link, `product-${p.id}`)}>
+                          {copiedLink === `product-${p.id}` ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                        <a href={link} target="_blank" rel="noopener noreferrer">
+                          <Button variant="ghost" size="sm">
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
       <Footer />
     </div>
