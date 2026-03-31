@@ -53,11 +53,17 @@ const MENU_SECTIONS = [
   { key: "banners", label: "Banners" },
   { key: "pages", label: "Páginas" },
   { key: "popups", label: "Popups" },
+  { key: "feedbacks", label: "Feedbacks" },
   { key: "design", label: "Design / Cores" },
   { key: "checkout", label: "Checkout" },
   { key: "store", label: "Configurações da Loja" },
   { key: "integrations", label: "Integrações" },
   { key: "ai_agents", label: "Agentes IA" },
+  { key: "recovery", label: "Recuperação" },
+  { key: "repurchase", label: "Recompra (+LTV)" },
+  { key: "combos", label: "Combos" },
+  { key: "whatsapp", label: "WhatsApp" },
+  { key: "tools", label: "Ferramentas" },
   { key: "users", label: "Usuários" },
 ];
 

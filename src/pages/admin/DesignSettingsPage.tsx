@@ -241,8 +241,8 @@ export default function DesignSettingsPage() {
     section_instagram_visible: "Feed Instagram",
   };
 
-  // Sections that are always visible (no toggle)
-  const ALWAYS_SHOW_SECTIONS = ["section_highlight_banner", "section_flash_sale"];
+  // All sections can be toggled
+  const ALWAYS_SHOW_SECTIONS: string[] = [];
 
   const DEFAULT_ORDER = Object.keys(SECTION_TOGGLES_MAP);
   const sectionOrder: string[] = (form as any).section_order && Array.isArray((form as any).section_order)
