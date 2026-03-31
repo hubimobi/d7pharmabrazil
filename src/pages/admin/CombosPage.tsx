@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Pencil, Trash2, Package, Upload, X, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, Upload, X, Search, Link2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ComboForm {
