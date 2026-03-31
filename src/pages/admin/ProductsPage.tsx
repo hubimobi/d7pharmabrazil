@@ -397,7 +397,9 @@ export default function ProductsPage() {
       .select("*").eq("product_id", p.id).order("created_at");
     setTestimonials((data ?? []).map((t: any) => ({
       id: t.id, author_name: t.author_name, content: t.content, rating: t.rating,
-      author_image_url: t.author_image_url, product_image_url: t.product_image_url, source: t.source || "manual",
+      author_image_url: t.author_image_url, product_image_url: t.product_image_url,
+      product_image_urls: Array.isArray(t.product_image_urls) ? t.product_image_urls : (t.product_image_url ? [t.product_image_url] : []),
+      source: t.source || "manual",
     })));
 
     // Load FAQs
