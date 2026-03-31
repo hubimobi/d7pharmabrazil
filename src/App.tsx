@@ -57,6 +57,7 @@ import WhatsAppPage from "./pages/admin/WhatsAppPage";
 import FeedbackApprovalPage from "./pages/admin/FeedbackApprovalPage";
 import ScrollToTop from "./components/ScrollToTop";
 import FloatingCheckoutButton from "./components/FloatingCheckoutButton";
+import PrescriberSignupPage from "./pages/PrescriberSignupPage";
 const queryClient = new QueryClient();
 
 // Detect Bling OAuth callback and redirect to edge function
