@@ -80,6 +80,17 @@ const CheckoutPageV3 = () => {
     }
   }, [savedCustomer]);
 
+  // Auto-apply coupon from URL param (?cupom=XXX)
+  const couponAppliedRef = useRef(false);
+  useEffect(() => {
+    const cupomParam = searchParams.get("cupom") || searchParams.get("Cupom") || searchParams.get("CUPOM");
+    if (cupomParam && items.length > 0 && !coupon && !couponAppliedRef.current) {
+      couponAppliedRef.current = true;
+      setCouponInput(cupomParam.toUpperCase());
+      applyCoupon(cupomParam);
+    }
+  }, [searchParams, items, coupon, applyCoupon]);
+
   const fetchAddress = useCallback(async (cep: string) => {
     setCepLoading(true);
     try {
