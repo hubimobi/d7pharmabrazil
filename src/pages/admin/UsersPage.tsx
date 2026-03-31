@@ -86,7 +86,7 @@ export default function UsersPage() {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserEntry | null>(null);
-  const [form, setForm] = useState({ email: "", password: "", full_name: "", role: "admin", representative_id: "" });
+  const [form, setForm] = useState({ email: "", password: "", full_name: "", role: "admin", representative_id: "", doctor_id: "" });
   const [editForm, setEditForm] = useState({ full_name: "", role: "", representative_id: "", email: "", phone: "" });
   const [accessRules, setAccessRules] = useState<Record<string, Record<string, { view: boolean; edit: boolean }>>>(DEFAULT_ACCESS);
   const [selectedAccessRole, setSelectedAccessRole] = useState("gestor");
