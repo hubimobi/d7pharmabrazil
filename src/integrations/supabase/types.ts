@@ -691,6 +691,7 @@ export type Database = {
       doctors: {
         Row: {
           active: boolean
+          approval_status: string
           city: string | null
           cpf: string | null
           created_at: string
@@ -708,6 +709,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          approval_status?: string
           city?: string | null
           cpf?: string | null
           created_at?: string
@@ -725,6 +727,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          approval_status?: string
           city?: string | null
           cpf?: string | null
           created_at?: string
