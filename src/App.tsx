@@ -54,6 +54,7 @@ import CombosPage from "./pages/admin/CombosPage";
 import ToolsPage from "./pages/admin/ToolsPage";
 import RepurchasePage from "./pages/admin/RepurchasePage";
 import WhatsAppPage from "./pages/admin/WhatsAppPage";
+import FeedbackApprovalPage from "./pages/admin/FeedbackApprovalPage";
 import ScrollToTop from "./components/ScrollToTop";
 import FloatingCheckoutButton from "./components/FloatingCheckoutButton";
 const queryClient = new QueryClient();
