@@ -130,10 +130,10 @@ export default function ProductsPage() {
   const linkGenUrl = (() => {
     if (!linkGenProduct) return "";
     const base = window.location.origin;
-    const doctor = doctorsWithCoupons?.find((d) => d.doctor_id === linkGenDoctor);
+    const doctor = linkGenDoctor && linkGenDoctor !== "none" ? doctorsWithCoupons?.find((d) => d.doctor_id === linkGenDoctor) : null;
     const params = new URLSearchParams();
     if (doctor) params.set("cupom", doctor.coupon_code);
-    if (linkGenCheckout) params.set("ck", linkGenCheckout);
+    if (linkGenCheckout && linkGenCheckout !== "default") params.set("ck", linkGenCheckout);
     const qs = params.toString();
     return `${base}/produto/${linkGenProduct.slug}${qs ? `?${qs}` : ""}`;
   })();
