@@ -148,15 +148,21 @@ Deno.serve(async (req) => {
     // If prescriber, link to existing doctor record or create new one
     if (role === "prescriber") {
       if (doctor_id) {
-        // Link existing doctor record to the new user
         await supabase.from("doctors").update({ user_id: userId }).eq("id", doctor_id);
       } else if (representative_id) {
-        // Fallback: create new doctor record
         await supabase.from("doctors").insert({
           user_id: userId,
           name: full_name || email,
           representative_id,
         });
+      }
+    }
+
+    // If representative, link to existing representative record
+    if (role === "representative") {
+      const repId = body.representative_record_id;
+      if (repId) {
+        await supabase.from("representatives").update({ user_id: userId }).eq("id", repId);
       }
     }
 
