@@ -47,6 +47,7 @@ interface AllDiscResult {
 }
 
 const DISC_OPTIONS = [
+  { value: "all", label: "Todos os Perfis", desc: "Gera para D, I, S e C", color: "bg-indigo-100 text-indigo-800 border-indigo-300" },
   { value: "D", label: "D — Dominância", desc: "Direto, resultado, rápido", color: "bg-red-100 text-red-800 border-red-300" },
   { value: "I", label: "I — Influência", desc: "Emocional, empolgante, social", color: "bg-yellow-100 text-yellow-800 border-yellow-300" },
   { value: "S", label: "S — Estabilidade", desc: "Seguro, confiável, tranquilo", color: "bg-green-100 text-green-800 border-green-300" },
