@@ -91,6 +91,9 @@ const PLATFORM_OPTIONS = [
 
 export default function ProfileCopyGenerator() {
   const { data: products } = useProducts();
+  const [sourceType, setSourceType] = useState<"product" | "url" | "text">("product");
+  const [referenceUrl, setReferenceUrl] = useState("");
+  const [baseText, setBaseText] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productName, setProductName] = useState("");
   const [productDescription, setProductDescription] = useState("");
