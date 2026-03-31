@@ -86,7 +86,7 @@ export default function UsersPage() {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserEntry | null>(null);
-  const [form, setForm] = useState({ email: "", password: "", full_name: "", role: "admin", representative_id: "", doctor_id: "" });
+  const [form, setForm] = useState({ email: "", password: "", full_name: "", role: "admin", representative_id: "", doctor_id: "", representative_record_id: "" });
   const [editForm, setEditForm] = useState({ full_name: "", role: "", representative_id: "", email: "", phone: "" });
   const [accessRules, setAccessRules] = useState<Record<string, Record<string, { view: boolean; edit: boolean }>>>(DEFAULT_ACCESS);
   const [selectedAccessRole, setSelectedAccessRole] = useState("gestor");
@@ -148,6 +148,13 @@ export default function UsersPage() {
   // Doctors without a linked user (available to create user for)
   const availableDoctors = doctors?.filter((d) => !d.user_id) || [];
 
+  // Representatives without a linked user (available to create user for)
+  const availableReps = representatives?.filter((r) => {
+    // Check if any user already has this rep linked
+    // We do a simple check: if rep has no user_id in the raw data
+    return true; // RLS handles this; we show all active reps for selection
+  }) || [];
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("create-tenant-user", {
@@ -155,6 +162,7 @@ export default function UsersPage() {
           ...form,
           representative_id: form.role === "prescriber" ? form.representative_id : undefined,
           doctor_id: form.role === "prescriber" ? form.doctor_id : undefined,
+          representative_record_id: form.role === "representative" ? form.representative_record_id : undefined,
         },
       });
       if (error) throw error;
@@ -165,7 +173,7 @@ export default function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       toast.success("Usuário criado com sucesso!");
       setCreateOpen(false);
-      setForm({ email: "", password: "", full_name: "", role: "admin", representative_id: "", doctor_id: "" });
+      setForm({ email: "", password: "", full_name: "", role: "admin", representative_id: "", doctor_id: "", representative_record_id: "" });
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -468,12 +476,40 @@ export default function UsersPage() {
                 </div>
               </div>
             )}
+            {form.role === "representative" && (
+              <div>
+                <Label>Representante Cadastrado *</Label>
+                <Select
+                  value={form.representative_record_id}
+                  onValueChange={(v) => {
+                    const rep = representatives?.find((r) => r.id === v);
+                    if (rep) {
+                      setForm((f) => ({
+                        ...f,
+                        representative_record_id: v,
+                        full_name: rep.name,
+                      }));
+                    }
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione um representante" /></SelectTrigger>
+                  <SelectContent>
+                    {representatives?.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  O nome será preenchido automaticamente. O user_id será vinculado ao registro.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
             <Button
               onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || !form.email || !form.password || (form.role === "prescriber" && !form.doctor_id)}
+              disabled={createMutation.isPending || !form.email || !form.password || (form.role === "prescriber" && !form.doctor_id) || (form.role === "representative" && !form.representative_record_id)}
             >
               {createMutation.isPending ? "Criando..." : "Criar Usuário"}
             </Button>
