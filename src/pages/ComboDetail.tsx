@@ -68,6 +68,7 @@ export default function ComboDetail() {
         .from("product_testimonials")
         .select("*")
         .in("product_id", combo.product_ids)
+        .eq("approved", true)
         .order("created_at", { ascending: false })
         .limit(12);
       if (error) throw error;

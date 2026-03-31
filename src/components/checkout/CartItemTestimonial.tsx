@@ -29,6 +29,7 @@ export default function CartItemTestimonial({ productId, customerState }: Props)
         .from("product_testimonials")
         .select("author_name, content, rating")
         .eq("product_id", productId)
+        .eq("approved", true)
         .order("created_at", { ascending: false })
         .limit(10);
       if (error) throw error;
