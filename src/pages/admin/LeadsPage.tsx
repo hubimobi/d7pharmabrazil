@@ -56,7 +56,9 @@ export default function LeadsPage() {
   const [editingLead, setEditingLead] = useState<any>(null);
   const [showAddLead, setShowAddLead] = useState(false);
   const [showBatches, setShowBatches] = useState(false);
-
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showUpsellDialog, setShowUpsellDialog] = useState(false);
+  const [upsellProductId, setUpsellProductId] = useState<string>("none");
   // CSV import state
   const [csvText, setCsvText] = useState("");
   const [importing, setImporting] = useState(false);
