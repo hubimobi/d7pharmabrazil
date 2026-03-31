@@ -115,6 +115,11 @@ export default function PrescritorPage() {
     return `${baseUrl}/produto/${slug}?cupom=${myCoupon}`;
   };
 
+  const generateComboLink = (slug: string) => {
+    if (!myCoupon) return `${baseUrl}/combo/${slug}`;
+    return `${baseUrl}/combo/${slug}?cupom=${myCoupon}`;
+  };
+
   const generateCheckoutLink = (slug: string) => {
     if (!myCoupon) return `${baseUrl}/checkout`;
     return `${baseUrl}/checkout?cupom=${myCoupon}`;
