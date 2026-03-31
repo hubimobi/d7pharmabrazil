@@ -485,6 +485,43 @@ export default function PrescritorPage() {
                     </Card>
                   );
                 })}
+
+                {/* Combos */}
+                {combos && combos.length > 0 && (
+                  <>
+                    <p className="text-sm font-semibold text-muted-foreground mt-4 mb-1">🔥 Combos</p>
+                    {combos.map((c: any) => {
+                      const link = generateComboLink(c.slug);
+                      return (
+                        <Card key={c.id}>
+                          <CardContent className="flex items-center gap-3 py-3">
+                            {c.image_url && (
+                              <img src={c.image_url} alt={c.name} className="w-10 h-10 object-cover rounded" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">COMBO</Badge>
+                                <p className="font-medium text-sm truncate">{c.name}</p>
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate">{link}</p>
+                            </div>
+                            <span className="text-sm font-semibold text-primary whitespace-nowrap">
+                              R$ {Number(c.price).toFixed(2).replace(".", ",")}
+                            </span>
+                            <Button variant="outline" size="sm" onClick={() => copyLink(link, `combo-${c.id}`)}>
+                              {copiedLink === `combo-${c.id}` ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                            <a href={link} target="_blank" rel="noopener noreferrer">
+                              <Button variant="ghost" size="sm">
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </a>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             )}
           </TabsContent>
