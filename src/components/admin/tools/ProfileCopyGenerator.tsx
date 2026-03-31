@@ -203,6 +203,34 @@ export default function ProfileCopyGenerator() {
     }
   };
 
+  const handleGenerateAllOcean = async () => {
+    if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
+    if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
+    if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
+    setLoadingOcean(true);
+    setAllOceanResult(null);
+    setAllDiscResult(null);
+    setResult(null);
+    try {
+      const payload = getBodyPayload();
+      const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
+        body: { ...payload, discProfile, funnelStage, platform, mode: "all_ocean" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.success && data.data?.profiles) {
+        setAllOceanResult(data.data);
+        toast.success("Variações OCEAN geradas!");
+      } else {
+        toast.error("Resposta inesperada da IA");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao gerar");
+    } finally {
+      setLoadingOcean(false);
+    }
+  };
+
   const copyFull = (copy: { headline: string; subheadline: string; body_blocks: string[]; cta: string }, key: string) => {
     const full = `${copy.headline}\n\n${copy.subheadline}\n\n${copy.body_blocks.join("\n\n")}\n\n${copy.cta}`;
     navigator.clipboard.writeText(full);
@@ -211,7 +239,7 @@ export default function ProfileCopyGenerator() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const isLoading = loading || loadingAll;
+  const isLoading = loading || loadingAll || loadingOcean;
 
   return (
     <div className="space-y-6">
