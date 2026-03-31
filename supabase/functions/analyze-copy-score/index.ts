@@ -44,7 +44,7 @@ serve(async (req) => {
     const isAdmin = (roles || []).some((r: any) => ["admin","super_admin","administrador","suporte","gestor","financeiro"].includes(r.role));
     if (!isAdmin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { text, productName, context } = await req.json();
+    const { text, productName, context, mode, suggestion } = await req.json();
     if (!text || text.trim().length < 10) {
       return new Response(JSON.stringify({ error: "Texto muito curto para análise" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -52,7 +52,14 @@ serve(async (req) => {
     const llm = await getActiveLLM(sb);
     const customPrompt = await getCustomPrompt(sb, "analyze_copy_score");
 
-    const systemPrompt = customPrompt?.system_prompt || `Você é um sistema avançado de análise de copywriting focado em alta conversão para o mercado brasileiro.
+    let systemPrompt: string;
+    let userPrompt: string;
+
+    if (mode === "implement_suggestion") {
+      systemPrompt = `Você é um copywriter especialista em alta conversão para o mercado brasileiro. Sua tarefa é receber um texto de copy e uma sugestão de melhoria, e reescrever o texto INTEIRO aplicando APENAS essa sugestão específica. Mantenha o restante do texto o mais próximo possível do original. Retorne APENAS JSON: { "improved_text": "texto completo reescrito" }`;
+      userPrompt = `TEXTO ORIGINAL:\n---\n${text}\n---\n\nSUGESTÃO A IMPLEMENTAR:\n${suggestion}\n\nReescreva o texto aplicando essa sugestão. Retorne APENAS o JSON.`;
+    } else {
+      systemPrompt = customPrompt?.system_prompt || `Você é um sistema avançado de análise de copywriting focado em alta conversão para o mercado brasileiro.
 Analise o texto e retorne APENAS JSON válido seguindo esta estrutura exata:
 
 {
@@ -83,13 +90,14 @@ Analise o texto e retorne APENAS JSON válido seguindo esta estrutura exata:
   }
 }`;
 
-    const userPrompt = `Analise o seguinte texto de copywriting${productName ? ` do produto "${productName}"` : ""}${context ? ` (contexto: ${context})` : ""}:
+      userPrompt = `Analise o seguinte texto de copywriting${productName ? ` do produto "${productName}"` : ""}${context ? ` (contexto: ${context})` : ""}:
 
 ---
 ${text}
 ---
 
 Retorne APENAS o JSON de análise, sem markdown ou explicações.`;
+    }
 
     const temperature = customPrompt?.temperature || 0.4;
 
