@@ -457,10 +457,67 @@ export default function ProfileCopyGenerator() {
             {loadingOcean ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Users className="h-4 w-4 mr-2" />}
             {loadingOcean ? "Gerando OCEAN..." : "Gerar por Traço OCEAN"}
           </Button>
+          {hasAnyResult && (
+            <Button onClick={() => setShowCampaignTable(true)} variant="outline" className="w-full sm:w-auto border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+              <Table2 className="h-4 w-4 mr-2" />
+              Tabela para Campanha
+            </Button>
+          )}
         </div>
       </Card>
 
-      {/* ===== ALL DISC COMPARISON VIEW ===== */}
+      {/* ===== CAMPAIGN TABLE DIALOG ===== */}
+      <Dialog open={showCampaignTable} onOpenChange={setShowCampaignTable}>
+        <DialogContent className="max-w-6xl max-h-[85vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Table2 className="h-5 w-5" />
+              Tabela de Campanha — Pronta para Importar
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground mb-3">
+            Compatível com Meta Ads (Facebook/Instagram) e Google Ads. Exporte como CSV e importe diretamente na plataforma.
+          </p>
+          <div className="rounded-lg border overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs whitespace-nowrap">Campaign Name</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Ad Set Name</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Ad Name</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Headline</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Description</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Primary Text</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Call to Action</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Platform</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {buildCampaignRows().map((row, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-xs font-medium max-w-[150px] truncate">{row.campaign}</TableCell>
+                    <TableCell className="text-xs max-w-[120px] truncate">{row.adSet}</TableCell>
+                    <TableCell className="text-xs max-w-[100px] truncate">{row.adName}</TableCell>
+                    <TableCell className="text-xs max-w-[180px]">{row.headline}</TableCell>
+                    <TableCell className="text-xs max-w-[180px]">{row.description}</TableCell>
+                    <TableCell className="text-xs max-w-[250px] line-clamp-2">{row.primaryText}</TableCell>
+                    <TableCell className="text-xs font-medium">{row.cta}</TableCell>
+                    <TableCell className="text-xs">{row.platform}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowCampaignTable(false)}>Fechar</Button>
+            <Button onClick={exportCampaignCSV} className="gap-2">
+              <Download className="h-4 w-4" />
+              Exportar CSV
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {allDiscResult && (
         <>
           {/* Performance Comparison Bar */}
