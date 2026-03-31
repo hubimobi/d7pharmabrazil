@@ -57,6 +57,7 @@ import WhatsAppPage from "./pages/admin/WhatsAppPage";
 import FeedbackApprovalPage from "./pages/admin/FeedbackApprovalPage";
 import ScrollToTop from "./components/ScrollToTop";
 import FloatingCheckoutButton from "./components/FloatingCheckoutButton";
+import PrescriberSignupPage from "./pages/PrescriberSignupPage";
 const queryClient = new QueryClient();
 
 // Detect Bling OAuth callback and redirect to edge function
@@ -102,6 +103,7 @@ const App = () => (
               <Route path="/acompanhar-pedido" element={<TrackOrderPage />} />
               <Route path="/feedback" element={<CustomerFeedbackPage />} />
               <Route path="/prescritor" element={<PrescritorPage />} />
+              <Route path="/cadastrar" element={<PrescriberSignupPage />} />
               <Route path="/politica-de-privacidade" element={<StaticPage />} />
               <Route path="/termos-de-uso" element={<StaticPage />} />
               <Route path="/trocas-e-devolucoes" element={<StaticPage />} />
