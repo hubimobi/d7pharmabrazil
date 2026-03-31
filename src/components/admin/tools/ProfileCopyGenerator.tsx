@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Copy, Check, UserCog, Sparkles, Users, Trophy } from "lucide-react";
+import { Loader2, Copy, Check, UserCog, Sparkles, Users, Trophy, Globe, FileText, Package } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -91,6 +91,9 @@ const PLATFORM_OPTIONS = [
 
 export default function ProfileCopyGenerator() {
   const { data: products } = useProducts();
+  const [sourceType, setSourceType] = useState<"product" | "url" | "text">("product");
+  const [referenceUrl, setReferenceUrl] = useState("");
+  const [baseText, setBaseText] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productName, setProductName] = useState("");
   const [productDescription, setProductDescription] = useState("");
@@ -116,14 +119,27 @@ export default function ProfileCopyGenerator() {
     }
   };
 
+  const getBodyPayload = () => {
+    if (sourceType === "url") {
+      return { productName: referenceUrl, productDescription: `Conteúdo da URL: ${referenceUrl}`, benefits: "", referenceUrl };
+    }
+    if (sourceType === "text") {
+      return { productName: "Texto Base", productDescription: baseText, benefits: "" };
+    }
+    return { productName, productDescription, benefits };
+  };
+
   const handleGenerate = async () => {
-    if (!productName) { toast.error("Informe o produto"); return; }
+    if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
+    if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
+    if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
     setLoading(true);
     setResult(null);
     setAllDiscResult(null);
     try {
+      const payload = getBodyPayload();
       const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
-        body: { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform },
+        body: { ...payload, discProfile, oceanTrait, funnelStage, platform },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -141,13 +157,16 @@ export default function ProfileCopyGenerator() {
   };
 
   const handleGenerateAllDisc = async () => {
-    if (!productName) { toast.error("Informe o produto"); return; }
+    if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
+    if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
+    if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
     setLoadingAll(true);
     setAllDiscResult(null);
     setResult(null);
     try {
+      const payload = getBodyPayload();
       const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
-        body: { productName, productDescription, benefits, oceanTrait, funnelStage, platform, mode: "all_disc" },
+        body: { ...payload, oceanTrait, funnelStage, platform, mode: "all_disc" },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -186,34 +205,62 @@ export default function ProfileCopyGenerator() {
           Gere copies de alta conversão personalizadas por perfil DISC, OCEAN e fase do funil.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">Selecionar Produto</label>
-            <Select value={selectedProductId} onValueChange={handleProductSelect}>
-              <SelectTrigger><SelectValue placeholder="Escolha..." /></SelectTrigger>
-              <SelectContent>
-                {products?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Nome do Produto *</label>
-            <Input value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Nome..." />
-          </div>
+        {/* Source Type Toggle */}
+        <div className="flex gap-2 mb-4">
+          {[
+            { value: "product" as const, label: "Produto", icon: Package },
+            { value: "url" as const, label: "URL de Referência", icon: Globe },
+            { value: "text" as const, label: "Texto Base", icon: FileText },
+          ].map((opt) => (
+            <Button
+              key={opt.value}
+              type="button"
+              variant={sourceType === opt.value ? "default" : "outline"}
+              size="sm"
+              className="text-xs"
+              onClick={() => setSourceType(opt.value)}
+            >
+              <opt.icon className="h-3 w-3 mr-1" />
+              {opt.label}
+            </Button>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">Descrição</label>
-            <Textarea value={productDescription} onChange={(e) => setProductDescription(e.target.value)} rows={2} placeholder="Descreva o produto..." />
+        {sourceType === "product" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Selecionar Produto</label>
+              <Select value={selectedProductId} onValueChange={handleProductSelect}>
+                <SelectTrigger><SelectValue placeholder="Escolha..." /></SelectTrigger>
+                <SelectContent>
+                  {products?.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Nome do Produto *</label>
+              <Input value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Nome..." />
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Benefícios</label>
-            <Textarea value={benefits} onChange={(e) => setBenefits(e.target.value)} rows={2} placeholder="Liste os benefícios..." />
+        )}
+
+        {sourceType === "url" && (
+          <div className="mb-4">
+            <label className="text-sm font-medium mb-1 block">URL de Referência *</label>
+            <Input value={referenceUrl} onChange={(e) => setReferenceUrl(e.target.value)} placeholder="https://exemplo.com/pagina-do-produto" />
+            <p className="text-xs text-gray-400 mt-1">Cole a URL da página que será usada como referência para gerar a copy.</p>
           </div>
-        </div>
+        )}
+
+        {sourceType === "text" && (
+          <div className="mb-4">
+            <label className="text-sm font-medium mb-1 block">Texto Base *</label>
+            <Textarea value={baseText} onChange={(e) => setBaseText(e.target.value)} rows={5} placeholder="Cole aqui o texto base que será usado como referência para gerar a copy..." />
+            <p className="text-xs text-gray-400 mt-1">{baseText.length} caracteres</p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div>
