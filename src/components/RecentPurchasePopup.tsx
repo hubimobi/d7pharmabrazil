@@ -195,6 +195,7 @@ export default function RecentPurchasePopup() {
       sku: "",
       upsellProductIds: Array.isArray((matchedProduct as any).upsell_product_ids) ? (matchedProduct as any).upsell_product_ids : [],
       benefits: (matchedProduct.benefits as string[]) || [],
+      manufacturer: (matchedProduct as any).manufacturer || "",
     };
     addItem(p, 1);
     setVisible(false);
