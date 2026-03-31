@@ -4,13 +4,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Copy, Check, UserCog, Sparkles, Users, Trophy, Globe, FileText, Package, Download, Table2 } from "lucide-react";
+import { Loader2, Copy, Check, UserCog, Sparkles, Users, Trophy, Globe, FileText, Package, Download, Table2, MessageCircleQuestion, HelpCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useProducts } from "@/hooks/useProducts";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+interface QuestionRow {
+  perfil: string;
+  jornada: string;
+  pergunta: string;
+  resposta: string;
+}
 
 interface CopyBlock {
   label: string;
@@ -108,6 +115,8 @@ const PLATFORM_OPTIONS = [
   { value: "whatsapp", label: "WhatsApp" },
   { value: "email", label: "E-mail Marketing" },
   { value: "landing_page", label: "Landing Page" },
+  { value: "caixinha_pergunta", label: "Caixinha de Pergunta" },
+  { value: "quizz_conversao", label: "Quizz de Conversão" },
 ];
 
 export default function ProfileCopyGenerator() {
@@ -131,6 +140,9 @@ export default function ProfileCopyGenerator() {
   const [allOceanResult, setAllOceanResult] = useState<AllDiscResult | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [showCampaignTable, setShowCampaignTable] = useState(false);
+  const [questionsResult, setQuestionsResult] = useState<QuestionRow[] | null>(null);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [showQuestionsTable, setShowQuestionsTable] = useState(false);
 
   const handleProductSelect = (id: string) => {
     setSelectedProductId(id);
@@ -153,10 +165,64 @@ export default function ProfileCopyGenerator() {
     return { productName, productDescription, benefits };
   };
 
+  const handleGenerateQuestions = async () => {
+    if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
+    if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
+    if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
+    setLoadingQuestions(true);
+    setQuestionsResult(null);
+    setResult(null);
+    setAllDiscResult(null);
+    setAllOceanResult(null);
+    try {
+      const payload = getBodyPayload();
+      const mode = platform === "caixinha_pergunta" ? "caixinha_pergunta" : "quizz_conversao";
+      const profileType = discProfile !== "D" && discProfile !== "all" ? "disc" : (oceanTrait !== "openness" ? "ocean" : "disc");
+      const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
+        body: { ...payload, discProfile, oceanTrait, funnelStage, platform, mode },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.success && data.data?.questions) {
+        setQuestionsResult(data.data.questions);
+        toast.success(mode === "caixinha_pergunta" ? "Caixinha de Perguntas gerada!" : "Quizz de Conversão gerado!");
+      } else {
+        toast.error("Resposta inesperada da IA");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao gerar");
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
+  const exportQuestionsCSV = () => {
+    if (!questionsResult?.length) { toast.error("Nenhuma pergunta gerada"); return; }
+    const headers = ["Perfil", "Jornada", "Pergunta", "Resposta"];
+    const csvContent = [
+      headers.join(","),
+      ...questionsResult.map(r => [r.perfil, r.jornada, r.pergunta, r.resposta].map(v => `"${(v || "").replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${platform === "caixinha_pergunta" ? "caixinha_perguntas" : "quizz_conversao"}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exportado!");
+  };
+
   const handleGenerate = async () => {
     if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
     if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
     if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
+
+    // Route to questions mode for special platforms
+    if (platform === "caixinha_pergunta" || platform === "quizz_conversao") {
+      handleGenerateQuestions();
+      return;
+    }
 
     // Auto-route to batch modes based on "all" selections
     if (discProfile === "all") { handleGenerateAllDisc(); return; }
@@ -166,6 +232,7 @@ export default function ProfileCopyGenerator() {
     setResult(null);
     setAllDiscResult(null);
     setAllOceanResult(null);
+    setQuestionsResult(null);
     try {
       const payload = getBodyPayload();
       const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
@@ -324,8 +391,8 @@ export default function ProfileCopyGenerator() {
     toast.success("CSV exportado com sucesso!");
   };
 
-  const hasAnyResult = !!(result || allDiscResult || allOceanResult);
-  const isLoading = loading || loadingAll || loadingOcean;
+  const hasAnyResult = !!(result || allDiscResult || allOceanResult || questionsResult);
+  const isLoading = loading || loadingAll || loadingOcean || loadingQuestions;
 
   return (
     <div className="space-y-6">
@@ -795,6 +862,77 @@ export default function ProfileCopyGenerator() {
                 </div>
               </Card>
             )}
+          </div>
+        </>
+      )}
+
+      {/* ===== QUESTIONS / QUIZ RESULTS ===== */}
+      {questionsResult && questionsResult.length > 0 && (
+        <>
+          <Card className="p-5 bg-white border border-gray-200 rounded-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                {platform === "quizz_conversao" ? (
+                  <><HelpCircle className="h-4 w-4 text-purple-500" /> Quizz de Conversão</>
+                ) : (
+                  <><MessageCircleQuestion className="h-4 w-4 text-pink-500" /> Caixinha de Perguntas — Instagram Stories</>
+                )}
+              </h3>
+              <Button size="sm" variant="outline" onClick={exportQuestionsCSV} className="text-xs gap-1">
+                <Download className="h-3 w-3" />
+                Exportar CSV (Canva)
+              </Button>
+            </div>
+            <div className="rounded-lg border overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs whitespace-nowrap">Perfil</TableHead>
+                    <TableHead className="text-xs whitespace-nowrap">Jornada</TableHead>
+                    <TableHead className="text-xs">Pergunta</TableHead>
+                    <TableHead className="text-xs">Resposta</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {questionsResult.map((row, i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] whitespace-nowrap">{row.perfil}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{row.jornada}</TableCell>
+                      <TableCell className="text-sm font-medium">{row.pergunta}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[250px]">{row.resposta}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+
+          {/* Individual question cards for mobile */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden">
+            {questionsResult.map((row, i) => (
+              <Card key={i} className="p-4 bg-white border border-gray-200 rounded-2xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="text-[10px]">{row.perfil}</Badge>
+                  <span className="text-[10px] text-muted-foreground">{row.jornada}</span>
+                </div>
+                <p className="text-sm font-semibold mb-1">"{row.pergunta}"</p>
+                <p className="text-xs text-muted-foreground">{row.resposta}</p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs mt-2 w-full"
+                  onClick={() => {
+                    navigator.clipboard.writeText(row.pergunta);
+                    toast.success("Pergunta copiada!");
+                  }}
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copiar Pergunta
+                </Button>
+              </Card>
+            ))}
           </div>
         </>
       )}
