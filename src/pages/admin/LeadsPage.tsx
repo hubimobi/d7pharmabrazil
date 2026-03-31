@@ -308,7 +308,78 @@ export default function LeadsPage() {
     const a = document.createElement("a"); a.href = url; a.download = "leads.csv"; a.click();
   };
 
-  return (
+  const allFilteredSelected = filtered.length > 0 && filtered.every((l: any) => selectedIds.has(l.id));
+
+  function toggleSelectAll() {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((l: any) => l.id)));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function bulkDelete() {
+    if (!selectedIds.size) return;
+    if (!confirm(`Excluir ${selectedIds.size} lead(s) selecionado(s)?`)) return;
+    const ids = Array.from(selectedIds);
+    for (let i = 0; i < ids.length; i += 50) {
+      await supabase.from("popup_leads").delete().in("id", ids.slice(i, i + 50));
+    }
+    toast.success(`${ids.length} lead(s) excluído(s)`);
+    setSelectedIds(new Set());
+    queryClient.invalidateQueries({ queryKey: ["popup-leads"] });
+  }
+
+  function bulkExport() {
+    const selected = filtered.filter((l: any) => selectedIds.has(l.id));
+    if (!selected.length) return;
+    const rows = [
+      ["Nome", "E-mail", "WhatsApp", "Cidade", "Estado", "Tags", "Produto", "Fonte", "Data"],
+      ...selected.map((l: any) => [
+        l.name || "", l.email, l.phone || "", l.city || "", l.state || "",
+        (Array.isArray(l.tags) ? l.tags.map(getTagLabel).join("; ") : ""),
+        l.product_name || "", l.source || "", new Date(l.created_at || "").toLocaleDateString("pt-BR"),
+      ]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "leads_selecionados.csv"; a.click();
+  }
+
+  async function bulkSendToUpsell() {
+    if (!upsellProductId || upsellProductId === "none") { toast.error("Selecione um produto para o fluxo"); return; }
+    const ids = Array.from(selectedIds);
+    const productName = products?.find((p) => p.id === upsellProductId)?.name || "";
+    for (let i = 0; i < ids.length; i += 50) {
+      await supabase.from("popup_leads").update({
+        product_id: upsellProductId,
+        product_name: productName,
+        tags: supabase.rpc ? undefined : undefined, // we update tags individually below
+      } as any).in("id", ids.slice(i, i + 50));
+    }
+    // Add "funil" tag to each
+    const leadsToUpdate = (leads || []).filter((l: any) => selectedIds.has(l.id));
+    for (const lead of leadsToUpdate) {
+      const currentTags: string[] = Array.isArray(lead.tags) ? lead.tags : [];
+      const newTags = [...new Set([...currentTags, "funil", "produto_vinculado"])];
+      await supabase.from("popup_leads").update({ tags: newTags, product_id: upsellProductId, product_name: productName } as any).eq("id", lead.id);
+    }
+    toast.success(`${ids.length} lead(s) enviado(s) para fluxo de UpSell: ${productName}`);
+    setSelectedIds(new Set());
+    setShowUpsellDialog(false);
+    setUpsellProductId("none");
+    queryClient.invalidateQueries({ queryKey: ["popup-leads"] });
+  }
+
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
