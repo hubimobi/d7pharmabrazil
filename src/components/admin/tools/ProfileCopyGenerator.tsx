@@ -187,9 +187,8 @@ export default function ProfileCopyGenerator() {
     try {
       const payload = getBodyPayload();
       const mode = platform === "caixinha_pergunta" ? "caixinha_pergunta" : "quizz_conversao";
-      const profileType = discProfile !== "D" && discProfile !== "all" ? "disc" : (oceanTrait !== "openness" ? "ocean" : "disc");
       const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
-        body: { ...payload, discProfile, oceanTrait, funnelStage, platform, mode },
+        body: { ...payload, discProfile, oceanTrait, funnelStage, platform, mode, copyMethod: platform === "caixinha_pergunta" ? copyMethod : undefined },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
