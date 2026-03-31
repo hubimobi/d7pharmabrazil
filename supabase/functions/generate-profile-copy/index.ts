@@ -44,7 +44,7 @@ serve(async (req) => {
     const isAdmin = (roles || []).some((r: any) => ["admin","super_admin","administrador","suporte","gestor","financeiro"].includes(r.role));
     if (!isAdmin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform } = await req.json();
+    const { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform, mode } = await req.json();
 
     if (!productName) {
       return new Response(JSON.stringify({ error: "Nome do produto é obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
