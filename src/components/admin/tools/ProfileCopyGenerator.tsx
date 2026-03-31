@@ -865,6 +865,77 @@ export default function ProfileCopyGenerator() {
           </div>
         </>
       )}
+
+      {/* ===== QUESTIONS / QUIZ RESULTS ===== */}
+      {questionsResult && questionsResult.length > 0 && (
+        <>
+          <Card className="p-5 bg-white border border-gray-200 rounded-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                {platform === "quizz_conversao" ? (
+                  <><HelpCircle className="h-4 w-4 text-purple-500" /> Quizz de Conversão</>
+                ) : (
+                  <><MessageCircleQuestion className="h-4 w-4 text-pink-500" /> Caixinha de Perguntas — Instagram Stories</>
+                )}
+              </h3>
+              <Button size="sm" variant="outline" onClick={exportQuestionsCSV} className="text-xs gap-1">
+                <Download className="h-3 w-3" />
+                Exportar CSV (Canva)
+              </Button>
+            </div>
+            <div className="rounded-lg border overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs whitespace-nowrap">Perfil</TableHead>
+                    <TableHead className="text-xs whitespace-nowrap">Jornada</TableHead>
+                    <TableHead className="text-xs">Pergunta</TableHead>
+                    <TableHead className="text-xs">Resposta</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {questionsResult.map((row, i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] whitespace-nowrap">{row.perfil}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">{row.jornada}</TableCell>
+                      <TableCell className="text-sm font-medium">{row.pergunta}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[250px]">{row.resposta}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+
+          {/* Individual question cards for mobile */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden">
+            {questionsResult.map((row, i) => (
+              <Card key={i} className="p-4 bg-white border border-gray-200 rounded-2xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="text-[10px]">{row.perfil}</Badge>
+                  <span className="text-[10px] text-muted-foreground">{row.jornada}</span>
+                </div>
+                <p className="text-sm font-semibold mb-1">"{row.pergunta}"</p>
+                <p className="text-xs text-muted-foreground">{row.resposta}</p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs mt-2 w-full"
+                  onClick={() => {
+                    navigator.clipboard.writeText(row.pergunta);
+                    toast.success("Pergunta copiada!");
+                  }}
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copiar Pergunta
+                </Button>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
