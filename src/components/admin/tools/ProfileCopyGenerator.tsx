@@ -207,16 +207,22 @@ export default function ProfileCopyGenerator() {
 
   const exportQuestionsCSV = () => {
     if (!questionsResult?.length) { toast.error("Nenhuma pergunta gerada"); return; }
-    const headers = ["Perfil", "Jornada", "Pergunta", "Resposta"];
+    const isCaixinha = platform === "caixinha_pergunta";
+    const headers = isCaixinha ? ["Perfil", "Jornada", "Pergunta", "Resposta", "Copy", "CTA"] : ["Perfil", "Jornada", "Pergunta", "Resposta"];
     const csvContent = [
       headers.join(","),
-      ...questionsResult.map(r => [r.perfil, r.jornada, r.pergunta, r.resposta].map(v => `"${(v || "").replace(/"/g, '""')}"`).join(","))
+      ...questionsResult.map(r => {
+        const cols = isCaixinha
+          ? [r.perfil, r.jornada, r.pergunta, r.resposta, r.copy || "", r.cta_copy || ""]
+          : [r.perfil, r.jornada, r.pergunta, r.resposta];
+        return cols.map(v => `"${(v || "").replace(/"/g, '""')}"`).join(",");
+      })
     ].join("\n");
     const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${platform === "caixinha_pergunta" ? "caixinha_perguntas" : "quizz_conversao"}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `${isCaixinha ? "caixinha_perguntas" : "quizz_conversao"}_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     toast.success("CSV exportado!");
