@@ -1,10 +1,10 @@
-import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ImageIcon, Video, Megaphone, MessageSquareQuote } from "lucide-react";
+import { ImageIcon, Video, Megaphone, MessageSquareQuote, BarChart3 } from "lucide-react";
 import TestimonialGenerator from "@/components/admin/tools/TestimonialGenerator";
 import ImageGenerator from "@/components/admin/tools/ImageGenerator";
 import VideoGenerator from "@/components/admin/tools/VideoGenerator";
 import AdsGenerator from "@/components/admin/tools/AdsGenerator";
+import CopyScoreAnalyzer from "@/components/admin/tools/CopyScoreAnalyzer";
 
 export default function ToolsPage() {
   return (
@@ -19,12 +19,13 @@ export default function ToolsPage() {
       </div>
 
       <Tabs defaultValue="testimonials" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-auto gap-2 bg-transparent p-0">
+        <TabsList className="grid w-full grid-cols-5 h-auto gap-2 bg-transparent p-0">
           {[
             { value: "testimonials", label: "Testemunhos", icon: MessageSquareQuote },
             { value: "images", label: "Imagens", icon: ImageIcon },
             { value: "videos", label: "Vídeos", icon: Video },
             { value: "ads", label: "ADS / Copy", icon: Megaphone },
+            { value: "copy-score", label: "Score Copy", icon: BarChart3 },
           ].map((tab) => (
             <TabsTrigger
               key={tab.value}
@@ -48,6 +49,9 @@ export default function ToolsPage() {
         </TabsContent>
         <TabsContent value="ads" className="mt-6">
           <AdsGenerator />
+        </TabsContent>
+        <TabsContent value="copy-score" className="mt-6">
+          <CopyScoreAnalyzer />
         </TabsContent>
       </Tabs>
     </div>
