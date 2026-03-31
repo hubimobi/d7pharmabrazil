@@ -120,8 +120,10 @@ export default function ProfileCopyGenerator() {
   const [platform, setPlatform] = useState("geral");
   const [loading, setLoading] = useState(false);
   const [loadingAll, setLoadingAll] = useState(false);
+  const [loadingOcean, setLoadingOcean] = useState(false);
   const [result, setResult] = useState<ProfileCopyResult | null>(null);
   const [allDiscResult, setAllDiscResult] = useState<AllDiscResult | null>(null);
+  const [allOceanResult, setAllOceanResult] = useState<AllDiscResult | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const handleProductSelect = (id: string) => {
