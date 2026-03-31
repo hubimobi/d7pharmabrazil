@@ -134,7 +134,9 @@ export default function ComboDetail() {
     if (comboDiscountValue > 0) {
       setComboDiscount(comboDiscountValue);
     }
-    navigate("/checkout");
+    const cupom = searchParams.get("cupom") || searchParams.get("Cupom") || searchParams.get("CUPOM");
+    const cupomParam = cupom ? `?cupom=${encodeURIComponent(cupom)}` : "";
+    navigate(`/checkout${cupomParam}`);
   };
 
   return (

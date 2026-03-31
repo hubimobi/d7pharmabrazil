@@ -47,7 +47,9 @@ const ProductDetail = () => {
       directCheckoutDone.current = true;
       addItem(product);
       const mParam = searchParams.has("m") ? "&m" : "";
-      navigate(`/checkout?ck=${ckParam}${mParam}`, { replace: true });
+      const cupom = searchParams.get("cupom") || searchParams.get("Cupom") || searchParams.get("CUPOM");
+      const cupomParam = cupom ? `&cupom=${encodeURIComponent(cupom)}` : "";
+      navigate(`/checkout?ck=${ckParam}${mParam}${cupomParam}`, { replace: true });
     }
   }, [ckParam, product, addItem, navigate, searchParams]);
   const [qty, setQty] = useState(1);

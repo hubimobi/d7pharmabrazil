@@ -190,6 +190,15 @@ const CheckoutPageV3 = () => {
       if (ref && data.order_id) {
         supabase.from("link_conversions").insert({ short_link_id: ref.linkId, order_id: data.order_id, order_total: paymentValue }).then(() => {});
         supabase.rpc("increment_link_conversions", { link_id: ref.linkId }).then(() => {});
+        // GA4 purchase attributed
+        if (typeof window !== "undefined" && (window as any).gtag) {
+          (window as any).gtag("event", "purchase_attributed", {
+            link_code: ref.code,
+            link_id: ref.linkId,
+            order_id: data.order_id,
+            order_total: paymentValue,
+          });
+        }
       }
 
       if (form.paymentMethod === "card" && (data.status === "CONFIRMED" || data.status === "RECEIVED")) {
