@@ -476,12 +476,40 @@ export default function UsersPage() {
                 </div>
               </div>
             )}
+            {form.role === "representative" && (
+              <div>
+                <Label>Representante Cadastrado *</Label>
+                <Select
+                  value={form.representative_record_id}
+                  onValueChange={(v) => {
+                    const rep = representatives?.find((r) => r.id === v);
+                    if (rep) {
+                      setForm((f) => ({
+                        ...f,
+                        representative_record_id: v,
+                        full_name: rep.name,
+                      }));
+                    }
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione um representante" /></SelectTrigger>
+                  <SelectContent>
+                    {representatives?.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  O nome será preenchido automaticamente. O user_id será vinculado ao registro.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
             <Button
               onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || !form.email || !form.password || (form.role === "prescriber" && !form.doctor_id)}
+              disabled={createMutation.isPending || !form.email || !form.password || (form.role === "prescriber" && !form.doctor_id) || (form.role === "representative" && !form.representative_record_id)}
             >
               {createMutation.isPending ? "Criando..." : "Criar Usuário"}
             </Button>
