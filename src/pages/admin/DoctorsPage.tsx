@@ -99,6 +99,18 @@ export default function DoctorsPage() {
     },
   });
 
+  // Fetch coupons linked to doctors
+  const { data: doctorCoupons } = useQuery({
+    queryKey: ["doctor-coupons-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("coupons").select("id, code, doctor_id").not("doctor_id", "is", null);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      data?.forEach((c) => { if (c.doctor_id) map[c.doctor_id] = c.code; });
+      return map;
+    },
+  });
+
   const availableCities = useMemo(() => {
     if (!form.state) return [];
     const list = CITIES_BY_STATE[form.state] ?? [];
@@ -372,6 +384,7 @@ export default function DoctorsPage() {
                 <TableHead className="hidden lg:table-cell">Especialidade</TableHead>
                 <TableHead className="hidden md:table-cell">Cidade/UF</TableHead>
                 {isAdmin && <TableHead className="hidden lg:table-cell">Representante</TableHead>}
+                <TableHead>Cupom</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-24">Ações</TableHead>
               </TableRow>
@@ -390,6 +403,26 @@ export default function DoctorsPage() {
                     <TableCell className="hidden lg:table-cell">{doc.specialty ?? "—"}</TableCell>
                     <TableCell className="hidden md:table-cell">{[doc.city, doc.state].filter(Boolean).join("/") || "—"}</TableCell>
                     {isAdmin && <TableCell className="hidden lg:table-cell">{(doc as any).representatives?.name ?? "—"}</TableCell>}
+                    <TableCell>
+                      {doctorCoupons?.[doc.id] ? (
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono text-xs font-semibold text-primary">{doctorCoupons[doc.id]}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              navigator.clipboard.writeText(doctorCoupons[doc.id]);
+                              toast.success("Cupom copiado!");
+                            }}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant={doc.active ? "default" : "secondary"}
