@@ -969,7 +969,9 @@ export default function ProfileCopyGenerator() {
                   <span className="text-[10px] text-muted-foreground">{row.jornada}</span>
                 </div>
                 <p className="text-sm font-semibold mb-1">"{row.pergunta}"</p>
-                <p className="text-xs text-muted-foreground">{row.resposta}</p>
+                <p className="text-xs text-muted-foreground mb-1">{row.resposta}</p>
+                {row.copy && <p className="text-xs text-gray-700 whitespace-pre-wrap border-t border-gray-100 pt-1 mt-1">{row.copy}</p>}
+                {row.cta_copy && <p className="text-xs font-medium text-indigo-700 mt-1">{row.cta_copy}</p>}
                 <Button
                   size="sm"
                   variant="ghost"

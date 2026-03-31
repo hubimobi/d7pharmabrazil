@@ -49,8 +49,19 @@ const funnelMap: Record<string, string> = {
   post: "Pós-compra — relacionamento, confiança, fidelização e recompra",
 };
 
+const copyMethodMap: Record<string, string> = {
+  venda: `V.E.N.D.A — Estrutura: Validação → Explicação → Nova visão → Direção → Abertura → Saída (CTA leve).
+Tom: Humano, simples, empático, conversacional. Ideal para público frio, engajamento e stories.`,
+  aida: `A.I.D.A — Estrutura: Atenção → Interesse → Desejo → Ação.
+Tom: Clareza, progressivo, envolvente. Ideal para público em consideração, anúncios e conteúdos estruturados.`,
+  corte: `C.O.R.T.E — Estrutura: Confronto → Oportunidade → Risco → Transição → Engajamento.
+Tom: Direto, firme, persuasivo. Ideal para público quente, ofertas, remarketing e fechamento.`,
+  ccp: `C.C.P — Estrutura: Cabeça (captura atenção, máx 12 palavras) → Corpo (explica problema, quebra crença, máx 3 linhas) → Pés (CTA claro, máx 1 linha).
+Tom: Adaptável ao contexto. Focado em dor, desejo ou resultado.`,
+};
+
 function buildUserPrompt(params: any): string {
-  const { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform, mode } = params;
+  const { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform, mode, copyMethod } = params;
 
   const funnelText = funnelStage === "all"
     ? "TODAS as fases (Sem noção, Curioso, Pronto para comprar, Pós-compra)"
@@ -64,6 +75,21 @@ function buildUserPrompt(params: any): string {
         ? "OCEAN (Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism)"
         : `DISC: ${discMap[discProfile] || discProfile}, OCEAN: ${oceanMap[oceanTrait] || oceanTrait}`);
 
+    const methodText = isCaixinha && copyMethod && copyMethodMap[copyMethod]
+      ? `\nMÉTODO DE RESPOSTA OBRIGATÓRIO: ${copyMethodMap[copyMethod]}`
+      : "";
+
+    const copyInstructions = isCaixinha ? `
+
+ETAPA 3: Para CADA pergunta gerada, crie uma COPY de resposta para Instagram Stories seguindo:
+- Estrutura do método selecionado${methodText ? ` (${(copyMethod || "venda").toUpperCase()})` : ""}
+- Linguagem natural e humana
+- Máximo 5 linhas
+- Foco em conversão
+- Incluir CTA leve no final
+- Adaptar para o perfil comportamental indicado
+- Adaptar para a etapa da jornada indicada` : "";
+
     return `Analise o seguinte conteúdo e gere ${isCaixinha ? "perguntas para Instagram Stories (caixinha de perguntas)" : "perguntas para um Quizz de Conversão interativo"}.
 
 PRODUTO/CONTEÚDO: ${productName}
@@ -71,7 +97,7 @@ DESCRIÇÃO: ${productDescription || "N/A"}
 BENEFÍCIOS: ${benefits || "N/A"}
 PLATAFORMA: ${isCaixinha ? "Instagram Stories — Caixinha de Perguntas" : "Quizz de Conversão (Instagram/Landing Page)"}
 MODELO DE PERFIL: ${profileModel}
-FASE DO FUNIL: ${funnelText}
+FASE DO FUNIL: ${funnelText}${methodText}
 
 ETAPA 1: Identifique:
 - Público-alvo
@@ -82,6 +108,7 @@ ETAPA 1: Identifique:
 ETAPA 2: Gere ${isCaixinha ? "perguntas para caixinha de perguntas do Instagram Stories" : "perguntas de quizz de conversão"}, seguindo:
 - 1 pergunta para cada perfil comportamental do modelo selecionado
 - Para cada fase do funil selecionada
+${copyInstructions}
 
 REGRAS:
 - As perguntas devem parecer naturais (linguagem humana)
@@ -89,6 +116,9 @@ REGRAS:
 - Máximo 12 palavras por pergunta
 - Evitar linguagem técnica
 - Gerar curiosidade ou identificação
+- Evitar linguagem robótica
+- Focar em dor, desejo ou resultado
+- Máximo de clareza com mínimo de palavras
 ${!isCaixinha ? "- Cada pergunta do quizz deve ter opções que revelam o perfil do respondente\n- A resposta deve direcionar sutilmente para o produto/solução" : ""}
 
 Retorne JSON com esta estrutura EXATA:
@@ -98,7 +128,9 @@ Retorne JSON com esta estrutura EXATA:
       "perfil": "nome do perfil (ex: D - Dominância ou Openness)",
       "jornada": "fase do funil (ex: Curioso, Pronto p/ Compra)",
       "pergunta": "a pergunta em até 12 palavras",
-      "resposta": "${isCaixinha ? "sugestão de resposta estratégica para engajar" : "resposta que direciona para a conversão/produto"}"
+      "resposta": "${isCaixinha ? "sugestão de resposta estratégica para engajar" : "resposta que direciona para a conversão/produto"}"${isCaixinha ? `,
+      "copy": "copy completa seguindo o método ${(copyMethod || "venda").toUpperCase()}, máximo 5 linhas, pronta para usar no stories",
+      "cta_copy": "CTA leve ou direto conforme o método"` : ""}
     }
   ],
   "publico_alvo": "descrição do público-alvo identificado",
