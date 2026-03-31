@@ -154,6 +154,7 @@ export default function ProfileCopyGenerator() {
     setLoading(true);
     setResult(null);
     setAllDiscResult(null);
+    setAllOceanResult(null);
     try {
       const payload = getBodyPayload();
       const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
