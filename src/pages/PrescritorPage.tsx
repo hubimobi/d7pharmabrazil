@@ -94,6 +94,20 @@ export default function PrescritorPage() {
     enabled: !!doctor,
   });
 
+  // Fetch active combos for link generation
+  const { data: combos } = useQuery({
+    queryKey: ["prescriber-combos"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("product_combos" as any)
+        .select("id, name, slug, image_url, price")
+        .eq("active", true)
+        .order("name") as { data: any[] | null };
+      return data ?? [];
+    },
+    enabled: !!doctor,
+  });
+
   const baseUrl = window.location.origin;
 
   const generateProductLink = (slug: string) => {
