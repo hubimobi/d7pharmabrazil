@@ -165,10 +165,64 @@ export default function ProfileCopyGenerator() {
     return { productName, productDescription, benefits };
   };
 
+  const handleGenerateQuestions = async () => {
+    if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
+    if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
+    if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
+    setLoadingQuestions(true);
+    setQuestionsResult(null);
+    setResult(null);
+    setAllDiscResult(null);
+    setAllOceanResult(null);
+    try {
+      const payload = getBodyPayload();
+      const mode = platform === "caixinha_pergunta" ? "caixinha_pergunta" : "quizz_conversao";
+      const profileType = discProfile !== "D" && discProfile !== "all" ? "disc" : (oceanTrait !== "openness" ? "ocean" : "disc");
+      const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
+        body: { ...payload, discProfile, oceanTrait, funnelStage, platform, mode },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.success && data.data?.questions) {
+        setQuestionsResult(data.data.questions);
+        toast.success(mode === "caixinha_pergunta" ? "Caixinha de Perguntas gerada!" : "Quizz de Conversão gerado!");
+      } else {
+        toast.error("Resposta inesperada da IA");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao gerar");
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
+  const exportQuestionsCSV = () => {
+    if (!questionsResult?.length) { toast.error("Nenhuma pergunta gerada"); return; }
+    const headers = ["Perfil", "Jornada", "Pergunta", "Resposta"];
+    const csvContent = [
+      headers.join(","),
+      ...questionsResult.map(r => [r.perfil, r.jornada, r.pergunta, r.resposta].map(v => `"${(v || "").replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${platform === "caixinha_pergunta" ? "caixinha_perguntas" : "quizz_conversao"}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exportado!");
+  };
+
   const handleGenerate = async () => {
     if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
     if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
     if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
+
+    // Route to questions mode for special platforms
+    if (platform === "caixinha_pergunta" || platform === "quizz_conversao") {
+      handleGenerateQuestions();
+      return;
+    }
 
     // Auto-route to batch modes based on "all" selections
     if (discProfile === "all") { handleGenerateAllDisc(); return; }
@@ -178,6 +232,7 @@ export default function ProfileCopyGenerator() {
     setResult(null);
     setAllDiscResult(null);
     setAllOceanResult(null);
+    setQuestionsResult(null);
     try {
       const payload = getBodyPayload();
       const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
