@@ -78,7 +78,7 @@ export default function RepresentativesPage() {
         const { error } = await supabase.from("representatives").update(form).eq("id", editId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("representatives").insert(form);
+        const { error } = await supabase.from("representatives").insert(form as any);
         if (error) throw error;
       }
     },
