@@ -33,6 +33,7 @@ export default function ComboDetail() {
   const { data: allProducts } = useProducts();
   const { addItem, setComboDiscount } = useCart();
   const { data: settings } = useStoreSettings();
+  const [searchParams] = useSearchParams();
 
   const combo = combos?.find((c) => c.slug === slug);
   const comboProducts = combo
