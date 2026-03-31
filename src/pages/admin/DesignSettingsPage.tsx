@@ -723,6 +723,20 @@ export default function DesignSettingsPage() {
           </div>
         </div>
 
+        {/* Filtro Lateral de Produtos */}
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Filtro Lateral de Produtos</h2>
+              <p className="text-sm text-muted-foreground">Exibir menu lateral com filtros por fabricante, categoria e faixa de preço na página de produtos.</p>
+            </div>
+            <Switch
+              checked={(form as any).products_sidebar_enabled !== false}
+              onCheckedChange={(v) => update("products_sidebar_enabled" as any, v)}
+            />
+          </div>
+        </div>
+
         {/* Estilo de Ícones */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <h2 className="text-lg font-semibold">Estilo dos Ícones</h2>
