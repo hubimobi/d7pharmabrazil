@@ -85,6 +85,7 @@ const OCEAN_NAMES: Record<string, string> = {
 };
 
 const OCEAN_OPTIONS = [
+  { value: "all", label: "Todos os Traços", desc: "Gera para os 5 traços OCEAN" },
   { value: "openness", label: "Abertura", desc: "Inovação e criatividade" },
   { value: "conscientiousness", label: "Conscienciosidade", desc: "Disciplina e organização" },
   { value: "extraversion", label: "Extroversão", desc: "Entusiasmo e energia" },
