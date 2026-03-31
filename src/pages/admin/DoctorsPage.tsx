@@ -99,6 +99,18 @@ export default function DoctorsPage() {
     },
   });
 
+  // Fetch coupons linked to doctors
+  const { data: doctorCoupons } = useQuery({
+    queryKey: ["doctor-coupons-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("coupons").select("id, code, doctor_id").not("doctor_id", "is", null);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      data?.forEach((c) => { if (c.doctor_id) map[c.doctor_id] = c.code; });
+      return map;
+    },
+  });
+
   const availableCities = useMemo(() => {
     if (!form.state) return [];
     const list = CITIES_BY_STATE[form.state] ?? [];
