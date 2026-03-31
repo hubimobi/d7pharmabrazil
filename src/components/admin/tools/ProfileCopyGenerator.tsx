@@ -119,14 +119,27 @@ export default function ProfileCopyGenerator() {
     }
   };
 
+  const getBodyPayload = () => {
+    if (sourceType === "url") {
+      return { productName: referenceUrl, productDescription: `Conteúdo da URL: ${referenceUrl}`, benefits: "", referenceUrl };
+    }
+    if (sourceType === "text") {
+      return { productName: "Texto Base", productDescription: baseText, benefits: "" };
+    }
+    return { productName, productDescription, benefits };
+  };
+
   const handleGenerate = async () => {
-    if (!productName) { toast.error("Informe o produto"); return; }
+    if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
+    if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
+    if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
     setLoading(true);
     setResult(null);
     setAllDiscResult(null);
     try {
+      const payload = getBodyPayload();
       const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
-        body: { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform },
+        body: { ...payload, discProfile, oceanTrait, funnelStage, platform },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
