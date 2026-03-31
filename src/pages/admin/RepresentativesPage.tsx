@@ -290,7 +290,7 @@ export default function RepresentativesPage() {
                           size="icon"
                           title="Copiar Link de Cadastro"
                           onClick={() => {
-                            const url = `${window.location.origin}/cadastrar?rep=${rep.id}`;
+                            const url = `${window.location.origin}/cadastrar?rep=${(rep as any).short_code || rep.id.slice(0, 4).toUpperCase()}`;
                             navigator.clipboard.writeText(url);
                             toast.success("Link de cadastro copiado!");
                           }}
