@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
     }
 
     // CREATE new user (default action)
-    const { email, password, full_name, role, representative_id } = body;
+    const { email, password, full_name, role, representative_id, doctor_id } = body;
 
     if (!email || !password || !role) {
       return new Response(JSON.stringify({ error: "Email, senha e role são obrigatórios" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -145,13 +145,19 @@ Deno.serve(async (req) => {
     // Assign role
     await supabase.from("user_roles").insert({ user_id: userId, role });
 
-    // If prescriber, link to representative
-    if (role === "prescriber" && representative_id) {
-      await supabase.from("doctors").insert({
-        user_id: userId,
-        name: full_name || email,
-        representative_id,
-      });
+    // If prescriber, link to existing doctor record or create new one
+    if (role === "prescriber") {
+      if (doctor_id) {
+        // Link existing doctor record to the new user
+        await supabase.from("doctors").update({ user_id: userId }).eq("id", doctor_id);
+      } else if (representative_id) {
+        // Fallback: create new doctor record
+        await supabase.from("doctors").insert({
+          user_id: userId,
+          name: full_name || email,
+          representative_id,
+        });
+      }
     }
 
     return new Response(JSON.stringify({ success: true, user_id: userId }), {
