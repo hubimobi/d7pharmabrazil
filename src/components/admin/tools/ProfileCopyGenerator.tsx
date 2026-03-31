@@ -47,6 +47,7 @@ interface AllDiscResult {
 }
 
 const DISC_OPTIONS = [
+  { value: "all", label: "Todos os Perfis", desc: "Gera para D, I, S e C", color: "bg-indigo-100 text-indigo-800 border-indigo-300" },
   { value: "D", label: "D — Dominância", desc: "Direto, resultado, rápido", color: "bg-red-100 text-red-800 border-red-300" },
   { value: "I", label: "I — Influência", desc: "Emocional, empolgante, social", color: "bg-yellow-100 text-yellow-800 border-yellow-300" },
   { value: "S", label: "S — Estabilidade", desc: "Seguro, confiável, tranquilo", color: "bg-green-100 text-green-800 border-green-300" },
@@ -84,6 +85,7 @@ const OCEAN_NAMES: Record<string, string> = {
 };
 
 const OCEAN_OPTIONS = [
+  { value: "all", label: "Todos os Traços", desc: "Gera para os 5 traços OCEAN" },
   { value: "openness", label: "Abertura", desc: "Inovação e criatividade" },
   { value: "conscientiousness", label: "Conscienciosidade", desc: "Disciplina e organização" },
   { value: "extraversion", label: "Extroversão", desc: "Entusiasmo e energia" },
@@ -92,6 +94,7 @@ const OCEAN_OPTIONS = [
 ];
 
 const FUNNEL_OPTIONS = [
+  { value: "all", label: "Todas as Fases", desc: "Gera para todas as fases do funil" },
   { value: "unaware", label: "Sem Noção", desc: "Não sabe que tem o problema" },
   { value: "curious", label: "Curioso", desc: "Sabe do problema, busca soluções" },
   { value: "ready", label: "Pronto p/ Compra", desc: "Decidido, precisa de um empurrão" },
@@ -154,6 +157,11 @@ export default function ProfileCopyGenerator() {
     if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
     if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
     if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
+
+    // Auto-route to batch modes based on "all" selections
+    if (discProfile === "all") { handleGenerateAllDisc(); return; }
+    if (oceanTrait === "all") { handleGenerateAllOcean(); return; }
+
     setLoading(true);
     setResult(null);
     setAllDiscResult(null);
