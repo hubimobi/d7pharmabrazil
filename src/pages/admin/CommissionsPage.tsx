@@ -357,7 +357,7 @@ function CommissionsTable({ commissions, isAdmin, type }: { commissions: any[]; 
                     <TableCell className="hidden sm:table-cell">{fmt(Number(c.order_total))}</TableCell>
                     <TableCell className="hidden md:table-cell">{c.commission_rate}%</TableCell>
                     <TableCell className="font-semibold">{fmt(Number(c.commission_value))}</TableCell>
-                    <TableCell><Badge variant={st.variant}>{st.label}</Badge></TableCell>
+                    <TableCell><span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${st.className}`}>{st.label}</span></TableCell>
                   </TableRow>
                 );
               })
