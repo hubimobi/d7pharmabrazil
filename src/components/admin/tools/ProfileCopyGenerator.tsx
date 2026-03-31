@@ -4,11 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Copy, Check, UserCog, Sparkles, Users, Trophy, Globe, FileText, Package } from "lucide-react";
+import { Loader2, Copy, Check, UserCog, Sparkles, Users, Trophy, Globe, FileText, Package, Download, Table2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useProducts } from "@/hooks/useProducts";
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface CopyBlock {
   label: string;
@@ -125,6 +127,7 @@ export default function ProfileCopyGenerator() {
   const [allDiscResult, setAllDiscResult] = useState<AllDiscResult | null>(null);
   const [allOceanResult, setAllOceanResult] = useState<AllDiscResult | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [showCampaignTable, setShowCampaignTable] = useState(false);
 
   const handleProductSelect = (id: string) => {
     setSelectedProductId(id);
@@ -239,6 +242,81 @@ export default function ProfileCopyGenerator() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const buildCampaignRows = () => {
+    const rows: { campaign: string; adSet: string; adName: string; headline: string; description: string; primaryText: string; cta: string; platform: string }[] = [];
+    const platLabel = PLATFORM_OPTIONS.find(p => p.value === platform)?.label || platform;
+    const funnelLabel = FUNNEL_OPTIONS.find(f => f.value === funnelStage)?.label || funnelStage;
+    const prodLabel = sourceType === "product" ? productName : sourceType === "url" ? referenceUrl : "Texto Base";
+
+    if (allDiscResult?.profiles) {
+      Object.entries(allDiscResult.profiles).forEach(([key, profile]) => {
+        if (!profile) return;
+        rows.push({
+          campaign: `${prodLabel} — DISC`,
+          adSet: `${DISC_NAMES[key] || key} | ${funnelLabel}`,
+          adName: `${key}_${platform}`,
+          headline: profile.headline || "",
+          description: profile.subheadline || "",
+          primaryText: (profile.body_blocks || []).join(" "),
+          cta: profile.cta || "",
+          platform: platLabel,
+        });
+      });
+    }
+
+    if (allOceanResult?.profiles) {
+      Object.entries(allOceanResult.profiles).forEach(([key, profile]) => {
+        if (!profile) return;
+        rows.push({
+          campaign: `${prodLabel} — OCEAN`,
+          adSet: `${OCEAN_NAMES[key] || key} | ${funnelLabel}`,
+          adName: `${key}_${platform}`,
+          headline: profile.headline || "",
+          description: profile.subheadline || "",
+          primaryText: (profile.body_blocks || []).join(" "),
+          cta: profile.cta || "",
+          platform: platLabel,
+        });
+      });
+    }
+
+    if (result?.copies) {
+      result.copies.forEach((copy, i) => {
+        rows.push({
+          campaign: `${prodLabel} — Perfil`,
+          adSet: `${DISC_NAMES[discProfile] || discProfile} | ${funnelLabel}`,
+          adName: copy.label || `Copy ${i + 1}`,
+          headline: copy.headline || "",
+          description: copy.subheadline || "",
+          primaryText: (copy.body_blocks || []).join(" "),
+          cta: copy.cta || "",
+          platform: platLabel,
+        });
+      });
+    }
+
+    return rows;
+  };
+
+  const exportCampaignCSV = () => {
+    const rows = buildCampaignRows();
+    if (!rows.length) { toast.error("Nenhuma copy gerada para exportar"); return; }
+    const headers = ["Campaign Name", "Ad Set Name", "Ad Name", "Headline", "Description", "Primary Text", "Call to Action", "Platform"];
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(r => [r.campaign, r.adSet, r.adName, r.headline, r.description, r.primaryText, r.cta, r.platform].map(v => `"${(v || "").replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `campanha_copies_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exportado com sucesso!");
+  };
+
+  const hasAnyResult = !!(result || allDiscResult || allOceanResult);
   const isLoading = loading || loadingAll || loadingOcean;
 
   return (
@@ -379,10 +457,67 @@ export default function ProfileCopyGenerator() {
             {loadingOcean ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Users className="h-4 w-4 mr-2" />}
             {loadingOcean ? "Gerando OCEAN..." : "Gerar por Traço OCEAN"}
           </Button>
+          {hasAnyResult && (
+            <Button onClick={() => setShowCampaignTable(true)} variant="outline" className="w-full sm:w-auto border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+              <Table2 className="h-4 w-4 mr-2" />
+              Tabela para Campanha
+            </Button>
+          )}
         </div>
       </Card>
 
-      {/* ===== ALL DISC COMPARISON VIEW ===== */}
+      {/* ===== CAMPAIGN TABLE DIALOG ===== */}
+      <Dialog open={showCampaignTable} onOpenChange={setShowCampaignTable}>
+        <DialogContent className="max-w-6xl max-h-[85vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Table2 className="h-5 w-5" />
+              Tabela de Campanha — Pronta para Importar
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground mb-3">
+            Compatível com Meta Ads (Facebook/Instagram) e Google Ads. Exporte como CSV e importe diretamente na plataforma.
+          </p>
+          <div className="rounded-lg border overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs whitespace-nowrap">Campaign Name</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Ad Set Name</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Ad Name</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Headline</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Description</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Primary Text</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Call to Action</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Platform</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {buildCampaignRows().map((row, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-xs font-medium max-w-[150px] truncate">{row.campaign}</TableCell>
+                    <TableCell className="text-xs max-w-[120px] truncate">{row.adSet}</TableCell>
+                    <TableCell className="text-xs max-w-[100px] truncate">{row.adName}</TableCell>
+                    <TableCell className="text-xs max-w-[180px]">{row.headline}</TableCell>
+                    <TableCell className="text-xs max-w-[180px]">{row.description}</TableCell>
+                    <TableCell className="text-xs max-w-[250px] line-clamp-2">{row.primaryText}</TableCell>
+                    <TableCell className="text-xs font-medium">{row.cta}</TableCell>
+                    <TableCell className="text-xs">{row.platform}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowCampaignTable(false)}>Fechar</Button>
+            <Button onClick={exportCampaignCSV} className="gap-2">
+              <Download className="h-4 w-4" />
+              Exportar CSV
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {allDiscResult && (
         <>
           {/* Performance Comparison Bar */}
