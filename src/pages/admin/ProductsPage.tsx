@@ -1088,6 +1088,13 @@ export default function ProductsPage() {
                           }}>
                             <Link2 className="h-4 w-4 mr-2" /> Copiar Link
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setLinkGenProduct({ id: p.id, slug: p.slug, name: p.name });
+                            setLinkGenDoctor("");
+                            setLinkGenCheckout("");
+                          }}>
+                            <ArrowUpRight className="h-4 w-4 mr-2" /> Link Personalizado
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => duplicateProduct.mutate(p)}>
                             <Copy className="h-4 w-4 mr-2" /> Duplicar
                           </DropdownMenuItem>
