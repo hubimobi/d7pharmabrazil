@@ -2,8 +2,9 @@ import { useState, useRef, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Download, Upload, Search, Edit, Trash2, UserPlus, FileText, X, FolderOpen
+  Download, Upload, Search, Edit, Trash2, UserPlus, FileText, X, FolderOpen, CheckSquare, TrendingUp
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,7 +56,9 @@ export default function LeadsPage() {
   const [editingLead, setEditingLead] = useState<any>(null);
   const [showAddLead, setShowAddLead] = useState(false);
   const [showBatches, setShowBatches] = useState(false);
-
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showUpsellDialog, setShowUpsellDialog] = useState(false);
+  const [upsellProductId, setUpsellProductId] = useState<string>("none");
   // CSV import state
   const [csvText, setCsvText] = useState("");
   const [importing, setImporting] = useState(false);
@@ -305,6 +308,78 @@ export default function LeadsPage() {
     const a = document.createElement("a"); a.href = url; a.download = "leads.csv"; a.click();
   };
 
+  const allFilteredSelected = filtered.length > 0 && filtered.every((l: any) => selectedIds.has(l.id));
+
+  function toggleSelectAll() {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((l: any) => l.id)));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function bulkDelete() {
+    if (!selectedIds.size) return;
+    if (!confirm(`Excluir ${selectedIds.size} lead(s) selecionado(s)?`)) return;
+    const ids = Array.from(selectedIds);
+    for (let i = 0; i < ids.length; i += 50) {
+      await supabase.from("popup_leads").delete().in("id", ids.slice(i, i + 50));
+    }
+    toast.success(`${ids.length} lead(s) excluído(s)`);
+    setSelectedIds(new Set());
+    queryClient.invalidateQueries({ queryKey: ["popup-leads"] });
+  }
+
+  function bulkExport() {
+    const selected = filtered.filter((l: any) => selectedIds.has(l.id));
+    if (!selected.length) return;
+    const rows = [
+      ["Nome", "E-mail", "WhatsApp", "Cidade", "Estado", "Tags", "Produto", "Fonte", "Data"],
+      ...selected.map((l: any) => [
+        l.name || "", l.email, l.phone || "", l.city || "", l.state || "",
+        (Array.isArray(l.tags) ? l.tags.map(getTagLabel).join("; ") : ""),
+        l.product_name || "", l.source || "", new Date(l.created_at || "").toLocaleDateString("pt-BR"),
+      ]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "leads_selecionados.csv"; a.click();
+  }
+
+  async function bulkSendToUpsell() {
+    if (!upsellProductId || upsellProductId === "none") { toast.error("Selecione um produto para o fluxo"); return; }
+    const ids = Array.from(selectedIds);
+    const productName = products?.find((p) => p.id === upsellProductId)?.name || "";
+    for (let i = 0; i < ids.length; i += 50) {
+      await supabase.from("popup_leads").update({
+        product_id: upsellProductId,
+        product_name: productName,
+        tags: supabase.rpc ? undefined : undefined, // we update tags individually below
+      } as any).in("id", ids.slice(i, i + 50));
+    }
+    // Add "funil" tag to each
+    const leadsToUpdate = (leads || []).filter((l: any) => selectedIds.has(l.id));
+    for (const lead of leadsToUpdate) {
+      const currentTags: string[] = Array.isArray(lead.tags) ? lead.tags : [];
+      const newTags = [...new Set([...currentTags, "funil", "produto_vinculado"])];
+      await supabase.from("popup_leads").update({ tags: newTags, product_id: upsellProductId, product_name: productName } as any).eq("id", lead.id);
+    }
+    toast.success(`${ids.length} lead(s) enviado(s) para fluxo de UpSell: ${productName}`);
+    setSelectedIds(new Set());
+    setShowUpsellDialog(false);
+    setUpsellProductId("none");
+    queryClient.invalidateQueries({ queryKey: ["popup-leads"] });
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -358,12 +433,34 @@ export default function LeadsPage() {
         )}
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50 flex-wrap">
+          <span className="text-sm font-medium">{selectedIds.size} selecionado(s)</span>
+          <Button size="sm" variant="destructive" onClick={bulkDelete}>
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setShowUpsellDialog(true)}>
+            <TrendingUp className="h-3.5 w-3.5 mr-1" /> Enviar para UpSell
+          </Button>
+          <Button size="sm" variant="outline" onClick={bulkExport}>
+            <Download className="h-3.5 w-3.5 mr-1" /> Exportar Selecionados
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+            <X className="h-3.5 w-3.5 mr-1" /> Limpar seleção
+          </Button>
+        </div>
+      )}
+
       {/* Table */}
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox checked={allFilteredSelected && filtered.length > 0} onCheckedChange={toggleSelectAll} />
+                </TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead className="hidden md:table-cell">WhatsApp</TableHead>
@@ -377,16 +474,19 @@ export default function LeadsPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !filtered.length ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   {search || filterTag !== "all" ? "Nenhum lead encontrado com os filtros aplicados." : "Nenhum lead capturado ainda."}
                 </TableCell></TableRow>
               ) : (
                 filtered.map((lead: any) => {
                   const tags: string[] = Array.isArray(lead.tags) ? lead.tags : [];
                   return (
-                    <TableRow key={lead.id}>
+                    <TableRow key={lead.id} data-state={selectedIds.has(lead.id) ? "selected" : undefined}>
+                      <TableCell>
+                        <Checkbox checked={selectedIds.has(lead.id)} onCheckedChange={() => toggleSelect(lead.id)} />
+                      </TableCell>
                       <TableCell className="font-medium">{lead.name || "—"}</TableCell>
                       <TableCell className="text-sm">{lead.email}</TableCell>
                       <TableCell className="hidden md:table-cell text-sm">{lead.phone || "—"}</TableCell>
@@ -669,6 +769,34 @@ export default function LeadsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEdit(false)}>Cancelar</Button>
             <Button onClick={saveEdit}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* UpSell Flow Dialog */}
+      <Dialog open={showUpsellDialog} onOpenChange={setShowUpsellDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Enviar para Fluxo de UpSell</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {selectedIds.size} lead(s) selecionado(s) serão vinculados ao produto e marcados com a tag "Funil".
+            </p>
+            <div className="space-y-2">
+              <Label>Produto do Fluxo de UpSell</Label>
+              <Select value={upsellProductId} onValueChange={setUpsellProductId}>
+                <SelectTrigger><SelectValue placeholder="Selecione um produto" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Selecione...</SelectItem>
+                  {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUpsellDialog(false)}>Cancelar</Button>
+            <Button onClick={bulkSendToUpsell} disabled={upsellProductId === "none"}>
+              <TrendingUp className="h-4 w-4 mr-1" /> Enviar para UpSell
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
