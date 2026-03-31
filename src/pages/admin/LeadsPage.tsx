@@ -772,6 +772,34 @@ export default function LeadsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* UpSell Flow Dialog */}
+      <Dialog open={showUpsellDialog} onOpenChange={setShowUpsellDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Enviar para Fluxo de UpSell</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {selectedIds.size} lead(s) selecionado(s) serão vinculados ao produto e marcados com a tag "Funil".
+            </p>
+            <div className="space-y-2">
+              <Label>Produto do Fluxo de UpSell</Label>
+              <Select value={upsellProductId} onValueChange={setUpsellProductId}>
+                <SelectTrigger><SelectValue placeholder="Selecione um produto" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Selecione...</SelectItem>
+                  {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUpsellDialog(false)}>Cancelar</Button>
+            <Button onClick={bulkSendToUpsell} disabled={upsellProductId === "none"}>
+              <TrendingUp className="h-4 w-4 mr-1" /> Enviar para UpSell
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
