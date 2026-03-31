@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Loader2, BarChart3, Copy, Check, Lightbulb, AlertTriangle, Sparkles } from "lucide-react";
+import { Loader2, BarChart3, Copy, Check, Lightbulb, AlertTriangle, Sparkles, Globe, FileText, Package, Zap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -84,12 +84,16 @@ function getClassBadge(classification: string) {
 
 export default function CopyScoreAnalyzer() {
   const { data: products } = useProducts();
+  const [sourceType, setSourceType] = useState<"product" | "url" | "text">("product");
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [referenceUrl, setReferenceUrl] = useState("");
   const [text, setText] = useState("");
   const [context, setContext] = useState("pagina_produto");
   const [loading, setLoading] = useState(false);
+  const [loadingUrl, setLoadingUrl] = useState(false);
   const [result, setResult] = useState<ScoreResult | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [implementingIdx, setImplementingIdx] = useState<number | null>(null);
 
   const handleProductSelect = (id: string) => {
     setSelectedProductId(id);
@@ -102,6 +106,28 @@ export default function CopyScoreAnalyzer() {
         ...(Array.isArray(product.benefits) ? (product.benefits as string[]) : []),
       ].filter(Boolean);
       setText(parts.join("\n\n"));
+    }
+  };
+
+  const handleLoadUrl = async () => {
+    if (!referenceUrl) { toast.error("Informe a URL"); return; }
+    setLoadingUrl(true);
+    try {
+      let url = referenceUrl.trim();
+      if (!url.startsWith("http://") && !url.startsWith("https://")) url = `https://${url}`;
+      const res = await fetch(url);
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      // Remove scripts/styles
+      doc.querySelectorAll("script, style, nav, footer, header").forEach(el => el.remove());
+      const bodyText = doc.body?.textContent?.replace(/\s+/g, " ").trim() || "";
+      if (bodyText.length < 20) { toast.error("Não foi possível extrair texto da URL"); return; }
+      setText(bodyText.slice(0, 5000));
+      toast.success("Texto carregado da URL!");
+    } catch {
+      toast.error("Erro ao carregar URL. Verifique o endereço.");
+    } finally {
+      setLoadingUrl(false);
     }
   };
 
@@ -139,9 +165,47 @@ export default function CopyScoreAnalyzer() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const handleImplementSuggestion = async (suggestion: string, idx: number) => {
+    if (!text) { toast.error("Nenhum texto base para aplicar"); return; }
+    setImplementingIdx(idx);
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-copy-score", {
+        body: {
+          text,
+          productName: products?.find((p) => p.id === selectedProductId)?.name || "",
+          context,
+          mode: "implement_suggestion",
+          suggestion,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.success && data.data?.improved_text) {
+        setText(data.data.improved_text);
+        setResult(null);
+        toast.success("Sugestão implementada! Analise novamente para ver o novo score.");
+      } else {
+        toast.error("Não foi possível implementar");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao implementar");
+    } finally {
+      setImplementingIdx(null);
+    }
+  };
+
+  const handleImplementHeadline = () => {
+    if (!result?.improvements?.rewritten_headline) return;
+    const lines = text.split("\n");
+    if (lines.length > 0) {
+      lines[0] = result.improvements.rewritten_headline;
+      setText(lines.join("\n"));
+      toast.success("Headline substituída no texto!");
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Input Card */}
       <Card className="p-6 bg-white border border-gray-200 rounded-2xl">
         <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-purple-600" />
@@ -151,22 +215,93 @@ export default function CopyScoreAnalyzer() {
           Analise textos de copy e receba um score de conversão com sugestões de melhoria baseadas em DISC, OCEAN e funil de vendas.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">Carregar de Produto</label>
-            <Select value={selectedProductId} onValueChange={handleProductSelect}>
-              <SelectTrigger><SelectValue placeholder="Selecione um produto..." /></SelectTrigger>
-              <SelectContent>
-                {products?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Source Type Toggle */}
+        <div className="flex gap-2 mb-4">
+          {[
+            { value: "product" as const, label: "Produto", icon: Package },
+            { value: "url" as const, label: "Carregar de URL", icon: Globe },
+            { value: "text" as const, label: "Colar Texto", icon: FileText },
+          ].map((opt) => (
+            <Button
+              key={opt.value}
+              type="button"
+              variant={sourceType === opt.value ? "default" : "outline"}
+              size="sm"
+              className="text-xs"
+              onClick={() => setSourceType(opt.value)}
+            >
+              <opt.icon className="h-3 w-3 mr-1" />
+              {opt.label}
+            </Button>
+          ))}
+        </div>
+
+        {sourceType === "product" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Carregar de Produto</label>
+              <Select value={selectedProductId} onValueChange={handleProductSelect}>
+                <SelectTrigger><SelectValue placeholder="Selecione um produto..." /></SelectTrigger>
+                <SelectContent>
+                  {products?.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Contexto</label>
+              <Select value={context} onValueChange={setContext}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pagina_produto">Página de Produto</SelectItem>
+                  <SelectItem value="anuncio">Anúncio / Ad</SelectItem>
+                  <SelectItem value="email">E-mail Marketing</SelectItem>
+                  <SelectItem value="landing_page">Landing Page</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div>
+        )}
+
+        {sourceType === "url" && (
+          <div className="mb-4">
+            <label className="text-sm font-medium mb-1 block">URL para Carregar *</label>
+            <div className="flex gap-2">
+              <Input
+                value={referenceUrl}
+                onChange={(e) => setReferenceUrl(e.target.value)}
+                placeholder="https://exemplo.com/pagina"
+                className="flex-1"
+              />
+              <Button onClick={handleLoadUrl} disabled={loadingUrl} variant="outline" size="sm">
+                {loadingUrl ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
+                <span className="ml-1">{loadingUrl ? "Carregando..." : "Carregar"}</span>
+              </Button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">O texto da página será extraído e carregado para análise.</p>
+            <div className="mt-2">
+              <label className="text-sm font-medium mb-1 block">Contexto</label>
+              <Select value={context} onValueChange={setContext}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pagina_produto">Página de Produto</SelectItem>
+                  <SelectItem value="anuncio">Anúncio / Ad</SelectItem>
+                  <SelectItem value="email">E-mail Marketing</SelectItem>
+                  <SelectItem value="landing_page">Landing Page</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
+        {sourceType === "text" && (
+          <div className="mb-4">
             <label className="text-sm font-medium mb-1 block">Contexto</label>
             <Select value={context} onValueChange={setContext}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="mb-3"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="pagina_produto">Página de Produto</SelectItem>
                 <SelectItem value="anuncio">Anúncio / Ad</SelectItem>
@@ -176,7 +311,7 @@ export default function CopyScoreAnalyzer() {
               </SelectContent>
             </Select>
           </div>
-        </div>
+        )}
 
         <div className="mb-4">
           <label className="text-sm font-medium mb-1 block">Texto para Análise *</label>
@@ -300,26 +435,51 @@ export default function CopyScoreAnalyzer() {
               <div className="mb-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
                 <p className="text-xs font-medium text-purple-600 mb-1">Headline Reescrita:</p>
                 <p className="text-sm font-semibold text-purple-900">{result.improvements.rewritten_headline}</p>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-xs mt-2"
-                  onClick={() => copyText(result.improvements.rewritten_headline, "headline")}
-                >
-                  {copiedKey === "headline" ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
-                  Copiar
-                </Button>
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-xs"
+                    onClick={() => copyText(result.improvements.rewritten_headline, "headline")}
+                  >
+                    {copiedKey === "headline" ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                    Copiar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs border-purple-300 text-purple-700 hover:bg-purple-100"
+                    onClick={handleImplementHeadline}
+                  >
+                    <Zap className="h-3 w-3 mr-1" />
+                    Implementar Agora
+                  </Button>
+                </div>
               </div>
             )}
 
             {result.improvements.suggestions?.length > 0 && (
               <div className="mb-4">
                 <p className="text-xs font-medium text-gray-500 mb-2">Melhorias Específicas:</p>
-                <ul className="space-y-1">
+                <ul className="space-y-2">
                   {result.improvements.suggestions.map((s, i) => (
-                    <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                    <li key={i} className="flex items-start gap-2 group">
                       <AlertTriangle className="h-3 w-3 text-yellow-500 mt-1 shrink-0" />
-                      {s}
+                      <span className="text-sm text-gray-700 flex-1">{s}</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-[10px] h-7 px-2 shrink-0 border-amber-300 text-amber-700 hover:bg-amber-50"
+                        disabled={implementingIdx === i}
+                        onClick={() => handleImplementSuggestion(s, i)}
+                      >
+                        {implementingIdx === i ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : (
+                          <Zap className="h-3 w-3 mr-1" />
+                        )}
+                        {implementingIdx === i ? "Aplicando..." : "Implementar"}
+                      </Button>
                     </li>
                   ))}
                 </ul>
