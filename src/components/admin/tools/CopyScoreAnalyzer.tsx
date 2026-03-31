@@ -115,12 +115,12 @@ export default function CopyScoreAnalyzer() {
     try {
       let url = referenceUrl.trim();
       if (!url.startsWith("http://") && !url.startsWith("https://")) url = `https://${url}`;
-      const res = await fetch(url);
-      const html = await res.text();
-      const doc = new DOMParser().parseFromString(html, "text/html");
-      // Remove scripts/styles
-      doc.querySelectorAll("script, style, nav, footer, header").forEach(el => el.remove());
-      const bodyText = doc.body?.textContent?.replace(/\s+/g, " ").trim() || "";
+      const { data, error } = await supabase.functions.invoke("ai-kb-crawl-public", {
+        body: { url },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const bodyText = data?.text || "";
       if (bodyText.length < 20) { toast.error("Não foi possível extrair texto da URL"); return; }
       setText(bodyText.slice(0, 5000));
       toast.success("Texto carregado da URL!");
