@@ -65,6 +65,22 @@ const DISC_NAMES: Record<string, string> = {
   C: "Conformidade",
 };
 
+const OCEAN_COLORS: Record<string, { bar: string; badge: string; bg: string }> = {
+  openness: { bar: "bg-purple-500", badge: "bg-purple-100 text-purple-800 border-purple-300", bg: "border-purple-200" },
+  conscientiousness: { bar: "bg-teal-500", badge: "bg-teal-100 text-teal-800 border-teal-300", bg: "border-teal-200" },
+  extraversion: { bar: "bg-orange-500", badge: "bg-orange-100 text-orange-800 border-orange-300", bg: "border-orange-200" },
+  agreeableness: { bar: "bg-pink-500", badge: "bg-pink-100 text-pink-800 border-pink-300", bg: "border-pink-200" },
+  neuroticism: { bar: "bg-gray-500", badge: "bg-gray-100 text-gray-800 border-gray-300", bg: "border-gray-200" },
+};
+
+const OCEAN_NAMES: Record<string, string> = {
+  openness: "Abertura",
+  conscientiousness: "Conscienciosidade",
+  extraversion: "Extroversão",
+  agreeableness: "Amabilidade",
+  neuroticism: "Neuroticismo",
+};
+
 const OCEAN_OPTIONS = [
   { value: "openness", label: "Abertura", desc: "Inovação e criatividade" },
   { value: "conscientiousness", label: "Conscienciosidade", desc: "Disciplina e organização" },
@@ -104,8 +120,10 @@ export default function ProfileCopyGenerator() {
   const [platform, setPlatform] = useState("geral");
   const [loading, setLoading] = useState(false);
   const [loadingAll, setLoadingAll] = useState(false);
+  const [loadingOcean, setLoadingOcean] = useState(false);
   const [result, setResult] = useState<ProfileCopyResult | null>(null);
   const [allDiscResult, setAllDiscResult] = useState<AllDiscResult | null>(null);
+  const [allOceanResult, setAllOceanResult] = useState<AllDiscResult | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const handleProductSelect = (id: string) => {
@@ -136,6 +154,7 @@ export default function ProfileCopyGenerator() {
     setLoading(true);
     setResult(null);
     setAllDiscResult(null);
+    setAllOceanResult(null);
     try {
       const payload = getBodyPayload();
       const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
@@ -162,6 +181,7 @@ export default function ProfileCopyGenerator() {
     if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
     setLoadingAll(true);
     setAllDiscResult(null);
+    setAllOceanResult(null);
     setResult(null);
     try {
       const payload = getBodyPayload();
@@ -183,6 +203,34 @@ export default function ProfileCopyGenerator() {
     }
   };
 
+  const handleGenerateAllOcean = async () => {
+    if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
+    if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
+    if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
+    setLoadingOcean(true);
+    setAllOceanResult(null);
+    setAllDiscResult(null);
+    setResult(null);
+    try {
+      const payload = getBodyPayload();
+      const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
+        body: { ...payload, discProfile, funnelStage, platform, mode: "all_ocean" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.success && data.data?.profiles) {
+        setAllOceanResult(data.data);
+        toast.success("Variações OCEAN geradas!");
+      } else {
+        toast.error("Resposta inesperada da IA");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao gerar");
+    } finally {
+      setLoadingOcean(false);
+    }
+  };
+
   const copyFull = (copy: { headline: string; subheadline: string; body_blocks: string[]; cta: string }, key: string) => {
     const full = `${copy.headline}\n\n${copy.subheadline}\n\n${copy.body_blocks.join("\n\n")}\n\n${copy.cta}`;
     navigator.clipboard.writeText(full);
@@ -191,7 +239,7 @@ export default function ProfileCopyGenerator() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const isLoading = loading || loadingAll;
+  const isLoading = loading || loadingAll || loadingOcean;
 
   return (
     <div className="space-y-6">
@@ -318,14 +366,18 @@ export default function ProfileCopyGenerator() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
           <Button onClick={handleGenerate} disabled={isLoading} className="w-full sm:w-auto">
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
             {loading ? "Gerando..." : "Gerar Copy por Perfil"}
           </Button>
           <Button onClick={handleGenerateAllDisc} disabled={isLoading} variant="outline" className="w-full sm:w-auto border-indigo-300 text-indigo-700 hover:bg-indigo-50">
             {loadingAll ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Users className="h-4 w-4 mr-2" />}
-            {loadingAll ? "Gerando 4 perfis..." : "Gerar Variações por Perfil Automaticamente"}
+            {loadingAll ? "Gerando D/I/S/C..." : "Gerar por Perfil DISC"}
+          </Button>
+          <Button onClick={handleGenerateAllOcean} disabled={isLoading} variant="outline" className="w-full sm:w-auto border-purple-300 text-purple-700 hover:bg-purple-50">
+            {loadingOcean ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Users className="h-4 w-4 mr-2" />}
+            {loadingOcean ? "Gerando OCEAN..." : "Gerar por Traço OCEAN"}
           </Button>
         </div>
       </Card>
@@ -416,6 +468,97 @@ export default function ProfileCopyGenerator() {
                     <div className="pt-2 border-t border-gray-100">
                       <p className="text-[10px] font-medium text-gray-400">CTA:</p>
                       <p className="text-xs font-bold text-indigo-700">{profile.cta}</p>
+                    </div>
+                    {profile.triggers_used?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {profile.triggers_used.map((t, ti) => (
+                          <Badge key={ti} variant="outline" className="text-[9px]">{t}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* ===== ALL OCEAN COMPARISON VIEW ===== */}
+      {allOceanResult && (
+        <>
+          <Card className="p-5 bg-white border border-gray-200 rounded-2xl">
+            <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-purple-500" />
+              Comparação de Performance OCEAN
+            </h3>
+            <div className="space-y-3">
+              {(["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"] as const).map((key) => {
+                const profile = allOceanResult.profiles[key];
+                if (!profile) return null;
+                const perf = profile.estimated_performance || 0;
+                const isBest = allOceanResult.best_profile?.toLowerCase().includes(key);
+                return (
+                  <div key={key} className="flex items-center gap-3">
+                    <Badge className={`text-[10px] border w-28 justify-center ${OCEAN_COLORS[key].badge}`}>
+                      {OCEAN_NAMES[key]}
+                    </Badge>
+                    <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden relative">
+                      <div
+                        className={`h-full rounded-full transition-all ${OCEAN_COLORS[key].bar}`}
+                        style={{ width: `${perf}%` }}
+                      />
+                      {isBest && (
+                        <Trophy className="h-3 w-3 text-yellow-600 absolute right-2 top-1" />
+                      )}
+                    </div>
+                    <span className="text-sm font-bold w-12 text-right">{perf}%</span>
+                  </div>
+                );
+              })}
+            </div>
+            {allOceanResult.comparison_notes && (
+              <p className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-100">
+                {allOceanResult.comparison_notes}
+              </p>
+            )}
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"] as const).map((key) => {
+              const profile = allOceanResult.profiles[key];
+              if (!profile) return null;
+              const isBest = allOceanResult.best_profile?.toLowerCase().includes(key);
+              return (
+                <Card key={key} className={`p-5 bg-white border-2 rounded-2xl ${isBest ? OCEAN_COLORS[key].bg + " ring-2 ring-offset-1 ring-yellow-400" : "border-gray-200"}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Badge className={`text-[10px] border ${OCEAN_COLORS[key].badge}`}>
+                        {OCEAN_NAMES[key]}
+                      </Badge>
+                      {isBest && <Badge className="text-[10px] bg-yellow-100 text-yellow-800 border-yellow-300">⭐ Melhor</Badge>}
+                    </div>
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => copyFull(profile, `ocean-${key}`)}>
+                      {copiedKey === `ocean-${key}` ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                      Copiar
+                    </Button>
+                  </div>
+                  {profile.tone && <p className="text-[10px] text-gray-400 mb-2 italic">Tom: {profile.tone}</p>}
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-[10px] font-medium text-gray-400">Headline:</p>
+                      <p className="text-sm font-bold text-gray-900">{profile.headline}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium text-gray-400">Subheadline:</p>
+                      <p className="text-xs text-gray-700">{profile.subheadline}</p>
+                    </div>
+                    {profile.body_blocks?.map((block, bi) => (
+                      <p key={bi} className="text-xs text-gray-600 whitespace-pre-wrap">{block}</p>
+                    ))}
+                    <div className="pt-2 border-t border-gray-100">
+                      <p className="text-[10px] font-medium text-gray-400">CTA:</p>
+                      <p className="text-xs font-bold text-purple-700">{profile.cta}</p>
                     </div>
                     {profile.triggers_used?.length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-1">

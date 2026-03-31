@@ -95,7 +95,6 @@ PRODUTO: ${productName}
 DESCRIÇÃO: ${productDescription || "N/A"}
 BENEFÍCIOS: ${benefits || "N/A"}
 PLATAFORMA: ${platform || "geral"}
-TRAÇO OCEAN: ${oceanMap[oceanTrait] || oceanTrait}
 FASE DO FUNIL: ${funnelMap[funnelStage] || funnelStage}
 
 Para cada perfil, adapte o tom, os gatilhos e a linguagem. Também estime uma performance de conversão de 0 a 100 para cada perfil.
@@ -119,6 +118,38 @@ Retorne JSON com esta estrutura EXATA:
   },
   "best_profile": "D ou I ou S ou C — qual tem maior potencial de conversão",
   "comparison_notes": "Análise comparativa entre os 4 perfis"
+}`;
+    } else if (mode === "all_ocean") {
+      userPrompt = `Gere UMA copy de alta conversão para CADA traço OCEAN (Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism) para o mesmo produto.
+
+PRODUTO: ${productName}
+DESCRIÇÃO: ${productDescription || "N/A"}
+BENEFÍCIOS: ${benefits || "N/A"}
+PLATAFORMA: ${platform || "geral"}
+FASE DO FUNIL: ${funnelMap[funnelStage] || funnelStage}
+
+Para cada traço, adapte o tom, os gatilhos e a linguagem. Também estime uma performance de conversão de 0 a 100 para cada traço.
+
+Retorne JSON com esta estrutura EXATA:
+{
+  "profiles": {
+    "openness": {
+      "profile_summary": "Como a copy foi adaptada para Abertura à Experiência",
+      "headline": "...",
+      "subheadline": "...",
+      "body_blocks": ["bloco 1", "bloco 2", "bloco 3"],
+      "cta": "...",
+      "triggers_used": ["gatilho 1", "gatilho 2"],
+      "estimated_performance": 85,
+      "tone": "descrição curta do tom usado"
+    },
+    "conscientiousness": { ... mesmo formato ... },
+    "extraversion": { ... mesmo formato ... },
+    "agreeableness": { ... mesmo formato ... },
+    "neuroticism": { ... mesmo formato ... }
+  },
+  "best_profile": "qual traço tem maior potencial de conversão",
+  "comparison_notes": "Análise comparativa entre os 5 traços OCEAN"
 }`;
     } else {
       userPrompt = `Gere copies de alta conversão para:
