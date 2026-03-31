@@ -135,7 +135,8 @@ export default function ProductsPage() {
     if (doctor) params.set("cupom", doctor.coupon_code);
     if (linkGenCheckout && linkGenCheckout !== "default") params.set("ck", linkGenCheckout);
     const qs = params.toString();
-    return `${base}/produto/${linkGenProduct.slug}${qs ? `?${qs}` : ""}`;
+    const prefix = linkGenProduct.isCombo ? "combo" : "produto";
+    return `${base}/${prefix}/${linkGenProduct.slug}${qs ? `?${qs}` : ""}`;
   })();
 
   const save = useMutation({
