@@ -413,6 +413,60 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_token_usage: {
+        Row: {
+          agent_id: string | null
+          agent_name: string
+          created_at: string
+          function_name: string
+          id: string
+          input_tokens: number
+          model: string
+          output_tokens: number
+          provider: string
+          total_tokens: number
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name?: string
+          created_at?: string
+          function_name?: string
+          id?: string
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+          provider?: string
+          total_tokens?: number
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string
+          created_at?: string
+          function_name?: string
+          id?: string
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+          provider?: string
+          total_tokens?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_token_usage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_token_usage_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bling_tokens: {
         Row: {
           access_token: string
