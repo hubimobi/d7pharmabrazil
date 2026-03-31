@@ -534,6 +534,30 @@ export default function ProfileCopyGenerator() {
           </div>
         </div>
 
+        {/* Copy Method selector for Caixinha */}
+        {platform === "caixinha_pergunta" && (
+          <div className="mb-4 p-4 rounded-xl border border-pink-200 bg-pink-50/50">
+            <label className="text-sm font-medium mb-2 block text-pink-800">Método de Resposta</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              {COPY_METHOD_OPTIONS.map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setCopyMethod(m.value)}
+                  className={`p-3 rounded-lg border text-left transition-all ${
+                    copyMethod === m.value
+                      ? "border-pink-500 bg-pink-100 ring-2 ring-pink-300"
+                      : "border-gray-200 bg-white hover:border-pink-300"
+                  }`}
+                >
+                  <p className={`text-sm font-bold ${copyMethod === m.value ? "text-pink-800" : "text-gray-700"}`}>{m.label}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{m.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
           <Button onClick={handleGenerate} disabled={isLoading} className="w-full sm:w-auto">
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
