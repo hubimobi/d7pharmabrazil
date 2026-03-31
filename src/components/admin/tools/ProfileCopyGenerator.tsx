@@ -127,6 +127,7 @@ export default function ProfileCopyGenerator() {
   const [allDiscResult, setAllDiscResult] = useState<AllDiscResult | null>(null);
   const [allOceanResult, setAllOceanResult] = useState<AllDiscResult | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [showCampaignTable, setShowCampaignTable] = useState(false);
 
   const handleProductSelect = (id: string) => {
     setSelectedProductId(id);
@@ -241,6 +242,81 @@ export default function ProfileCopyGenerator() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const buildCampaignRows = () => {
+    const rows: { campaign: string; adSet: string; adName: string; headline: string; description: string; primaryText: string; cta: string; platform: string }[] = [];
+    const platLabel = PLATFORM_OPTIONS.find(p => p.value === platform)?.label || platform;
+    const funnelLabel = FUNNEL_OPTIONS.find(f => f.value === funnelStage)?.label || funnelStage;
+    const prodLabel = sourceType === "product" ? productName : sourceType === "url" ? referenceUrl : "Texto Base";
+
+    if (allDiscResult?.profiles) {
+      Object.entries(allDiscResult.profiles).forEach(([key, profile]) => {
+        if (!profile) return;
+        rows.push({
+          campaign: `${prodLabel} — DISC`,
+          adSet: `${DISC_NAMES[key] || key} | ${funnelLabel}`,
+          adName: `${key}_${platform}`,
+          headline: profile.headline || "",
+          description: profile.subheadline || "",
+          primaryText: (profile.body_blocks || []).join(" "),
+          cta: profile.cta || "",
+          platform: platLabel,
+        });
+      });
+    }
+
+    if (allOceanResult?.profiles) {
+      Object.entries(allOceanResult.profiles).forEach(([key, profile]) => {
+        if (!profile) return;
+        rows.push({
+          campaign: `${prodLabel} — OCEAN`,
+          adSet: `${OCEAN_NAMES[key] || key} | ${funnelLabel}`,
+          adName: `${key}_${platform}`,
+          headline: profile.headline || "",
+          description: profile.subheadline || "",
+          primaryText: (profile.body_blocks || []).join(" "),
+          cta: profile.cta || "",
+          platform: platLabel,
+        });
+      });
+    }
+
+    if (result?.copies) {
+      result.copies.forEach((copy, i) => {
+        rows.push({
+          campaign: `${prodLabel} — Perfil`,
+          adSet: `${DISC_NAMES[discProfile] || discProfile} | ${funnelLabel}`,
+          adName: copy.label || `Copy ${i + 1}`,
+          headline: copy.headline || "",
+          description: copy.subheadline || "",
+          primaryText: (copy.body_blocks || []).join(" "),
+          cta: copy.cta || "",
+          platform: platLabel,
+        });
+      });
+    }
+
+    return rows;
+  };
+
+  const exportCampaignCSV = () => {
+    const rows = buildCampaignRows();
+    if (!rows.length) { toast.error("Nenhuma copy gerada para exportar"); return; }
+    const headers = ["Campaign Name", "Ad Set Name", "Ad Name", "Headline", "Description", "Primary Text", "Call to Action", "Platform"];
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(r => [r.campaign, r.adSet, r.adName, r.headline, r.description, r.primaryText, r.cta, r.platform].map(v => `"${(v || "").replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `campanha_copies_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exportado com sucesso!");
+  };
+
+  const hasAnyResult = !!(result || allDiscResult || allOceanResult);
   const isLoading = loading || loadingAll || loadingOcean;
 
   return (
