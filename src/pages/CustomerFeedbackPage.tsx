@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Star, Upload, Gift, CheckCircle, Camera } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Star, Upload, Gift, CheckCircle, Camera, X } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
@@ -23,28 +23,36 @@ export default function CustomerFeedbackPage() {
   const [content, setContent] = useState("");
   const [rating, setRating] = useState(5);
   const [authorPhoto, setAuthorPhoto] = useState<File | null>(null);
-  const [productPhoto, setProductPhoto] = useState<File | null>(null);
   const [authorPreview, setAuthorPreview] = useState<string | null>(null);
-  const [productPreview, setProductPreview] = useState<string | null>(null);
+  const [productPhotos, setProductPhotos] = useState<File[]>([]);
+  const [productPreviews, setProductPreviews] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [couponCode, setCouponCode] = useState("");
 
-  const handleFileChange = (type: "author" | "product", file: File | null) => {
+  const handleAuthorFile = (file: File | null) => {
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    if (type === "author") {
-      setAuthorPhoto(file);
-      setAuthorPreview(url);
-    } else {
-      setProductPhoto(file);
-      setProductPreview(url);
-    }
+    setAuthorPhoto(file);
+    setAuthorPreview(URL.createObjectURL(file));
+  };
+
+  const addProductPhotos = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files);
+    const remaining = 4 - productPhotos.length;
+    const toAdd = newFiles.slice(0, remaining);
+    setProductPhotos((prev) => [...prev, ...toAdd]);
+    setProductPreviews((prev) => [...prev, ...toAdd.map((f) => URL.createObjectURL(f))]);
+  };
+
+  const removeProductPhoto = (idx: number) => {
+    setProductPhotos((prev) => prev.filter((_, i) => i !== idx));
+    setProductPreviews((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const uploadImage = async (file: File, prefix: string) => {
     const ext = file.name.split(".").pop();
-    const path = `testimonials/${prefix}-${Date.now()}.${ext}`;
+    const path = `testimonials/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error } = await supabase.storage.from("images").upload(path, file, { upsert: true });
     if (error) throw error;
     const { data } = supabase.storage.from("images").getPublicUrl(path);
@@ -60,10 +68,13 @@ export default function CustomerFeedbackPage() {
     setSubmitting(true);
     try {
       let authorImageUrl: string | undefined;
-      let productImageUrl: string | undefined;
-
       if (authorPhoto) authorImageUrl = await uploadImage(authorPhoto, "author");
-      if (productPhoto) productImageUrl = await uploadImage(productPhoto, "product");
+
+      const productImageUrls: string[] = [];
+      for (const f of productPhotos) {
+        const url = await uploadImage(f, "product");
+        productImageUrls.push(url);
+      }
 
       const { error } = await supabase.from("product_testimonials").insert({
         product_id: productId,
@@ -71,12 +82,12 @@ export default function CustomerFeedbackPage() {
         content,
         rating,
         author_image_url: authorImageUrl || null,
-        product_image_url: productImageUrl || null,
+        product_image_url: productImageUrls[0] || null,
+        product_image_urls: productImageUrls,
         source: "customer",
       } as any);
       if (error) throw error;
 
-      // Check if there's a feedback bonus coupon
       if ((settings as any)?.feedback_bonus_coupon_id) {
         const { data: coupon } = await supabase
           .from("coupons")
@@ -162,42 +173,52 @@ export default function CustomerFeedbackPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1"><Camera className="h-4 w-4" /> Sua Foto</Label>
-                  <div
-                    className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => document.getElementById("author-photo")?.click()}
-                  >
-                    {authorPreview ? (
-                      <img src={authorPreview} alt="preview" className="h-20 w-20 rounded-full object-cover mx-auto" />
-                    ) : (
-                      <div className="space-y-1">
-                        <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground">Enviar foto</p>
-                      </div>
-                    )}
-                  </div>
-                  <input id="author-photo" type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange("author", e.target.files?.[0] || null)} />
+              {/* Author Photo */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1"><Camera className="h-4 w-4" /> Sua Foto</Label>
+                <div
+                  className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => document.getElementById("author-photo")?.click()}
+                >
+                  {authorPreview ? (
+                    <img src={authorPreview} alt="preview" className="h-20 w-20 rounded-full object-cover mx-auto" />
+                  ) : (
+                    <div className="space-y-1">
+                      <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">Enviar sua foto</p>
+                    </div>
+                  )}
                 </div>
+                <input id="author-photo" type="file" accept="image/*" className="hidden" onChange={(e) => handleAuthorFile(e.target.files?.[0] || null)} />
+              </div>
 
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1"><Camera className="h-4 w-4" /> Foto do Produto</Label>
-                  <div
-                    className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => document.getElementById("product-photo")?.click()}
-                  >
-                    {productPreview ? (
-                      <img src={productPreview} alt="preview" className="h-20 w-20 rounded-lg object-cover mx-auto" />
-                    ) : (
-                      <div className="space-y-1">
-                        <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground">Enviar foto</p>
-                      </div>
-                    )}
-                  </div>
-                  <input id="product-photo" type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange("product", e.target.files?.[0] || null)} />
+              {/* Product Photos - up to 4 */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1"><Camera className="h-4 w-4" /> Fotos do Produto (até 4)</Label>
+                <div className="flex flex-wrap gap-3">
+                  {productPreviews.map((url, i) => (
+                    <div key={i} className="relative group">
+                      <img src={url} alt="preview" className="h-20 w-20 rounded-lg object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeProductPhoto(i)}
+                        className="absolute -top-1 -right-1 rounded-full bg-destructive p-0.5 text-destructive-foreground opacity-0 group-hover:opacity-100 transition"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {productPhotos.length < 4 && (
+                    <div
+                      className="h-20 w-20 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={() => document.getElementById("product-photos")?.click()}
+                    >
+                      <Upload className="h-5 w-5 text-muted-foreground" />
+                      <p className="text-[10px] text-muted-foreground">Adicionar</p>
+                    </div>
+                  )}
                 </div>
+                <input id="product-photos" type="file" accept="image/*" multiple className="hidden" onChange={(e) => addProductPhotos(e.target.files)} />
               </div>
 
               <Button type="submit" className="w-full gap-2" disabled={submitting}>
