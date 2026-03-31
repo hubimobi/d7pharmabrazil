@@ -433,12 +433,34 @@ export default function LeadsPage() {
         )}
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50 flex-wrap">
+          <span className="text-sm font-medium">{selectedIds.size} selecionado(s)</span>
+          <Button size="sm" variant="destructive" onClick={bulkDelete}>
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setShowUpsellDialog(true)}>
+            <TrendingUp className="h-3.5 w-3.5 mr-1" /> Enviar para UpSell
+          </Button>
+          <Button size="sm" variant="outline" onClick={bulkExport}>
+            <Download className="h-3.5 w-3.5 mr-1" /> Exportar Selecionados
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+            <X className="h-3.5 w-3.5 mr-1" /> Limpar seleção
+          </Button>
+        </div>
+      )}
+
       {/* Table */}
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox checked={allFilteredSelected && filtered.length > 0} onCheckedChange={toggleSelectAll} />
+                </TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead className="hidden md:table-cell">WhatsApp</TableHead>
@@ -452,16 +474,19 @@ export default function LeadsPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : !filtered.length ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   {search || filterTag !== "all" ? "Nenhum lead encontrado com os filtros aplicados." : "Nenhum lead capturado ainda."}
                 </TableCell></TableRow>
               ) : (
                 filtered.map((lead: any) => {
                   const tags: string[] = Array.isArray(lead.tags) ? lead.tags : [];
                   return (
-                    <TableRow key={lead.id}>
+                    <TableRow key={lead.id} data-state={selectedIds.has(lead.id) ? "selected" : undefined}>
+                      <TableCell>
+                        <Checkbox checked={selectedIds.has(lead.id)} onCheckedChange={() => toggleSelect(lead.id)} />
+                      </TableCell>
                       <TableCell className="font-medium">{lead.name || "—"}</TableCell>
                       <TableCell className="text-sm">{lead.email}</TableCell>
                       <TableCell className="hidden md:table-cell text-sm">{lead.phone || "—"}</TableCell>
