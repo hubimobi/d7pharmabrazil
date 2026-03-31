@@ -52,14 +52,20 @@ export default function CustomerFeedbackPage() {
         const { data, error } = await supabase.functions.invoke("get-order", {
           body: { order_id: orderId, customer_email: emailParam },
         });
-        if (error || !data || data.error) {
+        if (error || !data) {
+          setOrderValid(false);
+          return;
+        }
+        // The edge function returns { order: {...} }
+        const orderData = data.order || data;
+        if (!orderData || orderData.error || !orderData.items) {
           setOrderValid(false);
           return;
         }
         setOrderValid(true);
-        setName(data.customer_name || "");
-        const items: OrderProduct[] = (data.items || []).map((i: any) => ({
-          product_id: i.product_id,
+        setName(orderData.customer_name || "");
+        const items: OrderProduct[] = (orderData.items || []).map((i: any) => ({
+          product_id: i.product_id || i.id,
           name: i.name,
           price: i.price,
           quantity: i.quantity,
