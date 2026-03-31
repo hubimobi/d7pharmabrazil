@@ -188,6 +188,32 @@ export default function DoctorsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["doctors"] }),
   });
 
+  const approveDoctor = useMutation({
+    mutationFn: async ({ id, approve }: { id: string; approve: boolean }) => {
+      const status = approve ? "approved" : "rejected";
+      const { error } = await supabase.from("doctors").update({ approval_status: status, active: approve } as any).eq("id", id);
+      if (error) throw error;
+      if (approve) {
+        await supabase.from("coupons").update({ active: true }).eq("doctor_id", id);
+      }
+    },
+    onSuccess: (_, { approve }) => {
+      qc.invalidateQueries({ queryKey: ["doctors"] });
+      toast.success(approve ? "Prescritor aprovado!" : "Prescritor rejeitado");
+    },
+    onError: () => toast.error("Erro ao atualizar status"),
+  });
+
+  const filteredDoctors = useMemo(() => {
+    if (!doctors) return [];
+    if (approvalTab === "pending") return doctors.filter((d: any) => d.approval_status === "pending");
+    if (approvalTab === "approved") return doctors.filter((d: any) => d.approval_status === "approved" || !d.approval_status);
+    if (approvalTab === "rejected") return doctors.filter((d: any) => d.approval_status === "rejected");
+    return doctors;
+  }, [doctors, approvalTab]);
+
+  const pendingCount = useMemo(() => doctors?.filter((d: any) => d.approval_status === "pending").length ?? 0, [doctors]);
+
   const openEdit = async (doc: NonNullable<typeof doctors>[number]) => {
     setEditId(doc.id);
     setForm({
