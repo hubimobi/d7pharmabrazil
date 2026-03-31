@@ -140,6 +140,9 @@ export default function ProfileCopyGenerator() {
   const [allOceanResult, setAllOceanResult] = useState<AllDiscResult | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [showCampaignTable, setShowCampaignTable] = useState(false);
+  const [questionsResult, setQuestionsResult] = useState<QuestionRow[] | null>(null);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [showQuestionsTable, setShowQuestionsTable] = useState(false);
 
   const handleProductSelect = (id: string) => {
     setSelectedProductId(id);
