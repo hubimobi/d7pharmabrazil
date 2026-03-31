@@ -136,6 +136,18 @@ export default function UsersPage() {
     },
   });
 
+  const { data: doctors } = useQuery({
+    queryKey: ["doctors-list-for-users"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("doctors").select("id, name, email, representative_id, user_id").eq("active", true).order("name") as any;
+      if (error) throw error;
+      return data as { id: string; name: string; email: string | null; representative_id: string; user_id: string | null }[];
+    },
+  });
+
+  // Doctors without a linked user (available to create user for)
+  const availableDoctors = doctors?.filter((d) => !d.user_id) || [];
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("create-tenant-user", {
