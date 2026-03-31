@@ -64,6 +64,55 @@ export default function PrescritorPage() {
     enabled: !!doctor,
   });
 
+  // Fetch doctor's coupon
+  const { data: myCoupon } = useQuery({
+    queryKey: ["my-coupon", doctor?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("coupons")
+        .select("code")
+        .eq("doctor_id", doctor!.id)
+        .eq("active", true)
+        .limit(1)
+        .single();
+      return data?.code ?? null;
+    },
+    enabled: !!doctor,
+  });
+
+  // Fetch active products for link generation
+  const { data: products } = useQuery({
+    queryKey: ["prescriber-products"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("products")
+        .select("id, name, slug, image_url, price")
+        .eq("active", true)
+        .order("name");
+      return data ?? [];
+    },
+    enabled: !!doctor,
+  });
+
+  const baseUrl = window.location.origin;
+
+  const generateProductLink = (slug: string) => {
+    if (!myCoupon) return `${baseUrl}/produto/${slug}`;
+    return `${baseUrl}/produto/${slug}?cupom=${myCoupon}`;
+  };
+
+  const generateCheckoutLink = (slug: string) => {
+    if (!myCoupon) return `${baseUrl}/checkout`;
+    return `${baseUrl}/checkout?cupom=${myCoupon}`;
+  };
+
+  const copyLink = (link: string, id: string) => {
+    navigator.clipboard.writeText(link);
+    setCopiedLink(id);
+    toast({ title: "Link copiado!" });
+    setTimeout(() => setCopiedLink(null), 2000);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoggingIn(true);
