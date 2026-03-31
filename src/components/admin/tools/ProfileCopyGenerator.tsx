@@ -189,36 +189,64 @@ export default function ProfileCopyGenerator() {
           Gere copies de alta conversão personalizadas por perfil DISC, OCEAN e fase do funil.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">Selecionar Produto</label>
-            <Select value={selectedProductId} onValueChange={handleProductSelect}>
-              <SelectTrigger><SelectValue placeholder="Escolha..." /></SelectTrigger>
-              <SelectContent>
-                {products?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Nome do Produto *</label>
-            <Input value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Nome..." />
-          </div>
+        {/* Source Type Toggle */}
+        <div className="flex gap-2 mb-4">
+          {[
+            { value: "product" as const, label: "Produto", icon: Package },
+            { value: "url" as const, label: "URL de Referência", icon: Globe },
+            { value: "text" as const, label: "Texto Base", icon: FileText },
+          ].map((opt) => (
+            <Button
+              key={opt.value}
+              type="button"
+              variant={sourceType === opt.value ? "default" : "outline"}
+              size="sm"
+              className="text-xs"
+              onClick={() => setSourceType(opt.value)}
+            >
+              <opt.icon className="h-3 w-3 mr-1" />
+              {opt.label}
+            </Button>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">Descrição</label>
-            <Textarea value={productDescription} onChange={(e) => setProductDescription(e.target.value)} rows={2} placeholder="Descreva o produto..." />
+        {sourceType === "product" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Selecionar Produto</label>
+              <Select value={selectedProductId} onValueChange={handleProductSelect}>
+                <SelectTrigger><SelectValue placeholder="Escolha..." /></SelectTrigger>
+                <SelectContent>
+                  {products?.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Nome do Produto *</label>
+              <Input value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Nome..." />
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Benefícios</label>
-            <Textarea value={benefits} onChange={(e) => setBenefits(e.target.value)} rows={2} placeholder="Liste os benefícios..." />
-          </div>
-        </div>
+        )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        {sourceType === "url" && (
+          <div className="mb-4">
+            <label className="text-sm font-medium mb-1 block">URL de Referência *</label>
+            <Input value={referenceUrl} onChange={(e) => setReferenceUrl(e.target.value)} placeholder="https://exemplo.com/pagina-do-produto" />
+            <p className="text-xs text-gray-400 mt-1">Cole a URL da página que será usada como referência para gerar a copy.</p>
+          </div>
+        )}
+
+        {sourceType === "text" && (
+          <div className="mb-4">
+            <label className="text-sm font-medium mb-1 block">Texto Base *</label>
+            <Textarea value={baseText} onChange={(e) => setBaseText(e.target.value)} rows={5} placeholder="Cole aqui o texto base que será usado como referência para gerar a copy..." />
+            <p className="text-xs text-gray-400 mt-1">{baseText.length} caracteres</p>
+          </div>
+        )}
+
+        {sourceType === "product" && (
           <div>
             <label className="text-sm font-medium mb-1 block">Perfil DISC</label>
             <Select value={discProfile} onValueChange={setDiscProfile}>
