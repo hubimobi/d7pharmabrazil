@@ -103,6 +103,7 @@ const App = () => (
               <Route path="/acompanhar-pedido" element={<TrackOrderPage />} />
               <Route path="/feedback" element={<CustomerFeedbackPage />} />
               <Route path="/prescritor" element={<PrescritorPage />} />
+              <Route path="/cadastrar" element={<PrescriberSignupPage />} />
               <Route path="/politica-de-privacidade" element={<StaticPage />} />
               <Route path="/termos-de-uso" element={<StaticPage />} />
               <Route path="/trocas-e-devolucoes" element={<StaticPage />} />
