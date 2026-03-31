@@ -180,19 +180,43 @@ export default function ProductsPage() {
 
       // Save testimonials
       if (productId) {
-        // Delete existing and re-insert
-        await supabase.from("product_testimonials").delete().eq("product_id", productId);
-        if (testimonials.length > 0) {
-          const rows = testimonials.map((t) => ({
+        // Upload testimonial images first
+        const processedTestimonials = await Promise.all(testimonials.map(async (t) => {
+          let authorUrl = t.author_image_url || null;
+          if (t.author_image_file) {
+            const ext = t.author_image_file.name.split(".").pop();
+            const path = `testimonials/author-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+            await supabase.storage.from("images").upload(path, t.author_image_file, { upsert: true });
+            const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
+            authorUrl = urlData.publicUrl;
+          }
+          let prodUrls = t.product_image_urls || [];
+          if (t.product_image_files && t.product_image_files.length > 0) {
+            const uploaded = await Promise.all(t.product_image_files.map(async (f) => {
+              const ext = f.name.split(".").pop();
+              const path = `testimonials/product-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+              await supabase.storage.from("images").upload(path, f, { upsert: true });
+              const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
+              return urlData.publicUrl;
+            }));
+            prodUrls = [...prodUrls, ...uploaded].slice(0, 4);
+          }
+          return {
             product_id: productId!,
             author_name: t.author_name,
             content: t.content,
             rating: t.rating,
-            author_image_url: t.author_image_url || null,
-            product_image_url: t.product_image_url || null,
+            author_image_url: authorUrl,
+            product_image_url: prodUrls[0] || t.product_image_url || null,
+            product_image_urls: prodUrls,
             source: t.source || "manual",
-          } as any));
-          const { error } = await supabase.from("product_testimonials").insert(rows);
+          };
+        }));
+
+        // Delete existing and re-insert
+        await supabase.from("product_testimonials").delete().eq("product_id", productId);
+        if (processedTestimonials.length > 0) {
+          const { error } = await supabase.from("product_testimonials").insert(processedTestimonials as any);
           if (error) throw error;
         }
 
