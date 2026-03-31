@@ -53,11 +53,17 @@ const MENU_SECTIONS = [
   { key: "banners", label: "Banners" },
   { key: "pages", label: "Páginas" },
   { key: "popups", label: "Popups" },
+  { key: "feedbacks", label: "Feedbacks" },
   { key: "design", label: "Design / Cores" },
   { key: "checkout", label: "Checkout" },
   { key: "store", label: "Configurações da Loja" },
   { key: "integrations", label: "Integrações" },
   { key: "ai_agents", label: "Agentes IA" },
+  { key: "recovery", label: "Recuperação" },
+  { key: "repurchase", label: "Recompra (+LTV)" },
+  { key: "combos", label: "Combos" },
+  { key: "whatsapp", label: "WhatsApp" },
+  { key: "tools", label: "Ferramentas" },
   { key: "users", label: "Usuários" },
 ];
 
@@ -68,7 +74,7 @@ const DEFAULT_ACCESS: Record<string, Record<string, { view: boolean; edit: boole
   suporte: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: true, edit: ["orders", "customers", "leads"].includes(s.key) }])),
   gestor: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: !["users", "integrations"].includes(s.key), edit: ["orders", "products", "customers", "coupons", "representatives", "doctors", "leads", "banners"].includes(s.key) }])),
   financeiro: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: ["dashboard", "orders", "commissions", "reports", "customers"].includes(s.key), edit: ["commissions"].includes(s.key) }])),
-  representative: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: ["dashboard", "doctors", "commissions", "links"].includes(s.key), edit: ["doctors", "links"].includes(s.key) }])),
+  representative: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: ["dashboard", "doctors", "commissions", "links", "coupons", "orders"].includes(s.key), edit: ["doctors", "links"].includes(s.key) }])),
   prescriber: Object.fromEntries(MENU_SECTIONS.map((s) => [s.key, { view: ["dashboard", "commissions"].includes(s.key), edit: false }])),
 };
 

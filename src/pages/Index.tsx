@@ -36,8 +36,8 @@ const DEFAULT_ORDER = [
 ];
 
 const SECTION_COMPONENTS: Record<string, { component: React.ComponentType; lazy?: boolean; alwaysShow?: boolean }> = {
-  section_highlight_banner: { component: HighlightBanner, alwaysShow: true },
-  section_flash_sale: { component: FlashSaleCarousel, alwaysShow: true },
+  section_highlight_banner: { component: HighlightBanner },
+  section_flash_sale: { component: FlashSaleCarousel },
   section_hero_visible: { component: HeroSection },
   section_featured_visible: { component: FeaturedCarousel },
   section_benefits_visible: { component: BenefitsSection },
@@ -55,8 +55,6 @@ const Index = () => {
   const s = settings as any;
 
   const show = (key: string) => {
-    const sec = SECTION_COMPONENTS[key];
-    if (sec?.alwaysShow) return true;
     return s?.[key] !== false;
   };
 
