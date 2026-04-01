@@ -3187,6 +3187,14 @@ export type Database = {
       }
     }
     Functions: {
+      get_active_representatives_public: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+          short_code: string
+        }[]
+      }
       get_doctor_id: { Args: never; Returns: string }
       get_representative_id: { Args: never; Returns: string }
       has_any_role: {

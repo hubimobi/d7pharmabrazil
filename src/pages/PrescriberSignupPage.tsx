@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -50,12 +50,15 @@ type Step = "form" | "pending" | "create-user" | "done";
 
 export default function PrescriberSignupPage() {
   const [searchParams] = useSearchParams();
-  const repId = searchParams.get("rep");
+  const repCode = searchParams.get("rep");
 
   const [step, setStep] = useState<Step>("form");
   const [saving, setSaving] = useState(false);
   const [citySearch, setCitySearch] = useState("");
   const [doctorResult, setDoctorResult] = useState<{ id: string; name: string; couponCode: string; email: string } | null>(null);
+  const [selectedRepId, setSelectedRepId] = useState<string>("");
+  const [repsLoading, setRepsLoading] = useState(true);
+  const [reps, setReps] = useState<{ id: string; name: string; short_code: string }[]>([]);
 
   // User creation
   const [userEmail, setUserEmail] = useState("");
@@ -74,6 +77,31 @@ export default function PrescriberSignupPage() {
     city: "",
     phone: "",
   });
+
+  // Fetch active representatives via RPC (bypasses RLS safely)
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data, error } = await supabase.rpc("get_active_representatives_public");
+        if (error) throw error;
+        const list = (data ?? []) as { id: string; name: string; short_code: string }[];
+        setReps(list);
+
+        // Pre-select from URL param
+        if (repCode) {
+          const match = list.find(
+            (r) => r.short_code?.toUpperCase() === repCode.toUpperCase() || r.id === repCode
+          );
+          if (match) setSelectedRepId(match.id);
+        }
+      } catch {
+        // silent
+      } finally {
+        setRepsLoading(false);
+      }
+    };
+    load();
+  }, [repCode]);
 
   const availableCities = useMemo(() => {
     if (!form.state) return [];
@@ -105,40 +133,10 @@ export default function PrescriberSignupPage() {
         return;
       }
 
-      // Look up representative by short_code (4-char friendly code)
-      let representativeId: string | null = null;
-      if (repId) {
-        const { data: repByCode } = await (supabase
-          .from("representatives")
-          .select("id") as any)
-          .eq("short_code", repId.toUpperCase())
-          .eq("active", true)
-          .maybeSingle();
-        representativeId = repByCode?.id ?? null;
-
-        // Fallback: try as UUID for backwards compatibility
-        if (!representativeId) {
-          const { data: repById } = await supabase
-            .from("representatives")
-            .select("id")
-            .eq("id", repId)
-            .eq("active", true)
-            .maybeSingle();
-          representativeId = repById?.id ?? null;
-        }
-      }
-      if (!representativeId) {
-        const { data: firstRep } = await supabase
-          .from("representatives")
-          .select("id")
-          .eq("active", true)
-          .limit(1)
-          .single();
-        representativeId = firstRep?.id ?? null;
-      }
+      const representativeId = selectedRepId || null;
 
       if (!representativeId) {
-        toast.error("Nenhum representante disponível. Contate o suporte.");
+        toast.error("Selecione um representante.");
         setSaving(false);
         return;
       }
@@ -298,7 +296,24 @@ export default function PrescriberSignupPage() {
                       )}
                     </div>
                   </div>
-                  <Button type="submit" className="w-full" disabled={saving}>
+                  <div className="space-y-2">
+                    <Label>Representante *</Label>
+                    {repsLoading ? (
+                      <Input disabled placeholder="Carregando representantes..." />
+                    ) : reps.length === 0 ? (
+                      <p className="text-sm text-destructive">Nenhum representante disponível. Contate o suporte.</p>
+                    ) : (
+                      <Select value={selectedRepId} onValueChange={setSelectedRepId}>
+                        <SelectTrigger><SelectValue placeholder="Selecione um representante" /></SelectTrigger>
+                        <SelectContent>
+                          {reps.map((r) => (
+                            <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                  <Button type="submit" className="w-full" disabled={saving || !selectedRepId}>
                     {saving ? "Enviando..." : "Cadastrar"}
                   </Button>
                 </form>
