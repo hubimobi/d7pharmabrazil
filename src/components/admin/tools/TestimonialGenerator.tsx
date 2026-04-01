@@ -8,6 +8,7 @@ import { Loader2, Star, Copy, Check, Save, RefreshCw, Pencil, X, RotateCcw } fro
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useProducts } from "@/hooks/useProducts";
+import ProductComboSelect from "@/components/admin/ProductComboSelect";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Persona {
