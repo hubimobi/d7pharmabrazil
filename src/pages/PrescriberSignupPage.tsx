@@ -296,7 +296,24 @@ export default function PrescriberSignupPage() {
                       )}
                     </div>
                   </div>
-                  <Button type="submit" className="w-full" disabled={saving}>
+                  <div className="space-y-2">
+                    <Label>Representante *</Label>
+                    {repsLoading ? (
+                      <Input disabled placeholder="Carregando representantes..." />
+                    ) : reps.length === 0 ? (
+                      <p className="text-sm text-destructive">Nenhum representante disponível. Contate o suporte.</p>
+                    ) : (
+                      <Select value={selectedRepId} onValueChange={setSelectedRepId}>
+                        <SelectTrigger><SelectValue placeholder="Selecione um representante" /></SelectTrigger>
+                        <SelectContent>
+                          {reps.map((r) => (
+                            <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                  <Button type="submit" className="w-full" disabled={saving || !selectedRepId}>
                     {saving ? "Enviando..." : "Cadastrar"}
                   </Button>
                 </form>
