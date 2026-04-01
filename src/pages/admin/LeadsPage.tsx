@@ -545,14 +545,14 @@ export default function LeadsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Vincular a Produto (opcional)</Label>
-                <Select value={importProductId} onValueChange={setImportProductId}>
-                  <SelectTrigger><SelectValue placeholder="Nenhum produto" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum produto</SelectItem>
-                    {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Label>Vincular a Produto / Combo (opcional)</Label>
+                <ProductComboSelect
+                  value={importProductId}
+                  onValueChange={setImportProductId}
+                  placeholder="Nenhum produto"
+                  allowNone
+                  noneLabel="Nenhum produto"
+                />
               </div>
 
               <div className="space-y-2">
