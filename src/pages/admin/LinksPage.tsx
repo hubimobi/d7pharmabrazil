@@ -78,9 +78,30 @@ export default function LinksPage() {
 
   const createLink = useMutation({
     mutationFn: async () => {
-      if (!selectedProduct) throw new Error("Selecione um produto");
+      if (!selectedProduct) throw new Error("Selecione um produto ou combo");
+      
+      // Check products first, then combos
       const product = products?.find((p) => p.id === selectedProduct);
-      if (!product) throw new Error("Produto não encontrado");
+      let targetUrl = "";
+      let productId: string | null = null;
+      
+      if (product) {
+        targetUrl = `/produto/${product.slug}`;
+        productId = product.id;
+      } else {
+        // Try combos
+        const { data: combo } = await supabase
+          .from("product_combos" as any)
+          .select("id, slug")
+          .eq("id", selectedProduct)
+          .single();
+        if (combo) {
+          targetUrl = `/combo/${(combo as any).slug}`;
+          productId = null; // combos don't have product_id FK
+        } else {
+          throw new Error("Produto ou combo não encontrado");
+        }
+      }
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
@@ -88,9 +109,9 @@ export default function LinksPage() {
       const code = generateCode();
       const insertData: any = {
         code,
-        product_id: product.id,
+        product_id: productId,
         user_id: user.id,
-        target_url: `/produto/${product.slug}`,
+        target_url: targetUrl,
         utm_source: utmSource || "share",
         utm_medium: utmMedium || "link",
         utm_campaign: utmCampaign || "",
