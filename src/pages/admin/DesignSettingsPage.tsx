@@ -164,8 +164,13 @@ export default function DesignSettingsPage() {
   const [panelExtracting, setPanelExtracting] = useState(false);
   const { theme: adminTheme, setTheme: setAdminTheme } = useAdminTheme();
 
+  const unsaved = useUnsavedChangesGuard();
+
   const update = useCallback((field: keyof StoreSettings, value: any) =>
-    setForm((prev) => (prev ? { ...prev, [field]: value } : prev)), []);
+    setForm((prev) => {
+      unsaved.setDirty(true);
+      return prev ? { ...prev, [field]: value } : prev;
+    }), [unsaved.setDirty]);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["store-settings-admin"],
