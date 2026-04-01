@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Copy, Check, ImageIcon, Sparkles } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProducts } from "@/hooks/useProducts";
+import ProductComboSelect from "@/components/admin/ProductComboSelect";
 import { toast } from "sonner";
 
 const objectives: Record<string, string> = {
@@ -102,15 +103,12 @@ export default function ImageGenerator() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="text-sm font-medium mb-1 block">Produto</label>
-            <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-              <SelectTrigger><SelectValue placeholder="Selecione um produto" /></SelectTrigger>
-              <SelectContent>
-                {products?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <label className="text-sm font-medium mb-1 block">Produto / Combo</label>
+            <ProductComboSelect
+              value={selectedProductId}
+              onValueChange={setSelectedProductId}
+              placeholder="Selecione um produto ou combo"
+            />
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">Objetivo</label>

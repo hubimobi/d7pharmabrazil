@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useProducts } from "@/hooks/useProducts";
+import ProductComboSelect from "@/components/admin/ProductComboSelect";
 
 interface ScoreResult {
   analysis: {
@@ -239,15 +240,12 @@ export default function CopyScoreAnalyzer() {
         {sourceType === "product" && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Carregar de Produto</label>
-              <Select value={selectedProductId} onValueChange={handleProductSelect}>
-                <SelectTrigger><SelectValue placeholder="Selecione um produto..." /></SelectTrigger>
-                <SelectContent>
-                  {products?.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium mb-1 block">Carregar de Produto / Combo</label>
+              <ProductComboSelect
+                value={selectedProductId}
+                onValueChange={handleProductSelect}
+                placeholder="Selecione um produto ou combo..."
+              />
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Contexto</label>

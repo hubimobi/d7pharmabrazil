@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import UnsavedChangesDialog from "@/components/admin/UnsavedChangesDialog";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
@@ -16,6 +18,7 @@ export default function CheckoutSettingsPage() {
   const { data: settings } = useStoreSettings();
   const { data: allProducts } = useProducts();
   const qc = useQueryClient();
+  const unsaved = useUnsavedChangesGuard();
 
   const [showTestimonials, setShowTestimonials] = useState(true);
   const [showUrgency, setShowUrgency] = useState(true);
@@ -102,6 +105,7 @@ export default function CheckoutSettingsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
+      unsaved.setDirty(false);
       toast.success("Configurações do checkout salvas!");
       qc.invalidateQueries({ queryKey: ["store-settings"] });
       qc.invalidateQueries({ queryKey: ["store-settings-admin"] });
@@ -119,8 +123,18 @@ export default function CheckoutSettingsPage() {
     { label: "Boleto Bancário", desc: "Habilitar pagamento por boleto bancário no checkout", icon: CreditCard, value: boletoEnabled, set: setBoletoEnabled },
   ];
 
+  // Track dirty on any toggle/input change
+  const markDirty = () => unsaved.setDirty(true);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onChange={markDirty} onClick={() => { /* clicks on switches also mark dirty */ setTimeout(markDirty, 0); }}>
+      <UnsavedChangesDialog
+        open={unsaved.showDialog}
+        onStay={unsaved.handleStay}
+        onLeave={unsaved.handleLeave}
+        onSaveAndLeave={() => { mutation.mutate(); unsaved.handleLeave(); }}
+        hasSave
+      />
       <div>
         <h1 className="text-2xl font-bold text-foreground">Checkout Inteligente</h1>
         <p className="text-sm text-muted-foreground mt-1">Configure frete, combo, conversão e rastreamento do checkout.</p>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ProductComboSelect from "@/components/admin/ProductComboSelect";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,9 +78,30 @@ export default function LinksPage() {
 
   const createLink = useMutation({
     mutationFn: async () => {
-      if (!selectedProduct) throw new Error("Selecione um produto");
+      if (!selectedProduct) throw new Error("Selecione um produto ou combo");
+      
+      // Check products first, then combos
       const product = products?.find((p) => p.id === selectedProduct);
-      if (!product) throw new Error("Produto não encontrado");
+      let targetUrl = "";
+      let productId: string | null = null;
+      
+      if (product) {
+        targetUrl = `/produto/${product.slug}`;
+        productId = product.id;
+      } else {
+        // Try combos
+        const { data: combo } = await supabase
+          .from("product_combos" as any)
+          .select("id, slug")
+          .eq("id", selectedProduct)
+          .single();
+        if (combo) {
+          targetUrl = `/combo/${(combo as any).slug}`;
+          productId = null; // combos don't have product_id FK
+        } else {
+          throw new Error("Produto ou combo não encontrado");
+        }
+      }
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
@@ -87,9 +109,9 @@ export default function LinksPage() {
       const code = generateCode();
       const insertData: any = {
         code,
-        product_id: product.id,
+        product_id: productId,
         user_id: user.id,
-        target_url: `/produto/${product.slug}`,
+        target_url: targetUrl,
         utm_source: utmSource || "share",
         utm_medium: utmMedium || "link",
         utm_campaign: utmCampaign || "",
@@ -170,15 +192,12 @@ export default function LinksPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>Produto *</Label>
-                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um produto" /></SelectTrigger>
-                  <SelectContent>
-                    {(products || []).map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Produto / Combo *</Label>
+                <ProductComboSelect
+                  value={selectedProduct}
+                  onValueChange={setSelectedProduct}
+                  placeholder="Selecione um produto ou combo"
+                />
               </div>
               <div>
                 <Label className="flex items-center gap-1.5">

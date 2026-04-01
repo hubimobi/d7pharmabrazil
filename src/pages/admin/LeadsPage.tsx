@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from "react";
+import ProductComboSelect from "@/components/admin/ProductComboSelect";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -545,14 +546,14 @@ export default function LeadsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Vincular a Produto (opcional)</Label>
-                <Select value={importProductId} onValueChange={setImportProductId}>
-                  <SelectTrigger><SelectValue placeholder="Nenhum produto" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum produto</SelectItem>
-                    {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Label>Vincular a Produto / Combo (opcional)</Label>
+                <ProductComboSelect
+                  value={importProductId}
+                  onValueChange={setImportProductId}
+                  placeholder="Nenhum produto"
+                  allowNone
+                  noneLabel="Nenhum produto"
+                />
               </div>
 
               <div className="space-y-2">
@@ -782,14 +783,14 @@ export default function LeadsPage() {
               {selectedIds.size} lead(s) selecionado(s) serão vinculados ao produto e marcados com a tag "Funil".
             </p>
             <div className="space-y-2">
-              <Label>Produto do Fluxo de UpSell</Label>
-              <Select value={upsellProductId} onValueChange={setUpsellProductId}>
-                <SelectTrigger><SelectValue placeholder="Selecione um produto" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Selecione...</SelectItem>
-                  {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>Produto / Combo do Fluxo de UpSell</Label>
+              <ProductComboSelect
+                value={upsellProductId}
+                onValueChange={setUpsellProductId}
+                placeholder="Selecione um produto"
+                allowNone
+                noneLabel="Selecione..."
+              />
             </div>
           </div>
           <DialogFooter>

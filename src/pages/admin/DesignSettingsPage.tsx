@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef } from "react";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import UnsavedChangesDialog from "@/components/admin/UnsavedChangesDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -162,8 +164,13 @@ export default function DesignSettingsPage() {
   const [panelExtracting, setPanelExtracting] = useState(false);
   const { theme: adminTheme, setTheme: setAdminTheme } = useAdminTheme();
 
+  const unsaved = useUnsavedChangesGuard();
+
   const update = useCallback((field: keyof StoreSettings, value: any) =>
-    setForm((prev) => (prev ? { ...prev, [field]: value } : prev)), []);
+    setForm((prev) => {
+      unsaved.setDirty(true);
+      return prev ? { ...prev, [field]: value } : prev;
+    }), [unsaved.setDirty]);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["store-settings-admin"],
@@ -186,6 +193,7 @@ export default function DesignSettingsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
+      unsaved.setDirty(false);
       toast.success("Design salvo com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["store-settings"] });
       queryClient.invalidateQueries({ queryKey: ["store-settings-admin"] });
@@ -332,6 +340,13 @@ export default function DesignSettingsPage() {
 
   return (
     <div>
+      <UnsavedChangesDialog
+        open={unsaved.showDialog}
+        onStay={unsaved.handleStay}
+        onLeave={unsaved.handleLeave}
+        onSaveAndLeave={() => { handleSave({ preventDefault: () => {} } as React.FormEvent); unsaved.handleLeave(); }}
+        hasSave
+      />
       <div className="mb-6 flex items-center gap-3">
         <Palette className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold">Configurações de Design</h1>

@@ -1,4 +1,6 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import UnsavedChangesDialog from "@/components/admin/UnsavedChangesDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -69,8 +71,13 @@ export default function StoreSettingsPage() {
   const [cropImageUrl, setCropImageUrl] = useState("");
   const [removingLogoBg, setRemovingLogoBg] = useState<string | null>(null);
 
+  const unsaved = useUnsavedChangesGuard();
+
   const updateField = useCallback((field: keyof StoreSettings, value: any) =>
-    setForm((prev) => prev ? { ...prev, [field]: value } : prev), []);
+    setForm((prev) => {
+      unsaved.setDirty(true);
+      return prev ? { ...prev, [field]: value } : prev;
+    }), [unsaved.setDirty]);
 
   const handleRemoveLogoBg = useCallback(async (type: "logo" | "horizontal_logo") => {
     const field = type === "logo" ? "logo_url" : "horizontal_logo_url";
@@ -158,6 +165,7 @@ export default function StoreSettingsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
+      unsaved.setDirty(false);
       toast.success("Configurações salvas com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["store-settings"] });
       queryClient.invalidateQueries({ queryKey: ["store-settings-admin"] });
@@ -223,6 +231,13 @@ export default function StoreSettingsPage() {
 
   return (
     <div>
+      <UnsavedChangesDialog
+        open={unsaved.showDialog}
+        onStay={unsaved.handleStay}
+        onLeave={unsaved.handleLeave}
+        onSaveAndLeave={() => { handleSave({ preventDefault: () => {} } as React.FormEvent); unsaved.handleLeave(); }}
+        hasSave
+      />
       <div className="mb-6 flex items-center gap-3">
         <Store className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold">Configurações da Loja</h1>
