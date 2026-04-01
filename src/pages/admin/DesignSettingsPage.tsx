@@ -193,6 +193,7 @@ export default function DesignSettingsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
+      unsaved.setDirty(false);
       toast.success("Design salvo com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["store-settings"] });
       queryClient.invalidateQueries({ queryKey: ["store-settings-admin"] });
