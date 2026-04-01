@@ -141,6 +141,11 @@ export default function PrescriberSignupPage() {
         return;
       }
 
+      // Auto-approve when coming from a representative link
+      const isAutoApproved = !!repCode && selectedRepId === reps.find(
+        r => r.short_code?.toUpperCase() === repCode.toUpperCase() || r.id === repCode
+      )?.id;
+
       const { data: inserted, error } = await supabase
         .from("doctors")
         .insert({
@@ -153,8 +158,8 @@ export default function PrescriberSignupPage() {
           state: form.state || null,
           city: form.city || null,
           representative_id: representativeId,
-          approval_status: "pending",
-          active: false,
+          approval_status: isAutoApproved ? "approved" : "pending",
+          active: isAutoApproved,
         } as any)
         .select()
         .single();
@@ -173,14 +178,14 @@ export default function PrescriberSignupPage() {
         description: `Cupom do Prescritor ${form.name}`,
         discount_type: "percent",
         discount_value: 10,
-        active: false, // Inactive until approved
+        active: isAutoApproved,
         doctor_id: inserted.id,
         representative_id: representativeId,
       } as any);
 
       setDoctorResult({ id: inserted.id, name: form.name, couponCode, email: form.email });
       setUserEmail(form.email);
-      setStep("pending");
+      setStep(isAutoApproved ? "create-user" : "pending");
     } catch (err: any) {
       toast.error(err?.message || "Erro ao cadastrar");
     } finally {
