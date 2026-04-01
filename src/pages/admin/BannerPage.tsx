@@ -454,7 +454,17 @@ export default function BannerPage() {
     mutationFn: async () => {
       const nextOrder = localBanners.length;
       const { error } = await (supabase.from("hero_banners" as any) as any)
-        .insert({ sort_order: nextOrder, active: true, title: "Novo Banner", subtitle: "", badges: [] });
+        .insert({
+          sort_order: nextOrder,
+          active: true,
+          title: "Novo Banner",
+          subtitle: "",
+          badges: [],
+          btn1_bg_color: defaultBtn1Bg || null,
+          btn1_hover_color: defaultBtn1Hover || null,
+          btn2_bg_color: defaultBtn2Bg || null,
+          btn2_hover_color: defaultBtn2Hover || null,
+        });
       if (error) throw error;
     },
     onSuccess: () => {
