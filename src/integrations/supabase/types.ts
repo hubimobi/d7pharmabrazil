@@ -570,6 +570,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "commissions_representative_id_fkey"
+            columns: ["representative_id"]
+            isOneToOne: false
+            referencedRelation: "representatives_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "commissions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -665,6 +672,13 @@ export type Database = {
             referencedRelation: "representatives"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "coupons_representative_id_fkey"
+            columns: ["representative_id"]
+            isOneToOne: false
+            referencedRelation: "representatives_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       customer_tags: {
@@ -749,6 +763,13 @@ export type Database = {
             columns: ["representative_id"]
             isOneToOne: false
             referencedRelation: "representatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctors_representative_id_fkey"
+            columns: ["representative_id"]
+            isOneToOne: false
+            referencedRelation: "representatives_public"
             referencedColumns: ["id"]
           },
           {
@@ -2786,6 +2807,24 @@ export type Database = {
           name?: string | null
           specialty?: string | null
           state?: string | null
+        }
+        Relationships: []
+      }
+      representatives_public: {
+        Row: {
+          id: string | null
+          name: string | null
+          short_code: string | null
+        }
+        Insert: {
+          id?: string | null
+          name?: string | null
+          short_code?: string | null
+        }
+        Update: {
+          id?: string | null
+          name?: string | null
+          short_code?: string | null
         }
         Relationships: []
       }
