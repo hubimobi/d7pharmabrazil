@@ -427,6 +427,10 @@ export default function BannerPage() {
           hero_carousel_enabled: carouselEnabled,
           hero_carousel_effect: carouselEffect,
           hero_carousel_interval: carouselInterval,
+          hero_btn1_bg_color: defaultBtn1Bg || null,
+          hero_btn1_hover_color: defaultBtn1Hover || null,
+          hero_btn2_bg_color: defaultBtn2Bg || null,
+          hero_btn2_hover_color: defaultBtn2Hover || null,
         })
         .eq("id", settings.id);
     },
