@@ -50,12 +50,15 @@ type Step = "form" | "pending" | "create-user" | "done";
 
 export default function PrescriberSignupPage() {
   const [searchParams] = useSearchParams();
-  const repId = searchParams.get("rep");
+  const repCode = searchParams.get("rep");
 
   const [step, setStep] = useState<Step>("form");
   const [saving, setSaving] = useState(false);
   const [citySearch, setCitySearch] = useState("");
   const [doctorResult, setDoctorResult] = useState<{ id: string; name: string; couponCode: string; email: string } | null>(null);
+  const [selectedRepId, setSelectedRepId] = useState<string>("");
+  const [repsLoading, setRepsLoading] = useState(true);
+  const [reps, setReps] = useState<{ id: string; name: string; short_code: string }[]>([]);
 
   // User creation
   const [userEmail, setUserEmail] = useState("");
@@ -74,6 +77,31 @@ export default function PrescriberSignupPage() {
     city: "",
     phone: "",
   });
+
+  // Fetch active representatives via RPC (bypasses RLS safely)
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data, error } = await supabase.rpc("get_active_representatives_public");
+        if (error) throw error;
+        const list = (data ?? []) as { id: string; name: string; short_code: string }[];
+        setReps(list);
+
+        // Pre-select from URL param
+        if (repCode) {
+          const match = list.find(
+            (r) => r.short_code?.toUpperCase() === repCode.toUpperCase() || r.id === repCode
+          );
+          if (match) setSelectedRepId(match.id);
+        }
+      } catch {
+        // silent
+      } finally {
+        setRepsLoading(false);
+      }
+    };
+    load();
+  }, [repCode]);
 
   const availableCities = useMemo(() => {
     if (!form.state) return [];
