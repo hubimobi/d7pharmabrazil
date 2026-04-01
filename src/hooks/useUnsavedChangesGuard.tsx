@@ -1,14 +1,15 @@
-import { useEffect, useCallback, useRef, useState } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
+import { useBlocker } from "react-router-dom";
 
 /**
- * Hook to track unsaved changes and warn before navigation.
- * Returns { setDirty, isDirty, confirmNavigation, UnsavedDialog }
+ * Hook to track unsaved changes and warn before SPA navigation or browser close.
  */
 export function useUnsavedChangesGuard(onSave?: () => Promise<void> | void) {
-  const [isDirty, setIsDirty] = useState(false);
-  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [isDirty, setIsDirtyState] = useState(false);
   const saveRef = useRef(onSave);
   saveRef.current = onSave;
+
+  const blocker = useBlocker(isDirty);
 
   // Warn on browser close / refresh
   useEffect(() => {
@@ -21,46 +22,29 @@ export function useUnsavedChangesGuard(onSave?: () => Promise<void> | void) {
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
-  const setDirty = useCallback((v: boolean) => setIsDirty(v), []);
+  const setDirty = useCallback((v: boolean) => setIsDirtyState(v), []);
 
-  const requestNavigation = useCallback((href: string) => {
-    if (!isDirty) {
-      window.location.href = href;
-      return;
-    }
-    setPendingHref(href);
-  }, [isDirty]);
+  const handleStay = useCallback(() => {
+    if (blocker.state === "blocked") blocker.reset();
+  }, [blocker]);
 
-  const handleStay = useCallback(() => setPendingHref(null), []);
   const handleLeave = useCallback(() => {
-    setIsDirty(false);
-    if (pendingHref) {
-      // Use timeout to let state settle
-      const href = pendingHref;
-      setPendingHref(null);
-      setTimeout(() => { window.location.href = href; }, 0);
-    }
-  }, [pendingHref]);
+    if (blocker.state === "blocked") blocker.proceed();
+  }, [blocker]);
 
   const handleSaveAndLeave = useCallback(async () => {
     try {
       if (saveRef.current) await saveRef.current();
-      setIsDirty(false);
-      if (pendingHref) {
-        const href = pendingHref;
-        setPendingHref(null);
-        setTimeout(() => { window.location.href = href; }, 100);
-      }
+      if (blocker.state === "blocked") blocker.proceed();
     } catch {
       // Save failed, stay on page
     }
-  }, [pendingHref]);
+  }, [blocker]);
 
   return {
     isDirty,
     setDirty,
-    requestNavigation,
-    showDialog: pendingHref !== null,
+    showDialog: blocker.state === "blocked",
     handleStay,
     handleLeave,
     handleSaveAndLeave,
