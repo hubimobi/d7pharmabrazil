@@ -273,13 +273,9 @@ export default function ProfileCopyGenerator() {
   };
 
   const handleGenerateAllDisc = async () => {
-    if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
-    if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
-    if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
+    if (!validateInput()) return;
     setLoadingAll(true);
-    setAllDiscResult(null);
-    setAllOceanResult(null);
-    setResult(null);
+    clearResults();
     try {
       const payload = getBodyPayload();
       const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
@@ -301,13 +297,9 @@ export default function ProfileCopyGenerator() {
   };
 
   const handleGenerateAllOcean = async () => {
-    if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
-    if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
-    if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
+    if (!validateInput()) return;
     setLoadingOcean(true);
-    setAllOceanResult(null);
-    setAllDiscResult(null);
-    setResult(null);
+    clearResults();
     try {
       const payload = getBodyPayload();
       const { data, error } = await supabase.functions.invoke("generate-profile-copy", {
