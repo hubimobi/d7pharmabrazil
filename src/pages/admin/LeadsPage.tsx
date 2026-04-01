@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from "react";
+import ProductComboSelect from "@/components/admin/ProductComboSelect";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
