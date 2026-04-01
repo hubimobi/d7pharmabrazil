@@ -335,6 +335,10 @@ export default function BannerPage() {
   const [carouselEffect, setCarouselEffect] = useState("fade");
   const [carouselInterval, setCarouselInterval] = useState(5);
   const [carouselEnabled, setCarouselEnabled] = useState(true);
+  const [defaultBtn1Bg, setDefaultBtn1Bg] = useState("#16a34a");
+  const [defaultBtn1Hover, setDefaultBtn1Hover] = useState("#15803d");
+  const [defaultBtn2Bg, setDefaultBtn2Bg] = useState("");
+  const [defaultBtn2Hover, setDefaultBtn2Hover] = useState("");
   const sideImageRef = useRef<HTMLInputElement>(null);
   const [uploadingSideImage, setUploadingSideImage] = useState<string | null>(null);
   const [cropDialog, setCropDialog] = useState<{ bannerId: string; imageUrl: string } | null>(null);
