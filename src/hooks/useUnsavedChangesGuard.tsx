@@ -3,11 +3,12 @@ import { useBlocker } from "react-router-dom";
 
 /**
  * Hook to track unsaved changes and warn before SPA navigation or browser close.
+ * Pass onSave as a stable callback or it will be captured via ref.
  */
 export function useUnsavedChangesGuard(onSave?: () => Promise<void> | void) {
   const [isDirty, setIsDirtyState] = useState(false);
   const saveRef = useRef(onSave);
-  saveRef.current = onSave;
+  useEffect(() => { saveRef.current = onSave; }, [onSave]);
 
   const blocker = useBlocker(isDirty);
 
