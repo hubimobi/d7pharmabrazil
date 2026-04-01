@@ -170,15 +170,12 @@ export default function LinksPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>Produto *</Label>
-                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um produto" /></SelectTrigger>
-                  <SelectContent>
-                    {(products || []).map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Produto / Combo *</Label>
+                <ProductComboSelect
+                  value={selectedProduct}
+                  onValueChange={setSelectedProduct}
+                  placeholder="Selecione um produto ou combo"
+                />
               </div>
               <div>
                 <Label className="flex items-center gap-1.5">

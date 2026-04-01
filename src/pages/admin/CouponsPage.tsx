@@ -270,16 +270,14 @@ export default function CouponsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Vincular a Produto (opcional)</Label>
-                <Select value={form.product_id} onValueChange={(v) => setForm({ ...form, product_id: v === "none" ? "" : v })}>
-                  <SelectTrigger><SelectValue placeholder="Todos os produtos" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Todos os produtos</SelectItem>
-                    {products?.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Vincular a Produto / Combo (opcional)</Label>
+                <ProductComboSelect
+                  value={form.product_id || "none"}
+                  onValueChange={(v) => setForm({ ...form, product_id: v === "none" ? "" : v })}
+                  placeholder="Todos os produtos"
+                  allowNone
+                  noneLabel="Todos os produtos"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

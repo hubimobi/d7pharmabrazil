@@ -782,14 +782,14 @@ export default function LeadsPage() {
               {selectedIds.size} lead(s) selecionado(s) serão vinculados ao produto e marcados com a tag "Funil".
             </p>
             <div className="space-y-2">
-              <Label>Produto do Fluxo de UpSell</Label>
-              <Select value={upsellProductId} onValueChange={setUpsellProductId}>
-                <SelectTrigger><SelectValue placeholder="Selecione um produto" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Selecione...</SelectItem>
-                  {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>Produto / Combo do Fluxo de UpSell</Label>
+              <ProductComboSelect
+                value={upsellProductId}
+                onValueChange={setUpsellProductId}
+                placeholder="Selecione um produto"
+                allowNone
+                noneLabel="Selecione..."
+              />
             </div>
           </div>
           <DialogFooter>
