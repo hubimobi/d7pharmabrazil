@@ -190,14 +190,9 @@ export default function ProfileCopyGenerator() {
   };
 
   const handleGenerateQuestions = async () => {
-    if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return; }
-    if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return; }
-    if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return; }
+    if (!validateInput()) return;
     setLoadingQuestions(true);
-    setQuestionsResult(null);
-    setResult(null);
-    setAllDiscResult(null);
-    setAllOceanResult(null);
+    clearResults();
     try {
       const payload = getBodyPayload();
       const mode = platform === "caixinha_pergunta" ? "caixinha_pergunta" : "quizz_conversao";
