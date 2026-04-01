@@ -18,6 +18,7 @@ export default function CheckoutSettingsPage() {
   const { data: settings } = useStoreSettings();
   const { data: allProducts } = useProducts();
   const qc = useQueryClient();
+  const unsaved = useUnsavedChangesGuard();
 
   const [showTestimonials, setShowTestimonials] = useState(true);
   const [showUrgency, setShowUrgency] = useState(true);
