@@ -335,6 +335,10 @@ export default function BannerPage() {
   const [carouselEffect, setCarouselEffect] = useState("fade");
   const [carouselInterval, setCarouselInterval] = useState(5);
   const [carouselEnabled, setCarouselEnabled] = useState(true);
+  const [defaultBtn1Bg, setDefaultBtn1Bg] = useState("#16a34a");
+  const [defaultBtn1Hover, setDefaultBtn1Hover] = useState("#15803d");
+  const [defaultBtn2Bg, setDefaultBtn2Bg] = useState("");
+  const [defaultBtn2Hover, setDefaultBtn2Hover] = useState("");
   const sideImageRef = useRef<HTMLInputElement>(null);
   const [uploadingSideImage, setUploadingSideImage] = useState<string | null>(null);
   const [cropDialog, setCropDialog] = useState<{ bannerId: string; imageUrl: string } | null>(null);
@@ -408,6 +412,10 @@ export default function BannerPage() {
       setCarouselEffect((settings as any).hero_carousel_effect || "fade");
       setCarouselInterval((settings as any).hero_carousel_interval || 5);
       setCarouselEnabled((settings as any).hero_carousel_enabled ?? true);
+      setDefaultBtn1Bg((settings as any).hero_btn1_bg_color || "#16a34a");
+      setDefaultBtn1Hover((settings as any).hero_btn1_hover_color || "#15803d");
+      setDefaultBtn2Bg((settings as any).hero_btn2_bg_color || "");
+      setDefaultBtn2Hover((settings as any).hero_btn2_hover_color || "");
     }
   }, [settings]);
 
@@ -419,6 +427,10 @@ export default function BannerPage() {
           hero_carousel_enabled: carouselEnabled,
           hero_carousel_effect: carouselEffect,
           hero_carousel_interval: carouselInterval,
+          hero_btn1_bg_color: defaultBtn1Bg || null,
+          hero_btn1_hover_color: defaultBtn1Hover || null,
+          hero_btn2_bg_color: defaultBtn2Bg || null,
+          hero_btn2_hover_color: defaultBtn2Hover || null,
         })
         .eq("id", settings.id);
     },
@@ -442,7 +454,17 @@ export default function BannerPage() {
     mutationFn: async () => {
       const nextOrder = localBanners.length;
       const { error } = await (supabase.from("hero_banners" as any) as any)
-        .insert({ sort_order: nextOrder, active: true, title: "Novo Banner", subtitle: "", badges: [] });
+        .insert({
+          sort_order: nextOrder,
+          active: true,
+          title: "Novo Banner",
+          subtitle: "",
+          badges: [],
+          btn1_bg_color: defaultBtn1Bg || null,
+          btn1_hover_color: defaultBtn1Hover || null,
+          btn2_bg_color: defaultBtn2Bg || null,
+          btn2_hover_color: defaultBtn2Hover || null,
+        });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -569,6 +591,53 @@ export default function BannerPage() {
               </div>
             </div>
           )}
+
+          <div className="border-t pt-4 mt-4">
+            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2"><Palette className="h-4 w-4" /> Cores Padrão dos Botões</h4>
+            <p className="text-xs text-muted-foreground mb-3">Cores aplicadas automaticamente ao criar novos banners.</p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <Label>Botão 1 - Fundo</Label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={defaultBtn1Bg || "#16a34a"} onChange={(e) => setDefaultBtn1Bg(e.target.value)} className="h-9 w-12 rounded border cursor-pointer" />
+                  <Input value={defaultBtn1Bg} onChange={(e) => setDefaultBtn1Bg(e.target.value)} placeholder="#16a34a" className="flex-1" />
+                </div>
+              </div>
+              <div>
+                <Label>Botão 1 - Hover</Label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={defaultBtn1Hover || "#15803d"} onChange={(e) => setDefaultBtn1Hover(e.target.value)} className="h-9 w-12 rounded border cursor-pointer" />
+                  <Input value={defaultBtn1Hover} onChange={(e) => setDefaultBtn1Hover(e.target.value)} placeholder="#15803d" className="flex-1" />
+                </div>
+              </div>
+              <div>
+                <Label>Botão 2 - Fundo</Label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={defaultBtn2Bg || "#1a1a2e"} onChange={(e) => setDefaultBtn2Bg(e.target.value)} className="h-9 w-12 rounded border cursor-pointer" />
+                  <Input value={defaultBtn2Bg} onChange={(e) => setDefaultBtn2Bg(e.target.value)} placeholder="Transparente" className="flex-1" />
+                </div>
+              </div>
+              <div>
+                <Label>Botão 2 - Hover</Label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={defaultBtn2Hover || "#2a2a3e"} onChange={(e) => setDefaultBtn2Hover(e.target.value)} className="h-9 w-12 rounded border cursor-pointer" />
+                  <Input value={defaultBtn2Hover} onChange={(e) => setDefaultBtn2Hover(e.target.value)} placeholder="Padrão" className="flex-1" />
+                </div>
+              </div>
+            </div>
+            <Button size="sm" className="mt-3 gap-2" onClick={() => {
+              setLocalBanners(prev => prev.map(b => ({
+                ...b,
+                btn1_bg_color: defaultBtn1Bg || null,
+                btn1_hover_color: defaultBtn1Hover || null,
+                btn2_bg_color: defaultBtn2Bg || null,
+                btn2_hover_color: defaultBtn2Hover || null,
+              })));
+              toast.success("Cores padrão aplicadas a todos os banners!");
+            }} variant="outline">
+              <Palette className="h-4 w-4" /> Aplicar a Todos os Banners
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
