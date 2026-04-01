@@ -570,13 +570,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "commissions_representative_id_fkey"
-            columns: ["representative_id"]
-            isOneToOne: false
-            referencedRelation: "representatives_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "commissions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -672,13 +665,6 @@ export type Database = {
             referencedRelation: "representatives"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "coupons_representative_id_fkey"
-            columns: ["representative_id"]
-            isOneToOne: false
-            referencedRelation: "representatives_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       customer_tags: {
@@ -763,13 +749,6 @@ export type Database = {
             columns: ["representative_id"]
             isOneToOne: false
             referencedRelation: "representatives"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "doctors_representative_id_fkey"
-            columns: ["representative_id"]
-            isOneToOne: false
-            referencedRelation: "representatives_public"
             referencedColumns: ["id"]
           },
           {
@@ -2810,24 +2789,6 @@ export type Database = {
         }
         Relationships: []
       }
-      representatives_public: {
-        Row: {
-          id: string | null
-          name: string | null
-          short_code: string | null
-        }
-        Insert: {
-          id?: string | null
-          name?: string | null
-          short_code?: string | null
-        }
-        Update: {
-          id?: string | null
-          name?: string | null
-          short_code?: string | null
-        }
-        Relationships: []
-      }
       short_links_public: {
         Row: {
           active: boolean | null
@@ -3226,6 +3187,14 @@ export type Database = {
       }
     }
     Functions: {
+      get_active_representatives_public: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+          short_code: string
+        }[]
+      }
       get_doctor_id: { Args: never; Returns: string }
       get_representative_id: { Args: never; Returns: string }
       has_any_role: {
