@@ -231,6 +231,13 @@ export default function StoreSettingsPage() {
 
   return (
     <div>
+      <UnsavedChangesDialog
+        open={unsaved.showDialog}
+        onStay={unsaved.handleStay}
+        onLeave={unsaved.handleLeave}
+        onSaveAndLeave={() => { handleSave({ preventDefault: () => {} } as React.FormEvent); unsaved.handleLeave(); }}
+        hasSave
+      />
       <div className="mb-6 flex items-center gap-3">
         <Store className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold">Configurações da Loja</h1>
