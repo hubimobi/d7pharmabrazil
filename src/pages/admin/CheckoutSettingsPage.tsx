@@ -127,7 +127,7 @@ export default function CheckoutSettingsPage() {
   const markDirty = () => unsaved.setDirty(true);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onChange={markDirty} onClick={() => { /* clicks on switches also mark dirty */ setTimeout(markDirty, 0); }}>
       <UnsavedChangesDialog
         open={unsaved.showDialog}
         onStay={unsaved.handleStay}
