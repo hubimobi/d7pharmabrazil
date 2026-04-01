@@ -71,19 +71,13 @@ export default function StoreSettingsPage() {
   const [cropImageUrl, setCropImageUrl] = useState("");
   const [removingLogoBg, setRemovingLogoBg] = useState<string | null>(null);
 
+  const [isDirty, setIsDirty] = useState(false);
+
   const updateField = useCallback((field: keyof StoreSettings, value: any) =>
     setForm((prev) => {
-      unsaved.setDirty(true);
+      setIsDirty(true);
       return prev ? { ...prev, [field]: value } : prev;
     }), []);
-
-  const doSave = useCallback(async () => {
-    if (!form) return;
-    const { id, ...values } = form as StoreSettings;
-    mutation.mutate(values);
-  }, [form, mutation]);
-
-  const unsaved = useUnsavedChangesGuard(doSave);
 
   const handleRemoveLogoBg = useCallback(async (type: "logo" | "horizontal_logo") => {
     const field = type === "logo" ? "logo_url" : "horizontal_logo_url";
