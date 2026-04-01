@@ -33,7 +33,7 @@ export default function ProductComboSelect({
         .eq("active", true)
         .order("name");
       if (error) throw error;
-      return (data ?? []) as Array<{ id: string; name: string; slug: string; active: boolean }>;
+      return (data ?? []) as unknown as Array<{ id: string; name: string; slug: string; active: boolean }>;
     },
     staleTime: 5 * 60 * 1000,
   });
