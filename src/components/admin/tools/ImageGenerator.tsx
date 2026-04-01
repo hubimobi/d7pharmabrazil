@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Copy, Check, ImageIcon, Sparkles } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProducts } from "@/hooks/useProducts";
+import ProductComboSelect from "@/components/admin/ProductComboSelect";
 import { toast } from "sonner";
 
 const objectives: Record<string, string> = {
