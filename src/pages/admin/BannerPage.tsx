@@ -412,6 +412,10 @@ export default function BannerPage() {
       setCarouselEffect((settings as any).hero_carousel_effect || "fade");
       setCarouselInterval((settings as any).hero_carousel_interval || 5);
       setCarouselEnabled((settings as any).hero_carousel_enabled ?? true);
+      setDefaultBtn1Bg((settings as any).hero_btn1_bg_color || "#16a34a");
+      setDefaultBtn1Hover((settings as any).hero_btn1_hover_color || "#15803d");
+      setDefaultBtn2Bg((settings as any).hero_btn2_bg_color || "");
+      setDefaultBtn2Hover((settings as any).hero_btn2_hover_color || "");
     }
   }, [settings]);
 
