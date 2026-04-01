@@ -103,15 +103,12 @@ export default function ImageGenerator() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="text-sm font-medium mb-1 block">Produto</label>
-            <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-              <SelectTrigger><SelectValue placeholder="Selecione um produto" /></SelectTrigger>
-              <SelectContent>
-                {products?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <label className="text-sm font-medium mb-1 block">Produto / Combo</label>
+            <ProductComboSelect
+              value={selectedProductId}
+              onValueChange={setSelectedProductId}
+              placeholder="Selecione um produto ou combo"
+            />
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">Objetivo</label>
