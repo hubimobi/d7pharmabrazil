@@ -833,12 +833,14 @@ export default function BannerPage() {
                     </div>
                     {allProducts && allProducts.length > 0 && (
                       <div>
-                        <Label>Selecionar Produto</Label>
-                        <Select
+                        <Label>Selecionar Produto / Combo</Label>
+                        <ProductComboSelect
                           value={
                             banner.button2_link?.startsWith("/produto/")
                               ? banner.button2_link.replace("/produto/", "")
-                              : ""
+                              : banner.button2_link?.startsWith("/combo/")
+                                ? banner.button2_link.replace("/combo/", "")
+                                : ""
                           }
                           onValueChange={(slug) => {
                             const prod = allProducts.find((p) => p.slug === slug);
@@ -847,20 +849,17 @@ export default function BannerPage() {
                               updateBanner(banner.id, "button_link", `/checkout?product=${prod.slug}`);
                               updateBanner(banner.id, "button2_text", "Ver Produto");
                               updateBanner(banner.id, "button2_link", `/produto/${prod.slug}`);
+                            } else {
+                              // It's a combo
+                              updateBanner(banner.id, "button_text", "Ver Combo");
+                              updateBanner(banner.id, "button_link", `/combo/${slug}`);
+                              updateBanner(banner.id, "button2_text", "Ver Combo");
+                              updateBanner(banner.id, "button2_link", `/combo/${slug}`);
                             }
                           }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Escolha um produto..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {allProducts.map((p) => (
-                              <SelectItem key={p.id} value={p.slug}>
-                                {p.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          placeholder="Escolha um produto ou combo..."
+                          useSlug
+                        />
                         {banner.button2_link?.startsWith("/produto/") && (
                           <p className="text-xs text-muted-foreground mt-1">
                             Botão 1 → Compra direta · Botão 2 → Página do produto
