@@ -133,40 +133,10 @@ export default function PrescriberSignupPage() {
         return;
       }
 
-      // Look up representative by short_code (4-char friendly code)
-      let representativeId: string | null = null;
-      if (repId) {
-        const { data: repByCode } = await (supabase
-          .from("representatives")
-          .select("id") as any)
-          .eq("short_code", repId.toUpperCase())
-          .eq("active", true)
-          .maybeSingle();
-        representativeId = repByCode?.id ?? null;
-
-        // Fallback: try as UUID for backwards compatibility
-        if (!representativeId) {
-          const { data: repById } = await supabase
-            .from("representatives")
-            .select("id")
-            .eq("id", repId)
-            .eq("active", true)
-            .maybeSingle();
-          representativeId = repById?.id ?? null;
-        }
-      }
-      if (!representativeId) {
-        const { data: firstRep } = await supabase
-          .from("representatives")
-          .select("id")
-          .eq("active", true)
-          .limit(1)
-          .single();
-        representativeId = firstRep?.id ?? null;
-      }
+      const representativeId = selectedRepId || null;
 
       if (!representativeId) {
-        toast.error("Nenhum representante disponível. Contate o suporte.");
+        toast.error("Selecione um representante.");
         setSaving(false);
         return;
       }
