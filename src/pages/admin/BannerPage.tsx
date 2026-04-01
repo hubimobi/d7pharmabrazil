@@ -249,21 +249,18 @@ function PromoBannersAdmin() {
                 </div>
               ) : (
                 <div>
-                  <Label>Selecionar Produto</Label>
-                  <Select
+                  <Label>Selecionar Produto / Combo</Label>
+                  <ProductComboSelect
                     value={banner.product_slug || ""}
                     onValueChange={(slug) => {
                       update(banner.id, "product_slug", slug);
-                      update(banner.id, "button_link", `/produto/${slug}`);
+                      // Detect if combo or product
+                      const isCombo = slug.startsWith("combo-") || !allProducts?.find(p => p.slug === slug);
+                      update(banner.id, "button_link", isCombo ? `/combo/${slug}` : `/produto/${slug}`);
                     }}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Escolha um produto..." /></SelectTrigger>
-                    <SelectContent>
-                      {allProducts?.map((p) => (
-                        <SelectItem key={p.id} value={p.slug}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Escolha um produto ou combo..."
+                    useSlug
+                  />
                 </div>
               )}
 
