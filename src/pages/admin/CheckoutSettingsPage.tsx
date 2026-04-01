@@ -105,6 +105,7 @@ export default function CheckoutSettingsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
+      unsaved.setDirty(false);
       toast.success("Configurações do checkout salvas!");
       qc.invalidateQueries({ queryKey: ["store-settings"] });
       qc.invalidateQueries({ queryKey: ["store-settings-admin"] });
