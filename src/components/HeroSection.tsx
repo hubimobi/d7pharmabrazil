@@ -137,7 +137,7 @@ const HeroSection = () => {
           animate={variants.animate}
           exit={variants.exit}
           transition={variants.transition}
-          className="absolute inset-0"
+          className="absolute inset-0 rounded-container overflow-hidden"
         >
           {banner.media_type === "color" ? (
             <div className="absolute inset-0" style={{ backgroundColor: banner.bg_color || "#1a1a2e" }} />
