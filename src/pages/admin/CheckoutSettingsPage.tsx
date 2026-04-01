@@ -123,8 +123,18 @@ export default function CheckoutSettingsPage() {
     { label: "Boleto Bancário", desc: "Habilitar pagamento por boleto bancário no checkout", icon: CreditCard, value: boletoEnabled, set: setBoletoEnabled },
   ];
 
+  // Track dirty on any toggle/input change
+  const markDirty = () => unsaved.setDirty(true);
+
   return (
     <div className="space-y-6">
+      <UnsavedChangesDialog
+        open={unsaved.showDialog}
+        onStay={unsaved.handleStay}
+        onLeave={unsaved.handleLeave}
+        onSaveAndLeave={() => { mutation.mutate(); unsaved.handleLeave(); }}
+        hasSave
+      />
       <div>
         <h1 className="text-2xl font-bold text-foreground">Checkout Inteligente</h1>
         <p className="text-sm text-muted-foreground mt-1">Configure frete, combo, conversão e rastreamento do checkout.</p>
