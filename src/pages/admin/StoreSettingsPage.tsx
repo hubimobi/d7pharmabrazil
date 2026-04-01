@@ -165,19 +165,13 @@ export default function StoreSettingsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      setIsDirty(false);
+      unsaved.setDirty(false);
       toast.success("Configurações salvas com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["store-settings"] });
       queryClient.invalidateQueries({ queryKey: ["store-settings-admin"] });
     },
     onError: () => toast.error("Erro ao salvar configurações."),
   });
-
-  const unsaved = useUnsavedChangesGuard(useCallback(async () => {
-    if (!form) return;
-    const { id, ...values } = form as StoreSettings;
-    mutation.mutate(values);
-  }, [form, mutation]));
 
   if (settings && !form) {
     setForm({ ...settings });
