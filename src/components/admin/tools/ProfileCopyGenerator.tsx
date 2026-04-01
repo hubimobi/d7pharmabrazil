@@ -154,6 +154,20 @@ export default function ProfileCopyGenerator() {
   const [showQuestionsTable, setShowQuestionsTable] = useState(false);
   const [copyMethod, setCopyMethod] = useState("venda");
 
+  const validateInput = (): boolean => {
+    if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return false; }
+    if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return false; }
+    if (sourceType === "text" && baseText.length < 10) { toast.error("Texto muito curto"); return false; }
+    return true;
+  };
+
+  const clearResults = () => {
+    setResult(null);
+    setAllDiscResult(null);
+    setAllOceanResult(null);
+    setQuestionsResult(null);
+  };
+
   const handleProductSelect = (id: string) => {
     setSelectedProductId(id);
     const product = products?.find((p) => p.id === id);
