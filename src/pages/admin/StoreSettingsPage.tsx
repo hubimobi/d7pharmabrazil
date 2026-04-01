@@ -71,13 +71,13 @@ export default function StoreSettingsPage() {
   const [cropImageUrl, setCropImageUrl] = useState("");
   const [removingLogoBg, setRemovingLogoBg] = useState<string | null>(null);
 
-  const [isDirty, setIsDirty] = useState(false);
+  const unsaved = useUnsavedChangesGuard();
 
   const updateField = useCallback((field: keyof StoreSettings, value: any) =>
     setForm((prev) => {
-      setIsDirty(true);
+      unsaved.setDirty(true);
       return prev ? { ...prev, [field]: value } : prev;
-    }), []);
+    }), [unsaved.setDirty]);
 
   const handleRemoveLogoBg = useCallback(async (type: "logo" | "horizontal_logo") => {
     const field = type === "logo" ? "logo_url" : "horizontal_logo_url";
