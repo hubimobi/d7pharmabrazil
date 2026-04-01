@@ -118,37 +118,16 @@ export default function PrescriberSignupPage() {
       return;
     }
 
+    const representativeId = selectedRepId || null;
+    if (!representativeId) {
+      toast.error("Selecione um representante.");
+      return;
+    }
+
     setSaving(true);
     try {
-      // Check if email already exists
-      const { data: existing } = await supabase
-        .from("doctors")
-        .select("id")
-        .eq("email", form.email)
-        .maybeSingle();
-
-      if (existing) {
-        toast.error("Este e-mail já está cadastrado como prescritor.");
-        setSaving(false);
-        return;
-      }
-
-      const representativeId = selectedRepId || null;
-
-      if (!representativeId) {
-        toast.error("Selecione um representante.");
-        setSaving(false);
-        return;
-      }
-
-      // Auto-approve when coming from a representative link
-      const isAutoApproved = !!repCode && selectedRepId === reps.find(
-        r => r.short_code?.toUpperCase() === repCode.toUpperCase() || r.id === repCode
-      )?.id;
-
-      const { data: inserted, error } = await supabase
-        .from("doctors")
-        .insert({
+      const { data, error } = await supabase.functions.invoke("register-prescriber", {
+        body: {
           name: form.name,
           email: form.email,
           cpf: form.cpf || null,
@@ -158,34 +137,16 @@ export default function PrescriberSignupPage() {
           state: form.state || null,
           city: form.city || null,
           representative_id: representativeId,
-          approval_status: isAutoApproved ? "approved" : "pending",
-          active: isAutoApproved,
-        } as any)
-        .select()
-        .single();
+          rep_code: repCode || null,
+        },
+      });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      // Generate coupon code
-      const initials = form.name.split(/\s+/).filter(Boolean).map(w => w[0].toUpperCase()).join("");
-      const randomDigit = Math.floor(Math.random() * 10);
-      const { count } = await supabase.from("doctors").select("id", { count: "exact", head: true });
-      const seq = count ?? 1;
-      const couponCode = `${initials}${randomDigit}R${seq}`;
-
-      await supabase.from("coupons").insert({
-        code: couponCode,
-        description: `Cupom do Prescritor ${form.name}`,
-        discount_type: "percent",
-        discount_value: 10,
-        active: isAutoApproved,
-        doctor_id: inserted.id,
-        representative_id: representativeId,
-      } as any);
-
-      setDoctorResult({ id: inserted.id, name: form.name, couponCode, email: form.email });
-      setUserEmail(form.email);
-      setStep(isAutoApproved ? "create-user" : "pending");
+      setDoctorResult({ id: data.doctor_id, name: data.name, couponCode: data.coupon_code, email: data.email });
+      setUserEmail(data.email);
+      setStep(data.auto_approved ? "create-user" : "pending");
     } catch (err: any) {
       toast.error(err?.message || "Erro ao cadastrar");
     } finally {
