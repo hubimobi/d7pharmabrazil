@@ -102,6 +102,7 @@ export default function CheckoutSettingsPage() {
           combo_offer_discount: comboDiscount,
           combo_offer_free_shipping: comboFreeShipping,
           checkout_version: checkoutVersion,
+          checkout_prescriber_required: prescriberRequired,
         })
         .eq("id", settings.id);
       if (error) throw error;
