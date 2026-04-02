@@ -230,7 +230,11 @@ const CheckoutPageV2 = () => {
     if (!form.number.trim()) { toast.error("Preencha o número."); return false; }
     if (!form.neighborhood.trim()) { toast.error("Preencha o bairro."); return false; }
     if (!form.city.trim()) { toast.error("Preencha a cidade."); return false; }
-    if (!form.doctor && !selectedDoctorId) { toast.error("Selecione um Prescritor ou marque 'Não Sei'."); return false; }
+    const prescriberRequired = (storeSettings as any)?.checkout_prescriber_required !== false;
+    if (prescriberRequired && !form.doctor && !selectedDoctorId) { toast.error("Selecione um Prescritor ou marque 'Não Sei'."); return false; }
+    // Require shipping selection unless free shipping
+    const hasFreeShipping = freeShipping || comboFreeShipping || qualifiesForFreeShipping;
+    if (!hasFreeShipping && !selectedShipping) { toast.error("Selecione uma opção de frete."); return false; }
     return true;
   };
 
