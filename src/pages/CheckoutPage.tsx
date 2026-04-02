@@ -464,9 +464,9 @@ const CheckoutPage = () => {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden pb-24 md:pb-0">
       
-      <main className="container px-3 sm:px-6 py-6 md:py-12 max-w-full overflow-hidden">
+      <main className="container px-3 sm:px-6 py-4 md:py-12 max-w-full overflow-hidden">
         <Link to="/produtos" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Continuar Comprando
         </Link>
@@ -624,18 +624,20 @@ const CheckoutPage = () => {
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold">Opção de Envio</Label>
                     <span className="block text-xs font-medium text-primary">📦 Postagem de Envio em até 24h</span>
-                    {shippingOptions.map((opt) => (
-                      <button key={opt.id} type="button"
-                        className={`flex w-full items-center gap-3 rounded-lg border-2 p-3 text-left transition ${selectedShipping?.id === opt.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
-                        onClick={() => setSelectedShipping(opt)}>
-                        {opt.logo && <img src={opt.logo} alt={opt.company} className="h-8 w-8 rounded object-contain" />}
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{opt.company} — {opt.name}</p>
-                          <p className="text-xs text-muted-foreground">Entrega em até {opt.delivery_time} dias úteis</p>
-                        </div>
-                        <span className="text-sm font-bold text-primary">{opt.price === 0 ? "Grátis" : `R$ ${opt.price.toFixed(2).replace(".", ",")}`}</span>
-                      </button>
-                    ))}
+                    <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1 -mr-1">
+                      {shippingOptions.map((opt) => (
+                        <button key={opt.id} type="button"
+                          className={`flex w-full items-center gap-3 rounded-lg border-2 p-2.5 text-left transition ${selectedShipping?.id === opt.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                          onClick={() => setSelectedShipping(opt)}>
+                          {opt.logo && <img src={opt.logo} alt={opt.company} className="h-7 w-7 rounded object-contain shrink-0" />}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{opt.company} — {opt.name}</p>
+                            <p className="text-xs text-muted-foreground">até {opt.delivery_time} dias úteis</p>
+                          </div>
+                          <span className="text-sm font-bold text-primary shrink-0">{opt.price === 0 ? "Grátis" : `R$ ${opt.price.toFixed(2).replace(".", ",")}`}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -767,7 +769,7 @@ const CheckoutPage = () => {
           </div>
 
           {step <= 2 && (
-             <div className="rounded-lg border border-border bg-card p-4 sm:p-6">
+             <div className="hidden lg:block rounded-lg border border-border bg-card p-4 sm:p-6">
               <h3 className="text-base lg:text-lg font-semibold">Resumo do Pedido</h3>
               <div className="mt-3 space-y-2 text-sm">
                 {items.map((item) => (
@@ -862,7 +864,7 @@ const CheckoutPage = () => {
           )}
         </div>
       )}
-      {step <= 2 && <div className="h-20 md:hidden" />}
+
 
       
       {!storeSettings?.hide_chat_on_checkout && <WhatsAppButton />}
