@@ -820,8 +820,15 @@ const CheckoutPage = () => {
       {step <= 2 && (
         <div className="fixed bottom-0 inset-x-0 z-40 flex gap-2 border-t border-border bg-card p-3 shadow-lg md:hidden">
           {step === 1 ? (
-            <Button className="flex-1 text-sm" size="lg" onClick={() => setStep(2)}>
-              Finalizar Pedido →
+            <Button className="flex-1 text-sm" size="lg" onClick={() => {
+              if (!form.name.trim()) { toast.error("Preencha seu nome."); return; }
+              if (!form.email.trim() || !form.email.includes("@")) { toast.error("Preencha um e-mail válido."); return; }
+              if (!form.phone.trim()) { toast.error("Preencha seu telefone."); return; }
+              saveAbandonment.current();
+              abandonmentSaved.current = false;
+              setStep(2);
+            }}>
+              Continuar →
             </Button>
           ) : (
             <>

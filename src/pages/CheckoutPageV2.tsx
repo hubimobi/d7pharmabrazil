@@ -667,7 +667,7 @@ const CheckoutPageV2 = () => {
                 <div className="border-t border-border p-5 sm:p-7">
                   {step === 1 && (
                     <>
-                      <Button className="w-full gap-2 text-base" size="lg" onClick={() => validateStep1() && goToStep(2)}>
+                      <Button className="w-full gap-2 text-base" size="lg" onClick={() => { if (validateStep1()) { saveAbandonment.current(); abandonmentSaved.current = false; goToStep(2); } }}>
                         Continuar para Entrega <ChevronRight className="h-4 w-4" />
                       </Button>
                       <p className="text-center text-xs text-muted-foreground mt-2.5">🔒 Dados protegidos com criptografia SSL</p>
