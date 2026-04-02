@@ -464,9 +464,9 @@ const CheckoutPage = () => {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden pb-24 md:pb-0">
       
-      <main className="container px-3 sm:px-6 py-6 md:py-12 max-w-full overflow-hidden">
+      <main className="container px-3 sm:px-6 py-4 md:py-12 max-w-full overflow-hidden">
         <Link to="/produtos" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Continuar Comprando
         </Link>
