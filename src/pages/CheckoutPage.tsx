@@ -769,7 +769,7 @@ const CheckoutPage = () => {
           </div>
 
           {step <= 2 && (
-             <div className="rounded-lg border border-border bg-card p-4 sm:p-6">
+             <div className="hidden lg:block rounded-lg border border-border bg-card p-4 sm:p-6">
               <h3 className="text-base lg:text-lg font-semibold">Resumo do Pedido</h3>
               <div className="mt-3 space-y-2 text-sm">
                 {items.map((item) => (
