@@ -510,17 +510,30 @@ const CheckoutPageV2 = () => {
                       </motion.div>
                     )}
 
-                    {/* Shipping */}
-                    <div className="mt-5">
-                      <ShippingCalculator
-                        cep={form.cep}
-                        onCepChange={(cep) => setForm({ ...form, cep })}
-                        items={items.map((i) => ({ price: i.product.price, quantity: i.quantity, weight: i.product.weight, height: i.product.height, width: i.product.width, length: i.product.length }))}
-                        selectedOption={selectedShipping}
-                        onSelectOption={setSelectedShipping}
-                        onAddressFound={(addr) => setForm((prev) => ({ ...prev, street: addr.street || prev.street, neighborhood: addr.neighborhood || prev.neighborhood, city: addr.city || prev.city, state: addr.state || prev.state }))}
-                      />
-                    </div>
+                    {/* Shipping Options (auto-calculated from CEP) */}
+                    {shippingLoading && (
+                      <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Calculando frete...
+                      </div>
+                    )}
+                    {!shippingLoading && shippingOptions.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Opções de Envio</Label>
+                        <span className="block text-xs font-medium text-primary">📦 Postagem de Envio em até 24h</span>
+                        {shippingOptions.map((opt) => (
+                          <button key={opt.id} type="button"
+                            className={`flex w-full items-center gap-3 rounded-lg border-2 p-3 text-left transition ${selectedShipping?.id === opt.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                            onClick={() => setSelectedShipping(opt)}>
+                            {opt.logo && <img src={opt.logo} alt={opt.company} className="h-8 w-8 rounded object-contain" />}
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{opt.company} — {opt.name}</p>
+                              <p className="text-xs text-muted-foreground">Entrega em até {opt.delivery_time} dias úteis</p>
+                            </div>
+                            <span className="text-sm font-bold text-primary">{opt.price === 0 ? "Grátis" : `R$ ${opt.price.toFixed(2).replace(".", ",")}`}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Prescritor */}
                     <div className="mt-5">
