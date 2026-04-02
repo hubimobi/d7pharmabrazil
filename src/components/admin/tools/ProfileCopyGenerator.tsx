@@ -942,11 +942,11 @@ export default function ProfileCopyGenerator() {
                       </TableCell>
                       <TableCell className="text-xs whitespace-nowrap">{row.jornada}</TableCell>
                       <TableCell className="text-sm font-medium">{row.pergunta}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-[250px]">{row.resposta}</TableCell>
-                      {platform === "caixinha_pergunta" && (
-                        <>
-                          <TableCell className="text-xs max-w-[300px] whitespace-pre-wrap">{row.copy}</TableCell>
-                          <TableCell className="text-xs font-medium text-indigo-700 max-w-[150px]">{row.cta_copy}</TableCell>
+                       <TableCell className="text-xs text-muted-foreground max-w-[180px]">{row.resposta}</TableCell>
+                       {platform === "caixinha_pergunta" && (
+                         <>
+                           <TableCell className="text-xs max-w-[300px] whitespace-pre-wrap">{row.copy}</TableCell>
+                           <TableCell className="text-xs font-medium text-indigo-700 max-w-[150px]">{row.cta_copy}</TableCell>
                         </>
                       )}
                     </TableRow>
