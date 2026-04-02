@@ -152,6 +152,9 @@ const CheckoutPageV3 = () => {
     if (!form.email.trim() || !form.email.includes("@")) { toast.error("Preencha um e-mail válido."); return; }
     if (form.cpf.replace(/\D/g, "").length !== 11) { toast.error("CPF inválido. Deve ter 11 dígitos."); return; }
     if (!form.phone.trim()) { toast.error("Preencha seu telefone."); return; }
+    // Require shipping selection unless free shipping
+    const hasFreeShipping = freeShipping || comboFreeShipping || qualifiesForFreeShipping;
+    if (!hasFreeShipping && !selectedShipping) { toast.error("Selecione uma opção de frete antes de finalizar."); return; }
     setIsSubmitting(true);
     try {
       const orderItems = items.map((i) => ({ product_id: i.product.id, name: i.product.name, price: i.product.price, quantity: i.quantity }));
