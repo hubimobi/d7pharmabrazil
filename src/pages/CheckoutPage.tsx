@@ -248,8 +248,16 @@ const CheckoutPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.doctor && !selectedDoctorId) {
+    const prescriberRequired = (storeSettings as any)?.checkout_prescriber_required !== false;
+    if (prescriberRequired && !form.doctor && !selectedDoctorId) {
       toast.error("Selecione um Prescritor ou marque 'Não Sei'.");
+      return;
+    }
+
+    // Require shipping selection unless free shipping applies
+    const hasFreeShipping = freeShipping || comboFreeShipping || qualifiesForFreeShipping;
+    if (!hasFreeShipping && !selectedShipping) {
+      toast.error("Selecione uma opção de frete antes de finalizar.");
       return;
     }
 
