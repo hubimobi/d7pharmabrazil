@@ -124,6 +124,7 @@ export default function CheckoutSettingsPage() {
     { label: "Mensagem Motivacional", desc: "Texto rotativo de benefícios ao lado dos passos do checkout", icon: Sparkles, value: showMotivation, set: setShowMotivation },
     { label: "Barra de Frete Grátis", desc: "Barra de progresso mostrando quanto falta para frete grátis", icon: Truck, value: showFreeShippingBar, set: setShowFreeShippingBar },
     { label: "Boleto Bancário", desc: "Habilitar pagamento por boleto bancário no checkout", icon: CreditCard, value: boletoEnabled, set: setBoletoEnabled },
+    { label: "Prescritor Obrigatório", desc: "Exige seleção de prescritor no checkout. Se desativado, o vínculo é feito automaticamente por cupom ou link.", icon: UserCheck, value: prescriberRequired, set: setPrescriberRequired },
   ];
 
   // Track dirty on any toggle/input change
