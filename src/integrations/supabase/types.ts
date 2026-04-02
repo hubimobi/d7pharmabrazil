@@ -1760,6 +1760,7 @@ export type Database = {
           benefits_subtitle: string
           benefits_title: string
           checkout_boleto_enabled: boolean | null
+          checkout_prescriber_required: boolean
           checkout_show_combo: boolean | null
           checkout_show_free_shipping_bar: boolean | null
           checkout_show_motivation: boolean | null
@@ -1901,6 +1902,7 @@ export type Database = {
           benefits_subtitle?: string
           benefits_title?: string
           checkout_boleto_enabled?: boolean | null
+          checkout_prescriber_required?: boolean
           checkout_show_combo?: boolean | null
           checkout_show_free_shipping_bar?: boolean | null
           checkout_show_motivation?: boolean | null
@@ -2042,6 +2044,7 @@ export type Database = {
           benefits_subtitle?: string
           benefits_title?: string
           checkout_boleto_enabled?: boolean | null
+          checkout_prescriber_required?: boolean
           checkout_show_combo?: boolean | null
           checkout_show_free_shipping_bar?: boolean | null
           checkout_show_motivation?: boolean | null
