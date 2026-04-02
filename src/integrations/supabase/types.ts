@@ -1846,6 +1846,7 @@ export type Database = {
           popup_banner_description: string | null
           popup_banner_enabled: boolean | null
           popup_banner_image_url: string | null
+          popup_banner_reappear_hours: number
           popup_banner_title: string | null
           products_sidebar_enabled: boolean
           sales_popup_burst_count: number | null
@@ -1986,6 +1987,7 @@ export type Database = {
           popup_banner_description?: string | null
           popup_banner_enabled?: boolean | null
           popup_banner_image_url?: string | null
+          popup_banner_reappear_hours?: number
           popup_banner_title?: string | null
           products_sidebar_enabled?: boolean
           sales_popup_burst_count?: number | null
@@ -2126,6 +2128,7 @@ export type Database = {
           popup_banner_description?: string | null
           popup_banner_enabled?: boolean | null
           popup_banner_image_url?: string | null
+          popup_banner_reappear_hours?: number
           popup_banner_title?: string | null
           products_sidebar_enabled?: boolean
           sales_popup_burst_count?: number | null

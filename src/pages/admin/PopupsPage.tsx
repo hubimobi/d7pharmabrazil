@@ -79,6 +79,7 @@ export default function PopupsPage() {
       popup_banner_cta_text: form.popup_banner_cta_text,
       popup_banner_collect_email: form.popup_banner_collect_email,
       popup_banner_delay_seconds: form.popup_banner_delay_seconds,
+      popup_banner_reappear_hours: form.popup_banner_reappear_hours,
     });
   };
 
@@ -374,6 +375,16 @@ export default function PopupsPage() {
                       value={form.popup_banner_delay_seconds ?? 5}
                       onChange={(e) => update("popup_banner_delay_seconds", Number(e.target.value))}
                     />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label>Reaparecer após (horas)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.popup_banner_reappear_hours ?? 24}
+                      onChange={(e) => update("popup_banner_reappear_hours", Number(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground">Tempo mínimo antes do popup reaparecer após ser fechado</p>
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label>Coletar E-mail</Label>

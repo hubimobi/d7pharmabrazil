@@ -8,6 +8,21 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
+const DISMISS_KEY = "popup-dismissed-at";
+
+function isDismissed(reappearHours: number): boolean {
+  const raw = localStorage.getItem(DISMISS_KEY);
+  if (!raw) return false;
+  const dismissedAt = Number(raw);
+  if (isNaN(dismissedAt)) return false;
+  const elapsed = Date.now() - dismissedAt;
+  return elapsed < reappearHours * 60 * 60 * 1000;
+}
+
+function markDismissed() {
+  localStorage.setItem(DISMISS_KEY, String(Date.now()));
+}
+
 export default function PopupBanner() {
   const { data: settings } = useStoreSettings();
   const location = useLocation();
@@ -18,28 +33,28 @@ export default function PopupBanner() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const enabled = settings?.popup_banner_enabled;
-  const delay = settings?.popup_banner_delay_seconds || 5;
+  const s = settings as any;
+  const enabled = s?.popup_banner_enabled;
+  const delay = s?.popup_banner_delay_seconds || 5;
+  const reappearHours = s?.popup_banner_reappear_hours ?? 24;
 
-  // Only show on public storefront pages
   const isPublicStorefront = ["/", "/produtos"].includes(location.pathname) || location.pathname.startsWith("/produto/");
 
   useEffect(() => {
     if (!enabled || !isPublicStorefront) return;
-    if (sessionStorage.getItem("popup-dismissed")) return;
+    if (isDismissed(reappearHours)) return;
 
     const timer = setTimeout(() => setOpen(true), delay * 1000);
     return () => clearTimeout(timer);
-  }, [enabled, delay, isPublicStorefront]);
+  }, [enabled, delay, isPublicStorefront, reappearHours]);
 
-  // Re-trigger on route change if not dismissed
   useEffect(() => {
     if (!enabled || !isPublicStorefront || open) return;
-    if (sessionStorage.getItem("popup-dismissed")) return;
+    if (isDismissed(reappearHours)) return;
 
     const timer = setTimeout(() => setOpen(true), delay * 1000);
     return () => clearTimeout(timer);
-  }, [location.pathname, enabled, isPublicStorefront, delay, open]);
+  }, [location.pathname, enabled, isPublicStorefront, delay, open, reappearHours]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +67,7 @@ export default function PopupBanner() {
       toast.success("Cadastro realizado com sucesso!");
       setTimeout(() => {
         setOpen(false);
-        sessionStorage.setItem("popup-dismissed", "1");
+        markDismissed();
       }, 2000);
     } catch {
       toast.error("Erro ao cadastrar. Tente novamente.");
@@ -63,7 +78,7 @@ export default function PopupBanner() {
 
   const handleClose = () => {
     setOpen(false);
-    sessionStorage.setItem("popup-dismissed", "1");
+    markDismissed();
   };
 
   if (!enabled || !isPublicStorefront) return null;
@@ -75,44 +90,29 @@ export default function PopupBanner() {
           <X className="h-5 w-5" />
         </button>
 
-        {settings?.popup_banner_image_url && (
+        {s?.popup_banner_image_url && (
           <img
-            src={settings.popup_banner_image_url}
+            src={s.popup_banner_image_url}
             alt="Promoção"
             className="w-full h-48 object-cover"
           />
         )}
 
         <div className="p-6 space-y-4">
-          {settings?.popup_banner_title && (
-            <h2 className="text-xl font-bold text-foreground">{settings.popup_banner_title}</h2>
+          {s?.popup_banner_title && (
+            <h2 className="text-xl font-bold text-foreground">{s.popup_banner_title}</h2>
           )}
-          {settings?.popup_banner_description && (
-            <p className="text-sm text-muted-foreground">{settings.popup_banner_description}</p>
+          {s?.popup_banner_description && (
+            <p className="text-sm text-muted-foreground">{s.popup_banner_description}</p>
           )}
 
-          {settings?.popup_banner_collect_email && !submitted ? (
+          {s?.popup_banner_collect_email && !submitted ? (
             <form onSubmit={handleSubmit} className="space-y-3">
-              <Input
-                placeholder="Seu nome"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <Input
-                type="email"
-                placeholder="Seu melhor e-mail"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <Input
-                type="tel"
-                placeholder="WhatsApp (00) 00000-0000"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
+              <Input placeholder="Seu nome" value={name} onChange={(e) => setName(e.target.value)} />
+              <Input type="email" placeholder="Seu melhor e-mail" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input type="tel" placeholder="WhatsApp (00) 00000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} />
               <Button type="submit" className="w-full" disabled={submitting}>
-                {submitting ? "Enviando..." : (settings?.popup_banner_cta_text || "Cadastre-se")}
+                {submitting ? "Enviando..." : (s?.popup_banner_cta_text || "Cadastre-se")}
               </Button>
             </form>
           ) : submitted ? (

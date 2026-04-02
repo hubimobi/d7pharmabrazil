@@ -9,6 +9,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
+import Preloader from "./components/Preloader";
 import DesignTokenApplier from "./components/DesignTokenApplier";
 import TrackingScripts from "./components/TrackingScripts";
 
@@ -106,6 +107,7 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <CartProvider>
+          <Preloader />
           <Toaster />
           <Sonner />
           <BrowserRouter>

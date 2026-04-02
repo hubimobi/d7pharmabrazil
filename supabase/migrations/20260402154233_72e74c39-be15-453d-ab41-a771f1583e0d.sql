@@ -1,0 +1,1 @@
+ALTER TABLE public.store_settings ADD COLUMN IF NOT EXISTS popup_banner_reappear_hours integer NOT NULL DEFAULT 24;

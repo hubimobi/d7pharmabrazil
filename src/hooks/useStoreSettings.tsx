@@ -74,6 +74,7 @@ export interface StoreSettings {
   popup_banner_cta_text: string;
   popup_banner_collect_email: boolean;
   popup_banner_delay_seconds: number;
+  popup_banner_reappear_hours: number;
   // Benefits section
   benefits_title: string;
   benefits_subtitle: string;
