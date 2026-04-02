@@ -10,7 +10,9 @@ export function useUnsavedChangesGuard(onSave?: () => Promise<void> | void) {
   const saveRef = useRef(onSave);
   useEffect(() => { saveRef.current = onSave; }, [onSave]);
 
-  const blocker = useBlocker(isDirty);
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => 
+    isDirty && currentLocation.pathname !== nextLocation.pathname
+  );
 
   // Warn on browser close / refresh
   useEffect(() => {
