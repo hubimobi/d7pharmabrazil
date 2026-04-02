@@ -61,7 +61,7 @@ const CheckoutPage = () => {
   const [showDoctorResults, setShowDoctorResults] = useState(false);
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+  const { shippingOptions, shippingLoading, selectedShipping, setSelectedShipping, calculateShipping } = useAutoShipping();
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
   const [cardData, setCardData] = useState<CreditCardData>({
     holderName: "", number: "", expiryMonth: "", expiryYear: "", ccv: "",
