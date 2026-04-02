@@ -15,7 +15,7 @@ const formatPhone = (v: string) => {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Trash2, Minus, Plus, ArrowLeft, CreditCard, CheckCircle, Lock } from "lucide-react";
+import { Trash2, Minus, Plus, ArrowLeft, CreditCard, CheckCircle, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,8 @@ import { useCart } from "@/hooks/useCart";
 import { Shield, ShieldCheck } from "lucide-react";
 import TrustMicroTexts from "@/components/checkout/TrustMicroTexts";
 import WhatsAppButton from "@/components/WhatsAppButton";
-import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
+import { ShippingOption } from "@/components/checkout/ShippingCalculator";
+import { useAutoShipping } from "@/hooks/useAutoShipping";
 import CreditCardForm, { CreditCardData, getInstallmentOptions } from "@/components/checkout/CreditCardForm";
 import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
@@ -47,7 +48,7 @@ const CheckoutPageV3 = () => {
   const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount } = useCart();
   const { data: storeSettings } = useStoreSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+  const { shippingOptions, shippingLoading, selectedShipping, setSelectedShipping, calculateShipping } = useAutoShipping();
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
   const [cardData, setCardData] = useState<CreditCardData>({ holderName: "", number: "", expiryMonth: "", expiryYear: "", ccv: "" });
   const [installments, setInstallments] = useState(1);
@@ -285,19 +286,6 @@ const CheckoutPageV3 = () => {
             </div>
           </section>
 
-          {/* Shipping */}
-          <section className="rounded-lg border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Entrega</h2>
-            <ShippingCalculator
-              cep={form.cep}
-              onCepChange={(cep) => setForm({ ...form, cep })}
-              items={items.map((i) => ({ price: i.product.price, quantity: i.quantity, weight: i.product.weight, height: i.product.height, width: i.product.width, length: i.product.length }))}
-              selectedOption={selectedShipping}
-              onSelectOption={setSelectedShipping}
-              onAddressFound={(addr) => setForm((prev) => ({ ...prev, street: addr.street || prev.street, neighborhood: addr.neighborhood || prev.neighborhood, city: addr.city || prev.city, state: addr.state || prev.state }))}
-            />
-          </section>
-
           {/* Customer data */}
           <section className="rounded-lg border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Seus Dados</h2>
@@ -309,9 +297,9 @@ const CheckoutPageV3 = () => {
             </div>
           </section>
 
-          {/* Address */}
+          {/* Address + Shipping */}
           <section className="rounded-lg border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Endereço</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Endereço de Entrega</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label className="text-xs">CEP *</Label>
@@ -320,7 +308,10 @@ const CheckoutPageV3 = () => {
                     const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
                     const formatted = raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw;
                     setForm({ ...form, cep: formatted });
-                    if (raw.length === 8) fetchAddress(raw);
+                    if (raw.length === 8) {
+                      fetchAddress(raw);
+                      calculateShipping(raw, items.map((i) => ({ price: i.product.price, quantity: i.quantity, weight: i.product.weight, height: i.product.height, width: i.product.width, length: i.product.length })));
+                    }
                   }} />
                   {cepLoading && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground animate-pulse">Buscando...</span>}
                 </div>
@@ -332,6 +323,30 @@ const CheckoutPageV3 = () => {
               <div><Label className="text-xs">Cidade *</Label><Input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} readOnly={!!form.city} className={`h-9 text-sm ${form.city ? "bg-muted" : ""}`} /></div>
               <div><Label className="text-xs">Estado *</Label><Input required value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} readOnly={!!form.state} className={`h-9 text-sm ${form.state ? "bg-muted" : ""}`} /></div>
             </div>
+            {/* Auto Shipping Options */}
+            {shippingLoading && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+                <Loader2 className="h-4 w-4 animate-spin" /> Calculando frete...
+              </div>
+            )}
+            {!shippingLoading && shippingOptions.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Opções de Envio</Label>
+                <span className="block text-xs font-medium text-primary">📦 Postagem de Envio em até 24h</span>
+                {shippingOptions.map((opt) => (
+                  <button key={opt.id} type="button"
+                    className={`flex w-full items-center gap-3 rounded-lg border-2 p-3 text-left transition ${selectedShipping?.id === opt.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                    onClick={() => setSelectedShipping(opt)}>
+                    {opt.logo && <img src={opt.logo} alt={opt.company} className="h-8 w-8 rounded object-contain" />}
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{opt.company} — {opt.name}</p>
+                      <p className="text-xs text-muted-foreground">Entrega em até {opt.delivery_time} dias úteis</p>
+                    </div>
+                    <span className="text-sm font-bold text-primary">{opt.price === 0 ? "Grátis" : `R$ ${opt.price.toFixed(2).replace(".", ",")}`}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Payment */}

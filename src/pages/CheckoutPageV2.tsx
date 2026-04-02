@@ -16,13 +16,14 @@ const formatPhone = (v: string) => {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle, Truck, Shield, Clock, Users, Eye, Package, Star, ChevronRight, Lock, ShieldCheck } from "lucide-react";
+import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle, Truck, Shield, Clock, Users, Eye, Package, Star, ChevronRight, Lock, ShieldCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/hooks/useCart";
 import WhatsAppButton from "@/components/WhatsAppButton";
-import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
+import { ShippingOption } from "@/components/checkout/ShippingCalculator";
+import { useAutoShipping } from "@/hooks/useAutoShipping";
 import CreditCardForm, { CreditCardData, getInstallmentOptions } from "@/components/checkout/CreditCardForm";
 import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
@@ -64,7 +65,7 @@ const CheckoutPageV2 = () => {
   const [showDoctorResults, setShowDoctorResults] = useState(false);
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+  const { shippingOptions, shippingLoading, selectedShipping, setSelectedShipping, calculateShipping } = useAutoShipping();
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
   const [cardData, setCardData] = useState<CreditCardData>({
     holderName: "", number: "", expiryMonth: "", expiryYear: "", ccv: "",
@@ -465,7 +466,10 @@ const CheckoutPageV2 = () => {
                             const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
                             const formatted = raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw;
                             setForm({ ...form, cep: formatted });
-                            if (raw.length === 8) fetchAddress(raw);
+                            if (raw.length === 8) {
+                              fetchAddress(raw);
+                              calculateShipping(raw, items.map((i) => ({ price: i.product.price, quantity: i.quantity, weight: i.product.weight, height: i.product.height, width: i.product.width, length: i.product.length })));
+                            }
                           }}
                         />
                         {cepLoading && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground animate-pulse">Buscando...</span>}
@@ -506,17 +510,30 @@ const CheckoutPageV2 = () => {
                       </motion.div>
                     )}
 
-                    {/* Shipping */}
-                    <div className="mt-5">
-                      <ShippingCalculator
-                        cep={form.cep}
-                        onCepChange={(cep) => setForm({ ...form, cep })}
-                        items={items.map((i) => ({ price: i.product.price, quantity: i.quantity, weight: i.product.weight, height: i.product.height, width: i.product.width, length: i.product.length }))}
-                        selectedOption={selectedShipping}
-                        onSelectOption={setSelectedShipping}
-                        onAddressFound={(addr) => setForm((prev) => ({ ...prev, street: addr.street || prev.street, neighborhood: addr.neighborhood || prev.neighborhood, city: addr.city || prev.city, state: addr.state || prev.state }))}
-                      />
-                    </div>
+                    {/* Shipping Options (auto-calculated from CEP) */}
+                    {shippingLoading && (
+                      <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Calculando frete...
+                      </div>
+                    )}
+                    {!shippingLoading && shippingOptions.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Opções de Envio</Label>
+                        <span className="block text-xs font-medium text-primary">📦 Postagem de Envio em até 24h</span>
+                        {shippingOptions.map((opt) => (
+                          <button key={opt.id} type="button"
+                            className={`flex w-full items-center gap-3 rounded-lg border-2 p-3 text-left transition ${selectedShipping?.id === opt.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                            onClick={() => setSelectedShipping(opt)}>
+                            {opt.logo && <img src={opt.logo} alt={opt.company} className="h-8 w-8 rounded object-contain" />}
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{opt.company} — {opt.name}</p>
+                              <p className="text-xs text-muted-foreground">Entrega em até {opt.delivery_time} dias úteis</p>
+                            </div>
+                            <span className="text-sm font-bold text-primary">{opt.price === 0 ? "Grátis" : `R$ ${opt.price.toFixed(2).replace(".", ",")}`}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Prescritor */}
                     <div className="mt-5">
@@ -650,7 +667,7 @@ const CheckoutPageV2 = () => {
                 <div className="border-t border-border p-5 sm:p-7">
                   {step === 1 && (
                     <>
-                      <Button className="w-full gap-2 text-base" size="lg" onClick={() => validateStep1() && goToStep(2)}>
+                      <Button className="w-full gap-2 text-base" size="lg" onClick={() => { if (validateStep1()) { saveAbandonment.current(); abandonmentSaved.current = false; goToStep(2); } }}>
                         Continuar para Entrega <ChevronRight className="h-4 w-4" />
                       </Button>
                       <p className="text-center text-xs text-muted-foreground mt-2.5">🔒 Dados protegidos com criptografia SSL</p>

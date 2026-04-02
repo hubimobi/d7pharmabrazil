@@ -15,7 +15,7 @@ const formatPhone = (v: string) => {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle, Truck } from "lucide-react";
+import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle, Truck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,8 @@ import { useCart } from "@/hooks/useCart";
 import { Shield, ShieldCheck } from "lucide-react";
 import TrustMicroTexts from "@/components/checkout/TrustMicroTexts";
 import WhatsAppButton from "@/components/WhatsAppButton";
-import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
+import { ShippingOption } from "@/components/checkout/ShippingCalculator";
+import { useAutoShipping } from "@/hooks/useAutoShipping";
 import CreditCardForm, { CreditCardData, getInstallmentOptions } from "@/components/checkout/CreditCardForm";
 import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
@@ -60,7 +61,7 @@ const CheckoutPage = () => {
   const [showDoctorResults, setShowDoctorResults] = useState(false);
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+  const { shippingOptions, shippingLoading, selectedShipping, setSelectedShipping, calculateShipping } = useAutoShipping();
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
   const [cardData, setCardData] = useState<CreditCardData>({
     holderName: "", number: "", expiryMonth: "", expiryYear: "", ccv: "",
@@ -534,24 +535,27 @@ const CheckoutPage = () => {
                   </Button>
                 </div>
 
-                <ShippingCalculator
-                  cep={form.cep}
-                  onCepChange={(cep) => setForm({ ...form, cep })}
-                  items={items.map((i) => ({ price: i.product.price, quantity: i.quantity, weight: i.product.weight, height: i.product.height, width: i.product.width, length: i.product.length }))}
-                  selectedOption={selectedShipping}
-                  onSelectOption={setSelectedShipping}
-                  onAddressFound={(addr) => setForm((prev) => ({
-                    ...prev,
-                    street: addr.street || prev.street,
-                    neighborhood: addr.neighborhood || prev.neighborhood,
-                    city: addr.city || prev.city,
-                    state: addr.state || prev.state,
-                  }))}
-                />
+                {/* Identificação - Lead Capture */}
+                <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+                  <h3 className="text-base font-semibold">Seus Dados</h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div><Label>Nome Completo *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Seu nome completo" /></div>
+                    <div><Label>E-mail *</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="seu@email.com" /></div>
+                  </div>
+                  <div><Label>Telefone / WhatsApp *</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" inputMode="tel" /></div>
+                </div>
 
                 {(storeSettings as any)?.checkout_show_combo !== false && <ComboUpsell />}
 
-                <Button className="w-full bg-primary hover:bg-primary/90" size="lg" onClick={() => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Passo 2 — Seus Dados</Button>
+                <Button className="w-full bg-primary hover:bg-primary/90" size="lg" onClick={() => {
+                  if (!form.name.trim()) { toast.error("Preencha seu nome."); return; }
+                  if (!form.email.trim() || !form.email.includes("@")) { toast.error("Preencha um e-mail válido."); return; }
+                  if (!form.phone.trim()) { toast.error("Preencha seu telefone."); return; }
+                  saveAbandonment.current();
+                  abandonmentSaved.current = false;
+                  setStep(2);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}>Continuar — Endereço e Pagamento</Button>
 
                 {/* Aproveite e economize - after step 2 button */}
                 {(storeSettings as any)?.checkout_show_recommendations !== false && (
@@ -583,7 +587,10 @@ const CheckoutPage = () => {
                           const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
                           const formatted = raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw;
                           setForm({ ...form, cep: formatted });
-                          if (raw.length === 8) fetchAddress(raw);
+                          if (raw.length === 8) {
+                            fetchAddress(raw);
+                            calculateShipping(raw, items.map((i) => ({ price: i.product.price, quantity: i.quantity, weight: i.product.weight, height: i.product.height, width: i.product.width, length: i.product.length })));
+                          }
                         }}
                       />
                       {cepLoading && (
@@ -598,6 +605,31 @@ const CheckoutPage = () => {
                   <div><Label>Cidade *</Label><Input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} readOnly={!!form.city} className={form.city ? "bg-muted" : ""} /></div>
                   <div><Label>Estado *</Label><Input required value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} readOnly={!!form.state} className={form.state ? "bg-muted" : ""} /></div>
                 </div>
+
+                {/* Auto Shipping Options */}
+                {shippingLoading && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Calculando frete...
+                  </div>
+                )}
+                {!shippingLoading && shippingOptions.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Opção de Envio</Label>
+                    <span className="block text-xs font-medium text-primary">📦 Postagem de Envio em até 24h</span>
+                    {shippingOptions.map((opt) => (
+                      <button key={opt.id} type="button"
+                        className={`flex w-full items-center gap-3 rounded-lg border-2 p-3 text-left transition ${selectedShipping?.id === opt.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                        onClick={() => setSelectedShipping(opt)}>
+                        {opt.logo && <img src={opt.logo} alt={opt.company} className="h-8 w-8 rounded object-contain" />}
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{opt.company} — {opt.name}</p>
+                          <p className="text-xs text-muted-foreground">Entrega em até {opt.delivery_time} dias úteis</p>
+                        </div>
+                        <span className="text-sm font-bold text-primary">{opt.price === 0 ? "Grátis" : `R$ ${opt.price.toFixed(2).replace(".", ",")}`}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <h2 className="text-lg font-semibold">Prescritor ou Médico Responsável</h2>
                 <div className="relative">
@@ -788,8 +820,15 @@ const CheckoutPage = () => {
       {step <= 2 && (
         <div className="fixed bottom-0 inset-x-0 z-40 flex gap-2 border-t border-border bg-card p-3 shadow-lg md:hidden">
           {step === 1 ? (
-            <Button className="flex-1 text-sm" size="lg" onClick={() => setStep(2)}>
-              Finalizar Pedido →
+            <Button className="flex-1 text-sm" size="lg" onClick={() => {
+              if (!form.name.trim()) { toast.error("Preencha seu nome."); return; }
+              if (!form.email.trim() || !form.email.includes("@")) { toast.error("Preencha um e-mail válido."); return; }
+              if (!form.phone.trim()) { toast.error("Preencha seu telefone."); return; }
+              saveAbandonment.current();
+              abandonmentSaved.current = false;
+              setStep(2);
+            }}>
+              Continuar →
             </Button>
           ) : (
             <>
