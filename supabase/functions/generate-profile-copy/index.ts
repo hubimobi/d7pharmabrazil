@@ -81,14 +81,15 @@ function buildUserPrompt(params: any): string {
 
     const copyInstructions = isCaixinha ? `
 
-ETAPA 3: Para CADA pergunta gerada, crie uma COPY de resposta para Instagram Stories seguindo:
-- Estrutura do método selecionado${methodText ? ` (${(copyMethod || "venda").toUpperCase()})` : ""}
-- Linguagem natural e humana
-- Máximo 5 linhas
-- Foco em conversão
-- Incluir CTA leve no final
-- Adaptar para o perfil comportamental indicado
-- Adaptar para a etapa da jornada indicada` : "";
+ETAPA 3: Para CADA pergunta gerada, crie:
+- RESPOSTA: O que o SEGUIDOR/PERFIL responderia na caixinha. Deve ser curta (máximo 80 caracteres), natural, como uma pessoa real digitaria no Instagram. Adaptar ao perfil comportamental (ex: perfil D responde direto, perfil I responde com emoção).
+- COPY: A resposta que a EMPRESA/PROFISSIONAL daria no Stories após receber a pergunta. Seguir o método ${(copyMethod || "venda").toUpperCase()}:${methodText}
+  - Linguagem natural e humana
+  - Máximo 5 linhas curtas (ideal para Stories)
+  - Foco em conversão
+  - Incluir CTA leve no final
+  - Adaptar para o perfil comportamental indicado
+  - Adaptar para a etapa da jornada indicada` : "";
 
     return `Analise o seguinte conteúdo e gere ${isCaixinha ? "perguntas para Instagram Stories (caixinha de perguntas)" : "perguntas para um Quizz de Conversão interativo"}.
 
@@ -108,6 +109,7 @@ ETAPA 1: Identifique:
 ETAPA 2: Gere ${isCaixinha ? "perguntas para caixinha de perguntas do Instagram Stories" : "perguntas de quizz de conversão"}, seguindo:
 - 1 pergunta para cada perfil comportamental do modelo selecionado
 - Para cada fase do funil selecionada
+- A PERGUNTA deve ativar dor ou desejo do perfil na fase indicada
 ${copyInstructions}
 
 REGRAS:
@@ -121,6 +123,12 @@ REGRAS:
 - Máximo de clareza com mínimo de palavras
 ${!isCaixinha ? "- Cada pergunta do quizz deve ter opções que revelam o perfil do respondente\n- A resposta deve direcionar sutilmente para o produto/solução" : ""}
 
+IMPORTANTE SOBRE OS CAMPOS (CAIXINHA):
+${isCaixinha ? `- "pergunta": A pergunta que aparece na caixinha do Stories (máx 12 palavras). Relacionada à fase e ao perfil comportamental.
+- "resposta": O que o SEGUIDOR digitaria como resposta na caixinha (máx 80 caracteres, curta e natural, como uma pessoa real escreveria). Deve refletir o comportamento do perfil.
+- "copy": A resposta que a EMPRESA/PROFISSIONAL publicaria no Stories respondendo à pergunta. Seguir o método selecionado. Máximo 5 linhas curtas. Baseada no conteúdo do produto/URL/texto fornecido.
+- "cta_copy": CTA leve no final da copy.` : ""}
+
 Retorne JSON com esta estrutura EXATA:
 {
   "questions": [
@@ -128,8 +136,8 @@ Retorne JSON com esta estrutura EXATA:
       "perfil": "nome do perfil (ex: D - Dominância ou Openness)",
       "jornada": "fase do funil (ex: Curioso, Pronto p/ Compra)",
       "pergunta": "a pergunta em até 12 palavras",
-      "resposta": "${isCaixinha ? "sugestão de resposta estratégica para engajar" : "resposta que direciona para a conversão/produto"}"${isCaixinha ? `,
-      "copy": "copy completa seguindo o método ${(copyMethod || "venda").toUpperCase()}, máximo 5 linhas, pronta para usar no stories",
+      "resposta": "${isCaixinha ? "resposta curta do seguidor, máx 80 caracteres, como digitaria no Instagram" : "resposta que direciona para a conversão/produto"}"${isCaixinha ? `,
+      "copy": "copy completa da empresa seguindo o método ${(copyMethod || "venda").toUpperCase()}, máximo 5 linhas curtas, pronta para usar no stories",
       "cta_copy": "CTA leve ou direto conforme o método"` : ""}
     }
   ],
