@@ -252,9 +252,9 @@ const CheckoutPageV3 = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden pb-6">
       
-      <main className="container max-w-3xl px-3 sm:px-4 py-8">
+      <main className="container max-w-3xl px-3 sm:px-4 py-4 sm:py-8">
         <Link to="/produtos" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Link>
