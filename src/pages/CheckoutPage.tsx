@@ -587,7 +587,10 @@ const CheckoutPage = () => {
                           const raw = e.target.value.replace(/\D/g, "").slice(0, 8);
                           const formatted = raw.length > 5 ? `${raw.slice(0, 5)}-${raw.slice(5)}` : raw;
                           setForm({ ...form, cep: formatted });
-                          if (raw.length === 8) fetchAddress(raw);
+                          if (raw.length === 8) {
+                            fetchAddress(raw);
+                            calculateShipping(raw, items.map((i) => ({ price: i.product.price, quantity: i.quantity, weight: i.product.weight, height: i.product.height, width: i.product.width, length: i.product.length })));
+                          }
                         }}
                       />
                       {cepLoading && (
