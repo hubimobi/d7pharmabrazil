@@ -15,7 +15,7 @@ const formatPhone = (v: string) => {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle, Truck } from "lucide-react";
+import { Trash2, Minus, Plus, Tag, ArrowLeft, CreditCard, CheckCircle, Truck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,8 @@ import { useCart } from "@/hooks/useCart";
 import { Shield, ShieldCheck } from "lucide-react";
 import TrustMicroTexts from "@/components/checkout/TrustMicroTexts";
 import WhatsAppButton from "@/components/WhatsAppButton";
-import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
+import { ShippingOption } from "@/components/checkout/ShippingCalculator";
+import { useAutoShipping } from "@/hooks/useAutoShipping";
 import CreditCardForm, { CreditCardData, getInstallmentOptions } from "@/components/checkout/CreditCardForm";
 import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
