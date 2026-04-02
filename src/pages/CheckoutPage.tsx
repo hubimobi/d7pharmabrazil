@@ -864,7 +864,7 @@ const CheckoutPage = () => {
           )}
         </div>
       )}
-      {step <= 2 && <div className="h-20 md:hidden" />}
+
 
       
       {!storeSettings?.hide_chat_on_checkout && <WhatsAppButton />}

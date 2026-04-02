@@ -336,18 +336,20 @@ const CheckoutPageV3 = () => {
               <div className="mt-3 space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Opções de Envio</Label>
                 <span className="block text-xs font-medium text-primary">📦 Postagem de Envio em até 24h</span>
-                {shippingOptions.map((opt) => (
-                  <button key={opt.id} type="button"
-                    className={`flex w-full items-center gap-3 rounded-lg border-2 p-3 text-left transition ${selectedShipping?.id === opt.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
-                    onClick={() => setSelectedShipping(opt)}>
-                    {opt.logo && <img src={opt.logo} alt={opt.company} className="h-8 w-8 rounded object-contain" />}
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{opt.company} — {opt.name}</p>
-                      <p className="text-xs text-muted-foreground">Entrega em até {opt.delivery_time} dias úteis</p>
-                    </div>
-                    <span className="text-sm font-bold text-primary">{opt.price === 0 ? "Grátis" : `R$ ${opt.price.toFixed(2).replace(".", ",")}`}</span>
-                  </button>
-                ))}
+                <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1 -mr-1">
+                  {shippingOptions.map((opt) => (
+                    <button key={opt.id} type="button"
+                      className={`flex w-full items-center gap-3 rounded-lg border-2 p-2.5 text-left transition ${selectedShipping?.id === opt.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                      onClick={() => setSelectedShipping(opt)}>
+                      {opt.logo && <img src={opt.logo} alt={opt.company} className="h-7 w-7 rounded object-contain shrink-0" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{opt.company} — {opt.name}</p>
+                        <p className="text-xs text-muted-foreground">até {opt.delivery_time} dias úteis</p>
+                      </div>
+                      <span className="text-sm font-bold text-primary shrink-0">{opt.price === 0 ? "Grátis" : `R$ ${opt.price.toFixed(2).replace(".", ",")}`}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </section>
