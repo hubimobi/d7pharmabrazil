@@ -922,16 +922,16 @@ export default function ProfileCopyGenerator() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs whitespace-nowrap">Perfil</TableHead>
-                    <TableHead className="text-xs whitespace-nowrap">Jornada</TableHead>
-                    <TableHead className="text-xs">Pergunta</TableHead>
-                    <TableHead className="text-xs">Resposta</TableHead>
-                    {platform === "caixinha_pergunta" && (
-                      <>
-                        <TableHead className="text-xs">Copy</TableHead>
-                        <TableHead className="text-xs">CTA</TableHead>
-                      </>
-                    )}
+                     <TableHead className="text-xs whitespace-nowrap">Perfil</TableHead>
+                     <TableHead className="text-xs whitespace-nowrap">Jornada</TableHead>
+                     <TableHead className="text-xs">Pergunta</TableHead>
+                     <TableHead className="text-xs">Resposta do Seguidor</TableHead>
+                     {platform === "caixinha_pergunta" && (
+                       <>
+                         <TableHead className="text-xs">Copy (Empresa)</TableHead>
+                         <TableHead className="text-xs">CTA</TableHead>
+                       </>
+                     )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
