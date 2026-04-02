@@ -79,6 +79,7 @@ export default function PopupsPage() {
       popup_banner_cta_text: form.popup_banner_cta_text,
       popup_banner_collect_email: form.popup_banner_collect_email,
       popup_banner_delay_seconds: form.popup_banner_delay_seconds,
+      popup_banner_reappear_hours: form.popup_banner_reappear_hours,
     });
   };
 
