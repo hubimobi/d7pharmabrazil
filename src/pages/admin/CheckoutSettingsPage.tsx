@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save, Loader2, ShoppingCart, MessageSquareQuote, Flame, Gift, Truck, Sparkles, BarChart3, CreditCard, Layout } from "lucide-react";
+import { Save, Loader2, ShoppingCart, MessageSquareQuote, Flame, Gift, Truck, Sparkles, BarChart3, CreditCard, Layout, UserCheck } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function CheckoutSettingsPage() {
@@ -33,6 +33,7 @@ export default function CheckoutSettingsPage() {
   const [maxInstallments, setMaxInstallments] = useState(3);
   const [maxTotalInstallments, setMaxTotalInstallments] = useState(12);
   const [checkoutVersion, setCheckoutVersion] = useState("v1");
+  const [prescriberRequired, setPrescriberRequired] = useState(true);
 
   // Frete
   const [freeShippingEnabled, setFreeShippingEnabled] = useState(false);
@@ -62,6 +63,7 @@ export default function CheckoutSettingsPage() {
     setMaxInstallments(s.max_installments ?? 3);
     setMaxTotalInstallments(s.max_total_installments ?? 12);
     setCheckoutVersion(s.checkout_version || "v1");
+    setPrescriberRequired(s.checkout_prescriber_required !== false);
 
     setFreeShippingEnabled(s.free_shipping_enabled ?? false);
     setFreeShippingMinValue(s.free_shipping_min_value ?? 499);
@@ -100,6 +102,7 @@ export default function CheckoutSettingsPage() {
           combo_offer_discount: comboDiscount,
           combo_offer_free_shipping: comboFreeShipping,
           checkout_version: checkoutVersion,
+          checkout_prescriber_required: prescriberRequired,
         })
         .eq("id", settings.id);
       if (error) throw error;
@@ -121,6 +124,7 @@ export default function CheckoutSettingsPage() {
     { label: "Mensagem Motivacional", desc: "Texto rotativo de benefícios ao lado dos passos do checkout", icon: Sparkles, value: showMotivation, set: setShowMotivation },
     { label: "Barra de Frete Grátis", desc: "Barra de progresso mostrando quanto falta para frete grátis", icon: Truck, value: showFreeShippingBar, set: setShowFreeShippingBar },
     { label: "Boleto Bancário", desc: "Habilitar pagamento por boleto bancário no checkout", icon: CreditCard, value: boletoEnabled, set: setBoletoEnabled },
+    { label: "Prescritor Obrigatório", desc: "Exige seleção de prescritor no checkout. Se desativado, o vínculo é feito automaticamente por cupom ou link.", icon: UserCheck, value: prescriberRequired, set: setPrescriberRequired },
   ];
 
   // Track dirty on any toggle/input change

@@ -248,8 +248,16 @@ const CheckoutPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.doctor && !selectedDoctorId) {
+    const prescriberRequired = (storeSettings as any)?.checkout_prescriber_required !== false;
+    if (prescriberRequired && !form.doctor && !selectedDoctorId) {
       toast.error("Selecione um Prescritor ou marque 'Não Sei'.");
+      return;
+    }
+
+    // Require shipping selection unless free shipping applies
+    const hasFreeShipping = freeShipping || comboFreeShipping || qualifiesForFreeShipping;
+    if (!hasFreeShipping && !selectedShipping) {
+      toast.error("Selecione uma opção de frete antes de finalizar.");
       return;
     }
 
@@ -631,72 +639,76 @@ const CheckoutPage = () => {
                   </div>
                 )}
 
-                <h2 className="text-lg font-semibold">Prescritor ou Médico Responsável</h2>
-                <div className="relative">
-                  <Input
-                    placeholder="Buscar por nome, cidade ou estado..."
-                    value={form.doctor || doctorSearch}
-                    onChange={(e) => {
-                      setDoctorSearch(e.target.value);
-                      setForm({ ...form, doctor: "" });
-                      setSelectedDoctorId(null);
-                      setShowDoctorResults(true);
-                    }}
-                    disabled={selectedDoctorId === "sem-prescritor"}
-                  />
-                  {showDoctorResults && doctorSearch && (
-                    <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
-                      {filteredDoctors.map((d) => (
-                        <button
-                          key={d.id}
-                          type="button"
-                          className="w-full px-4 py-2 text-left text-sm hover:bg-muted"
-                          onClick={() => {
-                            setForm({ ...form, doctor: d.name });
-                            setSelectedDoctorId(d.id);
-                            setDoctorSearch("");
-                            setShowDoctorResults(false);
-                          }}
-                        >
-                          <span className="font-medium">{d.name}</span>
-                          {d.specialty && <span className="text-muted-foreground"> — {d.specialty}</span>}
-                          {(d.city || d.state) && (
-                            <span className="text-muted-foreground text-xs ml-2">
-                              ({[d.city, d.state].filter(Boolean).join("/")})
-                            </span>
+                {(storeSettings as any)?.checkout_prescriber_required !== false && (
+                  <>
+                    <h2 className="text-lg font-semibold">Prescritor ou Médico Responsável</h2>
+                    <div className="relative">
+                      <Input
+                        placeholder="Buscar por nome, cidade ou estado..."
+                        value={form.doctor || doctorSearch}
+                        onChange={(e) => {
+                          setDoctorSearch(e.target.value);
+                          setForm({ ...form, doctor: "" });
+                          setSelectedDoctorId(null);
+                          setShowDoctorResults(true);
+                        }}
+                        disabled={selectedDoctorId === "sem-prescritor"}
+                      />
+                      {showDoctorResults && doctorSearch && (
+                        <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
+                          {filteredDoctors.map((d) => (
+                            <button
+                              key={d.id}
+                              type="button"
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-muted"
+                              onClick={() => {
+                                setForm({ ...form, doctor: d.name });
+                                setSelectedDoctorId(d.id);
+                                setDoctorSearch("");
+                                setShowDoctorResults(false);
+                              }}
+                            >
+                              <span className="font-medium">{d.name}</span>
+                              {d.specialty && <span className="text-muted-foreground"> — {d.specialty}</span>}
+                              {(d.city || d.state) && (
+                                <span className="text-muted-foreground text-xs ml-2">
+                                  ({[d.city, d.state].filter(Boolean).join("/")})
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                          {filteredDoctors.length === 0 && (
+                            <p className="px-4 py-3 text-sm text-muted-foreground">
+                              Nenhum prescritor encontrado. Use "Não Sei" abaixo.
+                            </p>
                           )}
-                        </button>
-                      ))}
-                      {filteredDoctors.length === 0 && (
-                        <p className="px-4 py-3 text-sm text-muted-foreground">
-                          Nenhum prescritor encontrado. Use "Não Sei" abaixo.
-                        </p>
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 mt-2">
-                  <Button
-                    type="button"
-                    variant={selectedDoctorId === "sem-prescritor" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      if (selectedDoctorId === "sem-prescritor") {
-                        setSelectedDoctorId(null);
-                        setForm({ ...form, doctor: "" });
-                        setDoctorSearch("");
-                      } else {
-                        setSelectedDoctorId("sem-prescritor");
-                        setForm({ ...form, doctor: "Sem Prescritor" });
-                        setDoctorSearch("");
-                        setShowDoctorResults(false);
-                      }
-                    }}
-                  >
-                    {selectedDoctorId === "sem-prescritor" ? "✓ Sem Prescritor" : "Não Sei / Sem Prescritor"}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">Selecione se não possui prescritor</span>
-                </div>
+                    <div className="flex items-center gap-3 mt-2">
+                      <Button
+                        type="button"
+                        variant={selectedDoctorId === "sem-prescritor" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          if (selectedDoctorId === "sem-prescritor") {
+                            setSelectedDoctorId(null);
+                            setForm({ ...form, doctor: "" });
+                            setDoctorSearch("");
+                          } else {
+                            setSelectedDoctorId("sem-prescritor");
+                            setForm({ ...form, doctor: "Sem Prescritor" });
+                            setDoctorSearch("");
+                            setShowDoctorResults(false);
+                          }
+                        }}
+                      >
+                        {selectedDoctorId === "sem-prescritor" ? "✓ Sem Prescritor" : "Não Sei / Sem Prescritor"}
+                      </Button>
+                      <span className="text-xs text-muted-foreground">Selecione se não possui prescritor</span>
+                    </div>
+                  </>
+                )}
 
                 <h2 className="text-lg font-semibold">Pagamento</h2>
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">

@@ -230,7 +230,11 @@ const CheckoutPageV2 = () => {
     if (!form.number.trim()) { toast.error("Preencha o número."); return false; }
     if (!form.neighborhood.trim()) { toast.error("Preencha o bairro."); return false; }
     if (!form.city.trim()) { toast.error("Preencha a cidade."); return false; }
-    if (!form.doctor && !selectedDoctorId) { toast.error("Selecione um Prescritor ou marque 'Não Sei'."); return false; }
+    const prescriberRequired = (storeSettings as any)?.checkout_prescriber_required !== false;
+    if (prescriberRequired && !form.doctor && !selectedDoctorId) { toast.error("Selecione um Prescritor ou marque 'Não Sei'."); return false; }
+    // Require shipping selection unless free shipping
+    const hasFreeShipping = freeShipping || comboFreeShipping || qualifiesForFreeShipping;
+    if (!hasFreeShipping && !selectedShipping) { toast.error("Selecione uma opção de frete."); return false; }
     return true;
   };
 
@@ -536,37 +540,39 @@ const CheckoutPageV2 = () => {
                     )}
 
                     {/* Prescritor */}
-                    <div className="mt-5">
-                      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">Prescritor / Médico</Label>
-                      <div className="relative">
-                        <Input
-                          placeholder="Buscar por nome, cidade ou estado..."
-                          value={form.doctor || doctorSearch}
-                          onChange={(e) => { setDoctorSearch(e.target.value); setForm({ ...form, doctor: "" }); setSelectedDoctorId(null); setShowDoctorResults(true); }}
-                          disabled={selectedDoctorId === "sem-prescritor"}
-                        />
-                        {showDoctorResults && doctorSearch && (
-                          <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
-                            {filteredDoctors.map((d) => (
-                              <button key={d.id} type="button" className="w-full px-4 py-2 text-left text-sm hover:bg-muted"
-                                onClick={() => { setForm({ ...form, doctor: d.name }); setSelectedDoctorId(d.id); setDoctorSearch(""); setShowDoctorResults(false); }}>
-                                <span className="font-medium">{d.name}</span>
-                                {d.specialty && <span className="text-muted-foreground"> — {d.specialty}</span>}
-                                {(d.city || d.state) && <span className="text-muted-foreground text-xs ml-2">({[d.city, d.state].filter(Boolean).join("/")})</span>}
-                              </button>
-                            ))}
-                            {filteredDoctors.length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">Nenhum prescritor encontrado.</p>}
-                          </div>
-                        )}
+                    {(storeSettings as any)?.checkout_prescriber_required !== false && (
+                      <div className="mt-5">
+                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">Prescritor / Médico</Label>
+                        <div className="relative">
+                          <Input
+                            placeholder="Buscar por nome, cidade ou estado..."
+                            value={form.doctor || doctorSearch}
+                            onChange={(e) => { setDoctorSearch(e.target.value); setForm({ ...form, doctor: "" }); setSelectedDoctorId(null); setShowDoctorResults(true); }}
+                            disabled={selectedDoctorId === "sem-prescritor"}
+                          />
+                          {showDoctorResults && doctorSearch && (
+                            <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
+                              {filteredDoctors.map((d) => (
+                                <button key={d.id} type="button" className="w-full px-4 py-2 text-left text-sm hover:bg-muted"
+                                  onClick={() => { setForm({ ...form, doctor: d.name }); setSelectedDoctorId(d.id); setDoctorSearch(""); setShowDoctorResults(false); }}>
+                                  <span className="font-medium">{d.name}</span>
+                                  {d.specialty && <span className="text-muted-foreground"> — {d.specialty}</span>}
+                                  {(d.city || d.state) && <span className="text-muted-foreground text-xs ml-2">({[d.city, d.state].filter(Boolean).join("/")})</span>}
+                                </button>
+                              ))}
+                              {filteredDoctors.length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">Nenhum prescritor encontrado.</p>}
+                            </div>
+                          )}
+                        </div>
+                        <Button type="button" variant={selectedDoctorId === "sem-prescritor" ? "default" : "outline"} size="sm" className="mt-2"
+                          onClick={() => {
+                            if (selectedDoctorId === "sem-prescritor") { setSelectedDoctorId(null); setForm({ ...form, doctor: "" }); }
+                            else { setSelectedDoctorId("sem-prescritor"); setForm({ ...form, doctor: "Sem Prescritor" }); setShowDoctorResults(false); }
+                          }}>
+                          {selectedDoctorId === "sem-prescritor" ? "✓ Sem Prescritor" : "Não Sei / Sem Prescritor"}
+                        </Button>
                       </div>
-                      <Button type="button" variant={selectedDoctorId === "sem-prescritor" ? "default" : "outline"} size="sm" className="mt-2"
-                        onClick={() => {
-                          if (selectedDoctorId === "sem-prescritor") { setSelectedDoctorId(null); setForm({ ...form, doctor: "" }); }
-                          else { setSelectedDoctorId("sem-prescritor"); setForm({ ...form, doctor: "Sem Prescritor" }); setShowDoctorResults(false); }
-                        }}>
-                        {selectedDoctorId === "sem-prescritor" ? "✓ Sem Prescritor" : "Não Sei / Sem Prescritor"}
-                      </Button>
-                    </div>
+                    )}
                   </motion.div>
                 )}
 
