@@ -63,6 +63,7 @@ export default function CheckoutSettingsPage() {
     setMaxInstallments(s.max_installments ?? 3);
     setMaxTotalInstallments(s.max_total_installments ?? 12);
     setCheckoutVersion(s.checkout_version || "v1");
+    setPrescriberRequired(s.checkout_prescriber_required !== false);
 
     setFreeShippingEnabled(s.free_shipping_enabled ?? false);
     setFreeShippingMinValue(s.free_shipping_min_value ?? 499);
