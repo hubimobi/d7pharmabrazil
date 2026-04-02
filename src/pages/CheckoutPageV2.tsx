@@ -346,7 +346,7 @@ const CheckoutPageV2 = () => {
   const freeShipProgress = Math.min(100, (subtotal / freeShippingMinValue) * 100);
 
   return (
-    <div className="min-h-screen bg-muted/30 overflow-x-hidden">
+    <div className="min-h-screen bg-muted/30 overflow-x-hidden pb-24 md:pb-0">
       
 
       {/* Urgency Bar */}
