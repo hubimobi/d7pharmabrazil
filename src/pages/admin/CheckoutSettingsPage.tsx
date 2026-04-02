@@ -33,6 +33,7 @@ export default function CheckoutSettingsPage() {
   const [maxInstallments, setMaxInstallments] = useState(3);
   const [maxTotalInstallments, setMaxTotalInstallments] = useState(12);
   const [checkoutVersion, setCheckoutVersion] = useState("v1");
+  const [prescriberRequired, setPrescriberRequired] = useState(true);
 
   // Frete
   const [freeShippingEnabled, setFreeShippingEnabled] = useState(false);
