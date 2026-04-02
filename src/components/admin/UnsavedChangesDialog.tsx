@@ -1,5 +1,7 @@
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -28,16 +30,22 @@ export default function UnsavedChangesDialog({ open, onStay, onLeave, onSaveAndL
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex gap-2 sm:gap-2">
-          <Button variant="outline" onClick={onStay} className="gap-1.5">
-            <ArrowLeft className="h-4 w-4" /> Ficar
-          </Button>
-          <Button variant="destructive" onClick={onLeave} className="gap-1.5">
-            <LogOut className="h-4 w-4" /> Sair
-          </Button>
-          {hasSave && onSaveAndLeave && (
-            <Button onClick={onSaveAndLeave} className="gap-1.5">
-              <Save className="h-4 w-4" /> Salvar e Sair
+          <AlertDialogCancel asChild>
+            <Button variant="outline" onClick={onStay} className="gap-1.5">
+              <ArrowLeft className="h-4 w-4" /> Ficar
             </Button>
+          </AlertDialogCancel>
+          <AlertDialogAction asChild>
+            <Button variant="destructive" onClick={onLeave} className="gap-1.5">
+              <LogOut className="h-4 w-4" /> Sair
+            </Button>
+          </AlertDialogAction>
+          {hasSave && onSaveAndLeave && (
+            <AlertDialogAction asChild>
+              <Button onClick={onSaveAndLeave} className="gap-1.5">
+                <Save className="h-4 w-4" /> Salvar e Sair
+              </Button>
+            </AlertDialogAction>
           )}
         </AlertDialogFooter>
       </AlertDialogContent>
