@@ -48,7 +48,7 @@ const CheckoutPageV3 = () => {
   const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount } = useCart();
   const { data: storeSettings } = useStoreSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+  const { shippingOptions, shippingLoading, selectedShipping, setSelectedShipping, calculateShipping } = useAutoShipping();
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
   const [cardData, setCardData] = useState<CreditCardData>({ holderName: "", number: "", expiryMonth: "", expiryYear: "", ccv: "" });
   const [installments, setInstallments] = useState(1);
