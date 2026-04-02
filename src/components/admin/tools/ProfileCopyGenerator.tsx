@@ -922,16 +922,16 @@ export default function ProfileCopyGenerator() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs whitespace-nowrap">Perfil</TableHead>
-                    <TableHead className="text-xs whitespace-nowrap">Jornada</TableHead>
-                    <TableHead className="text-xs">Pergunta</TableHead>
-                    <TableHead className="text-xs">Resposta</TableHead>
-                    {platform === "caixinha_pergunta" && (
-                      <>
-                        <TableHead className="text-xs">Copy</TableHead>
-                        <TableHead className="text-xs">CTA</TableHead>
-                      </>
-                    )}
+                     <TableHead className="text-xs whitespace-nowrap">Perfil</TableHead>
+                     <TableHead className="text-xs whitespace-nowrap">Jornada</TableHead>
+                     <TableHead className="text-xs">Pergunta</TableHead>
+                     <TableHead className="text-xs">Resposta do Seguidor</TableHead>
+                     {platform === "caixinha_pergunta" && (
+                       <>
+                         <TableHead className="text-xs">Copy (Empresa)</TableHead>
+                         <TableHead className="text-xs">CTA</TableHead>
+                       </>
+                     )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -942,11 +942,11 @@ export default function ProfileCopyGenerator() {
                       </TableCell>
                       <TableCell className="text-xs whitespace-nowrap">{row.jornada}</TableCell>
                       <TableCell className="text-sm font-medium">{row.pergunta}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-[250px]">{row.resposta}</TableCell>
-                      {platform === "caixinha_pergunta" && (
-                        <>
-                          <TableCell className="text-xs max-w-[300px] whitespace-pre-wrap">{row.copy}</TableCell>
-                          <TableCell className="text-xs font-medium text-indigo-700 max-w-[150px]">{row.cta_copy}</TableCell>
+                       <TableCell className="text-xs text-muted-foreground max-w-[180px]">{row.resposta}</TableCell>
+                       {platform === "caixinha_pergunta" && (
+                         <>
+                           <TableCell className="text-xs max-w-[300px] whitespace-pre-wrap">{row.copy}</TableCell>
+                           <TableCell className="text-xs font-medium text-indigo-700 max-w-[150px]">{row.cta_copy}</TableCell>
                         </>
                       )}
                     </TableRow>
@@ -964,9 +964,10 @@ export default function ProfileCopyGenerator() {
                   <Badge variant="outline" className="text-[10px]">{row.perfil}</Badge>
                   <span className="text-[10px] text-muted-foreground">{row.jornada}</span>
                 </div>
-                <p className="text-sm font-semibold mb-1">"{row.pergunta}"</p>
-                <p className="text-xs text-muted-foreground mb-1">{row.resposta}</p>
-                {row.copy && <p className="text-xs text-gray-700 whitespace-pre-wrap border-t border-gray-100 pt-1 mt-1">{row.copy}</p>}
+                 <p className="text-sm font-semibold mb-1">"{row.pergunta}"</p>
+                 <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Resposta do seguidor:</p>
+                 <p className="text-xs text-muted-foreground mb-1">{row.resposta}</p>
+                 {row.copy && <><p className="text-[10px] text-muted-foreground uppercase mt-1">Copy da empresa:</p><p className="text-xs text-gray-700 whitespace-pre-wrap border-t border-gray-100 pt-1">{row.copy}</p></>}
                 {row.cta_copy && <p className="text-xs font-medium text-indigo-700 mt-1">{row.cta_copy}</p>}
                 <Button
                   size="sm"
