@@ -725,7 +725,7 @@ const CheckoutPageV2 = () => {
 
           {/* RIGHT: Sidebar */}
           {step <= 3 && (
-            <div className="lg:sticky lg:top-4">
+            <div className="hidden lg:block lg:sticky lg:top-4">
               <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
                 {/* Header */}
                 <div className="bg-primary p-4">
