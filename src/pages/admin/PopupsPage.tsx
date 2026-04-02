@@ -377,6 +377,16 @@ export default function PopupsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-2">
+                    <Label>Reaparecer após (horas)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.popup_banner_reappear_hours ?? 24}
+                      onChange={(e) => update("popup_banner_reappear_hours", Number(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground">Tempo mínimo antes do popup reaparecer após ser fechado</p>
+                  </div>
+                  <div className="flex flex-col gap-2">
                     <Label>Coletar E-mail</Label>
                     <Switch
                       checked={form.popup_banner_collect_email ?? true}
