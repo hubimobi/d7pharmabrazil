@@ -535,24 +535,27 @@ const CheckoutPage = () => {
                   </Button>
                 </div>
 
-                <ShippingCalculator
-                  cep={form.cep}
-                  onCepChange={(cep) => setForm({ ...form, cep })}
-                  items={items.map((i) => ({ price: i.product.price, quantity: i.quantity, weight: i.product.weight, height: i.product.height, width: i.product.width, length: i.product.length }))}
-                  selectedOption={selectedShipping}
-                  onSelectOption={setSelectedShipping}
-                  onAddressFound={(addr) => setForm((prev) => ({
-                    ...prev,
-                    street: addr.street || prev.street,
-                    neighborhood: addr.neighborhood || prev.neighborhood,
-                    city: addr.city || prev.city,
-                    state: addr.state || prev.state,
-                  }))}
-                />
+                {/* Identificação - Lead Capture */}
+                <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+                  <h3 className="text-base font-semibold">Seus Dados</h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div><Label>Nome Completo *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Seu nome completo" /></div>
+                    <div><Label>E-mail *</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="seu@email.com" /></div>
+                  </div>
+                  <div><Label>Telefone / WhatsApp *</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" inputMode="tel" /></div>
+                </div>
 
                 {(storeSettings as any)?.checkout_show_combo !== false && <ComboUpsell />}
 
-                <Button className="w-full bg-primary hover:bg-primary/90" size="lg" onClick={() => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Passo 2 — Seus Dados</Button>
+                <Button className="w-full bg-primary hover:bg-primary/90" size="lg" onClick={() => {
+                  if (!form.name.trim()) { toast.error("Preencha seu nome."); return; }
+                  if (!form.email.trim() || !form.email.includes("@")) { toast.error("Preencha um e-mail válido."); return; }
+                  if (!form.phone.trim()) { toast.error("Preencha seu telefone."); return; }
+                  saveAbandonment.current();
+                  abandonmentSaved.current = false;
+                  setStep(2);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}>Continuar — Endereço e Pagamento</Button>
 
                 {/* Aproveite e economize - after step 2 button */}
                 {(storeSettings as any)?.checkout_show_recommendations !== false && (
