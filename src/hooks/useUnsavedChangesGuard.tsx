@@ -1,18 +1,19 @@
 import { useEffect, useCallback, useState, useRef } from "react";
-import { useBlocker } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 /**
  * Hook to track unsaved changes and warn before SPA navigation or browser close.
- * Pass onSave as a stable callback or it will be captured via ref.
+ * Works with BrowserRouter (no data router required).
  */
 export function useUnsavedChangesGuard(onSave?: () => Promise<void> | void) {
   const [isDirty, setIsDirtyState] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const pendingPath = useRef<string | null>(null);
   const saveRef = useRef(onSave);
-  useEffect(() => { saveRef.current = onSave; }, [onSave]);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => 
-    isDirty && currentLocation.pathname !== nextLocation.pathname
-  );
+  useEffect(() => { saveRef.current = onSave; }, [onSave]);
 
   // Warn on browser close / refresh
   useEffect(() => {
@@ -25,29 +26,59 @@ export function useUnsavedChangesGuard(onSave?: () => Promise<void> | void) {
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
+  // Intercept sidebar / link clicks via popstate
+  useEffect(() => {
+    if (!isDirty) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement).closest("a[href]");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("http") || href.startsWith("#")) return;
+      if (href === location.pathname) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      pendingPath.current = href;
+      setShowDialog(true);
+    };
+
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [isDirty, location.pathname]);
+
   const setDirty = useCallback((v: boolean) => setIsDirtyState(v), []);
 
   const handleStay = useCallback(() => {
-    if (blocker.state === "blocked") blocker.reset();
-  }, [blocker]);
+    pendingPath.current = null;
+    setShowDialog(false);
+  }, []);
 
   const handleLeave = useCallback(() => {
-    if (blocker.state === "blocked") blocker.proceed();
-  }, [blocker]);
+    const path = pendingPath.current;
+    pendingPath.current = null;
+    setShowDialog(false);
+    setIsDirtyState(false);
+    if (path) navigate(path);
+  }, [navigate]);
 
   const handleSaveAndLeave = useCallback(async () => {
     try {
       if (saveRef.current) await saveRef.current();
-      if (blocker.state === "blocked") blocker.proceed();
+      const path = pendingPath.current;
+      pendingPath.current = null;
+      setShowDialog(false);
+      setIsDirtyState(false);
+      if (path) navigate(path);
     } catch {
       // Save failed, stay on page
     }
-  }, [blocker]);
+  }, [navigate]);
 
   return {
     isDirty,
     setDirty,
-    showDialog: blocker.state === "blocked",
+    showDialog,
     handleStay,
     handleLeave,
     handleSaveAndLeave,
