@@ -21,7 +21,7 @@ export default function ToolsPage() {
       </div>
 
       <Tabs defaultValue="testimonials" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto gap-2 bg-transparent p-0">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-7 h-auto gap-2 bg-transparent p-0">
           {[
             { value: "testimonials", label: "Testemunhos", icon: MessageSquareQuote },
             { value: "images", label: "Imagens", icon: ImageIcon },
@@ -29,6 +29,7 @@ export default function ToolsPage() {
             { value: "ads", label: "ADS / Copy", icon: Megaphone },
             { value: "copy-score", label: "Score Copy", icon: BarChart3 },
             { value: "profile-copy", label: "Copy Perfil", icon: UserCog },
+            { value: "campaign-config", label: "Campanha", icon: Settings2 },
           ].map((tab) => (
             <TabsTrigger
               key={tab.value}
