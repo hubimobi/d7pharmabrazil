@@ -546,6 +546,17 @@ export default function ProfileCopyGenerator() {
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">CTA (Call to Action)</label>
+            <Select value={ctaType} onValueChange={setCtaType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CTA_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Copy Method selector for Caixinha */}
