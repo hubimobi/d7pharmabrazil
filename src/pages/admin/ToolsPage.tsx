@@ -1,11 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ImageIcon, Video, Megaphone, MessageSquareQuote, BarChart3, UserCog } from "lucide-react";
+import { ImageIcon, Video, Megaphone, MessageSquareQuote, BarChart3, UserCog, Settings2 } from "lucide-react";
 import TestimonialGenerator from "@/components/admin/tools/TestimonialGenerator";
 import ImageGenerator from "@/components/admin/tools/ImageGenerator";
 import VideoGenerator from "@/components/admin/tools/VideoGenerator";
 import AdsGenerator from "@/components/admin/tools/AdsGenerator";
 import CopyScoreAnalyzer from "@/components/admin/tools/CopyScoreAnalyzer";
 import ProfileCopyGenerator from "@/components/admin/tools/ProfileCopyGenerator";
+import CampaignConfigTool from "@/components/admin/tools/CampaignConfigTool";
 
 export default function ToolsPage() {
   return (
