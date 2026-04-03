@@ -195,14 +195,16 @@ export default function ProfileCopyGenerator() {
     }
   };
 
+  const ctaLabel = CTA_OPTIONS.find(c => c.value === ctaType)?.label || ctaType;
+
   const getBodyPayload = () => {
     if (sourceType === "url") {
-      return { productName: referenceUrl, productDescription: `Conteúdo da URL: ${referenceUrl}`, benefits: "", referenceUrl };
+      return { productName: referenceUrl, productDescription: `Conteúdo da URL: ${referenceUrl}`, benefits: "", referenceUrl, ctaType: ctaLabel };
     }
     if (sourceType === "text") {
-      return { productName: "Texto Base", productDescription: baseText, benefits: "" };
+      return { productName: "Texto Base", productDescription: baseText, benefits: "", ctaType: ctaLabel };
     }
-    return { productName, productDescription, benefits };
+    return { productName, productDescription, benefits, ctaType: ctaLabel };
   };
 
   const handleGenerateQuestions = async () => {
