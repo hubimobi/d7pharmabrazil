@@ -597,10 +597,37 @@ export default function ProfileCopyGenerator() {
             {loadingOcean ? "Gerando OCEAN..." : "Gerar por Traço OCEAN"}
           </Button>
           {hasAnyResult && (
-            <Button onClick={() => setShowCampaignTable(true)} variant="outline" className="w-full sm:w-auto border-emerald-300 text-emerald-700 hover:bg-emerald-50">
-              <Table2 className="h-4 w-4 mr-2" />
-              Tabela para Campanha
-            </Button>
+            <>
+              <Button onClick={() => setShowCampaignTable(true)} variant="outline" className="w-full sm:w-auto border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+                <Table2 className="h-4 w-4 mr-2" />
+                Tabela para Campanha
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto border-amber-300 text-amber-700 hover:bg-amber-50"
+                onClick={() => {
+                  // Build the full text from results to validate
+                  let text = "";
+                  if (result?.copies) {
+                    const c = result.copies[0];
+                    text = `${c.headline}\n${c.subheadline}\n${c.body_blocks?.join("\n")}\n${c.cta}`;
+                  } else if (allDiscResult?.profiles) {
+                    const first = Object.values(allDiscResult.profiles)[0];
+                    if (first) text = `${first.headline}\n${first.subheadline}\n${first.body_blocks?.join("\n")}\n${first.cta}`;
+                  } else if (allOceanResult?.profiles) {
+                    const first = Object.values(allOceanResult.profiles)[0];
+                    if (first) text = `${first.headline}\n${first.subheadline}\n${first.body_blocks?.join("\n")}\n${first.cta}`;
+                  }
+                  if (text) {
+                    navigator.clipboard.writeText(text);
+                    toast.info("Copy copiada! Vá para a aba Score Copy e cole para validar.");
+                  }
+                }}
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Validar com Score Copy
+              </Button>
+            </>
           )}
         </div>
       </Card>
