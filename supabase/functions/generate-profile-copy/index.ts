@@ -107,8 +107,9 @@ ETAPA 1: Identifique:
 - Objeções comuns
 
 ETAPA 2: Gere ${isCaixinha ? "perguntas para caixinha de perguntas do Instagram Stories" : "perguntas de quizz de conversão"}, seguindo:
-- 1 pergunta para cada perfil comportamental do modelo selecionado
-- Para cada fase do funil selecionada
+- 1 pergunta para CADA COMBINAÇÃO de perfil comportamental × fase do funil
+- ${discProfile === "all" ? "São 4 perfis DISC (D, I, S, C)" : oceanTrait === "all" ? "São 5 traços OCEAN" : "1 perfil selecionado"} × ${funnelStage === "all" ? "4 fases do funil" : "1 fase selecionada"} = ${(() => { const profiles = discProfile === "all" ? 4 : oceanTrait === "all" ? 5 : 1; const stages = funnelStage === "all" ? 4 : 1; return profiles * stages; })()} perguntas NO TOTAL
+- OBRIGATÓRIO: Gere EXATAMENTE ${(() => { const profiles = discProfile === "all" ? 4 : oceanTrait === "all" ? 5 : 1; const stages = funnelStage === "all" ? 4 : 1; return profiles * stages; })()} perguntas, uma para cada combinação única
 - A PERGUNTA deve ativar dor ou desejo do perfil na fase indicada
 ${copyInstructions}
 
@@ -146,7 +147,7 @@ Retorne JSON com esta estrutura EXATA:
   "desejo_central": "desejo central identificado"
 }
 
-Gere no mínimo 8 perguntas variadas, cobrindo diferentes perfis e fases.`;
+Gere EXATAMENTE ${(() => { const profiles = discProfile === "all" ? 4 : oceanTrait === "all" ? 5 : 1; const stages = funnelStage === "all" ? 4 : 1; return profiles * stages; })()} perguntas. Cada combinação perfil×fase deve ter EXATAMENTE 1 pergunta. NÃO repita combinações e NÃO omita nenhuma.`;
   }
 
   if (mode === "all_disc") {
