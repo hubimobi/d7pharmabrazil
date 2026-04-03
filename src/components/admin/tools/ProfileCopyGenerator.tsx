@@ -167,7 +167,9 @@ export default function ProfileCopyGenerator() {
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [showQuestionsTable, setShowQuestionsTable] = useState(false);
   const [copyMethod, setCopyMethod] = useState("venda");
-
+  const [ctaType, setCtaType] = useState("saber_mais");
+  const [showScoreDialog, setShowScoreDialog] = useState(false);
+  const [scoreText, setScoreText] = useState("");
   const validateInput = (): boolean => {
     if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return false; }
     if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return false; }
