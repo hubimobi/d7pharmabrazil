@@ -64,14 +64,14 @@ const VISUAL_THEMES = [
     previewClass: "rounded-sm",
   },
   {
-    value: "claymorphism",
-    label: "Claymorphism",
-    desc: "Visual 3D suave, sombras duplas, cantos ultra-arredondados e cores pastel — estilo app moderno.",
+    value: "glassmorphism",
+    label: "Glassmorphism",
+    desc: "Vidro fosco translúcido, blur de fundo, bordas luminosas e camadas sobrepostas — estilo premium.",
     icon: <FlaskConical className="h-4 w-4 text-primary" />,
     available: true,
-    previewRadius: "rounded-3xl",
-    previewRadiusSmall: "rounded-2xl",
-    previewClass: "rounded-3xl",
+    previewRadius: "rounded-2xl",
+    previewRadiusSmall: "rounded-xl",
+    previewClass: "rounded-2xl",
   },
 ];
 

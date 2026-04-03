@@ -177,76 +177,85 @@
 }
 
 /* =============================================================
-   THEME 4: CLAYMORPHISM
-   Soft 3D look, double shadows, ultra-rounded corners, pastel tones
+   THEME 4: GLASSMORPHISM
+   Frosted glass look, backdrop blur, luminous borders, layered depth
    ============================================================= */
-[data-visual-theme="claymorphism"] {
-  --theme-radius-card: 1.5rem;
-  --theme-radius-section: 2.5rem;
-  --theme-radius-button: 1rem;
-  --theme-shadow-card:
-    8px 8px 16px rgba(0,0,0,0.08),
-    -4px -4px 12px rgba(255,255,255,0.6);
-  --theme-shadow-hover:
-    12px 12px 24px rgba(0,0,0,0.12),
-    -6px -6px 16px rgba(255,255,255,0.7);
-  --theme-shadow-inset:
-    inset 4px 4px 8px rgba(0,0,0,0.05),
-    inset -2px -2px 6px rgba(255,255,255,0.5);
+[data-visual-theme="glassmorphism"] {
+  --theme-radius-card: 1.25rem;
+  --theme-radius-section: 2rem;
+  --theme-radius-button: 0.75rem;
+  --theme-shadow-card: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --theme-shadow-hover: 0 16px 48px rgba(0, 0, 0, 0.12);
   --theme-section-padding: 3.5rem 1rem;
   --theme-section-gap: 1.5rem;
   --theme-heading-font: 'Inter', system-ui, sans-serif;
   --theme-body-font: 'Inter', system-ui, sans-serif;
-  --theme-heading-weight: 800;
+  --theme-heading-weight: 700;
   --theme-heading-tracking: -0.02em;
   --theme-heading-line-height: 1.1;
-  --theme-label-tracking: 0.06em;
-  --theme-label-transform: none;
-  --theme-label-size: 0.75rem;
-  --theme-card-border: none;
-  --theme-card-bg: hsl(var(--card));
-  --theme-transition-duration: 280ms;
+  --theme-label-tracking: 0.08em;
+  --theme-label-transform: uppercase;
+  --theme-label-size: 0.7rem;
+  --theme-card-border: 1px solid rgba(255, 255, 255, 0.25);
+  --theme-card-bg: rgba(255, 255, 255, 0.55);
+  --theme-transition-duration: 300ms;
   --theme-hero-size: clamp(1.75rem, 4.5vw, 3.25rem);
   --theme-section-title-size: clamp(1.35rem, 2.8vw, 2.15rem);
 }
 
 @media (min-width: 768px) {
-  [data-visual-theme="claymorphism"] {
+  [data-visual-theme="glassmorphism"] {
     --theme-section-padding: 4.5rem 2rem;
   }
 }
 
-/* Claymorphism-specific card override */
-[data-visual-theme="claymorphism"] .theme-card {
-  border: none;
-  background: hsl(var(--card));
-  box-shadow: var(--theme-shadow-card);
+/* Glassmorphism card: frosted glass effect */
+[data-visual-theme="glassmorphism"] .theme-card {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--theme-radius-card);
+  box-shadow: var(--theme-shadow-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
-[data-visual-theme="claymorphism"] .theme-card:hover {
+[data-visual-theme="glassmorphism"] .theme-card:hover {
+  background: rgba(255, 255, 255, 0.6);
   box-shadow: var(--theme-shadow-hover);
+  border-color: rgba(255, 255, 255, 0.4);
   transform: translateY(-2px);
 }
 
-/* Claymorphism buttons get a puffy look */
-[data-visual-theme="claymorphism"] .theme-button {
-  box-shadow:
-    4px 4px 10px rgba(0,0,0,0.1),
-    -2px -2px 6px rgba(255,255,255,0.5);
+/* Glassmorphism buttons */
+[data-visual-theme="glassmorphism"] .theme-button {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--theme-radius-button);
 }
-[data-visual-theme="claymorphism"] .theme-button:hover {
-  box-shadow:
-    2px 2px 6px rgba(0,0,0,0.12),
-    -1px -1px 4px rgba(255,255,255,0.4);
-  transform: translateY(1px);
+
+/* Glassmorphism inputs */
+[data-visual-theme="glassmorphism"] input,
+[data-visual-theme="glassmorphism"] textarea,
+[data-visual-theme="glassmorphism"] select {
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0.75rem;
 }
 
-/* Claymorphism inset inputs */
-[data-visual-theme="claymorphism"] input,
-[data-visual-theme="claymorphism"] textarea,
-[data-visual-theme="claymorphism"] select {
-  box-shadow: var(--theme-shadow-inset);
-  border: none;
-  border-radius: 0.75rem;
+/* Dark mode adjustments for glassmorphism */
+.dark [data-visual-theme="glassmorphism"] .theme-card,
+[data-visual-theme="glassmorphism"].dark .theme-card {
+  background: rgba(30, 30, 40, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.dark [data-visual-theme="glassmorphism"] input,
+.dark [data-visual-theme="glassmorphism"] textarea,
+.dark [data-visual-theme="glassmorphism"] select,
+[data-visual-theme="glassmorphism"].dark input,
+[data-visual-theme="glassmorphism"].dark textarea,
+[data-visual-theme="glassmorphism"].dark select {
+  background: rgba(30, 30, 40, 0.4);
+  border-color: rgba(255, 255, 255, 0.1);
 }

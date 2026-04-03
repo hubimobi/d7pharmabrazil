@@ -12,7 +12,7 @@ export default function DesignTokenApplier() {
     if (!settings) return;
     const root = document.documentElement;
 
-    // Visual theme (editorial | modern | classic)
+    // Visual theme (editorial | modern | classic | glassmorphism)
     const visualTheme = (settings as any).visual_theme || "editorial";
     root.setAttribute("data-visual-theme", visualTheme);
 
