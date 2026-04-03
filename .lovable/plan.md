@@ -1,70 +1,79 @@
 
 
-# 3 Correções: Home Sections, Regras de Acesso e CSV de Leads
+# Plano: Reestruturação Profissional do Copy por Perfil
+
+## Problema Atual
+Os prompts atuais são genéricos e produzem copies rasas. As instruções para a IA carecem de profundidade em psicologia comportamental, gatilhos mentais específicos por perfil, e estrutura persuasiva de alto nível. O resultado são perguntas genéricas, respostas previsíveis e CTAs fracos.
 
 ---
 
-## 1. Banner Destaque e Oferta Relâmpago — Respeitar Ordem e Toggle
+## O que muda
 
-**Problema**: Em `Index.tsx`, `section_highlight_banner` e `section_flash_sale` têm `alwaysShow: true`, ignorando o toggle de ativo/desativo. Em `DesignSettingsPage.tsx`, `ALWAYS_SHOW_SECTIONS` impede que o switch apareça para essas seções.
+### 1. System Prompt de Nível Expert (Edge Function)
 
-**Correção**:
-- **`src/pages/Index.tsx`**: Remover `alwaysShow: true` de ambas as seções para que obedeçam `s?.[key] !== false`
-- **`src/pages/admin/DesignSettingsPage.tsx`**: Remover `ALWAYS_SHOW_SECTIONS` ou esvaziar o array, exibindo o Switch para todas as seções
+Reescrever o system prompt com a persona de um copywriter sênior de 20+ anos, incluindo:
+
+- **Mapa de dores e desejos por perfil DISC**: cada perfil tem gatilhos emocionais distintos (D = medo de perder controle, I = medo de ser ignorado, S = medo de mudança, C = medo de errar)
+- **Mapa de dores OCEAN**: cada traço com motivadores profundos
+- **Regras de persuasão obrigatórias**: especificidade (números, prazos), contraste antes/depois, loops abertos, padrão de interrupção, prova social contextual
+- **Score interno**: a IA deve autoavaliar cada copy gerada usando os critérios do Score de Conversão (clareza, emoção, dor/desejo, prova, urgência, fit perfil)
+
+**Arquivo**: `supabase/functions/generate-profile-copy/index.ts`
+
+### 2. Prompt da Caixinha de Perguntas Completamente Reformulado
+
+Substituir o prompt atual por um com:
+
+- **Etapa de Análise Profunda**: antes de gerar, a IA deve mapear 3 dores específicas e 3 desejos do público-alvo baseados no produto
+- **Perguntas vinculadas a dores/desejos reais**: cada pergunta deve atacar uma dor ou desejo específico do perfil (não genérica). Ex: Perfil D + Curioso = "Quanto tempo mais você vai aceitar resultados medianos?"
+- **Respostas do seguidor autênticas por perfil**: com exemplos de como cada perfil DISC responde (D: curto e assertivo, I: com emoji e emoção, S: cauteloso, C: com dados)
+- **Copy da empresa com estrutura de alta conversão**: seguir o framework selecionado com rigor, incluir prova social implícita, usar contraste antes/depois, e finalizar com CTA contextual
+- **CTA adaptado ao perfil + jornada**: ex: D+Ready = "Garanta agora", I+Curious = "Descubra como...", S+Unaware = "Saiba se você...", C+Ready = "Veja os dados e decida"
+
+**Arquivo**: `supabase/functions/generate-profile-copy/index.ts`
+
+### 3. Mapas Expandidos de DISC e OCEAN
+
+Expandir os objetos `discMap` e `oceanMap` com:
+
+- Dor principal de cada perfil
+- Desejo central
+- Gatilhos mentais que funcionam
+- Gatilhos que repelem
+- Tom de CTA ideal
+- Palavras de poder e palavras a evitar
+
+### 4. CTA Dinâmico por Perfil × Jornada
+
+Criar uma matriz `ctaMatrix` que cruza perfil + fase do funil para gerar CTAs de alta conversão automaticamente, que a IA deve usar como referência:
+
+```text
+         | Unaware        | Curious           | Ready              | Post
+---------|----------------|-------------------|--------------------|------------------
+D        | Descubra o que | Veja como outros  | Garanta o seu agora| Renove antes que
+I        | Você sabia que | Olha o que achei  | Quero! Como faço?  | Compartilhe com
+S        | Entenda por que| Compare e escolha | Peça o seu sem     | Continue cuidando
+C        | Dados mostram  | Analise os fatos  | Acesse e comprove  | Veja seu histórico
+```
+
+### 5. Prompt de Copy Única e Batch Também Aprimorado
+
+Mesma lógica de profundidade para os modos `all_disc`, `all_ocean` e single profile:
+- Incluir campo `pain_addressed` e `desire_addressed` em cada copy
+- Incluir `persuasion_technique` usado
+- Body blocks com estrutura narrativa (gancho, desenvolvimento, prova, transição, CTA)
+
+### 6. Deploy da Edge Function
+
+Após editar o arquivo, deploy automático.
 
 ---
 
-## 2. Regras de Acesso — Sincronizar com Menus Atuais
-
-**Problema**: O `MENU_SECTIONS` em `UsersPage.tsx` não contempla todos os menus do sidebar. Faltam:
-
-| Menu no Sidebar | Chave que falta em MENU_SECTIONS |
-|---|---|
-| Recuperação | `recovery` |
-| Recompra (+LTV) | `repurchase` |
-| Combos | `combos` |
-| WhatsApp | `whatsapp` |
-| Ferramentas | `tools` |
-| Feedbacks | `feedbacks` |
-
-**Correção** em `src/pages/admin/UsersPage.tsx`:
-- Adicionar as 6 entradas faltantes ao array `MENU_SECTIONS`
-- Atualizar `DEFAULT_ACCESS` para cada role com as permissões adequadas (ex: `financeiro` não vê `tools`/`whatsapp`, `representative` não vê nenhum desses novos)
-
----
-
-## 3. Importação CSV com Pareação de Colunas + Exportar/Excluir Lista
-
-**Problema**: A importação atual tenta detectar colunas automaticamente pelo nome do cabeçalho, sem permitir ao usuário confirmar ou ajustar o mapeamento. Não existe funcionalidade de agrupar leads por importação para exportar ou excluir em lote.
-
-**Correção** em `src/pages/admin/LeadsPage.tsx`:
-
-### 3a. Pareação de colunas antes de importar
-- Após o upload/colagem do CSV, exibir um **passo intermediário** com:
-  - Preview das primeiras 3 linhas do CSV
-  - Para cada coluna do CSV, um `<Select>` para mapear ao campo: Nome, E-mail, Telefone, Cidade, Estado, Ignorar
-  - Botão "Confirmar e Importar" que usa o mapeamento manual
-- Adicionar estado `importStep: "upload" | "mapping" | "importing"` para controlar o fluxo em 2 etapas dentro do mesmo dialog
-
-### 3b. Rastreamento de lote de importação
-- Ao importar, gerar um `batch_id` (UUID ou timestamp) e salvar em cada lead importado via campo `source` como `csv_import_BATCH_ID`
-- Adicionar um filtro por "Fonte" no painel de leads
-
-### 3c. Exportar e Excluir lista importada
-- Adicionar um dropdown ou seção "Importações" que lista as importações feitas (agrupando por `source` que contém `csv_import`)
-- Cada grupo mostra: data, quantidade de leads, botão "Exportar" e "Excluir Todos"
-- Excluir Todos deleta todos os leads com aquele `source`/batch
-
-**Nota**: Não será necessária migração de banco — o campo `source` já existe na tabela `popup_leads`.
-
----
-
-## Resumo técnico
+## Arquivos Modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/pages/Index.tsx` | Remover `alwaysShow` de highlight_banner e flash_sale |
-| `src/pages/admin/DesignSettingsPage.tsx` | Remover `ALWAYS_SHOW_SECTIONS` ou esvaziar |
-| `src/pages/admin/UsersPage.tsx` | Adicionar menus faltantes + atualizar DEFAULT_ACCESS |
-| `src/pages/admin/LeadsPage.tsx` | Fluxo de pareação CSV em 2 etapas, batch tracking, exportar/excluir por lote |
+| `supabase/functions/generate-profile-copy/index.ts` | System prompt expert, mapas expandidos, prompts reestruturados, CTA matrix |
+
+Nenhuma mudança no frontend necessária - as melhorias são todas na qualidade do prompt e da instrução para a IA.
 
