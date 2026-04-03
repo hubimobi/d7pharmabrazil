@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Copy, Check, UserCog, Sparkles, Users, Trophy, Globe, FileText, Package, Download, Table2, MessageCircleQuestion, HelpCircle } from "lucide-react";
+import { Loader2, Copy, Check, UserCog, Sparkles, Users, Trophy, Globe, FileText, Package, Download, Table2, MessageCircleQuestion, HelpCircle, BarChart3 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -121,11 +121,25 @@ const PLATFORM_OPTIONS = [
   { value: "geral", label: "Geral" },
   { value: "facebook", label: "Facebook / Instagram" },
   { value: "google", label: "Google Ads" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "youtube", label: "YouTube" },
   { value: "whatsapp", label: "WhatsApp" },
   { value: "email", label: "E-mail Marketing" },
   { value: "landing_page", label: "Landing Page" },
   { value: "caixinha_pergunta", label: "Caixinha de Pergunta" },
   { value: "quizz_conversao", label: "Quizz de Conversão" },
+];
+
+const CTA_OPTIONS = [
+  { value: "acessar", label: "Acessar" },
+  { value: "cadastrar", label: "Cadastrar" },
+  { value: "mensagem", label: "Enviar Mensagem" },
+  { value: "seguir", label: "Seguir" },
+  { value: "saber_mais", label: "Saber Mais" },
+  { value: "comprar", label: "Comprar Agora" },
+  { value: "baixar", label: "Baixar" },
+  { value: "agendar", label: "Agendar" },
+  { value: "assinar", label: "Assinar" },
 ];
 
 export default function ProfileCopyGenerator() {
@@ -153,7 +167,9 @@ export default function ProfileCopyGenerator() {
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [showQuestionsTable, setShowQuestionsTable] = useState(false);
   const [copyMethod, setCopyMethod] = useState("venda");
-
+  const [ctaType, setCtaType] = useState("saber_mais");
+  const [showScoreDialog, setShowScoreDialog] = useState(false);
+  const [scoreText, setScoreText] = useState("");
   const validateInput = (): boolean => {
     if (sourceType === "product" && !productName) { toast.error("Informe o produto"); return false; }
     if (sourceType === "url" && !referenceUrl) { toast.error("Informe a URL"); return false; }
@@ -179,14 +195,16 @@ export default function ProfileCopyGenerator() {
     }
   };
 
+  const ctaLabel = CTA_OPTIONS.find(c => c.value === ctaType)?.label || ctaType;
+
   const getBodyPayload = () => {
     if (sourceType === "url") {
-      return { productName: referenceUrl, productDescription: `Conteúdo da URL: ${referenceUrl}`, benefits: "", referenceUrl };
+      return { productName: referenceUrl, productDescription: `Conteúdo da URL: ${referenceUrl}`, benefits: "", referenceUrl, ctaType: ctaLabel };
     }
     if (sourceType === "text") {
-      return { productName: "Texto Base", productDescription: baseText, benefits: "" };
+      return { productName: "Texto Base", productDescription: baseText, benefits: "", ctaType: ctaLabel };
     }
-    return { productName, productDescription, benefits };
+    return { productName, productDescription, benefits, ctaType: ctaLabel };
   };
 
   const handleGenerateQuestions = async () => {
@@ -329,54 +347,65 @@ export default function ProfileCopyGenerator() {
   };
 
   const buildCampaignRows = () => {
-    const rows: { campaign: string; adSet: string; adName: string; headline: string; description: string; primaryText: string; cta: string; platform: string }[] = [];
+    const rows: { campaign: string; adSet: string; adName: string; audience: string; headline: string; description: string; primaryText: string; cta: string; platform: string; objective: string }[] = [];
     const platLabel = PLATFORM_OPTIONS.find(p => p.value === platform)?.label || platform;
     const funnelLabel = FUNNEL_OPTIONS.find(f => f.value === funnelStage)?.label || funnelStage;
     const prodLabel = sourceType === "product" ? productName : sourceType === "url" ? referenceUrl : "Texto Base";
+    const ctaLbl = CTA_OPTIONS.find(c => c.value === ctaType)?.label || ctaType;
+    const varLetters = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
     if (allDiscResult?.profiles) {
-      Object.entries(allDiscResult.profiles).forEach(([key, profile]) => {
+      Object.entries(allDiscResult.profiles).forEach(([key, profile], idx) => {
         if (!profile) return;
+        const perfilName = DISC_NAMES[key] || key;
         rows.push({
           campaign: `${prodLabel} — DISC`,
-          adSet: `${DISC_NAMES[key] || key} | ${funnelLabel}`,
-          adName: `${key}_${platform}`,
+          adSet: `${perfilName} | ${funnelLabel} | ${platLabel}`,
+          adName: `${key}_${platform}_${varLetters[idx] || idx}`,
+          audience: `${perfilName} — ${funnelLabel} — ${platLabel}`,
           headline: profile.headline || "",
           description: profile.subheadline || "",
           primaryText: (profile.body_blocks || []).join(" "),
-          cta: profile.cta || "",
+          cta: ctaLbl,
           platform: platLabel,
+          objective: "CONVERSIONS",
         });
       });
     }
 
     if (allOceanResult?.profiles) {
-      Object.entries(allOceanResult.profiles).forEach(([key, profile]) => {
+      Object.entries(allOceanResult.profiles).forEach(([key, profile], idx) => {
         if (!profile) return;
+        const traitName = OCEAN_NAMES[key] || key;
         rows.push({
           campaign: `${prodLabel} — OCEAN`,
-          adSet: `${OCEAN_NAMES[key] || key} | ${funnelLabel}`,
-          adName: `${key}_${platform}`,
+          adSet: `${traitName} | ${funnelLabel} | ${platLabel}`,
+          adName: `${key}_${platform}_${varLetters[idx] || idx}`,
+          audience: `${traitName} — ${funnelLabel} — ${platLabel}`,
           headline: profile.headline || "",
           description: profile.subheadline || "",
           primaryText: (profile.body_blocks || []).join(" "),
-          cta: profile.cta || "",
+          cta: ctaLbl,
           platform: platLabel,
+          objective: "CONVERSIONS",
         });
       });
     }
 
     if (result?.copies) {
       result.copies.forEach((copy, i) => {
+        const perfilName = DISC_NAMES[discProfile] || discProfile;
         rows.push({
           campaign: `${prodLabel} — Perfil`,
-          adSet: `${DISC_NAMES[discProfile] || discProfile} | ${funnelLabel}`,
-          adName: copy.label || `Copy ${i + 1}`,
+          adSet: `${perfilName} | ${funnelLabel} | ${platLabel}`,
+          adName: `${copy.label || `Copy_${varLetters[i] || i}`}`,
+          audience: `${perfilName} — ${funnelLabel} — ${platLabel}`,
           headline: copy.headline || "",
           description: copy.subheadline || "",
           primaryText: (copy.body_blocks || []).join(" "),
-          cta: copy.cta || "",
+          cta: ctaLbl,
           platform: platLabel,
+          objective: "CONVERSIONS",
         });
       });
     }
@@ -387,10 +416,10 @@ export default function ProfileCopyGenerator() {
   const exportCampaignCSV = () => {
     const rows = buildCampaignRows();
     if (!rows.length) { toast.error("Nenhuma copy gerada para exportar"); return; }
-    const headers = ["Campaign Name", "Ad Set Name", "Ad Name", "Headline", "Description", "Primary Text", "Call to Action", "Platform"];
+    const headers = ["Campaign Name", "Ad Set Name", "Ad Name", "Audience", "Headline", "Description", "Primary Text", "Call to Action", "Platform", "Objective"];
     const csvContent = [
       headers.join(","),
-      ...rows.map(r => [r.campaign, r.adSet, r.adName, r.headline, r.description, r.primaryText, r.cta, r.platform].map(v => `"${(v || "").replace(/"/g, '""')}"`).join(","))
+      ...rows.map(r => [r.campaign, r.adSet, r.adName, r.audience, r.headline, r.description, r.primaryText, r.cta, r.platform, r.objective].map(v => `"${(v || "").replace(/"/g, '""')}"`).join(","))
     ].join("\n");
     const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -474,7 +503,7 @@ export default function ProfileCopyGenerator() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
           <div>
             <label className="text-sm font-medium mb-1 block">Perfil DISC</label>
             <Select value={discProfile} onValueChange={setDiscProfile}>
@@ -528,6 +557,17 @@ export default function ProfileCopyGenerator() {
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">CTA (Call to Action)</label>
+            <Select value={ctaType} onValueChange={setCtaType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CTA_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Copy Method selector for Caixinha */}
@@ -568,10 +608,37 @@ export default function ProfileCopyGenerator() {
             {loadingOcean ? "Gerando OCEAN..." : "Gerar por Traço OCEAN"}
           </Button>
           {hasAnyResult && (
-            <Button onClick={() => setShowCampaignTable(true)} variant="outline" className="w-full sm:w-auto border-emerald-300 text-emerald-700 hover:bg-emerald-50">
-              <Table2 className="h-4 w-4 mr-2" />
-              Tabela para Campanha
-            </Button>
+            <>
+              <Button onClick={() => setShowCampaignTable(true)} variant="outline" className="w-full sm:w-auto border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+                <Table2 className="h-4 w-4 mr-2" />
+                Tabela para Campanha
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto border-amber-300 text-amber-700 hover:bg-amber-50"
+                onClick={() => {
+                  // Build the full text from results to validate
+                  let text = "";
+                  if (result?.copies) {
+                    const c = result.copies[0];
+                    text = `${c.headline}\n${c.subheadline}\n${c.body_blocks?.join("\n")}\n${c.cta}`;
+                  } else if (allDiscResult?.profiles) {
+                    const first = Object.values(allDiscResult.profiles)[0];
+                    if (first) text = `${first.headline}\n${first.subheadline}\n${first.body_blocks?.join("\n")}\n${first.cta}`;
+                  } else if (allOceanResult?.profiles) {
+                    const first = Object.values(allOceanResult.profiles)[0];
+                    if (first) text = `${first.headline}\n${first.subheadline}\n${first.body_blocks?.join("\n")}\n${first.cta}`;
+                  }
+                  if (text) {
+                    navigator.clipboard.writeText(text);
+                    toast.info("Copy copiada! Vá para a aba Score Copy e cole para validar.");
+                  }
+                }}
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Validar com Score Copy
+              </Button>
+            </>
           )}
         </div>
       </Card>
@@ -595,24 +662,28 @@ export default function ProfileCopyGenerator() {
                   <TableHead className="text-xs whitespace-nowrap">Campaign Name</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Ad Set Name</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Ad Name</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Audience</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Headline</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Description</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Primary Text</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Call to Action</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Platform</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Objective</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {buildCampaignRows().map((row, i) => (
                   <TableRow key={i}>
                     <TableCell className="text-xs font-medium max-w-[150px] truncate">{row.campaign}</TableCell>
-                    <TableCell className="text-xs max-w-[120px] truncate">{row.adSet}</TableCell>
+                    <TableCell className="text-xs max-w-[140px] truncate">{row.adSet}</TableCell>
                     <TableCell className="text-xs max-w-[100px] truncate">{row.adName}</TableCell>
+                    <TableCell className="text-xs max-w-[150px] truncate">{row.audience}</TableCell>
                     <TableCell className="text-xs max-w-[180px]">{row.headline}</TableCell>
                     <TableCell className="text-xs max-w-[180px]">{row.description}</TableCell>
                     <TableCell className="text-xs max-w-[250px] line-clamp-2">{row.primaryText}</TableCell>
                     <TableCell className="text-xs font-medium">{row.cta}</TableCell>
                     <TableCell className="text-xs">{row.platform}</TableCell>
+                    <TableCell className="text-xs">{row.objective}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

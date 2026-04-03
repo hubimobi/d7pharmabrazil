@@ -1,11 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ImageIcon, Video, Megaphone, MessageSquareQuote, BarChart3, UserCog } from "lucide-react";
+import { ImageIcon, Video, Megaphone, MessageSquareQuote, BarChart3, UserCog, Settings2 } from "lucide-react";
 import TestimonialGenerator from "@/components/admin/tools/TestimonialGenerator";
 import ImageGenerator from "@/components/admin/tools/ImageGenerator";
 import VideoGenerator from "@/components/admin/tools/VideoGenerator";
 import AdsGenerator from "@/components/admin/tools/AdsGenerator";
 import CopyScoreAnalyzer from "@/components/admin/tools/CopyScoreAnalyzer";
 import ProfileCopyGenerator from "@/components/admin/tools/ProfileCopyGenerator";
+import CampaignConfigTool from "@/components/admin/tools/CampaignConfigTool";
 
 export default function ToolsPage() {
   return (
@@ -20,7 +21,7 @@ export default function ToolsPage() {
       </div>
 
       <Tabs defaultValue="testimonials" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto gap-2 bg-transparent p-0">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-7 h-auto gap-2 bg-transparent p-0">
           {[
             { value: "testimonials", label: "Testemunhos", icon: MessageSquareQuote },
             { value: "images", label: "Imagens", icon: ImageIcon },
@@ -28,6 +29,7 @@ export default function ToolsPage() {
             { value: "ads", label: "ADS / Copy", icon: Megaphone },
             { value: "copy-score", label: "Score Copy", icon: BarChart3 },
             { value: "profile-copy", label: "Copy Perfil", icon: UserCog },
+            { value: "campaign-config", label: "Campanha", icon: Settings2 },
           ].map((tab) => (
             <TabsTrigger
               key={tab.value}
@@ -57,6 +59,9 @@ export default function ToolsPage() {
         </TabsContent>
         <TabsContent value="profile-copy" className="mt-6">
           <ProfileCopyGenerator />
+        </TabsContent>
+        <TabsContent value="campaign-config" className="mt-6">
+          <CampaignConfigTool />
         </TabsContent>
       </Tabs>
     </div>

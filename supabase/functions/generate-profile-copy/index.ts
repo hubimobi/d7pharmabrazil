@@ -61,7 +61,7 @@ Tom: Adaptável ao contexto. Focado em dor, desejo ou resultado.`,
 };
 
 function buildUserPrompt(params: any): string {
-  const { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform, mode, copyMethod } = params;
+  const { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform, mode, copyMethod, ctaType } = params;
 
   const funnelText = funnelStage === "all"
     ? "TODAS as fases (Sem noção, Curioso, Pronto para comprar, Pós-compra)"
@@ -156,7 +156,7 @@ PRODUTO: ${productName}
 DESCRIÇÃO: ${productDescription || "N/A"}
 BENEFÍCIOS: ${benefits || "N/A"}
 PLATAFORMA: ${platform || "geral"}
-FASE DO FUNIL: ${funnelText}
+FASE DO FUNIL: ${funnelText}${ctaType ? `\nCTA OBRIGATÓRIO: Use "${ctaType}" como call to action principal.` : ""}
 
 Para cada perfil, adapte o tom, os gatilhos e a linguagem. Também estime uma performance de conversão de 0 a 100 para cada perfil.
 
@@ -189,7 +189,7 @@ PRODUTO: ${productName}
 DESCRIÇÃO: ${productDescription || "N/A"}
 BENEFÍCIOS: ${benefits || "N/A"}
 PLATAFORMA: ${platform || "geral"}
-FASE DO FUNIL: ${funnelText}
+FASE DO FUNIL: ${funnelText}${ctaType ? `\nCTA OBRIGATÓRIO: Use "${ctaType}" como call to action principal.` : ""}
 
 Para cada traço, adapte o tom, os gatilhos e a linguagem. Também estime uma performance de conversão de 0 a 100 para cada traço.
 
@@ -217,12 +217,14 @@ Retorne JSON com esta estrutura EXATA:
   }
 
   // Default single profile mode
+  const ctaInstruction = ctaType ? `\nCTA OBRIGATÓRIO: Use "${ctaType}" como call to action principal.` : "";
   return `Gere copies de alta conversão para:
 
 PRODUTO: ${productName}
 DESCRIÇÃO: ${productDescription || "N/A"}
 BENEFÍCIOS: ${benefits || "N/A"}
 PLATAFORMA: ${platform || "geral"}
+${ctaInstruction}
 
 PERFIL DISC: ${discMap[discProfile] || discProfile}
 TRAÇO OCEAN: ${oceanMap[oceanTrait] || oceanTrait}

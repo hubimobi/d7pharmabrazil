@@ -494,6 +494,42 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_config: {
+        Row: {
+          ad_template: string
+          adset_template: string
+          audience_template: string
+          campaign_template: string
+          created_at: string
+          default_objective: string
+          id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          ad_template?: string
+          adset_template?: string
+          audience_template?: string
+          campaign_template?: string
+          created_at?: string
+          default_objective?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ad_template?: string
+          adset_template?: string
+          audience_template?: string
+          campaign_template?: string
+          created_at?: string
+          default_objective?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       commissions: {
         Row: {
           commission_rate: number
