@@ -121,11 +121,25 @@ const PLATFORM_OPTIONS = [
   { value: "geral", label: "Geral" },
   { value: "facebook", label: "Facebook / Instagram" },
   { value: "google", label: "Google Ads" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "youtube", label: "YouTube" },
   { value: "whatsapp", label: "WhatsApp" },
   { value: "email", label: "E-mail Marketing" },
   { value: "landing_page", label: "Landing Page" },
   { value: "caixinha_pergunta", label: "Caixinha de Pergunta" },
   { value: "quizz_conversao", label: "Quizz de Conversão" },
+];
+
+const CTA_OPTIONS = [
+  { value: "acessar", label: "Acessar" },
+  { value: "cadastrar", label: "Cadastrar" },
+  { value: "mensagem", label: "Enviar Mensagem" },
+  { value: "seguir", label: "Seguir" },
+  { value: "saber_mais", label: "Saber Mais" },
+  { value: "comprar", label: "Comprar Agora" },
+  { value: "baixar", label: "Baixar" },
+  { value: "agendar", label: "Agendar" },
+  { value: "assinar", label: "Assinar" },
 ];
 
 export default function ProfileCopyGenerator() {
