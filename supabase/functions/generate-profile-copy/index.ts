@@ -217,12 +217,14 @@ Retorne JSON com esta estrutura EXATA:
   }
 
   // Default single profile mode
+  const ctaInstruction = ctaType ? `\nCTA OBRIGATÓRIO: Use "${ctaType}" como call to action principal.` : "";
   return `Gere copies de alta conversão para:
 
 PRODUTO: ${productName}
 DESCRIÇÃO: ${productDescription || "N/A"}
 BENEFÍCIOS: ${benefits || "N/A"}
 PLATAFORMA: ${platform || "geral"}
+${ctaInstruction}
 
 PERFIL DISC: ${discMap[discProfile] || discProfile}
 TRAÇO OCEAN: ${oceanMap[oceanTrait] || oceanTrait}
