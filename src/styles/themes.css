@@ -175,3 +175,78 @@
   transform: translateY(-4px);
   box-shadow: var(--theme-shadow-hover);
 }
+
+/* =============================================================
+   THEME 4: CLAYMORPHISM
+   Soft 3D look, double shadows, ultra-rounded corners, pastel tones
+   ============================================================= */
+[data-visual-theme="claymorphism"] {
+  --theme-radius-card: 1.5rem;
+  --theme-radius-section: 2.5rem;
+  --theme-radius-button: 1rem;
+  --theme-shadow-card:
+    8px 8px 16px rgba(0,0,0,0.08),
+    -4px -4px 12px rgba(255,255,255,0.6);
+  --theme-shadow-hover:
+    12px 12px 24px rgba(0,0,0,0.12),
+    -6px -6px 16px rgba(255,255,255,0.7);
+  --theme-shadow-inset:
+    inset 4px 4px 8px rgba(0,0,0,0.05),
+    inset -2px -2px 6px rgba(255,255,255,0.5);
+  --theme-section-padding: 3.5rem 1rem;
+  --theme-section-gap: 1.5rem;
+  --theme-heading-font: 'Inter', system-ui, sans-serif;
+  --theme-body-font: 'Inter', system-ui, sans-serif;
+  --theme-heading-weight: 800;
+  --theme-heading-tracking: -0.02em;
+  --theme-heading-line-height: 1.1;
+  --theme-label-tracking: 0.06em;
+  --theme-label-transform: none;
+  --theme-label-size: 0.75rem;
+  --theme-card-border: none;
+  --theme-card-bg: hsl(var(--card));
+  --theme-transition-duration: 280ms;
+  --theme-hero-size: clamp(1.75rem, 4.5vw, 3.25rem);
+  --theme-section-title-size: clamp(1.35rem, 2.8vw, 2.15rem);
+}
+
+@media (min-width: 768px) {
+  [data-visual-theme="claymorphism"] {
+    --theme-section-padding: 4.5rem 2rem;
+  }
+}
+
+/* Claymorphism-specific card override */
+[data-visual-theme="claymorphism"] .theme-card {
+  border: none;
+  background: hsl(var(--card));
+  box-shadow: var(--theme-shadow-card);
+  border-radius: var(--theme-radius-card);
+}
+[data-visual-theme="claymorphism"] .theme-card:hover {
+  box-shadow: var(--theme-shadow-hover);
+  transform: translateY(-2px);
+}
+
+/* Claymorphism buttons get a puffy look */
+[data-visual-theme="claymorphism"] .theme-button {
+  box-shadow:
+    4px 4px 10px rgba(0,0,0,0.1),
+    -2px -2px 6px rgba(255,255,255,0.5);
+  border-radius: var(--theme-radius-button);
+}
+[data-visual-theme="claymorphism"] .theme-button:hover {
+  box-shadow:
+    2px 2px 6px rgba(0,0,0,0.12),
+    -1px -1px 4px rgba(255,255,255,0.4);
+  transform: translateY(1px);
+}
+
+/* Claymorphism inset inputs */
+[data-visual-theme="claymorphism"] input,
+[data-visual-theme="claymorphism"] textarea,
+[data-visual-theme="claymorphism"] select {
+  box-shadow: var(--theme-shadow-inset);
+  border: none;
+  border-radius: 0.75rem;
+}
