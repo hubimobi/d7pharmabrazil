@@ -662,24 +662,28 @@ export default function ProfileCopyGenerator() {
                   <TableHead className="text-xs whitespace-nowrap">Campaign Name</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Ad Set Name</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Ad Name</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Audience</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Headline</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Description</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Primary Text</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Call to Action</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Platform</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Objective</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {buildCampaignRows().map((row, i) => (
                   <TableRow key={i}>
                     <TableCell className="text-xs font-medium max-w-[150px] truncate">{row.campaign}</TableCell>
-                    <TableCell className="text-xs max-w-[120px] truncate">{row.adSet}</TableCell>
+                    <TableCell className="text-xs max-w-[140px] truncate">{row.adSet}</TableCell>
                     <TableCell className="text-xs max-w-[100px] truncate">{row.adName}</TableCell>
+                    <TableCell className="text-xs max-w-[150px] truncate">{row.audience}</TableCell>
                     <TableCell className="text-xs max-w-[180px]">{row.headline}</TableCell>
                     <TableCell className="text-xs max-w-[180px]">{row.description}</TableCell>
                     <TableCell className="text-xs max-w-[250px] line-clamp-2">{row.primaryText}</TableCell>
                     <TableCell className="text-xs font-medium">{row.cta}</TableCell>
                     <TableCell className="text-xs">{row.platform}</TableCell>
+                    <TableCell className="text-xs">{row.objective}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
