@@ -147,7 +147,7 @@ Retorne JSON com esta estrutura EXATA:
   "desejo_central": "desejo central identificado"
 }
 
-Gere no mínimo 8 perguntas variadas, cobrindo diferentes perfis e fases.`;
+Gere EXATAMENTE ${(() => { const profiles = discProfile === "all" ? 4 : oceanTrait === "all" ? 5 : 1; const stages = funnelStage === "all" ? 4 : 1; return profiles * stages; })()} perguntas. Cada combinação perfil×fase deve ter EXATAMENTE 1 pergunta. NÃO repita combinações e NÃO omita nenhuma.`;
   }
 
   if (mode === "all_disc") {
