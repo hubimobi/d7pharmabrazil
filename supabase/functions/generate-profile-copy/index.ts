@@ -61,7 +61,7 @@ Tom: Adaptável ao contexto. Focado em dor, desejo ou resultado.`,
 };
 
 function buildUserPrompt(params: any): string {
-  const { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform, mode, copyMethod } = params;
+  const { productName, productDescription, benefits, discProfile, oceanTrait, funnelStage, platform, mode, copyMethod, ctaType } = params;
 
   const funnelText = funnelStage === "all"
     ? "TODAS as fases (Sem noção, Curioso, Pronto para comprar, Pós-compra)"
