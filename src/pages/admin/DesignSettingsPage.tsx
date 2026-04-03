@@ -63,6 +63,16 @@ const VISUAL_THEMES = [
     previewRadiusSmall: "rounded-sm",
     previewClass: "rounded-sm",
   },
+  {
+    value: "claymorphism",
+    label: "Claymorphism",
+    desc: "Visual 3D suave, sombras duplas, cantos ultra-arredondados e cores pastel — estilo app moderno.",
+    icon: <FlaskConical className="h-4 w-4 text-primary" />,
+    available: true,
+    previewRadius: "rounded-3xl",
+    previewRadiusSmall: "rounded-2xl",
+    previewClass: "rounded-3xl",
+  },
 ];
 
 const ColorInput = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
