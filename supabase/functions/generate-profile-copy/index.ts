@@ -189,7 +189,7 @@ PRODUTO: ${productName}
 DESCRIÇÃO: ${productDescription || "N/A"}
 BENEFÍCIOS: ${benefits || "N/A"}
 PLATAFORMA: ${platform || "geral"}
-FASE DO FUNIL: ${funnelText}
+FASE DO FUNIL: ${funnelText}${ctaType ? `\nCTA OBRIGATÓRIO: Use "${ctaType}" como call to action principal.` : ""}
 
 Para cada traço, adapte o tom, os gatilhos e a linguagem. Também estime uma performance de conversão de 0 a 100 para cada traço.
 
