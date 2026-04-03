@@ -60,6 +60,9 @@ export default function ToolsPage() {
         <TabsContent value="profile-copy" className="mt-6">
           <ProfileCopyGenerator />
         </TabsContent>
+        <TabsContent value="campaign-config" className="mt-6">
+          <CampaignConfigTool />
+        </TabsContent>
       </Tabs>
     </div>
   );
