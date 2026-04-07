@@ -54,10 +54,13 @@ const CheckoutPageV3 = () => {
   const [installments, setInstallments] = useState(1);
   const [cepLoading, setCepLoading] = useState(false);
   const [couponInput, setCouponInput] = useState("");
+  const [doctorSearch, setDoctorSearch] = useState("");
+  const [showDoctorResults, setShowDoctorResults] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
     cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "",
-    paymentMethod: "pix" as "pix" | "card" | "boleto",
+    doctor: "", paymentMethod: "pix" as "pix" | "card" | "boleto",
   });
   const abandonmentSaved = useRef(false);
 

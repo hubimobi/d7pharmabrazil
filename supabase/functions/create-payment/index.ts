@@ -153,12 +153,25 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
+    // Resolve doctor_id: use provided value, or fallback to coupon's linked doctor
+    let resolvedDoctorId = doctor_id || null;
+    if (!resolvedDoctorId && coupon_code) {
+      const { data: couponRow } = await supabaseAdmin
+        .from("coupons")
+        .select("doctor_id")
+        .eq("code", coupon_code)
+        .maybeSingle();
+      if (couponRow?.doctor_id) {
+        resolvedDoctorId = couponRow.doctor_id;
+      }
+    }
+
     const { data: order, error: orderError } = await supabaseAdmin.from("orders").insert({
       customer_name,
       customer_email,
       customer_phone,
       customer_cpf,
-      doctor_id: doctor_id || null,
+      doctor_id: resolvedDoctorId,
       items: items || [],
       total: Number(value),
       status: paymentData.status === "CONFIRMED" || paymentData.status === "RECEIVED" ? "paid" : "pending",
