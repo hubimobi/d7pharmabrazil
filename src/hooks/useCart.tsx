@@ -305,7 +305,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   const freeShipping = appliedCoupon?.free_shipping ?? false;
-  const total = Math.max(0, subtotal - discount - comboState.discount);
+
+  // Derive combo quantity from first combo item
+  const comboQuantity = comboState.productIds.length > 0
+    ? (items.find((i) => comboState.productIds.includes(i.product.id))?.quantity ?? 1)
+    : 0;
+
+  // Combo discount is cumulative: per-unit discount × quantity
+  const totalComboDiscount = comboState.discount * Math.max(comboQuantity, 1);
+  const total = Math.max(0, subtotal - discount - totalComboDiscount);
 
   return (
     <CartContext.Provider value={{
@@ -313,11 +321,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       total, coupon: appliedCoupon?.code ?? null, applyCoupon,
       discount, freeShipping,
       comboFreeShipping: comboState.freeShipping,
-      comboDiscount: comboState.discount,
+      comboDiscount: totalComboDiscount,
+      comboQuantity,
       setComboDiscount, setComboFreeShipping,
       comboProductIds: comboState.productIds,
       setComboProductIds,
-      removeCombo, duplicateCombo, addCombo,
+      removeCombo, setComboQuantity, duplicateCombo, addCombo,
     }}>
       {children}
     </CartContext.Provider>
