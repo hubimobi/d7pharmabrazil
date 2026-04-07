@@ -36,11 +36,13 @@ interface CartContextType {
   freeShipping: boolean;
   comboFreeShipping: boolean;
   comboDiscount: number;
+  comboQuantity: number;
   setComboDiscount: (v: number) => void;
   setComboFreeShipping: (v: boolean) => void;
   comboProductIds: string[];
   setComboProductIds: (ids: string[]) => void;
   removeCombo: () => void;
+  setComboQuantity: (qty: number) => void;
   duplicateCombo: () => void;
   addCombo: (products: Product[], discount: number, freeShipping: boolean, qty?: number) => void;
 }
@@ -145,6 +147,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (comboState.productIds.length === 0) return;
     setItems((prev) => prev.filter((i) => !comboState.productIds.includes(i.product.id)));
     setComboState({ productIds: [], discount: 0, freeShipping: false });
+  };
+
+  const setComboQuantity = (qty: number) => {
+    if (comboState.productIds.length === 0 || qty < 1) return;
+    setItems((prev) =>
+      prev.map((i) =>
+        comboState.productIds.includes(i.product.id)
+          ? { ...i, quantity: qty }
+          : i
+      )
+    );
   };
 
   const duplicateCombo = () => {
