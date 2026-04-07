@@ -96,7 +96,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setAppliedCoupon(null);
     setComboDiscount(0);
     setComboFreeShipping(false);
+    setComboProductIds([]);
     localStorage.removeItem(CART_STORAGE_KEY);
+  };
+
+  const removeCombo = () => {
+    if (comboProductIds.length === 0) return;
+    setItems((prev) => prev.filter((i) => !comboProductIds.includes(i.product.id)));
+    setComboDiscount(0);
+    setComboFreeShipping(false);
+    setComboProductIds([]);
+  };
+
+  const duplicateCombo = () => {
+    if (comboProductIds.length === 0) return;
+    setItems((prev) =>
+      prev.map((i) =>
+        comboProductIds.includes(i.product.id)
+          ? { ...i, quantity: i.quantity + 1 }
+          : i
+      )
+    );
   };
 
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
