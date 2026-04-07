@@ -276,7 +276,7 @@ export default function StoreSettingsPage() {
             </div>
             <div>
               <Label>Nome da Atendente Principal</Label>
-              <Input placeholder="Ex: Ana" value={(form as any).attendant_name || ""} onChange={(e) => update("attendant_name" as any, e.target.value)} />
+              <Input placeholder="Ex: Equipe de Atendimento" value={(form as any).attendant_name || ""} onChange={(e) => update("attendant_name" as any, e.target.value)} />
               <p className="text-xs text-muted-foreground mt-1">Nome usado como atendente nos templates WhatsApp</p>
             </div>
           </div>
