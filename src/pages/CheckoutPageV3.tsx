@@ -187,6 +187,11 @@ const CheckoutPageV3 = () => {
     if (!form.email.trim() || !form.email.includes("@")) { toast.error("Preencha um e-mail válido."); return; }
     if (form.cpf.replace(/\D/g, "").length !== 11) { toast.error("CPF inválido. Deve ter 11 dígitos."); return; }
     if (!form.phone.trim()) { toast.error("Preencha seu telefone."); return; }
+    const prescriberRequired = (storeSettings as any)?.checkout_prescriber_required !== false;
+    if (prescriberRequired && !form.doctor && !selectedDoctorId) {
+      toast.error("Selecione um Prescritor ou marque 'Não Sei'.");
+      return;
+    }
     // Require shipping selection unless free shipping
     const hasFreeShipping = freeShipping || comboFreeShipping || qualifiesForFreeShipping;
     if (!hasFreeShipping && !selectedShipping) { toast.error("Selecione uma opção de frete antes de finalizar."); return; }
@@ -202,7 +207,7 @@ const CheckoutPageV3 = () => {
       const payload: any = {
         customer_name: form.name, customer_email: form.email, customer_cpf: form.cpf, customer_phone: form.phone,
         billing_type: form.paymentMethod === "pix" ? "PIX" : form.paymentMethod === "boleto" ? "BOLETO" : "CREDIT_CARD",
-        value: paymentValue, items: orderItems, doctor_id: getActiveRef()?.doctorId || null,
+        value: paymentValue, items: orderItems, doctor_id: resolveDoctorId(),
         shipping_address: { street: form.street, number: form.number, complement: form.complement, neighborhood: form.neighborhood, city: form.city, state: form.state, cep: form.cep },
         coupon_code: coupon || null,
       };
