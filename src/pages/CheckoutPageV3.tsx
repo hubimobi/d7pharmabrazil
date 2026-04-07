@@ -45,7 +45,7 @@ const CheckoutPageV3 = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { savedCustomer, saveCustomer } = useSavedCustomer();
-  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount, comboProductIds, removeCombo, duplicateCombo } = useCart();
+  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount, comboProductIds, comboQuantity, setComboQuantity, removeCombo, duplicateCombo } = useCart();
   const { data: storeSettings } = useStoreSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { shippingOptions, shippingLoading, selectedShipping, setSelectedShipping, calculateShipping } = useAutoShipping();
@@ -271,9 +271,13 @@ const CheckoutPageV3 = () => {
                 <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-3 mb-2">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-primary uppercase tracking-wide">🔥 Combo</span>
-                    <div className="flex gap-2">
-                      <button type="button" onClick={duplicateCombo} className="text-xs text-primary hover:underline font-medium">Duplicar</button>
-                      <button type="button" onClick={removeCombo} className="text-xs text-destructive hover:underline font-medium">Remover Combo</button>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <button type="button" onClick={() => setComboQuantity(comboQuantity - 1)} disabled={comboQuantity <= 1} className="rounded border border-border p-1 hover:bg-muted disabled:opacity-30"><Minus className="h-3.5 w-3.5" /></button>
+                        <span className="w-6 text-center text-sm font-semibold">{comboQuantity}</span>
+                        <button type="button" onClick={() => setComboQuantity(comboQuantity + 1)} className="rounded border border-border p-1 hover:bg-muted"><Plus className="h-3.5 w-3.5" /></button>
+                      </div>
+                      <button type="button" onClick={removeCombo} className="rounded p-1.5 text-destructive hover:bg-destructive/10" title="Remover Combo"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </div>
                   {items.filter((i) => comboProductIds.includes(i.product.id)).map((item) => (
@@ -283,7 +287,7 @@ const CheckoutPageV3 = () => {
                         <p className="text-sm font-medium truncate">{item.product.name}</p>
                         <p className="text-sm font-bold text-primary">R$ {item.product.price.toFixed(2).replace(".", ",")}</p>
                       </div>
-                      <span className="text-sm text-muted-foreground">Qtd: {item.quantity}</span>
+                      <span className="text-sm text-muted-foreground">×{item.quantity}</span>
                     </div>
                   ))}
                 </div>

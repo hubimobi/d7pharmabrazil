@@ -36,11 +36,13 @@ interface CartContextType {
   freeShipping: boolean;
   comboFreeShipping: boolean;
   comboDiscount: number;
+  comboQuantity: number;
   setComboDiscount: (v: number) => void;
   setComboFreeShipping: (v: boolean) => void;
   comboProductIds: string[];
   setComboProductIds: (ids: string[]) => void;
   removeCombo: () => void;
+  setComboQuantity: (qty: number) => void;
   duplicateCombo: () => void;
   addCombo: (products: Product[], discount: number, freeShipping: boolean, qty?: number) => void;
 }
@@ -145,6 +147,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (comboState.productIds.length === 0) return;
     setItems((prev) => prev.filter((i) => !comboState.productIds.includes(i.product.id)));
     setComboState({ productIds: [], discount: 0, freeShipping: false });
+  };
+
+  const setComboQuantity = (qty: number) => {
+    if (comboState.productIds.length === 0 || qty < 1) return;
+    setItems((prev) =>
+      prev.map((i) =>
+        comboState.productIds.includes(i.product.id)
+          ? { ...i, quantity: qty }
+          : i
+      )
+    );
   };
 
   const duplicateCombo = () => {
@@ -292,7 +305,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   const freeShipping = appliedCoupon?.free_shipping ?? false;
-  const total = Math.max(0, subtotal - discount - comboState.discount);
+
+  // Derive combo quantity from first combo item
+  const comboQuantity = comboState.productIds.length > 0
+    ? (items.find((i) => comboState.productIds.includes(i.product.id))?.quantity ?? 1)
+    : 0;
+
+  // Combo discount is cumulative: per-unit discount × quantity
+  const totalComboDiscount = comboState.discount * Math.max(comboQuantity, 1);
+  const total = Math.max(0, subtotal - discount - totalComboDiscount);
 
   return (
     <CartContext.Provider value={{
@@ -300,11 +321,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       total, coupon: appliedCoupon?.code ?? null, applyCoupon,
       discount, freeShipping,
       comboFreeShipping: comboState.freeShipping,
-      comboDiscount: comboState.discount,
+      comboDiscount: totalComboDiscount,
+      comboQuantity,
       setComboDiscount, setComboFreeShipping,
       comboProductIds: comboState.productIds,
       setComboProductIds,
-      removeCombo, duplicateCombo, addCombo,
+      removeCombo, setComboQuantity, duplicateCombo, addCombo,
     }}>
       {children}
     </CartContext.Provider>

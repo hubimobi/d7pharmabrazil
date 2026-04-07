@@ -57,7 +57,7 @@ const CheckoutPageV2 = () => {
   const [searchParams] = useSearchParams();
   const isOneClick = searchParams.get("oneclick") === "1";
   const { savedCustomer, saveCustomer } = useSavedCustomer();
-  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount, comboProductIds, removeCombo, duplicateCombo } = useCart();
+  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount, comboProductIds, comboQuantity, setComboQuantity, removeCombo, duplicateCombo } = useCart();
   const { data: storeSettings } = useStoreSettings();
   const [step, setStep] = useState(1);
   const [couponInput, setCouponInput] = useState("");
@@ -738,9 +738,13 @@ const CheckoutPageV2 = () => {
                   <div className="border-b border-primary/20 bg-primary/5 p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-primary uppercase tracking-wide">🔥 Combo</span>
-                      <div className="flex gap-2">
-                        <button onClick={duplicateCombo} className="text-xs text-primary hover:underline font-medium">Duplicar</button>
-                        <button onClick={removeCombo} className="text-xs text-destructive hover:underline font-medium">Remover</button>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => setComboQuantity(comboQuantity - 1)} disabled={comboQuantity <= 1} className="flex h-6 w-6 items-center justify-center rounded-md border border-border text-xs hover:border-primary disabled:opacity-30"><Minus className="h-3 w-3" /></button>
+                          <span className="text-sm font-semibold w-5 text-center">{comboQuantity}</span>
+                          <button onClick={() => setComboQuantity(comboQuantity + 1)} className="flex h-6 w-6 items-center justify-center rounded-md border border-border text-xs hover:border-primary"><Plus className="h-3 w-3" /></button>
+                        </div>
+                        <button onClick={removeCombo} className="rounded p-1 text-destructive hover:bg-destructive/10" title="Remover Combo"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </div>
                     {items.filter((i) => comboProductIds.includes(i.product.id)).map((item) => (
@@ -748,7 +752,7 @@ const CheckoutPageV2 = () => {
                         <img src={item.product.image} alt={item.product.name} className="h-10 w-10 rounded-lg object-contain bg-muted p-1 shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-foreground truncate">{item.product.name}</p>
-                          <span className="text-xs text-muted-foreground">Qtd: {item.quantity}</span>
+                          <span className="text-xs text-muted-foreground">×{item.quantity}</span>
                         </div>
                         <p className="text-sm font-bold text-foreground shrink-0">R$ {(item.product.price * item.quantity).toFixed(2).replace(".", ",")}</p>
                       </div>
