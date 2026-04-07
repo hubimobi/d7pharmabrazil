@@ -31,7 +31,7 @@ export default function ComboDetail() {
   const navigate = useNavigate();
   const { data: combos, isLoading } = useCombos();
   const { data: allProducts } = useProducts();
-  const { addItem, setComboDiscount } = useCart();
+  const { addCombo } = useCart();
   const { data: settings } = useStoreSettings();
   const [searchParams] = useSearchParams();
 
@@ -120,21 +120,15 @@ export default function ComboDetail() {
   const totalLength = comboProducts.reduce((s, p) => s + (p.length || 20), 0);
 
   const handleAddCombo = () => {
-    comboProducts.forEach((p) => addItem(p, qty));
     const individualTotal = comboProducts.reduce((sum, p) => sum + p.price * qty, 0);
     const comboDiscountValue = Math.max(0, individualTotal - combo.price * qty);
-    if (comboDiscountValue > 0) {
-      setComboDiscount(comboDiscountValue);
-    }
+    addCombo(comboProducts, comboDiscountValue, hasFreeShipping, qty);
   };
 
   const handleQuickBuy = () => {
-    comboProducts.forEach((p) => addItem(p, qty));
     const individualTotal = comboProducts.reduce((sum, p) => sum + p.price * qty, 0);
     const comboDiscountValue = Math.max(0, individualTotal - combo.price * qty);
-    if (comboDiscountValue > 0) {
-      setComboDiscount(comboDiscountValue);
-    }
+    addCombo(comboProducts, comboDiscountValue, hasFreeShipping, qty);
     const cupom = searchParams.get("cupom") || searchParams.get("Cupom") || searchParams.get("CUPOM");
     const cupomParam = cupom ? `?cupom=${encodeURIComponent(cupom)}` : "";
     navigate(`/checkout${cupomParam}`);

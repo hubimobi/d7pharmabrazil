@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function ComboUpsell() {
   const { data: allProducts } = useProducts();
-  const { items, addItem, setComboDiscount, setComboFreeShipping, setComboProductIds } = useCart();
+  const { items, addCombo } = useCart();
   const [accepted, setAccepted] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [savings, setSavings] = useState(0);
@@ -68,19 +68,7 @@ export default function ComboUpsell() {
   const totalSavings = originalTotal * (discountPercent / 100);
 
   const handleAccept = () => {
-    // Add missing products to cart
-    comboProducts.forEach((p) => {
-      if (!cartIds.has(p.id)) {
-        addItem(p, 1);
-      }
-    });
-    // Track combo product IDs
-    setComboProductIds(comboProducts.map((p) => p.id));
-    // Apply real combo discount to cart total
-    setComboDiscount(totalSavings);
-    if (comboSettings.combo_offer_free_shipping) {
-      setComboFreeShipping(true);
-    }
+    addCombo(comboProducts, totalSavings, !!comboSettings.combo_offer_free_shipping);
     setSavings(totalSavings);
     setAccepted(true);
   };
