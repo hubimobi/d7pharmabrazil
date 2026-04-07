@@ -65,10 +65,6 @@ export default function PopupBanner() {
       if (error) throw error;
       setSubmitted(true);
       toast.success("Cadastro realizado com sucesso!");
-      setTimeout(() => {
-        setOpen(false);
-        markDismissed();
-      }, 2000);
     } catch {
       toast.error("Erro ao cadastrar. Tente novamente.");
     } finally {
