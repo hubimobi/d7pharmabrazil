@@ -931,6 +931,7 @@ const CheckoutPageV2 = () => {
                 </div>
               </div>
             </div>
+            </>
           )}
         </div>
       </main>
