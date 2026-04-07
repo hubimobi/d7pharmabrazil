@@ -37,8 +37,6 @@ const FinalCTA = () => {
       console.error("Mailing insert error:", err);
       toast.error("Erro ao cadastrar. Tente novamente.");
     } finally {
-      toast.error("Erro ao cadastrar. Tente novamente.");
-    } finally {
       setLoading(false);
     }
   };
