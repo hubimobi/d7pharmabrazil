@@ -65,10 +65,6 @@ export default function PopupBanner() {
       if (error) throw error;
       setSubmitted(true);
       toast.success("Cadastro realizado com sucesso!");
-      setTimeout(() => {
-        setOpen(false);
-        markDismissed();
-      }, 2000);
     } catch {
       toast.error("Erro ao cadastrar. Tente novamente.");
     } finally {
@@ -116,8 +112,13 @@ export default function PopupBanner() {
               </Button>
             </form>
           ) : submitted ? (
-            <div className="text-center py-4">
-              <p className="text-primary font-semibold">✓ Cadastrado com sucesso!</p>
+            <div className="text-center py-4 space-y-3">
+              <p className="text-primary font-semibold text-lg">✓ Cadastrado com sucesso!</p>
+              <div className="rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-4">
+                <p className="text-sm text-muted-foreground mb-1">Você ganhou <strong className="text-foreground">10% de Desconto</strong> em sua primeira compra!</p>
+                <p className="text-2xl font-bold text-primary tracking-widest my-2">DESCONTO10</p>
+                <p className="text-xs text-muted-foreground">⚠️ Importante! Não cumulativo com outros descontos.</p>
+              </div>
             </div>
           ) : null}
         </div>
