@@ -725,6 +725,35 @@ const CheckoutPageV2 = () => {
 
           {/* RIGHT: Sidebar */}
           {step <= 3 && (
+            {/* Mobile order summary */}
+            <div className="lg:hidden rounded-lg border border-border bg-card p-4 mb-4">
+              <h3 className="text-sm font-semibold mb-2">Resumo do Pedido</h3>
+              <div className="space-y-1.5 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>R$ {subtotal.toFixed(2).replace(".", ",")}</span></div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-success"><span>Desconto ({coupon})</span><span>-R$ {discount.toFixed(2).replace(".", ",")}</span></div>
+                )}
+                {comboDiscount > 0 && !coupon && (
+                  <div className="flex justify-between text-success"><span>Desconto Combo</span><span>-R$ {comboDiscount.toFixed(2).replace(".", ",")}</span></div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Frete</span>
+                  <span className={shipping === 0 && (qualifiesForFreeShipping || freeShipping || comboFreeShipping || selectedShipping) ? "font-semibold text-success" : ""}>
+                    {qualifiesForFreeShipping || freeShipping || comboFreeShipping ? "Grátis" : selectedShipping ? (shipping === 0 ? "Grátis" : `R$ ${shipping.toFixed(2).replace(".", ",")}`) : "—"}
+                  </span>
+                </div>
+                <div className="border-t border-border pt-2 flex justify-between font-bold">
+                  <span>Total</span>
+                  <span className="text-primary">R$ {finalTotal.toFixed(2).replace(".", ",")}</span>
+                </div>
+                {form.paymentMethod === "pix" && (
+                  <div className="rounded-lg bg-success/10 border border-success/30 p-2 text-center mt-1">
+                    <p className="text-xs font-medium text-success">🎉 No Pix: R$ {pixTotal.toFixed(2).replace(".", ",")} (5% OFF)</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Desktop sidebar */}
             <div className="hidden lg:block lg:sticky lg:top-4">
               <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
                 {/* Header */}
