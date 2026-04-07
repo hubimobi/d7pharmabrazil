@@ -17,6 +17,12 @@ interface AppliedCoupon {
   coupon_id?: string;
 }
 
+interface ComboState {
+  productIds: string[];
+  discount: number;
+  freeShipping: boolean;
+}
+
 interface CartContextType {
   items: CartItem[];
   addItem: (product: Product, qty?: number) => void;
@@ -36,11 +42,13 @@ interface CartContextType {
   setComboProductIds: (ids: string[]) => void;
   removeCombo: () => void;
   duplicateCombo: () => void;
+  addCombo: (products: Product[], discount: number, freeShipping: boolean, qty?: number) => void;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
 
 const CART_STORAGE_KEY = "d7pharma_cart";
+const COMBO_STORAGE_KEY = "d7pharma_combo";
 
 function loadCartFromStorage(): CartItem[] {
   try {
@@ -59,17 +67,47 @@ function saveCartToStorage(items: CartItem[]) {
   } catch {}
 }
 
+function loadComboFromStorage(): ComboState {
+  try {
+    const stored = localStorage.getItem(COMBO_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed && Array.isArray(parsed.productIds)) return parsed;
+    }
+  } catch {}
+  return { productIds: [], discount: 0, freeShipping: false };
+}
+
+function saveComboToStorage(combo: ComboState) {
+  try {
+    localStorage.setItem(COMBO_STORAGE_KEY, JSON.stringify(combo));
+  } catch {}
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => loadCartFromStorage());
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
-  const [comboDiscount, setComboDiscount] = useState(0);
-  const [comboFreeShipping, setComboFreeShipping] = useState(false);
-  const [comboProductIds, setComboProductIds] = useState<string[]>([]);
+  const [comboState, setComboState] = useState<ComboState>(() => loadComboFromStorage());
 
   // Persist cart to localStorage
   useEffect(() => {
     saveCartToStorage(items);
   }, [items]);
+
+  // Persist combo state to localStorage
+  useEffect(() => {
+    saveComboToStorage(comboState);
+  }, [comboState]);
+
+  // Validate combo state: if combo products are no longer in the cart, clear combo
+  useEffect(() => {
+    if (comboState.productIds.length === 0) return;
+    const cartIds = new Set(items.map((i) => i.product.id));
+    const allPresent = comboState.productIds.every((id) => cartIds.has(id));
+    if (!allPresent) {
+      setComboState({ productIds: [], discount: 0, freeShipping: false });
+    }
+  }, [items, comboState.productIds]);
 
   const addItem = (product: Product, qty = 1) => {
     setItems((prev) => {
@@ -84,13 +122,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const removeItem = (productId: string) => {
     // Prevent removing individual combo items
-    if (comboProductIds.includes(productId)) return;
+    if (comboState.productIds.includes(productId)) return;
     setItems((prev) => prev.filter((i) => i.product.id !== productId));
   };
 
   const updateQuantity = (productId: string, qty: number) => {
     // Prevent changing individual combo item quantities
-    if (comboProductIds.includes(productId)) return;
+    if (comboState.productIds.includes(productId)) return;
     if (qty <= 0) return removeItem(productId);
     setItems((prev) => prev.map((i) => i.product.id === productId ? { ...i, quantity: qty } : i));
   };
@@ -98,29 +136,71 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearCart = () => {
     setItems([]);
     setAppliedCoupon(null);
-    setComboDiscount(0);
-    setComboFreeShipping(false);
-    setComboProductIds([]);
+    setComboState({ productIds: [], discount: 0, freeShipping: false });
     localStorage.removeItem(CART_STORAGE_KEY);
+    localStorage.removeItem(COMBO_STORAGE_KEY);
   };
 
   const removeCombo = () => {
-    if (comboProductIds.length === 0) return;
-    setItems((prev) => prev.filter((i) => !comboProductIds.includes(i.product.id)));
-    setComboDiscount(0);
-    setComboFreeShipping(false);
-    setComboProductIds([]);
+    if (comboState.productIds.length === 0) return;
+    setItems((prev) => prev.filter((i) => !comboState.productIds.includes(i.product.id)));
+    setComboState({ productIds: [], discount: 0, freeShipping: false });
   };
 
   const duplicateCombo = () => {
-    if (comboProductIds.length === 0) return;
+    if (comboState.productIds.length === 0) return;
     setItems((prev) =>
       prev.map((i) =>
-        comboProductIds.includes(i.product.id)
+        comboState.productIds.includes(i.product.id)
           ? { ...i, quantity: i.quantity + 1 }
           : i
       )
     );
+  };
+
+  // Centralized combo addition
+  const addCombo = (products: Product[], discount: number, freeShipping: boolean, qty = 1) => {
+    // Remove any existing combo first
+    if (comboState.productIds.length > 0) {
+      setItems((prev) => prev.filter((i) => !comboState.productIds.includes(i.product.id)));
+    }
+
+    // Add all combo products
+    setItems((prev) => {
+      let next = [...prev];
+      for (const p of products) {
+        const existing = next.find((i) => i.product.id === p.id);
+        if (existing) {
+          next = next.map((i) => i.product.id === p.id ? { ...i, quantity: qty } : i);
+        } else {
+          next.push({ product: p, quantity: qty });
+        }
+      }
+      return next;
+    });
+
+    // Register combo state (persisted)
+    setComboState({
+      productIds: products.map((p) => p.id),
+      discount,
+      freeShipping,
+    });
+
+    // Reset coupon — no stacking discounts
+    setAppliedCoupon(null);
+  };
+
+  // Setters that also update persisted state
+  const setComboDiscount = (v: number) => {
+    setComboState((prev) => ({ ...prev, discount: v }));
+  };
+
+  const setComboFreeShipping = (v: boolean) => {
+    setComboState((prev) => ({ ...prev, freeShipping: v }));
+  };
+
+  const setComboProductIds = (ids: string[]) => {
+    setComboState((prev) => ({ ...prev, productIds: ids }));
   };
 
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
@@ -183,9 +263,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       });
 
       // Reset combo discount — no stacking discounts
-      setComboDiscount(0);
+      setComboState((prev) => ({ ...prev, discount: 0 }));
 
-      // DO NOT increment used_count here - will be done after payment confirmation
       toast.success("Cupom aplicado com sucesso!");
       return true;
     } catch {
@@ -213,17 +292,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   const freeShipping = appliedCoupon?.free_shipping ?? false;
-  const total = Math.max(0, subtotal - discount - comboDiscount);
+  const total = Math.max(0, subtotal - discount - comboState.discount);
 
   return (
     <CartContext.Provider value={{
       items, addItem, removeItem, updateQuantity, clearCart,
       total, coupon: appliedCoupon?.code ?? null, applyCoupon,
       discount, freeShipping,
-      comboFreeShipping, comboDiscount,
+      comboFreeShipping: comboState.freeShipping,
+      comboDiscount: comboState.discount,
       setComboDiscount, setComboFreeShipping,
-      comboProductIds, setComboProductIds,
-      removeCombo, duplicateCombo,
+      comboProductIds: comboState.productIds,
+      setComboProductIds,
+      removeCombo, duplicateCombo, addCombo,
     }}>
       {children}
     </CartContext.Provider>
