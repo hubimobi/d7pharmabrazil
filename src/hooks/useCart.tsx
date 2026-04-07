@@ -64,6 +64,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [comboDiscount, setComboDiscount] = useState(0);
   const [comboFreeShipping, setComboFreeShipping] = useState(false);
+  const [comboProductIds, setComboProductIds] = useState<string[]>([]);
 
   // Persist cart to localStorage
   useEffect(() => {
