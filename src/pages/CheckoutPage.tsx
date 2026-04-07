@@ -797,6 +797,7 @@ const CheckoutPage = () => {
           </div>
 
           {step <= 2 && (
+            <>
              {/* Mobile order summary */}
              <div className="lg:hidden rounded-lg border border-border bg-card p-4 mb-4">
                <h3 className="text-sm font-semibold mb-2">Resumo do Pedido</h3>
