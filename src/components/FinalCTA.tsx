@@ -15,7 +15,6 @@ const FinalCTA = () => {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<Step>("email");
-  const [leadId, setLeadId] = useState<string | null>(null);
 
   const bgColor = (settings as any)?.mailing_bg_color || "#08090A";
   const buttonColor = (settings as any)?.mailing_button_color || "#e53e3e";
