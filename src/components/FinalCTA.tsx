@@ -28,15 +28,15 @@ const FinalCTA = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("popup_leads" as any)
-        .insert({ email: email.trim(), source: "mailing_capture" } as any)
-        .select("id")
-        .single();
+        .insert({ email: email.trim(), source: "mailing_capture", tags: JSON.stringify(["mailing_capture"]) } as any);
       if (error) throw error;
-      setLeadId((data as any)?.id || null);
       setStep("extra");
-    } catch {
+    } catch (err) {
+      console.error("Mailing insert error:", err);
+      toast.error("Erro ao cadastrar. Tente novamente.");
+    } finally {
       toast.error("Erro ao cadastrar. Tente novamente.");
     } finally {
       setLoading(false);
@@ -49,12 +49,12 @@ const FinalCTA = () => {
 
     setLoading(true);
     try {
-      if (leadId) {
-        await supabase
-          .from("popup_leads" as any)
-          .update({ name: name.trim(), phone: phone.trim() } as any)
-          .eq("id", leadId);
-      }
+      // Update by email since we can't select the id back
+      await supabase
+        .from("popup_leads" as any)
+        .update({ name: name.trim(), phone: phone.trim() } as any)
+        .eq("email", email.trim())
+        .eq("source", "mailing_capture");
       setStep("done");
     } catch {
       toast.error("Erro ao salvar. Tente novamente.");
