@@ -32,6 +32,10 @@ interface CartContextType {
   comboDiscount: number;
   setComboDiscount: (v: number) => void;
   setComboFreeShipping: (v: boolean) => void;
+  comboProductIds: string[];
+  setComboProductIds: (ids: string[]) => void;
+  removeCombo: () => void;
+  duplicateCombo: () => void;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
