@@ -366,6 +366,41 @@ const CheckoutPageV3 = () => {
               <div><Label className="text-xs">Email *</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-9 text-sm" /></div>
               <div><Label className="text-xs">Telefone *</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" inputMode="tel" className="h-9 text-sm" /></div>
             </div>
+            {/* Prescriber field */}
+            {(storeSettings as any)?.checkout_prescriber_required !== false && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">Prescritor / Médico</Label>
+                <div className="relative">
+                  <Input
+                    placeholder="Buscar por nome, cidade ou estado..."
+                    value={form.doctor || doctorSearch}
+                    onChange={(e) => { setDoctorSearch(e.target.value); setForm({ ...form, doctor: "" }); setSelectedDoctorId(null); setShowDoctorResults(true); }}
+                    disabled={selectedDoctorId === "sem-prescritor"}
+                    className="h-9 text-sm"
+                  />
+                  {showDoctorResults && doctorSearch && (
+                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
+                      {filteredDoctors.map((d) => (
+                        <button key={d.id} type="button" className="w-full px-4 py-2 text-left text-sm hover:bg-muted"
+                          onClick={() => { setForm({ ...form, doctor: d.name }); setSelectedDoctorId(d.id); setDoctorSearch(""); setShowDoctorResults(false); }}>
+                          <span className="font-medium">{d.name}</span>
+                          {d.specialty && <span className="text-muted-foreground"> — {d.specialty}</span>}
+                          {d.city && <span className="text-muted-foreground text-xs"> ({d.city}/{d.state})</span>}
+                        </button>
+                      ))}
+                      {filteredDoctors.length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">Nenhum prescritor encontrado.</p>}
+                    </div>
+                  )}
+                </div>
+                <Button type="button" variant={selectedDoctorId === "sem-prescritor" ? "default" : "outline"} size="sm" className="mt-2"
+                  onClick={() => {
+                    if (selectedDoctorId === "sem-prescritor") { setSelectedDoctorId(null); setForm({ ...form, doctor: "" }); setDoctorSearch(""); }
+                    else { setSelectedDoctorId("sem-prescritor"); setForm({ ...form, doctor: "Não sei meu prescritor" }); setDoctorSearch(""); setShowDoctorResults(false); }
+                  }}>
+                  {selectedDoctorId === "sem-prescritor" ? "✓ Marcado: Não Sei" : "Não Sei"}
+                </Button>
+              </div>
+            )}
           </section>
 
           {/* Address + Shipping */}
