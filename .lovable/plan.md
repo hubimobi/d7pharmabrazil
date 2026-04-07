@@ -1,110 +1,100 @@
 
-Objetivo: corrigir de forma definitiva o erro em que itens de combo ainda podem ser removidos individualmente no checkout.
+Objetivo: corrigir o comportamento do prescritor no checkout para ficar exatamente como você já tinha pedido, sem mexer no que já está funcionando.
 
-1. Causa raiz confirmada
-- O bloqueio atual depende de `comboProductIds` no `useCart`.
-- Hoje esse estado:
-  - não é persistido no `localStorage`
-  - só é preenchido no `ComboUpsell`
-  - não é preenchido quando o combo é adicionado por `ComboCard` ou `ComboDetail`
-- Resultado: ao entrar no checkout por outras origens, ou após recarregar a página, os produtos do combo deixam de ser reconhecidos como combo e voltam a exibir/remover como itens normais.
+1. O que foi verificado
+- A configuração já existe no admin:
+  - `src/pages/admin/CheckoutSettingsPage.tsx`
+  - campo: `checkout_prescriber_required`
+  - descrição atual já diz que, ao desativar, o vínculo deve ocorrer por cupom ou link.
+- Nos checkouts V1 e V2:
+  - o campo de prescritor só aparece quando a configuração está ativa
+  - a validação obrigatória também só acontece quando ativa
+- No checkout V3:
+  - hoje não segue a mesma regra
+  - ele não usa a configuração para decidir exibição/obrigatoriedade
+  - ele força `doctor_id` apenas por link (`getActiveRef()?.doctorId`)
+  - isso deixa o comportamento inconsistente entre os 3 modelos
 
-2. Correção estrutural no carrinho
-Vou reestruturar o estado do combo no `useCart` para ele não depender só de memória temporária:
-- Persistir também os metadados do combo no storage
-- Salvar pelo menos:
-  - `comboProductIds`
-  - identificador do combo/grupo
-  - quantidade do combo, quando aplicável
-  - desconto do combo
-  - frete grátis do combo
-- Na inicialização do carrinho, restaurar esses dados junto com os itens.
+2. Problema real encontrado
+Hoje a lógica está incompleta:
+- V1 e V2 escondem/validam corretamente o campo quando desativado
+- mas o vínculo automático por cupom não está garantido no frontend
+- V3 está desalinhado com o comportamento dos outros checkouts
+- resultado: o requisito “desativar campo obrigatório, mas manter vínculo automático por link ou cupom” não está implementado de forma uniforme
 
-3. Corrigir todas as entradas de combo
-Vou padronizar a adição de combo em todos os pontos:
-- `src/components/checkout/ComboUpsell.tsx`
-- `src/components/ComboCard.tsx`
-- `src/pages/ComboDetail.tsx`
+3. Ajuste que vou fazer
+Vou padronizar os 3 checkouts com esta regra:
 
-Em vez de cada tela apenas adicionar produtos e setar desconto isolado, vou usar um fluxo único para:
-- registrar quais produtos pertencem ao combo
-- registrar o desconto correto
-- registrar se o combo concede frete grátis
-- manter a consistência ao duplicar/remover o combo
-
-4. Melhorar a modelagem do combo no carrinho
-Em vez de só guardar lista solta de IDs, vou tratar combo como um grupo lógico:
 ```text
-comboState
-├─ productIds[]
-├─ discount
-├─ freeShipping
-├─ quantity
-└─ source/type
-```
-Isso evita falhas quando:
-- o usuário recarrega a página
-- entra no checkout por rota diferente
-- duplica o combo
-- adiciona produto comum junto com combo
+Se "Prescritor obrigatório" = ativo
+- mostrar campo de prescritor
+- exigir seleção manual ou "não sei"
 
-5. Ajustar a renderização dos 3 checkouts
-Vou revisar:
+Se "Prescritor obrigatório" = desativado
+- esconder campo de prescritor
+- não exigir seleção manual
+- manter vínculo automático se vier por:
+  - link com prescritor
+  - cupom vinculado ao prescritor
+```
+
+4. Como isso será aplicado
+A. Revisar os 3 checkouts
 - `src/pages/CheckoutPage.tsx`
 - `src/pages/CheckoutPageV2.tsx`
 - `src/pages/CheckoutPageV3.tsx`
 
-Para garantir que:
-- itens de combo nunca caiam na lista de “produtos comuns”
-- não apareça botão individual de remover para item de combo
-- não apareça controle individual de `+ / -` para item de combo
-- só existam ações:
-  - duplicar combo
-  - remover combo inteiro
+Vou alinhar:
+- renderização do campo
+- validação antes de avançar/finalizar
+- montagem do `doctor_id` enviado no pagamento
 
-6. Blindagem extra na lógica
-Além do ajuste visual, vou reforçar as regras no hook:
-- `removeItem(productId)` continua bloqueando item de combo
-- `updateQuantity(productId, qty)` continua bloqueando item de combo
-- vou adicionar validações para limpar estado quebrado quando:
-  - os IDs do combo não estiverem mais presentes no carrinho
-  - parte do combo sumir por inconsistência
-- isso evita falsos estados após navegação ou reload.
+B. Criar resolução única do prescritor antes do pagamento
+Em vez de cada checkout decidir isso de um jeito, vou usar a mesma prioridade lógica:
 
-7. Compatibilidade com combos da vitrine
-Hoje há dois tipos de combo no projeto:
-- combos reais de `product_combos`
-- combo/upsell configurado em `store_settings`
+```text
+1. Se veio por link com prescritor: usar esse prescritor
+2. Senão, se o usuário selecionou prescritor manualmente: usar o selecionado
+3. Senão, se houver cupom aplicado vinculado a prescritor: usar o prescritor do cupom
+4. Senão: null
+```
 
-Vou manter compatibilidade com ambos, mas com a mesma estrutura no carrinho, para o checkout não depender de “de onde veio” o combo.
+5. O que precisa ser ajustado tecnicamente
+Frontend
+- padronizar uma função/trecho compartilhado de resolução de `doctor_id`
+- garantir que V3 respeite `checkout_prescriber_required`
+- manter o preenchimento automático por link sem exibir campo quando a configuração estiver desativada
+- ao aplicar cupom, permitir obter o `doctor_id` vinculado ao cupom para o envio do pedido
 
-8. Validação que vou fazer após implementar
-Vou testar estes cenários:
-- adicionar combo pela vitrine e abrir checkout
-- adicionar combo pela página de detalhe do combo e abrir checkout
-- aceitar combo upsell no checkout
-- recarregar a página do checkout com combo no carrinho
-- tentar remover 1 item do combo
-- tentar alterar quantidade de 1 item do combo
-- duplicar combo
-- remover combo inteiro
-- usar combo junto com produtos avulsos
+Backend
+- revisar `supabase/functions/create-payment/index.ts`
+- idealmente garantir uma blindagem extra no backend:
+  - se chegar `coupon_code` e não vier `doctor_id`
+  - resolver o prescritor do cupom antes de salvar o pedido
+- isso evita erro mesmo se algum checkout falhar no frontend
 
-9. Resultado esperado
-Após a correção:
-- não será mais possível excluir item individual do combo
-- não será mais possível alterar quantidade individual do combo
-- o combo continuará protegido mesmo após reload
-- o comportamento ficará igual nos 3 modelos de checkout
+6. Resultado esperado
+Depois do ajuste:
+- o botão/configuração do prescritor no admin passa a funcionar de verdade nos 3 checkouts
+- quando desativado:
+  - o campo some
+  - o cliente não precisa preencher
+  - pedidos por link continuam vinculados
+  - pedidos por cupom vinculado também continuam vinculados
+- quando ativado:
+  - o fluxo continua exigindo prescritor normalmente
+
+7. Arquivos envolvidos
+- `src/pages/admin/CheckoutSettingsPage.tsx` (somente conferência, sem mudança estrutural)
+- `src/pages/CheckoutPage.tsx`
+- `src/pages/CheckoutPageV2.tsx`
+- `src/pages/CheckoutPageV3.tsx`
+- `supabase/functions/create-payment/index.ts`
+
+8. Observação importante
+O problema não é só visual. A interface do admin já sugere um comportamento que hoje o checkout entrega só parcialmente. A correção certa é alinhar regra de negócio + envio do pedido, não apenas esconder o campo.
 
 Detalhes técnicos
-- Arquivos principais envolvidos:
-  - `src/hooks/useCart.tsx`
-  - `src/components/ComboCard.tsx`
-  - `src/pages/ComboDetail.tsx`
-  - `src/components/checkout/ComboUpsell.tsx`
-  - `src/pages/CheckoutPage.tsx`
-  - `src/pages/CheckoutPageV2.tsx`
-  - `src/pages/CheckoutPageV3.tsx`
-- A falha não está só no layout; está no modelo de estado do carrinho.
-- A correção correta é centralizar o cadastro e persistência do combo, não apenas esconder botão no checkout.
+- Hoje V1/V2 usam `selectedDoctorId === "sem-prescritor" ? null : selectedDoctorId`.
+- V3 hoje usa apenas `getActiveRef()?.doctorId || null`, então está incompleto.
+- O vínculo por cupom depende de resolver `doctor_id` a partir da tabela `coupons`, que já possui relação com `doctor_id`.
