@@ -45,7 +45,7 @@ const CheckoutPageV3 = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { savedCustomer, saveCustomer } = useSavedCustomer();
-  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount } = useCart();
+  const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount, comboProductIds, removeCombo, duplicateCombo } = useCart();
   const { data: storeSettings } = useStoreSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { shippingOptions, shippingLoading, selectedShipping, setSelectedShipping, calculateShipping } = useAutoShipping();
@@ -266,7 +266,31 @@ const CheckoutPageV3 = () => {
           <section className="rounded-lg border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Produtos</h2>
             <div className="divide-y divide-border">
-              {items.map((item) => (
+              {/* Combo group */}
+              {comboProductIds.length > 0 && items.some((i) => comboProductIds.includes(i.product.id)) && (
+                <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-3 mb-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-primary uppercase tracking-wide">🔥 Combo</span>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={duplicateCombo} className="text-xs text-primary hover:underline font-medium">Duplicar</button>
+                      <button type="button" onClick={removeCombo} className="text-xs text-destructive hover:underline font-medium">Remover Combo</button>
+                    </div>
+                  </div>
+                  {items.filter((i) => comboProductIds.includes(i.product.id)).map((item) => (
+                    <div key={item.product.id} className="flex items-center gap-3 py-2 border-t border-primary/10 first:border-t-0">
+                      <img src={item.product.image} alt={item.product.name} className="h-12 w-12 rounded object-contain bg-muted/30" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{item.product.name}</p>
+                        <p className="text-sm font-bold text-primary">R$ {item.product.price.toFixed(2).replace(".", ",")}</p>
+                      </div>
+                      <span className="text-sm text-muted-foreground">Qtd: {item.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Non-combo items */}
+              {items.filter((i) => !comboProductIds.includes(i.product.id)).map((item) => (
                 <div key={item.product.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <img src={item.product.image} alt={item.product.name} className="h-12 w-12 rounded object-contain bg-muted/30" />
                   <div className="flex-1 min-w-0">

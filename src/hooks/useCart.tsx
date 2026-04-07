@@ -32,6 +32,10 @@ interface CartContextType {
   comboDiscount: number;
   setComboDiscount: (v: number) => void;
   setComboFreeShipping: (v: boolean) => void;
+  comboProductIds: string[];
+  setComboProductIds: (ids: string[]) => void;
+  removeCombo: () => void;
+  duplicateCombo: () => void;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -60,6 +64,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [comboDiscount, setComboDiscount] = useState(0);
   const [comboFreeShipping, setComboFreeShipping] = useState(false);
+  const [comboProductIds, setComboProductIds] = useState<string[]>([]);
 
   // Persist cart to localStorage
   useEffect(() => {
@@ -78,10 +83,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const removeItem = (productId: string) => {
+    // Prevent removing individual combo items
+    if (comboProductIds.includes(productId)) return;
     setItems((prev) => prev.filter((i) => i.product.id !== productId));
   };
 
   const updateQuantity = (productId: string, qty: number) => {
+    // Prevent changing individual combo item quantities
+    if (comboProductIds.includes(productId)) return;
     if (qty <= 0) return removeItem(productId);
     setItems((prev) => prev.map((i) => i.product.id === productId ? { ...i, quantity: qty } : i));
   };
@@ -91,7 +100,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setAppliedCoupon(null);
     setComboDiscount(0);
     setComboFreeShipping(false);
+    setComboProductIds([]);
     localStorage.removeItem(CART_STORAGE_KEY);
+  };
+
+  const removeCombo = () => {
+    if (comboProductIds.length === 0) return;
+    setItems((prev) => prev.filter((i) => !comboProductIds.includes(i.product.id)));
+    setComboDiscount(0);
+    setComboFreeShipping(false);
+    setComboProductIds([]);
+  };
+
+  const duplicateCombo = () => {
+    if (comboProductIds.length === 0) return;
+    setItems((prev) =>
+      prev.map((i) =>
+        comboProductIds.includes(i.product.id)
+          ? { ...i, quantity: i.quantity + 1 }
+          : i
+      )
+    );
   };
 
   const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
@@ -193,6 +222,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       discount, freeShipping,
       comboFreeShipping, comboDiscount,
       setComboDiscount, setComboFreeShipping,
+      comboProductIds, setComboProductIds,
+      removeCombo, duplicateCombo,
     }}>
       {children}
     </CartContext.Provider>
