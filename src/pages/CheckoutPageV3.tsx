@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSavedCustomer } from "@/hooks/useSavedCustomer";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { useQuery } from "@tanstack/react-query";
 import { getActiveRef } from "@/pages/LinkRedirectPage";
 
 interface PaymentResult {
