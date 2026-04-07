@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSavedCustomer } from "@/hooks/useSavedCustomer";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { useQuery } from "@tanstack/react-query";
 import { getActiveRef } from "@/pages/LinkRedirectPage";
 
 interface PaymentResult {
@@ -54,10 +55,13 @@ const CheckoutPageV3 = () => {
   const [installments, setInstallments] = useState(1);
   const [cepLoading, setCepLoading] = useState(false);
   const [couponInput, setCouponInput] = useState("");
+  const [doctorSearch, setDoctorSearch] = useState("");
+  const [showDoctorResults, setShowDoctorResults] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "", cpf: "", email: "", phone: "",
     cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "",
-    paymentMethod: "pix" as "pix" | "card" | "boleto",
+    doctor: "", paymentMethod: "pix" as "pix" | "card" | "boleto",
   });
   const abandonmentSaved = useRef(false);
 
@@ -91,6 +95,37 @@ const CheckoutPageV3 = () => {
       applyCoupon(cupomParam);
     }
   }, [searchParams, items, coupon, applyCoupon]);
+
+  // Auto-fill doctor from smart link ref
+  useEffect(() => {
+    const ref = getActiveRef();
+    if (ref?.doctorId && ref?.doctorName && !selectedDoctorId) {
+      setSelectedDoctorId(ref.doctorId);
+      setForm((prev) => ({ ...prev, doctor: ref.doctorName! }));
+    }
+  }, []);
+
+  const { data: doctors } = useQuery({
+    queryKey: ["active-doctors"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("doctors_public" as any).select("id, name, specialty, city, state").eq("active", true).order("name");
+      if (error) throw error;
+      return data as unknown as { id: string; name: string; specialty: string | null; city: string | null; state: string | null }[];
+    },
+  });
+
+  const filteredDoctors = (doctors ?? []).filter((d) => {
+    const search = doctorSearch.toLowerCase();
+    return d.name.toLowerCase().includes(search) || (d.city && d.city.toLowerCase().includes(search)) || (d.state && d.state.toLowerCase().includes(search));
+  });
+
+  // Resolve doctor_id: link > manual > coupon
+  const resolveDoctorId = useCallback(() => {
+    const ref = getActiveRef();
+    if (ref?.doctorId) return ref.doctorId;
+    if (selectedDoctorId && selectedDoctorId !== "sem-prescritor") return selectedDoctorId;
+    return null;
+  }, [selectedDoctorId]);
 
   const fetchAddress = useCallback(async (cep: string) => {
     setCepLoading(true);
@@ -152,6 +187,11 @@ const CheckoutPageV3 = () => {
     if (!form.email.trim() || !form.email.includes("@")) { toast.error("Preencha um e-mail válido."); return; }
     if (form.cpf.replace(/\D/g, "").length !== 11) { toast.error("CPF inválido. Deve ter 11 dígitos."); return; }
     if (!form.phone.trim()) { toast.error("Preencha seu telefone."); return; }
+    const prescriberRequired = (storeSettings as any)?.checkout_prescriber_required !== false;
+    if (prescriberRequired && !form.doctor && !selectedDoctorId) {
+      toast.error("Selecione um Prescritor ou marque 'Não Sei'.");
+      return;
+    }
     // Require shipping selection unless free shipping
     const hasFreeShipping = freeShipping || comboFreeShipping || qualifiesForFreeShipping;
     if (!hasFreeShipping && !selectedShipping) { toast.error("Selecione uma opção de frete antes de finalizar."); return; }
@@ -167,7 +207,7 @@ const CheckoutPageV3 = () => {
       const payload: any = {
         customer_name: form.name, customer_email: form.email, customer_cpf: form.cpf, customer_phone: form.phone,
         billing_type: form.paymentMethod === "pix" ? "PIX" : form.paymentMethod === "boleto" ? "BOLETO" : "CREDIT_CARD",
-        value: paymentValue, items: orderItems, doctor_id: getActiveRef()?.doctorId || null,
+        value: paymentValue, items: orderItems, doctor_id: resolveDoctorId(),
         shipping_address: { street: form.street, number: form.number, complement: form.complement, neighborhood: form.neighborhood, city: form.city, state: form.state, cep: form.cep },
         coupon_code: coupon || null,
       };
@@ -326,6 +366,41 @@ const CheckoutPageV3 = () => {
               <div><Label className="text-xs">Email *</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="h-9 text-sm" /></div>
               <div><Label className="text-xs">Telefone *</Label><Input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(00) 00000-0000" inputMode="tel" className="h-9 text-sm" /></div>
             </div>
+            {/* Prescriber field */}
+            {(storeSettings as any)?.checkout_prescriber_required !== false && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 block">Prescritor / Médico</Label>
+                <div className="relative">
+                  <Input
+                    placeholder="Buscar por nome, cidade ou estado..."
+                    value={form.doctor || doctorSearch}
+                    onChange={(e) => { setDoctorSearch(e.target.value); setForm({ ...form, doctor: "" }); setSelectedDoctorId(null); setShowDoctorResults(true); }}
+                    disabled={selectedDoctorId === "sem-prescritor"}
+                    className="h-9 text-sm"
+                  />
+                  {showDoctorResults && doctorSearch && (
+                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
+                      {filteredDoctors.map((d) => (
+                        <button key={d.id} type="button" className="w-full px-4 py-2 text-left text-sm hover:bg-muted"
+                          onClick={() => { setForm({ ...form, doctor: d.name }); setSelectedDoctorId(d.id); setDoctorSearch(""); setShowDoctorResults(false); }}>
+                          <span className="font-medium">{d.name}</span>
+                          {d.specialty && <span className="text-muted-foreground"> — {d.specialty}</span>}
+                          {d.city && <span className="text-muted-foreground text-xs"> ({d.city}/{d.state})</span>}
+                        </button>
+                      ))}
+                      {filteredDoctors.length === 0 && <p className="px-4 py-3 text-sm text-muted-foreground">Nenhum prescritor encontrado.</p>}
+                    </div>
+                  )}
+                </div>
+                <Button type="button" variant={selectedDoctorId === "sem-prescritor" ? "default" : "outline"} size="sm" className="mt-2"
+                  onClick={() => {
+                    if (selectedDoctorId === "sem-prescritor") { setSelectedDoctorId(null); setForm({ ...form, doctor: "" }); setDoctorSearch(""); }
+                    else { setSelectedDoctorId("sem-prescritor"); setForm({ ...form, doctor: "Não sei meu prescritor" }); setDoctorSearch(""); setShowDoctorResults(false); }
+                  }}>
+                  {selectedDoctorId === "sem-prescritor" ? "✓ Marcado: Não Sei" : "Não Sei"}
+                </Button>
+              </div>
+            )}
           </section>
 
           {/* Address + Shipping */}
