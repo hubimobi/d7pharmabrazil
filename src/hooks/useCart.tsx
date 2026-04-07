@@ -83,10 +83,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const removeItem = (productId: string) => {
+    // Prevent removing individual combo items
+    if (comboProductIds.includes(productId)) return;
     setItems((prev) => prev.filter((i) => i.product.id !== productId));
   };
 
   const updateQuantity = (productId: string, qty: number) => {
+    // Prevent changing individual combo item quantities
+    if (comboProductIds.includes(productId)) return;
     if (qty <= 0) return removeItem(productId);
     setItems((prev) => prev.map((i) => i.product.id === productId ? { ...i, quantity: qty } : i));
   };
