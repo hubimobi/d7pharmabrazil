@@ -218,6 +218,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       discount, freeShipping,
       comboFreeShipping, comboDiscount,
       setComboDiscount, setComboFreeShipping,
+      comboProductIds, setComboProductIds,
+      removeCombo, duplicateCombo,
     }}>
       {children}
     </CartContext.Provider>
