@@ -41,7 +41,7 @@ export default function CartRecommendations({ cartItems, showOnlyUpsell = false 
   const remaining = freeShippingThreshold - cartTotal;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full min-w-0 space-y-6 overflow-hidden">
       {/* Free shipping progress - only in full mode */}
       {!showOnlyUpsell && remaining > 0 && (
         <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
@@ -69,23 +69,25 @@ export default function CartRecommendations({ cartItems, showOnlyUpsell = false 
             const savingsPercent = 10;
             const bulkPrice = item.product.price * 3 * (1 - savingsPercent / 100);
             return (
-              <div key={item.product.id} className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-                <img src={item.product.image} alt="" className="h-12 w-12 rounded object-contain" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground truncate">{item.product.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Leve <span className="font-bold text-primary">3 unidades</span> e ganhe{" "}
-                    <span className="font-bold text-success">{savingsPercent}% OFF</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    De <span className="line-through">R$ {(item.product.price * 3).toFixed(2).replace(".", ",")}</span>{" "}
-                    por <span className="font-bold text-primary">R$ {bulkPrice.toFixed(2).replace(".", ",")}</span>
-                  </p>
+              <div key={item.product.id} className="flex w-full min-w-0 flex-col gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <img src={item.product.image} alt="" className="h-12 w-12 shrink-0 rounded object-contain" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-foreground break-words">{item.product.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Leve <span className="font-bold text-primary">3 unidades</span> e ganhe{" "}
+                      <span className="font-bold text-success">{savingsPercent}% OFF</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground break-words">
+                      De <span className="line-through">R$ {(item.product.price * 3).toFixed(2).replace(".", ",")}</span>{" "}
+                      por <span className="font-bold text-primary">R$ {bulkPrice.toFixed(2).replace(".", ",")}</span>
+                    </p>
+                  </div>
                 </div>
                 <Button
                   size="sm"
                   variant="default"
-                  className="shrink-0 text-xs"
+                  className="w-full shrink-0 text-xs sm:w-auto"
                   onClick={() => {
                     const qtyToAdd = 3 - item.quantity;
                     if (qtyToAdd > 0) addItem(item.product, qtyToAdd);
@@ -112,12 +114,13 @@ export default function CartRecommendations({ cartItems, showOnlyUpsell = false 
                 ? Math.round((1 - p.price / p.originalPrice) * 100)
                 : 0;
               return (
-                <div key={p.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 hover:border-primary/30 transition">
-                  <img src={p.image} alt={p.name} className="h-14 w-14 rounded object-contain bg-muted p-1" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-sm font-bold text-primary">R$ {p.price.toFixed(2).replace(".", ",")}</span>
+                <div key={p.id} className="flex w-full min-w-0 flex-col gap-3 overflow-hidden rounded-lg border border-border bg-card p-3 transition hover:border-primary/30 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <img src={p.image} alt={p.name} className="h-14 w-14 shrink-0 rounded object-contain bg-muted p-1" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground break-words">{p.name}</p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-bold text-primary">R$ {p.price.toFixed(2).replace(".", ",")}</span>
                       {discount > 0 && (
                         <>
                           <span className="text-xs text-muted-foreground line-through">R$ {p.originalPrice.toFixed(2).replace(".", ",")}</span>
@@ -126,10 +129,11 @@ export default function CartRecommendations({ cartItems, showOnlyUpsell = false 
                       )}
                     </div>
                   </div>
+                  </div>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="shrink-0 gap-1 text-xs"
+                    className="w-full shrink-0 gap-1 text-xs sm:w-auto"
                     onClick={() => addItem(p)}
                   >
                     <ShoppingCart className="h-3.5 w-3.5" />
