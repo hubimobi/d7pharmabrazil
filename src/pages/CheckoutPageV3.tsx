@@ -95,6 +95,37 @@ const CheckoutPageV3 = () => {
     }
   }, [searchParams, items, coupon, applyCoupon]);
 
+  // Auto-fill doctor from smart link ref
+  useEffect(() => {
+    const ref = getActiveRef();
+    if (ref?.doctorId && ref?.doctorName && !selectedDoctorId) {
+      setSelectedDoctorId(ref.doctorId);
+      setForm((prev) => ({ ...prev, doctor: ref.doctorName! }));
+    }
+  }, []);
+
+  const { data: doctors } = useQuery({
+    queryKey: ["active-doctors"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("doctors_public" as any).select("id, name, specialty, city, state").eq("active", true).order("name");
+      if (error) throw error;
+      return data as unknown as { id: string; name: string; specialty: string | null; city: string | null; state: string | null }[];
+    },
+  });
+
+  const filteredDoctors = (doctors ?? []).filter((d) => {
+    const search = doctorSearch.toLowerCase();
+    return d.name.toLowerCase().includes(search) || (d.city && d.city.toLowerCase().includes(search)) || (d.state && d.state.toLowerCase().includes(search));
+  });
+
+  // Resolve doctor_id: link > manual > coupon
+  const resolveDoctorId = useCallback(() => {
+    const ref = getActiveRef();
+    if (ref?.doctorId) return ref.doctorId;
+    if (selectedDoctorId && selectedDoctorId !== "sem-prescritor") return selectedDoctorId;
+    return null;
+  }, [selectedDoctorId]);
+
   const fetchAddress = useCallback(async (cep: string) => {
     setCepLoading(true);
     try {
