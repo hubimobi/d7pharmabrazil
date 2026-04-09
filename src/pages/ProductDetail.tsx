@@ -265,12 +265,37 @@ const ProductDetail = () => {
                   ))}
                 </div>
               )}
-              <div className="flex-1 aspect-square overflow-hidden rounded-xl bg-muted">
+              <div className="relative flex-1 aspect-square overflow-hidden rounded-xl bg-muted group/main cursor-pointer"
+                onClick={() => openLightbox(currentImageIndex)}
+              >
                 <img
                   src={selectedImage || product.image}
                   alt={product.name}
                   className="h-full w-full object-cover transition-opacity duration-200"
                 />
+                {/* Zoom hint overlay */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover/main:bg-black/10 group-hover/main:opacity-100">
+                  <Search className="h-8 w-8 text-white drop-shadow-lg" />
+                </div>
+                {/* Arrow navigation on main image */}
+                {allImages.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigateImage(-1); }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-1.5 text-foreground shadow-md opacity-0 transition group-hover/main:opacity-100 hover:bg-white"
+                      aria-label="Imagem anterior"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigateImage(1); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-1.5 text-foreground shadow-md opacity-0 transition group-hover/main:opacity-100 hover:bg-white"
+                      aria-label="Próxima imagem"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
