@@ -155,11 +155,40 @@ const Footer = () => {
           </div>
         )}
 
-        <div className="mt-8 border-t border-white/10 pt-8 flex flex-col items-center gap-3">
-          <div className="flex items-center gap-4 text-sm opacity-60">
-            <span className="flex items-center gap-1"><Lock className="h-3.5 w-3.5" /> 100% Seguro</span>
-            <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Dados Protegidos</span>
+        <div className="mt-8 border-t border-white/10 pt-8 flex flex-col items-center gap-5">
+          {/* Selos de Segurança */}
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <div className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 backdrop-blur-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20">
+                <Lock className="h-4 w-4 text-green-400" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold leading-tight" style={{ color: footerTitleColor }}>Site Seguro</span>
+                <span className="text-[10px] opacity-60">SSL 256-bit</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 backdrop-blur-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/20">
+                <ShieldCheck className="h-4 w-4 text-blue-400" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold leading-tight" style={{ color: footerTitleColor }}>Google Safe Browsing</span>
+                <span className="text-[10px] opacity-60">Verificado</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 backdrop-blur-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20">
+                <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold leading-tight" style={{ color: footerTitleColor }}>Dados Protegidos</span>
+                <span className="text-[10px] opacity-60">LGPD Compliance</span>
+              </div>
+            </div>
           </div>
+
           <p className="text-sm opacity-70">
             Suplementos de alta performance com qualidade farmacêutica.
           </p>
