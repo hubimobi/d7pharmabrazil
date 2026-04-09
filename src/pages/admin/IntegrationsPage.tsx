@@ -380,6 +380,9 @@ export default function IntegrationsPage() {
 
         {/* Google Meu Negócio */}
         <GoogleBusinessCard />
+
+        {/* Cloudflare Cache */}
+        <CloudflareCacheCard />
       </div>
 
       {/* Manual Bling Sync */}
