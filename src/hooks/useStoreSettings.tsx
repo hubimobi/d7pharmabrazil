@@ -130,7 +130,7 @@ export function useStoreSettings() {
     queryKey: ["store-settings"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("store_settings" as any)
+        .from("store_settings_public" as any)
         .select("*")
         .limit(1)
         .single();

@@ -695,6 +695,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "coupons_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "coupons_representative_id_fkey"
             columns: ["representative_id"]
             isOneToOne: false
@@ -1134,6 +1141,13 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "popup_leads_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       product_combos: {
@@ -1223,6 +1237,13 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "product_faqs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       product_groups: {
@@ -1299,6 +1320,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_testimonials_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1751,6 +1779,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "short_links_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2802,6 +2837,13 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "coupons_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       doctors_public: {
@@ -2830,6 +2872,137 @@ export type Database = {
           state?: string | null
         }
         Relationships: []
+      }
+      products_public: {
+        Row: {
+          active: boolean | null
+          badge: string | null
+          benefits: Json | null
+          countdown_duration_minutes: number | null
+          countdown_end_date: string | null
+          countdown_end_time: string | null
+          countdown_mode: string | null
+          created_at: string | null
+          description: string | null
+          extra_images: Json | null
+          featured: boolean | null
+          group_name: string | null
+          gtin: string | null
+          height: number | null
+          id: string | null
+          image_url: string | null
+          length: number | null
+          manufacturer: string | null
+          name: string | null
+          ncm: string | null
+          original_price: number | null
+          price: number | null
+          rating: number | null
+          reviews_count: number | null
+          seo_description: string | null
+          seo_keywords: string | null
+          seo_title: string | null
+          short_description: string | null
+          show_countdown: boolean | null
+          sku: string | null
+          slug: string | null
+          stock: number | null
+          tenant_id: string | null
+          unit: string | null
+          updated_at: string | null
+          upsell_product_ids: Json | null
+          weight: number | null
+          width: number | null
+        }
+        Insert: {
+          active?: boolean | null
+          badge?: string | null
+          benefits?: Json | null
+          countdown_duration_minutes?: number | null
+          countdown_end_date?: string | null
+          countdown_end_time?: string | null
+          countdown_mode?: string | null
+          created_at?: string | null
+          description?: string | null
+          extra_images?: Json | null
+          featured?: boolean | null
+          group_name?: string | null
+          gtin?: string | null
+          height?: number | null
+          id?: string | null
+          image_url?: string | null
+          length?: number | null
+          manufacturer?: string | null
+          name?: string | null
+          ncm?: string | null
+          original_price?: number | null
+          price?: number | null
+          rating?: number | null
+          reviews_count?: number | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          short_description?: string | null
+          show_countdown?: boolean | null
+          sku?: string | null
+          slug?: string | null
+          stock?: number | null
+          tenant_id?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          upsell_product_ids?: Json | null
+          weight?: number | null
+          width?: number | null
+        }
+        Update: {
+          active?: boolean | null
+          badge?: string | null
+          benefits?: Json | null
+          countdown_duration_minutes?: number | null
+          countdown_end_date?: string | null
+          countdown_end_time?: string | null
+          countdown_mode?: string | null
+          created_at?: string | null
+          description?: string | null
+          extra_images?: Json | null
+          featured?: boolean | null
+          group_name?: string | null
+          gtin?: string | null
+          height?: number | null
+          id?: string | null
+          image_url?: string | null
+          length?: number | null
+          manufacturer?: string | null
+          name?: string | null
+          ncm?: string | null
+          original_price?: number | null
+          price?: number | null
+          rating?: number | null
+          reviews_count?: number | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          short_description?: string | null
+          show_countdown?: boolean | null
+          sku?: string | null
+          slug?: string | null
+          stock?: number | null
+          tenant_id?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          upsell_product_ids?: Json | null
+          weight?: number | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       short_links_public: {
         Row: {
@@ -2879,6 +3052,7 @@ export type Database = {
           benefits_subtitle: string | null
           benefits_title: string | null
           checkout_boleto_enabled: boolean | null
+          checkout_prescriber_required: boolean | null
           checkout_show_combo: boolean | null
           checkout_show_free_shipping_bar: boolean | null
           checkout_show_motivation: boolean | null
@@ -2913,6 +3087,7 @@ export type Database = {
           free_shipping_enabled: boolean | null
           free_shipping_min_value: number | null
           free_shipping_regions: string | null
+          gtm_id: string | null
           hero_badges: Json | null
           hero_btn1_bg_color: string | null
           hero_btn1_hover_color: string | null
@@ -2932,6 +3107,7 @@ export type Database = {
           hero_video_url: string | null
           hide_chat_on_checkout: boolean | null
           horizontal_logo_url: string | null
+          hotjar_id: string | null
           id: string | null
           instagram: string | null
           logo_url: string | null
@@ -2941,6 +3117,7 @@ export type Database = {
           mailing_title_color: string | null
           max_installments: number | null
           max_total_installments: number | null
+          meta_pixel_id: string | null
           notification_bar_bg_color: string | null
           notification_bar_enabled: boolean | null
           notification_bar_text: string | null
@@ -2951,6 +3128,7 @@ export type Database = {
           popup_banner_description: string | null
           popup_banner_enabled: boolean | null
           popup_banner_image_url: string | null
+          popup_banner_reappear_hours: number | null
           popup_banner_title: string | null
           products_sidebar_enabled: boolean | null
           sales_popup_burst_count: number | null
@@ -2978,6 +3156,7 @@ export type Database = {
           webchat_delay_seconds: number | null
           webchat_enabled: boolean | null
           webchat_position: string | null
+          webchat_script: string | null
           webchat_show_on_scroll: boolean | null
           whatsapp: string | null
           whatsapp_button_enabled: boolean | null
@@ -2997,6 +3176,7 @@ export type Database = {
           benefits_subtitle?: string | null
           benefits_title?: string | null
           checkout_boleto_enabled?: boolean | null
+          checkout_prescriber_required?: boolean | null
           checkout_show_combo?: boolean | null
           checkout_show_free_shipping_bar?: boolean | null
           checkout_show_motivation?: boolean | null
@@ -3031,6 +3211,7 @@ export type Database = {
           free_shipping_enabled?: boolean | null
           free_shipping_min_value?: number | null
           free_shipping_regions?: string | null
+          gtm_id?: string | null
           hero_badges?: Json | null
           hero_btn1_bg_color?: string | null
           hero_btn1_hover_color?: string | null
@@ -3050,6 +3231,7 @@ export type Database = {
           hero_video_url?: string | null
           hide_chat_on_checkout?: boolean | null
           horizontal_logo_url?: string | null
+          hotjar_id?: string | null
           id?: string | null
           instagram?: string | null
           logo_url?: string | null
@@ -3059,6 +3241,7 @@ export type Database = {
           mailing_title_color?: string | null
           max_installments?: number | null
           max_total_installments?: number | null
+          meta_pixel_id?: string | null
           notification_bar_bg_color?: string | null
           notification_bar_enabled?: boolean | null
           notification_bar_text?: string | null
@@ -3069,6 +3252,7 @@ export type Database = {
           popup_banner_description?: string | null
           popup_banner_enabled?: boolean | null
           popup_banner_image_url?: string | null
+          popup_banner_reappear_hours?: number | null
           popup_banner_title?: string | null
           products_sidebar_enabled?: boolean | null
           sales_popup_burst_count?: number | null
@@ -3096,6 +3280,7 @@ export type Database = {
           webchat_delay_seconds?: number | null
           webchat_enabled?: boolean | null
           webchat_position?: string | null
+          webchat_script?: string | null
           webchat_show_on_scroll?: boolean | null
           whatsapp?: string | null
           whatsapp_button_enabled?: boolean | null
@@ -3115,6 +3300,7 @@ export type Database = {
           benefits_subtitle?: string | null
           benefits_title?: string | null
           checkout_boleto_enabled?: boolean | null
+          checkout_prescriber_required?: boolean | null
           checkout_show_combo?: boolean | null
           checkout_show_free_shipping_bar?: boolean | null
           checkout_show_motivation?: boolean | null
@@ -3149,6 +3335,7 @@ export type Database = {
           free_shipping_enabled?: boolean | null
           free_shipping_min_value?: number | null
           free_shipping_regions?: string | null
+          gtm_id?: string | null
           hero_badges?: Json | null
           hero_btn1_bg_color?: string | null
           hero_btn1_hover_color?: string | null
@@ -3168,6 +3355,7 @@ export type Database = {
           hero_video_url?: string | null
           hide_chat_on_checkout?: boolean | null
           horizontal_logo_url?: string | null
+          hotjar_id?: string | null
           id?: string | null
           instagram?: string | null
           logo_url?: string | null
@@ -3177,6 +3365,7 @@ export type Database = {
           mailing_title_color?: string | null
           max_installments?: number | null
           max_total_installments?: number | null
+          meta_pixel_id?: string | null
           notification_bar_bg_color?: string | null
           notification_bar_enabled?: boolean | null
           notification_bar_text?: string | null
@@ -3187,6 +3376,7 @@ export type Database = {
           popup_banner_description?: string | null
           popup_banner_enabled?: boolean | null
           popup_banner_image_url?: string | null
+          popup_banner_reappear_hours?: number | null
           popup_banner_title?: string | null
           products_sidebar_enabled?: boolean | null
           sales_popup_burst_count?: number | null
@@ -3214,6 +3404,7 @@ export type Database = {
           webchat_delay_seconds?: number | null
           webchat_enabled?: boolean | null
           webchat_position?: string | null
+          webchat_script?: string | null
           webchat_show_on_scroll?: boolean | null
           whatsapp?: string | null
           whatsapp_button_enabled?: boolean | null

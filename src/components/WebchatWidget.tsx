@@ -60,8 +60,34 @@ export default function WebchatWidget() {
     const temp = document.createElement("div");
     temp.innerHTML = settings.webchat_script;
 
+    // Whitelist of allowed script domains for webchat widgets
+    const ALLOWED_DOMAINS = [
+      "cdn.jsdelivr.net", "unpkg.com", "cdnjs.cloudflare.com",
+      "widget.intercom.io", "js.intercomcdn.com",
+      "embed.tawk.to", "static.zdassets.com",
+      "api.whatsapp.com", "web.whatsapp.com",
+      "d3v4jsc54141g1.cloudfront.net", "static.hsappstatic.net",
+      "js.driftt.com", "widget.crisp.chat",
+      "cdn.botpress.cloud", "mediafiles.botpress.cloud",
+    ];
+
+    const isScriptAllowed = (script: HTMLScriptElement): boolean => {
+      const src = script.getAttribute("src") || "";
+      if (!src) return !!script.textContent; // inline scripts allowed
+      try {
+        const url = new URL(src);
+        return ALLOWED_DOMAINS.some((d) => url.hostname === d || url.hostname.endsWith("." + d));
+      } catch {
+        return false;
+      }
+    };
+
     const scripts = temp.querySelectorAll("script");
     scripts.forEach((origScript) => {
+      if (!isScriptAllowed(origScript)) {
+        console.warn("[WebchatWidget] Blocked script from untrusted domain:", origScript.getAttribute("src"));
+        return;
+      }
       const newScript = document.createElement("script");
       Array.from(origScript.attributes).forEach((attr) => {
         newScript.setAttribute(attr.name, attr.value);
