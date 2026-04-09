@@ -8,6 +8,57 @@ const corsHeaders = {
 
 const BLING_API = "https://www.bling.com.br/Api/v3";
 
+async function getValidToken(supabase: any): Promise<string> {
+  const { data: tokens } = await supabase
+    .from("bling_tokens")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!tokens) throw new Error("Bling não conectado");
+
+  const expiresAt = new Date(tokens.expires_at).getTime();
+  if (expiresAt > Date.now()) {
+    return tokens.access_token;
+  }
+
+  const clientId = Deno.env.get("BLING_CLIENT_ID")!;
+  const clientSecret = Deno.env.get("BLING_CLIENT_SECRET")!;
+  const credentials = btoa(`${clientId}:${clientSecret}`);
+
+  const res = await fetch(`${BLING_API}/oauth/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${credentials}`,
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: tokens.refresh_token,
+    }),
+  });
+
+  const data = await res.json();
+  if (!res.ok || !data.access_token) {
+    throw new Error("Falha ao renovar token do Bling. Reconecte pelo painel.");
+  }
+
+  const newExpiresAt = new Date(Date.now() + data.expires_in * 1000).toISOString();
+
+  await supabase
+    .from("bling_tokens")
+    .update({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: newExpiresAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", tokens.id);
+
+  return data.access_token;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -19,7 +70,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Auth check - admin only
     const authHeader = req.headers.get("authorization");
     if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const authToken = authHeader.replace("Bearer ", "");
@@ -29,22 +79,7 @@ serve(async (req) => {
     const isAdmin = (roles || []).some((r: any) => ["admin","super_admin","administrador","suporte","gestor","financeiro"].includes(r.role));
     if (!isAdmin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    // Get valid token
-    const { data: tokens } = await supabase
-      .from("bling_tokens")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (!tokens) {
-      return new Response(JSON.stringify({ error: "Bling não conectado" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const accessToken = tokens.access_token;
+    const accessToken = await getValidToken(supabase);
     const { page = 1, search = "" } = await req.json().catch(() => ({}));
 
     let url = `${BLING_API}/produtos?pagina=${page}&limite=100`;
@@ -85,7 +120,7 @@ serve(async (req) => {
     });
   } catch (err) {
     console.error("bling-list-products error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Erro interno" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

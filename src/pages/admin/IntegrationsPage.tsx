@@ -72,8 +72,16 @@ export default function IntegrationsPage() {
   });
 
   const handleRefresh = async () => {
-    await refetch();
-    toast.success("Status atualizado!");
+    try {
+      const { error, data } = await supabase.functions.invoke("bling-refresh-token");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      await refetch();
+      toast.success("Token do Bling verificado e atualizado.");
+    } catch (err: any) {
+      await refetch();
+      toast.error(err?.message || "Erro ao atualizar token do Bling.");
+    }
   };
 
   const handleDisconnectBling = async () => {
