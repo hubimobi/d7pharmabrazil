@@ -157,7 +157,15 @@ const HeroSection = () => {
             </>
           ) : (
             <>
-              <img src={bgImage} alt="Banner" className="h-full w-full object-cover" width={1920} height={1080} />
+              <img
+                src={bgImage}
+                alt="Banner"
+                className="h-full w-full object-cover"
+                width={1920}
+                height={1080}
+                fetchPriority="high"
+                decoding="async"
+              />
               <div className="absolute inset-0 bg-gradient-to-r from-primary/90 via-primary/70 to-primary/40" />
             </>
           )}
@@ -252,6 +260,8 @@ const HeroSection = () => {
                   src={banner.side_image_url}
                   alt="Destaque"
                   className="max-h-[400px] w-auto object-contain drop-shadow-2xl"
+                  loading="lazy"
+                  decoding="async"
                 />
               </motion.div>
             </AnimatePresence>

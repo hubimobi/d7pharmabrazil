@@ -7,8 +7,14 @@
     <meta name="description" content="Suplementos de alta performance com qualidade farmacêutica. Protein Kids, TCF-4 Control, EAA Aminoácido. Entrega rápida, compra segura e aprovação ANVISA.">
     <meta name="author" content="D7 Pharma Brazil" />
 
-    
-    
+    <!-- Preconnect to critical origins -->
+    <link rel="preconnect" href="https://xufiemrhlmirkrdrcxox.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+
+    <!-- Preload critical font (Inter 400/600/700) -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" as="style" />
+
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1971c5c6-c8a1-4c9d-a1e5-a0dee722fa45/id-preview-dcf478c0--e7f9d910-27bc-4ff1-ad19-9df48deec852.lovable.app-1774469767730.png">
 
@@ -19,10 +25,24 @@
   <meta name="twitter:title" content="D7 Pharma Brazil | Suplementos Farmacêuticos de Alta Performance">
   <meta property="og:description" content="Suplementos de alta performance com qualidade farmacêutica. Protein Kids, TCF-4 Control, EAA Aminoácido. Entrega rápida, compra segura e aprovação ANVISA.">
   <meta name="twitter:description" content="Suplementos de alta performance com qualidade farmacêutica. Protein Kids, TCF-4 Control, EAA Aminoácido. Entrega rápida, compra segura e aprovação ANVISA.">
+
+  <!-- Inline critical CSS for first paint -->
+  <style>
+    body{margin:0;font-family:Inter,system-ui,-apple-system,sans-serif}
+    #root{min-height:100vh}
+    .preloader-inline{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f5f3ef}
+    .preloader-spinner{width:48px;height:48px;border:3px solid #e5e2dc;border-top-color:#1a4a6e;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
 </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Inline preloader for instant first paint (no JS needed) -->
+      <div class="preloader-inline" id="inline-preloader">
+        <div class="preloader-spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
