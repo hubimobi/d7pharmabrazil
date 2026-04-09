@@ -4,9 +4,15 @@ import { useStoreSettings } from "@/hooks/useStoreSettings";
 export default function TrackingScripts() {
   const { data: settings } = useStoreSettings();
 
-  const metaPixelId = (settings as any)?.meta_pixel_id || "";
-  const gtmId = (settings as any)?.gtm_id || "";
-  const hotjarId = (settings as any)?.hotjar_id || "";
+  // Sanitize IDs to prevent script injection
+  const sanitizeId = (id: string | undefined | null): string => {
+    const raw = id || "";
+    return /^[a-zA-Z0-9_-]+$/.test(raw) ? raw : "";
+  };
+
+  const metaPixelId = sanitizeId((settings as any)?.meta_pixel_id);
+  const gtmId = sanitizeId((settings as any)?.gtm_id);
+  const hotjarId = sanitizeId((settings as any)?.hotjar_id);
 
   // Meta Pixel
   useEffect(() => {
@@ -25,10 +31,11 @@ export default function TrackingScripts() {
     `;
     document.head.appendChild(script);
 
+    // noscript goes in body (HTML5 spec: noscript with img not allowed in head)
     const noscript = document.createElement("noscript");
     noscript.id = "meta-pixel-noscript";
     noscript.innerHTML = `<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${metaPixelId}&ev=PageView&noscript=1"/>`;
-    document.head.appendChild(noscript);
+    document.body.appendChild(noscript);
 
     return () => {
       document.getElementById("meta-pixel-script")?.remove();
