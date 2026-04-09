@@ -736,6 +736,7 @@ const ProductDetail = () => {
       <Footer />
       <WhatsAppButton />
       {product && <UpsellDialog open={showUpsell} onOpenChange={setShowUpsell} product={product} currentQty={qty} onAddMore={(extra) => addItem(product, extra)} />}
+      <ImageLightbox images={allImages} initialIndex={lightboxIndex} open={lightboxOpen} onClose={() => setLightboxOpen(false)} alt={product?.name} />
     </div>
   );
 };
