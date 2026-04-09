@@ -169,7 +169,7 @@ export default function IntegrationsPage() {
                 </div>
                 <p className="text-xs text-muted-foreground ml-6">
                   Última atualização: {new Date(blingStatus.updatedAt!).toLocaleString("pt-BR")}
-                  {" • "}Renovação automática a cada 12h
+                  {" • "}Renovação automática antes do vencimento
                 </p>
               </div>
             )}
