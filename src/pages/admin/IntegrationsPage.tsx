@@ -380,6 +380,9 @@ export default function IntegrationsPage() {
 
         {/* Google Meu Negócio */}
         <GoogleBusinessCard />
+
+        {/* Cloudflare Cache */}
+        <CloudflareCacheCard />
       </div>
 
       {/* Manual Bling Sync */}
@@ -1066,6 +1069,91 @@ function GoogleBusinessCard() {
         </div>
         <Button onClick={handleSave} disabled={saving} size="sm">
           {saving ? "Salvando..." : "Salvar Configurações"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CloudflareCacheCard() {
+  const [purging, setPurging] = useState(false);
+  const [mode, setMode] = useState<"all" | "urls">("all");
+  const [urls, setUrls] = useState("");
+
+  const handlePurge = async () => {
+    setPurging(true);
+    try {
+      const body: Record<string, unknown> = mode === "all"
+        ? { purge_all: true }
+        : { purge_all: false, urls: urls.split("\n").map(u => u.trim()).filter(Boolean) };
+
+      if (mode === "urls" && (!body.urls || (body.urls as string[]).length === 0)) {
+        toast.error("Informe ao menos uma URL.");
+        setPurging(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("cloudflare-purge", { body });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(data?.message || "Cache limpo com sucesso!");
+      if (mode === "urls") setUrls("");
+    } catch (err: any) {
+      toast.error(`Erro: ${err.message || "Falha ao limpar cache"}`);
+    } finally {
+      setPurging(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <RefreshCw className="h-5 w-5" />
+          Cloudflare Cache
+          <Badge variant="default">Configurado</Badge>
+        </CardTitle>
+        <CardDescription>
+          Limpe o cache do Cloudflare para atualizar o conteúdo do site imediatamente.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>Tipo de limpeza</Label>
+          <Select value={mode} onValueChange={(v) => setMode(v as "all" | "urls")}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Limpar todo o cache</SelectItem>
+              <SelectItem value="urls">Limpar URLs específicas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {mode === "urls" && (
+          <div className="space-y-1">
+            <Label>URLs (uma por linha)</Label>
+            <Textarea
+              placeholder={"https://seudominio.com.br/\nhttps://seudominio.com.br/produto/exemplo"}
+              value={urls}
+              onChange={(e) => setUrls(e.target.value)}
+              rows={4}
+            />
+          </div>
+        )}
+
+        <div className="rounded-md bg-muted p-3">
+          <p className="text-xs text-muted-foreground">
+            {mode === "all"
+              ? "⚠️ Limpar todo o cache pode causar lentidão temporária enquanto os arquivos são re-cacheados."
+              : "Informe as URLs exatas que deseja invalidar no cache do Cloudflare."}
+          </p>
+        </div>
+
+        <Button onClick={handlePurge} disabled={purging} variant={mode === "all" ? "destructive" : "default"}>
+          {purging ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+          {purging ? "Limpando..." : mode === "all" ? "Limpar Todo o Cache" : "Limpar URLs"}
         </Button>
       </CardContent>
     </Card>
