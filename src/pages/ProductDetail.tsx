@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard, Copy, MessageCircle, ChevronDown, ChevronUp, HelpCircle, Headphones, Package } from "lucide-react";
+import { ArrowLeft, Star, ShoppingCart, ShieldCheck, Truck, CheckCircle, Quote, Zap, CreditCard, Copy, MessageCircle, ChevronDown, ChevronUp, HelpCircle, Headphones, Package, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import ImageLightbox from "@/components/ImageLightbox";
 import CountdownTimer from "@/components/CountdownTimer";
 import FlashSaleBar from "@/components/FlashSaleBar";
 import { useQuery } from "@tanstack/react-query";
@@ -59,6 +60,24 @@ const ProductDetail = () => {
   const [shippingOption, setShippingOption] = useState<ShippingOption | null>(null);
   const buyButtonsRef = useRef<HTMLDivElement>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  // Build all images array for lightbox
+  const allImages = product ? [product.image, ...product.extraImages] : [];
+
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const currentImageIndex = selectedImage ? allImages.indexOf(selectedImage) : 0;
+
+  const navigateImage = (dir: 1 | -1) => {
+    if (!product || allImages.length <= 1) return;
+    const next = (currentImageIndex + dir + allImages.length) % allImages.length;
+    setSelectedImage(next === 0 ? null : allImages[next]);
+  };
 
   useEffect(() => {
     const el = buyButtonsRef.current;
