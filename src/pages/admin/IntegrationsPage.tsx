@@ -72,8 +72,16 @@ export default function IntegrationsPage() {
   });
 
   const handleRefresh = async () => {
-    await refetch();
-    toast.success("Status atualizado!");
+    try {
+      const { error, data } = await supabase.functions.invoke("bling-refresh-token");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      await refetch();
+      toast.success("Token do Bling verificado e atualizado.");
+    } catch (err: any) {
+      await refetch();
+      toast.error(err?.message || "Erro ao atualizar token do Bling.");
+    }
   };
 
   const handleDisconnectBling = async () => {
@@ -161,7 +169,7 @@ export default function IntegrationsPage() {
                 </div>
                 <p className="text-xs text-muted-foreground ml-6">
                   Última atualização: {new Date(blingStatus.updatedAt!).toLocaleString("pt-BR")}
-                  {" • "}Renovação automática a cada 12h
+                  {" • "}Renovação automática antes do vencimento
                 </p>
               </div>
             )}
