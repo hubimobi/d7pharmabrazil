@@ -260,6 +260,8 @@ const HeroSection = () => {
                   src={banner.side_image_url}
                   alt="Destaque"
                   className="max-h-[400px] w-auto object-contain drop-shadow-2xl"
+                  loading="lazy"
+                  decoding="async"
                 />
               </motion.div>
             </AnimatePresence>

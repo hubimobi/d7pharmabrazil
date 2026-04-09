@@ -1,17 +1,19 @@
-import { lazy, Suspense, useMemo, ReactNode } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import SEOHead from "@/components/SEOHead";
-import FeaturedCarousel from "@/components/FeaturedCarousel";
 import HighlightBanner from "@/components/HighlightBanner";
-import BenefitsSection from "@/components/BenefitsSection";
-import AllProducts from "@/components/AllProducts";
-import FlashSaleCarousel from "@/components/FlashSaleCarousel";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import NotificationBar from "@/components/NotificationBar";
 import CookieConsent from "@/components/CookieConsent";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
+
+// Lazy-load everything below the fold
+const FeaturedCarousel = lazy(() => import("@/components/FeaturedCarousel"));
+const BenefitsSection = lazy(() => import("@/components/BenefitsSection"));
+const AllProducts = lazy(() => import("@/components/AllProducts"));
+const FlashSaleCarousel = lazy(() => import("@/components/FlashSaleCarousel"));
 
 const TestimonialsSection = lazy(() => import("@/components/TestimonialsSection"));
 const PromoBanners = lazy(() => import("@/components/PromoBanners"));
@@ -35,13 +37,13 @@ const DEFAULT_ORDER = [
   "section_mailing_visible",
 ];
 
-const SECTION_COMPONENTS: Record<string, { component: React.ComponentType; lazy?: boolean; alwaysShow?: boolean }> = {
+const SECTION_COMPONENTS: Record<string, { component: React.ComponentType; lazy?: boolean }> = {
   section_highlight_banner: { component: HighlightBanner },
-  section_flash_sale: { component: FlashSaleCarousel },
+  section_flash_sale: { component: FlashSaleCarousel, lazy: true },
   section_hero_visible: { component: HeroSection },
-  section_featured_visible: { component: FeaturedCarousel },
-  section_benefits_visible: { component: BenefitsSection },
-  section_products_visible: { component: AllProducts },
+  section_featured_visible: { component: FeaturedCarousel, lazy: true },
+  section_benefits_visible: { component: BenefitsSection, lazy: true },
+  section_products_visible: { component: AllProducts, lazy: true },
   section_testimonials_visible: { component: TestimonialsSection, lazy: true },
   section_promo_banners_visible: { component: PromoBanners, lazy: true },
   section_guarantee_visible: { component: GuaranteeSection, lazy: true },
