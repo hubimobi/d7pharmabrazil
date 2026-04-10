@@ -120,18 +120,19 @@ const oceanDeep: Record<string, { label: string; pain: string; desire: string; t
 
 // ── Funnel Stage Map ──
 const funnelDeep: Record<string, { label: string; objective: string; technique: string }> = {
-  unaware: { label: "Sem noção do problema", objective: "Revelar a dor de forma sutil, criar consciência", technique: "Padrão de interrupção, pergunta retórica, revelação surpreendente" },
-  curious: { label: "Curioso", objective: "Aprofundar com prova social, dados e autoridade", technique: "Storytelling, comparação antes/depois, loop aberto" },
-  ready: { label: "Pronto para comprar", objective: "Urgência real, escassez, decisão imediata", technique: "Escassez genuína, ancoragem de preço, stack de valor, risco reverso" },
-  post: { label: "Pós-compra", objective: "Relacionamento, confiança, fidelização e recompra", technique: "Exclusividade de cliente, resultado acumulado, comunidade VIP" }
+  descoberta: { label: "Descoberta", objective: "O cliente ainda não sabe que tem um problema. Revelar a dor de forma sutil, criar consciência e despertar curiosidade.", technique: "Padrão de interrupção, pergunta retórica, revelação surpreendente, conteúdo educativo" },
+  reconhecimento: { label: "Reconhecimento", objective: "O cliente reconhece que tem um problema. Aprofundar a consciência da dor e mostrar que existe solução.", technique: "Storytelling de identificação, dados impactantes, comparação antes/depois, prova social" },
+  consideracao: { label: "Consideração", objective: "O cliente pesquisa e considera soluções possíveis. Posicionar o produto como a melhor opção.", technique: "Comparativos, diferenciais únicos, autoridade, demonstração de valor, stack de benefícios" },
+  decisao: { label: "Decisão de Compra", objective: "O cliente está pronto para decidir. Urgência real, escassez, decisão imediata.", technique: "Escassez genuína, ancoragem de preço, stack de valor, risco reverso, garantia" },
+  pos_venda: { label: "Pós-Venda", objective: "O cliente já comprou. Relacionamento, confiança, fidelização e recompra.", technique: "Exclusividade de cliente, resultado acumulado, comunidade VIP, indicação" }
 };
 
 // ── CTA Matrix: Profile × Funnel ──
 const ctaMatrix: Record<string, Record<string, string>> = {
-  D: { unaware: "Descubra o que está te travando", curious: "Veja como líderes resolvem isso", ready: "Garanta o seu agora — estoque limitado", post: "Renove antes que acabe — cliente tem prioridade" },
-  I: { unaware: "Você sabia que existe algo incrível?", curious: "Olha o que todo mundo está usando!", ready: "Eu quero! Como faço? 😍", post: "Compartilhe essa descoberta com quem ama!" },
-  S: { unaware: "Entenda por que tanta gente está mudando", curious: "Compare e escolha com tranquilidade", ready: "Peça o seu sem risco — garantia total", post: "Continue cuidando de você com segurança" },
-  C: { unaware: "Os dados mostram algo preocupante", curious: "Analise os fatos antes de decidir", ready: "Acesse, comprove e ative com 100% de garantia", post: "Veja seu histórico de resultados" }
+  D: { descoberta: "Descubra o que está te travando", reconhecimento: "Você já sabe o problema — agora resolva", consideracao: "Veja como líderes resolvem isso", decisao: "Garanta o seu agora — estoque limitado", pos_venda: "Renove antes que acabe — cliente tem prioridade" },
+  I: { descoberta: "Você sabia que existe algo incrível?", reconhecimento: "Olha o que pode mudar tudo pra você! 😍", consideracao: "Olha o que todo mundo está usando!", decisao: "Eu quero! Como faço? 😍", pos_venda: "Compartilhe essa descoberta com quem ama!" },
+  S: { descoberta: "Entenda por que tanta gente está mudando", reconhecimento: "Você não está sozinha nessa — veja depoimentos", consideracao: "Compare e escolha com tranquilidade", decisao: "Peça o seu sem risco — garantia total", pos_venda: "Continue cuidando de você com segurança" },
+  C: { descoberta: "Os dados mostram algo preocupante", reconhecimento: "Veja os números que comprovam o problema", consideracao: "Analise os fatos antes de decidir", decisao: "Acesse, comprove e ative com 100% de garantia", pos_venda: "Veja seu histórico de resultados" }
 };
 
 // ── Copy Method Map ──
@@ -307,10 +308,10 @@ Antes de gerar qualquer pergunta, analise:
 - Deve usar PADRÃO DE INTERRUPÇÃO — surpreender, provocar, gerar identificação
 - Deve fazer o seguidor PARAR e pensar "isso sou eu"
 - Exemplos de BOAS perguntas:
-  - Perfil D + Unaware: "Quanto você já perdeu por não agir rápido?"
-  - Perfil I + Curious: "Qual foi o último produto que te fez sentir incrível?"
-  - Perfil S + Ready: "O que te impede de cuidar de você sem medo?"
-  - Perfil C + Unaware: "Você sabe quantos % do que usa é comprovado?"
+  - Perfil D + Descoberta: "Quanto você já perdeu por não agir rápido?"
+  - Perfil I + Reconhecimento: "Qual foi o último produto que te fez sentir incrível?"
+  - Perfil S + Decisão: "O que te impede de cuidar de você sem medo?"
+  - Perfil C + Descoberta: "Você sabe quantos % do que usa é comprovado?"
 
 ### REGRAS PARA A RESPOSTA DO SEGUIDOR:
 - Máximo 80 caracteres
@@ -323,21 +324,34 @@ ${discProfile === "all" || (!oceanTrait || oceanTrait === "all") ? `  - D: diret
 - NÃO pode ser genérica (ex: "Sim, concordo" é PROIBIDO)
 - Deve demonstrar a DOR ou o DESEJO do perfil
 
-### REGRAS PARA A COPY DA EMPRESA (resposta nos Stories):
+### REGRAS PARA "SUA RESPOSTA" (resposta nos Stories):
+- COMECE SEMPRE COM UM HOOK — uma frase de impacto que prende a atenção (máx 8 palavras)
 - Máximo 5 linhas curtas (ideal para Stories)
 - SEGUIR O MÉTODO ${(copyMethod || "venda").toUpperCase()} COM RIGOR
+- OBRIGATÓRIO: Use quebras de linha (\\n) entre cada linha da resposta para facilitar cópia no Canva
+- Formato esperado: "Hook forte\\n\\nLinha 1 do desenvolvimento\\n\\nLinha 2 com prova\\n\\nLinha 3 transição\\n\\nCTA final"
 - Deve incluir PROVA SOCIAL IMPLÍCITA (ex: "milhares de gestoras já...")
 - Deve usar CONTRASTE ANTES/DEPOIS
 - Deve ter TOM HUMANO — como se uma pessoa real estivesse respondendo
-- CTA no final ALINHADO ao perfil + fase do funil
+- CTA no final ALINHADO ao perfil + fase da jornada
 - A copy deve ser baseada no conteúdo/benefícios do produto fornecido
 - CADA copy deve tirar nota 8+ no Score de Conversão
 
 ### REGRAS PARA O CTA:
 - Deve ser CONSEQUÊNCIA NATURAL da copy
-- Alinhado ao perfil comportamental e fase do funil
+- Alinhado ao perfil comportamental e fase da jornada
 - Referência de CTAs por perfil × fase:
 ${discProfile === "all" ? Object.entries(ctaMatrix).map(([p, stages]) => `  ${p}: ${Object.entries(stages).map(([s, cta]) => `${s}="${cta}"`).join(" | ")}`).join("\n") : "  Adapte ao perfil e fase selecionados"}
+
+### REGRAS PARA "TEXTO ANÚNCIO" (nova coluna):
+- Estrutura C.C.P (Cabeça, Corpo, Pés) OBRIGATÓRIA, independente do método escolhido
+- CABEÇA: Hook forte baseado na Pergunta (máx 12 palavras, deve parar o scroll)
+- CORPO: Combina a Resposta do Seguidor + Sua Resposta de forma fluida, como uma narrativa persuasiva. Máx 4 linhas. Inclua prova social e contraste antes/depois.
+- PÉS: CTA direto e urgente (1 linha)
+- OBRIGATÓRIO: Use quebras de linha (\\n) entre Cabeça, Corpo e Pés
+- Formato: "HOOK FORTE\\n\\nDesenvolvimento persuasivo linha 1\\nDesenvolvimento linha 2\\nDesenvolvimento linha 3\\n\\nCTA DIRETO"
+- Deve ser PRONTO para usar como texto de anúncio (Meta Ads, Google Ads)
+- Tom de copywriter de 20 anos: persuasivo, específico, sem clichês
 
 ## FORMATO DE SAÍDA — JSON EXATO:
 {
@@ -350,11 +364,12 @@ ${discProfile === "all" ? Object.entries(ctaMatrix).map(([p, stages]) => `  ${p}
   "questions": [
     {
       "perfil": "nome do perfil (ex: D - Dominância)",
-      "jornada": "fase do funil (ex: Curioso)",
+      "jornada": "fase da jornada (ex: Descoberta, Reconhecimento, Consideração, Decisão, Pós-Venda)",
       "pergunta": "pergunta de até 12 palavras que ataca dor/desejo específico",
       "resposta": "resposta curta do seguidor (máx 80 chars), autêntica ao perfil",
-      "copy": "copy da empresa seguindo o método ${(copyMethod || "venda").toUpperCase()}, máx 5 linhas, alta conversão",
+      "copy": "Sua Resposta: COMECE COM HOOK + copy seguindo o método ${(copyMethod || "venda").toUpperCase()}, máx 5 linhas com \\n entre cada linha, alta conversão",
       "cta_copy": "CTA contextual alinhado ao perfil e fase",
+      "texto_anuncio": "Texto Anúncio no padrão CCP: Cabeça (hook)\\n\\nCorpo (narrativa persuasiva)\\n\\nPés (CTA)",
       "pain_addressed": "qual dor específica essa pergunta ataca",
       "desire_addressed": "qual desejo específico essa pergunta ativa"
     }
