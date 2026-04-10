@@ -39,6 +39,7 @@ import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { Progress } from "@/components/ui/progress";
 import { useSavedCustomer } from "@/hooks/useSavedCustomer";
 import { getActiveRef } from "@/pages/LinkRedirectPage";
+import { trackInitiateCheckout, trackAddPaymentInfo } from "@/lib/tracking";
 
 interface PaymentResult {
   payment_id: string;
@@ -74,6 +75,24 @@ const CheckoutPage = () => {
   });
   const abandonmentSaved = useRef(false);
   const [cepLoading, setCepLoading] = useState(false);
+
+  // Track InitiateCheckout on mount
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (!checkoutTracked.current && items.length > 0) {
+      checkoutTracked.current = true;
+      trackInitiateCheckout(items.map((i) => ({ id: i.product.id, name: i.product.name, price: i.product.price, quantity: i.quantity })), total);
+    }
+  }, [items.length]);
+
+  // Track AddPaymentInfo when method changes
+  const lastMethod = useRef(form.paymentMethod);
+  useEffect(() => {
+    if (form.paymentMethod !== lastMethod.current) {
+      lastMethod.current = form.paymentMethod;
+      trackAddPaymentInfo(form.paymentMethod);
+    }
+  }, [form.paymentMethod]);
 
   // Auto-fill from saved customer data
   useEffect(() => {

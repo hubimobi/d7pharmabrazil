@@ -12,6 +12,10 @@ import ScrollToTop from "./components/ScrollToTop";
 import Preloader from "./components/Preloader";
 import DesignTokenApplier from "./components/DesignTokenApplier";
 import TrackingScripts from "./components/TrackingScripts";
+import { useUTMCapture } from "./hooks/useUTMCapture";
+
+// Wrapper to call the hook inside BrowserRouter
+const UTMCaptureInit = () => { useUTMCapture(); return null; };
 
 // Lazy-loaded storefront pages
 const ProductsPage = lazy(() => import("./pages/ProductsPage"));
@@ -114,6 +118,7 @@ const App = () => (
             <ScrollToTop />
             <DesignTokenApplier />
             <TrackingScripts />
+            <UTMCaptureInit />
             <Suspense fallback={null}>
               <RecentPurchasePopup />
               <WebchatWidget />

@@ -20,6 +20,7 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import SEOHead from "@/components/SEOHead";
 import { useState, useEffect, useRef, useCallback } from "react";
 import UpsellDialog from "@/components/UpsellDialog";
+import { trackViewContent } from "@/lib/tracking";
 import ShippingCalculator, { ShippingOption } from "@/components/checkout/ShippingCalculator";
 import ProductQA from "@/components/ProductQA";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
@@ -89,6 +90,13 @@ const ProductDetail = () => {
     observer.observe(el);
     return () => observer.disconnect();
   }, [product]);
+
+  // Track ViewContent when product loads
+  useEffect(() => {
+    if (product) {
+      trackViewContent({ id: product.id, name: product.name, price: product.price, slug: product.slug });
+    }
+  }, [product?.id]);
 
   const { data: testimonials } = useQuery({
     queryKey: ["product-testimonials", product?.id],
