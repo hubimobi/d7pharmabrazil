@@ -19,6 +19,7 @@ interface QuestionRow {
   resposta: string;
   copy: string;
   cta_copy: string;
+  texto_anuncio?: string;
 }
 
 const COPY_METHOD_OPTIONS = [
@@ -110,11 +111,12 @@ const OCEAN_OPTIONS = [
 ];
 
 const FUNNEL_OPTIONS = [
-  { value: "all", label: "Todas as Fases", desc: "Gera para todas as fases do funil" },
-  { value: "unaware", label: "Sem Noção", desc: "Não sabe que tem o problema" },
-  { value: "curious", label: "Curioso", desc: "Sabe do problema, busca soluções" },
-  { value: "ready", label: "Pronto p/ Compra", desc: "Decidido, precisa de um empurrão" },
-  { value: "post", label: "Pós-Compra", desc: "Já comprou, fidelização" },
+  { value: "all", label: "Todas as Fases", desc: "Gera para todas as fases da jornada" },
+  { value: "descoberta", label: "Descoberta", desc: "Ainda não sabe que tem um problema" },
+  { value: "reconhecimento", label: "Reconhecimento", desc: "Reconhece que tem um problema" },
+  { value: "consideracao", label: "Consideração", desc: "Pesquisa e considera soluções" },
+  { value: "decisao", label: "Decisão de Compra", desc: "Pronto para decidir qual solução adquirir" },
+  { value: "pos_venda", label: "Pós-Venda", desc: "Já comprou, fidelização e recompra" },
 ];
 
 const PLATFORM_OPTIONS = [
@@ -235,12 +237,12 @@ export default function ProfileCopyGenerator() {
   const exportQuestionsCSV = () => {
     if (!questionsResult?.length) { toast.error("Nenhuma pergunta gerada"); return; }
     const isCaixinha = platform === "caixinha_pergunta";
-    const headers = isCaixinha ? ["Perfil", "Jornada", "Pergunta", "Resposta", "Copy", "CTA"] : ["Perfil", "Jornada", "Pergunta", "Resposta"];
+    const headers = isCaixinha ? ["Perfil", "Jornada", "Pergunta", "Resposta do Seguidor", "Sua Resposta", "CTA", "Texto Anúncio"] : ["Perfil", "Jornada", "Pergunta", "Resposta"];
     const csvContent = [
       headers.join(","),
       ...questionsResult.map(r => {
         const cols = isCaixinha
-          ? [r.perfil, r.jornada, r.pergunta, r.resposta, r.copy || "", r.cta_copy || ""]
+          ? [r.perfil, r.jornada, r.pergunta, r.resposta, r.copy || "", r.cta_copy || "", r.texto_anuncio || ""]
           : [r.perfil, r.jornada, r.pergunta, r.resposta];
         return cols.map(v => `"${(v || "").replace(/"/g, '""')}"`).join(",");
       })
@@ -533,7 +535,7 @@ export default function ProfileCopyGenerator() {
             </Select>
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block">Fase do Funil</label>
+            <label className="text-sm font-medium mb-1 block">Jornada de Compra</label>
             <Select value={funnelStage} onValueChange={setFunnelStage}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -999,8 +1001,9 @@ export default function ProfileCopyGenerator() {
                      <TableHead className="text-xs">Resposta do Seguidor</TableHead>
                      {platform === "caixinha_pergunta" && (
                        <>
-                         <TableHead className="text-xs">Copy (Empresa)</TableHead>
+                         <TableHead className="text-xs">Sua Resposta</TableHead>
                          <TableHead className="text-xs">CTA</TableHead>
+                         <TableHead className="text-xs">Texto Anúncio</TableHead>
                        </>
                      )}
                   </TableRow>
@@ -1018,6 +1021,7 @@ export default function ProfileCopyGenerator() {
                          <>
                            <TableCell className="text-xs max-w-[300px] whitespace-pre-wrap">{row.copy}</TableCell>
                            <TableCell className="text-xs font-medium text-indigo-700 max-w-[150px]">{row.cta_copy}</TableCell>
+                           <TableCell className="text-xs max-w-[350px] whitespace-pre-wrap">{row.texto_anuncio}</TableCell>
                         </>
                       )}
                     </TableRow>
@@ -1038,8 +1042,9 @@ export default function ProfileCopyGenerator() {
                  <p className="text-sm font-semibold mb-1">"{row.pergunta}"</p>
                  <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Resposta do seguidor:</p>
                  <p className="text-xs text-muted-foreground mb-1">{row.resposta}</p>
-                 {row.copy && <><p className="text-[10px] text-muted-foreground uppercase mt-1">Copy da empresa:</p><p className="text-xs text-gray-700 whitespace-pre-wrap border-t border-gray-100 pt-1">{row.copy}</p></>}
+                 {row.copy && <><p className="text-[10px] text-muted-foreground uppercase mt-1">Sua Resposta:</p><p className="text-xs text-gray-700 whitespace-pre-wrap border-t border-gray-100 pt-1">{row.copy}</p></>}
                 {row.cta_copy && <p className="text-xs font-medium text-indigo-700 mt-1">{row.cta_copy}</p>}
+                {row.texto_anuncio && <><p className="text-[10px] text-muted-foreground uppercase mt-2">Texto Anúncio:</p><p className="text-xs text-gray-700 whitespace-pre-wrap border-t border-gray-100 pt-1">{row.texto_anuncio}</p></>}
                 <Button
                   size="sm"
                   variant="ghost"
