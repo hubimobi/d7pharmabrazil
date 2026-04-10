@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { Product } from "@/hooks/useProducts";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { trackAddToCart } from "@/lib/tracking";
 
 interface CartItem {
   product: Product;
@@ -120,6 +121,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, { product, quantity: qty }];
     });
     toast.success(`${product.name} adicionado ao carrinho!`);
+    trackAddToCart({ id: product.id, name: product.name, price: product.price }, qty);
   };
 
   const removeItem = (productId: string) => {

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { identifyHotjar } from "@/lib/tracking";
 
 /**
  * Defers third-party tracking scripts until user interaction (scroll, click, touch)
@@ -106,6 +107,9 @@ export default function TrackingScripts() {
       `;
       document.head.appendChild(script);
     }
+
+    // Identify visitor in Hotjar after scripts load
+    setTimeout(identifyHotjar, 2000);
   };
 
   useUserInteraction(loadScripts);

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
+import { trackPurchase } from "@/lib/tracking";
 
 interface OrderData {
   id: string;
@@ -31,7 +32,20 @@ export default function OrderConfirmationPage() {
           body: { order_id: orderId, customer_email: localStorage.getItem("checkout_email") || undefined },
         });
         if (error) throw error;
-        if (data?.order) setOrder(data.order as any);
+        if (data?.order) {
+          setOrder(data.order as any);
+          const o = data.order as any;
+          trackPurchase({
+            id: o.id,
+            total: Number(o.total),
+            items: (o.items as any[]).map((item: any) => ({
+              id: item.product_id || item.name,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+            })),
+          });
+        }
       } catch {
         console.error("Failed to fetch order");
       }

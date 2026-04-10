@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { trackPurchase } from "@/lib/tracking";
 
 interface PixPaymentResultProps {
   encodedImage: string;
@@ -39,6 +40,14 @@ export default function PixPaymentResult({
   const handleConfirmed = () => {
     setConfirmed(true);
     toast.success("Pagamento confirmado! 🎉");
+    // Track purchase on PIX confirmation
+    if (orderId) {
+      trackPurchase({
+        id: orderId,
+        total,
+        items: [], // items not available here, will be tracked again on confirmation page
+      });
+    }
     onConfirmed?.();
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
