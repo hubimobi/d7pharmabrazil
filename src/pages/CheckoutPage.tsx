@@ -39,6 +39,7 @@ import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { Progress } from "@/components/ui/progress";
 import { useSavedCustomer } from "@/hooks/useSavedCustomer";
 import { getActiveRef } from "@/pages/LinkRedirectPage";
+import { trackInitiateCheckout, trackAddPaymentInfo } from "@/lib/tracking";
 
 interface PaymentResult {
   payment_id: string;

@@ -36,6 +36,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { getActiveRef } from "@/pages/LinkRedirectPage";
 import { motion, AnimatePresence } from "framer-motion";
+import { trackInitiateCheckout, trackAddPaymentInfo } from "@/lib/tracking";
 
 interface PaymentResult {
   payment_id: string;
