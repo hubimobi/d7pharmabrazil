@@ -120,18 +120,19 @@ const oceanDeep: Record<string, { label: string; pain: string; desire: string; t
 
 // ── Funnel Stage Map ──
 const funnelDeep: Record<string, { label: string; objective: string; technique: string }> = {
-  unaware: { label: "Sem noção do problema", objective: "Revelar a dor de forma sutil, criar consciência", technique: "Padrão de interrupção, pergunta retórica, revelação surpreendente" },
-  curious: { label: "Curioso", objective: "Aprofundar com prova social, dados e autoridade", technique: "Storytelling, comparação antes/depois, loop aberto" },
-  ready: { label: "Pronto para comprar", objective: "Urgência real, escassez, decisão imediata", technique: "Escassez genuína, ancoragem de preço, stack de valor, risco reverso" },
-  post: { label: "Pós-compra", objective: "Relacionamento, confiança, fidelização e recompra", technique: "Exclusividade de cliente, resultado acumulado, comunidade VIP" }
+  descoberta: { label: "Descoberta", objective: "O cliente ainda não sabe que tem um problema. Revelar a dor de forma sutil, criar consciência e despertar curiosidade.", technique: "Padrão de interrupção, pergunta retórica, revelação surpreendente, conteúdo educativo" },
+  reconhecimento: { label: "Reconhecimento", objective: "O cliente reconhece que tem um problema. Aprofundar a consciência da dor e mostrar que existe solução.", technique: "Storytelling de identificação, dados impactantes, comparação antes/depois, prova social" },
+  consideracao: { label: "Consideração", objective: "O cliente pesquisa e considera soluções possíveis. Posicionar o produto como a melhor opção.", technique: "Comparativos, diferenciais únicos, autoridade, demonstração de valor, stack de benefícios" },
+  decisao: { label: "Decisão de Compra", objective: "O cliente está pronto para decidir. Urgência real, escassez, decisão imediata.", technique: "Escassez genuína, ancoragem de preço, stack de valor, risco reverso, garantia" },
+  pos_venda: { label: "Pós-Venda", objective: "O cliente já comprou. Relacionamento, confiança, fidelização e recompra.", technique: "Exclusividade de cliente, resultado acumulado, comunidade VIP, indicação" }
 };
 
 // ── CTA Matrix: Profile × Funnel ──
 const ctaMatrix: Record<string, Record<string, string>> = {
-  D: { unaware: "Descubra o que está te travando", curious: "Veja como líderes resolvem isso", ready: "Garanta o seu agora — estoque limitado", post: "Renove antes que acabe — cliente tem prioridade" },
-  I: { unaware: "Você sabia que existe algo incrível?", curious: "Olha o que todo mundo está usando!", ready: "Eu quero! Como faço? 😍", post: "Compartilhe essa descoberta com quem ama!" },
-  S: { unaware: "Entenda por que tanta gente está mudando", curious: "Compare e escolha com tranquilidade", ready: "Peça o seu sem risco — garantia total", post: "Continue cuidando de você com segurança" },
-  C: { unaware: "Os dados mostram algo preocupante", curious: "Analise os fatos antes de decidir", ready: "Acesse, comprove e ative com 100% de garantia", post: "Veja seu histórico de resultados" }
+  D: { descoberta: "Descubra o que está te travando", reconhecimento: "Você já sabe o problema — agora resolva", consideracao: "Veja como líderes resolvem isso", decisao: "Garanta o seu agora — estoque limitado", pos_venda: "Renove antes que acabe — cliente tem prioridade" },
+  I: { descoberta: "Você sabia que existe algo incrível?", reconhecimento: "Olha o que pode mudar tudo pra você! 😍", consideracao: "Olha o que todo mundo está usando!", decisao: "Eu quero! Como faço? 😍", pos_venda: "Compartilhe essa descoberta com quem ama!" },
+  S: { descoberta: "Entenda por que tanta gente está mudando", reconhecimento: "Você não está sozinha nessa — veja depoimentos", consideracao: "Compare e escolha com tranquilidade", decisao: "Peça o seu sem risco — garantia total", pos_venda: "Continue cuidando de você com segurança" },
+  C: { descoberta: "Os dados mostram algo preocupante", reconhecimento: "Veja os números que comprovam o problema", consideracao: "Analise os fatos antes de decidir", decisao: "Acesse, comprove e ative com 100% de garantia", pos_venda: "Veja seu histórico de resultados" }
 };
 
 // ── Copy Method Map ──
