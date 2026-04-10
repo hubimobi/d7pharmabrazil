@@ -386,6 +386,9 @@ export default function IntegrationsPage() {
         {/* TikTok Shop */}
         <TikTokShopCard />
 
+        {/* Hotjar */}
+        <HotjarCard />
+
         {/* Google Meu Negócio */}
         <GoogleBusinessCard />
 
@@ -1078,6 +1081,94 @@ function GoogleBusinessCard() {
         <Button onClick={handleSave} disabled={saving} size="sm">
           {saving ? "Salvando..." : "Salvar Configurações"}
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function HotjarCard() {
+  const { data: settings } = useStoreSettings();
+  const qc = useQueryClient();
+  const [hotjarId, setHotjarId] = useState((settings as any)?.hotjar_id || "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setHotjarId((settings as any)?.hotjar_id || "");
+    }
+  }, [settings]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("store_settings").update({
+        hotjar_id: hotjarId || null,
+      } as any).eq("id", (settings as any)?.id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["store-settings"] });
+      toast.success("Hotjar configurado com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isConfigured = !!hotjarId;
+
+  return (
+    <Card className={!isConfigured ? "opacity-75" : ""}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          🔥 Hotjar
+          {isConfigured ? (
+            <Badge variant="default">Configurado</Badge>
+          ) : (
+            <Badge variant="outline">Não configurado</Badge>
+          )}
+        </CardTitle>
+        <CardDescription>
+          Mapa de calor, gravações de sessão e análise de comportamento dos visitantes.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>Site ID do Hotjar</Label>
+          <Input
+            placeholder="Ex: 1234567"
+            value={hotjarId}
+            onChange={(e) => setHotjarId(e.target.value.replace(/\D/g, ""))}
+          />
+          <p className="text-xs text-muted-foreground">
+            Encontre em <a href="https://insights.hotjar.com/settings" target="_blank" rel="noopener noreferrer" className="text-primary underline">Hotjar → Settings → Sites & Organizations</a>
+          </p>
+        </div>
+
+        <div className="rounded-md bg-muted p-3">
+          <p className="text-xs text-muted-foreground">
+            O script do Hotjar será carregado automaticamente em todas as páginas do site após a primeira interação do visitante, para não impactar a performance.
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <Button onClick={handleSave} disabled={saving} size="sm">
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+          {isConfigured && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setHotjarId("");
+                handleSave();
+              }}
+              className="text-destructive hover:text-destructive"
+            >
+              <PowerOff className="h-4 w-4 mr-2" />
+              Remover
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
