@@ -3,6 +3,7 @@ import { Product } from "@/hooks/useProducts";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { trackAddToCart } from "@/lib/tracking";
+import { useTenant } from "@/hooks/useTenant";
 
 interface CartItem {
   product: Product;
@@ -88,6 +89,7 @@ function saveComboToStorage(combo: ComboState) {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { tenantId } = useTenant();
   const [items, setItems] = useState<CartItem[]>(() => loadCartFromStorage());
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [comboState, setComboState] = useState<ComboState>(() => loadComboFromStorage());
@@ -233,6 +235,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         .select("*")
         .eq("code", upper)
         .eq("active", true)
+        .eq("tenant_id", tenantId)
         .single() as { data: any; error: any };
 
       if (error || !data) {

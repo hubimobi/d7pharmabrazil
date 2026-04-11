@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/hooks/useCart";
 import { AuthProvider } from "@/hooks/useAuth";
+import { TenantProvider } from "@/hooks/useTenant";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
@@ -110,7 +111,8 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <CartProvider>
+        <TenantProvider>
+          <CartProvider>
           <Preloader />
           <Toaster />
           <Sonner />
@@ -179,6 +181,7 @@ const App = () => (
             </Suspense>
           </BrowserRouter>
         </CartProvider>
+        </TenantProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

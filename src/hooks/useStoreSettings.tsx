@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 
 export interface HeroBadge {
   icon: string;
@@ -45,7 +46,6 @@ export interface StoreSettings {
   webchat_position: string;
   webchat_delay_seconds: number;
   webchat_show_on_scroll: boolean;
-  // Hero media (legacy, kept for compatibility)
   hero_media_type: string;
   hero_video_url: string;
   hero_badges: HeroBadge[];
@@ -53,20 +53,16 @@ export interface StoreSettings {
   hero_btn1_hover_color: string;
   hero_btn2_bg_color: string;
   hero_btn2_hover_color: string;
-  // Carousel settings
   hero_carousel_enabled: boolean;
   hero_carousel_effect: string;
   hero_carousel_interval: number;
-  // Shipping
   free_shipping_enabled: boolean;
   free_shipping_min_value: number;
   free_shipping_regions: string;
-  // Notification bar
   notification_bar_enabled: boolean;
   notification_bar_text: string;
   notification_bar_bg_color: string;
   notification_bar_text_color: string;
-  // Popup banner
   popup_banner_enabled: boolean;
   popup_banner_title: string;
   popup_banner_description: string;
@@ -75,18 +71,15 @@ export interface StoreSettings {
   popup_banner_collect_email: boolean;
   popup_banner_delay_seconds: number;
   popup_banner_reappear_hours: number;
-  // Benefits section
   benefits_title: string;
   benefits_subtitle: string;
   benefits_items: Array<{ icon: string; title: string; desc: string }>;
-  // Combo offer
   combo_offer_enabled: boolean;
   combo_offer_products: string[];
   combo_offer_discount: number;
   combo_offer_free_shipping: boolean;
   combo_offer_label: string;
   hide_chat_on_checkout: boolean;
-  // Design settings
   design_title_color: string;
   design_text_color: string;
   design_icon_color: string;
@@ -98,7 +91,6 @@ export interface StoreSettings {
   design_border_style: string;
   design_bg_gradient: string;
   design_footer_gradient: string;
-  // Sales popup
   sales_popup_enabled: boolean;
   sales_popup_position: string;
   sales_popup_button_color: string;
@@ -109,14 +101,10 @@ export interface StoreSettings {
   sales_popup_custom_entries: Array<{ customer_name: string; product_name: string; city: string }>;
   max_installments: number;
   max_total_installments: number;
-  // Visual theme
   visual_theme: string;
-  // Checkout version
   checkout_version: string;
-  // Company display
   display_name: string;
   attendant_name: string;
-  // Store goals
   goal_monthly_revenue: number;
   goal_conversion_rate: number;
   goal_cart_recovery: number;
@@ -126,12 +114,14 @@ export interface StoreSettings {
 }
 
 export function useStoreSettings() {
+  const { tenantId } = useTenant();
   return useQuery({
-    queryKey: ["store-settings"],
+    queryKey: ["store-settings", tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("store_settings_public" as any)
         .select("*")
+        .eq("tenant_id", tenantId)
         .limit(1)
         .single();
       if (error) throw error;
