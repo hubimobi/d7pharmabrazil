@@ -394,6 +394,9 @@ export default function IntegrationsPage() {
 
         {/* Cloudflare Cache */}
         <CloudflareCacheCard />
+
+        {/* Evolution API */}
+        <EvolutionApiCard />
       </div>
 
       {/* Manual Bling Sync */}
@@ -1254,6 +1257,135 @@ function CloudflareCacheCard() {
           {purging ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
           {purging ? "Limpando..." : mode === "all" ? "Limpar Todo o Cache" : "Limpar URLs"}
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EvolutionApiCard() {
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["evolution-api-settings"],
+    queryFn: async () => {
+      const { data } = await supabase.from("store_settings").select("evolution_api_url, evolution_api_key").limit(1).single();
+      return data as { evolution_api_url: string; evolution_api_key: string } | null;
+    },
+  });
+  const qc = useQueryClient();
+  const [url, setUrl] = useState("");
+  const [key, setKey] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setUrl(settings.evolution_api_url || "");
+      setKey(settings.evolution_api_key || "");
+    }
+  }, [settings]);
+
+  const isConnected = !!(settings?.evolution_api_url && settings?.evolution_api_key);
+
+  const handleSave = async () => {
+    if (!url || !key) { toast.error("Preencha URL e chave da API"); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("store_settings").update({
+        evolution_api_url: url.replace(/\/+$/, ""),
+        evolution_api_key: key,
+      } as any).neq("id", "00000000-0000-0000-0000-000000000000");
+      if (error) throw error;
+      toast.success("Evolution API configurada!");
+      qc.invalidateQueries({ queryKey: ["evolution-api-settings"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTest = async () => {
+    if (!url || !key) { toast.error("Configure URL e chave primeiro"); return; }
+    setTesting(true);
+    try {
+      const res = await fetch(`${url.replace(/\/+$/, "")}/instance/fetchInstances`, {
+        headers: { apikey: key },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(`Conexão OK! ${Array.isArray(data) ? data.length : 0} instância(s) encontrada(s).`);
+      } else {
+        toast.error(`Erro ${res.status}: Verifique URL e chave.`);
+      }
+    } catch (e: any) {
+      toast.error(`Falha na conexão: ${e.message}`);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setSaving(true);
+    await supabase.from("store_settings").update({
+      evolution_api_url: "",
+      evolution_api_key: "",
+    } as any).neq("id", "00000000-0000-0000-0000-000000000000");
+    setUrl("");
+    setKey("");
+    qc.invalidateQueries({ queryKey: ["evolution-api-settings"] });
+    toast.success("Evolution API desconectada");
+    setSaving(false);
+  };
+
+  return (
+    <Card className={!isConnected ? "opacity-75" : ""}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5" />
+          Evolution API (WhatsApp)
+          <Badge variant={isConnected ? "default" : "outline"}>
+            {isLoading ? "Verificando..." : isConnected ? "Conectado" : "Desconectado"}
+          </Badge>
+        </CardTitle>
+        <CardDescription>
+          Servidor de automação WhatsApp. Configure a URL e chave de API aqui para todas as instâncias.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-3">
+          <div>
+            <Label>URL da Evolution API</Label>
+            <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://sua-evolution-api.com" />
+          </div>
+          <div>
+            <Label>API Key</Label>
+            <Input value={key} onChange={(e) => setKey(e.target.value)} placeholder="Chave de autenticação" type="password" />
+          </div>
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleTest} disabled={testing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${testing ? "animate-spin" : ""}`} />
+            Testar Conexão
+          </Button>
+          {isConnected && (
+            <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={handleDisconnect}>
+              <PowerOff className="h-4 w-4 mr-2" />
+              Desconectar
+            </Button>
+          )}
+        </div>
+
+        <div className="rounded-md bg-muted p-3 space-y-1">
+          <p className="text-xs font-medium">Como configurar:</p>
+          <ol className="text-xs text-muted-foreground list-decimal pl-4 space-y-0.5">
+            <li>Hospede a Evolution API (Railway, VPS, etc.)</li>
+            <li>Copie a URL do servidor e a <code className="bg-background px-1 rounded">AUTHENTICATION_API_KEY</code></li>
+            <li>Cole os valores acima e clique em <strong>Testar Conexão</strong></li>
+          </ol>
+        </div>
       </CardContent>
     </Card>
   );
