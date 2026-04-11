@@ -413,8 +413,11 @@ function InstancesTab() {
           <DialogHeader><DialogTitle>Nova Instância WhatsApp</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>Nome</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: WhatsApp Vendas 1" /></div>
-            <div><Label>URL da Evolution API</Label><Input value={form.api_url} onChange={(e) => setForm({ ...form, api_url: e.target.value })} placeholder="https://sua-evolution-api.com" /></div>
-            <div><Label>API Key</Label><Input value={form.api_key} onChange={(e) => setForm({ ...form, api_key: e.target.value })} placeholder="Chave da sua Evolution API" type="password" /></div>
+            {(!evoConfig?.url || !evoConfig?.key) && (
+              <div className="rounded-md bg-destructive/10 border border-destructive/30 p-3 text-sm text-destructive">
+                ⚠️ Configure a Evolution API em <strong>Integrações</strong> antes de criar instâncias.
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Função deste WhatsApp</Label>
               <div className="flex flex-wrap gap-2">
