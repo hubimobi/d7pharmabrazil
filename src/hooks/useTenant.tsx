@@ -4,6 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { DEFAULT_TENANT_ID } from "@/constants/tenant";
 
+interface TenantResolution {
+  tenant_id: string;
+  slug: string;
+  plan: string;
+  status: string;
+  allowed_modules: Record<string, boolean>;
+  store_settings: Record<string, unknown> | null;
+}
+
 interface TenantContextType {
   tenantId: string;
   isResolved: boolean;
@@ -18,6 +27,63 @@ const TenantContext = createContext<TenantContextType>({
   switchTenant: () => {},
 });
 
+// ── In-memory cache with 5-min TTL ──
+const tenantCache = new Map<string, { data: TenantResolution; expiresAt: number }>();
+const CACHE_TTL = 5 * 60 * 1000;
+
+function getHostname(): string {
+  try {
+    return window.location.hostname.toLowerCase().trim();
+  } catch {
+    return "localhost";
+  }
+}
+
+async function fetchTenantResolution(): Promise<TenantResolution | null> {
+  const hostname = getHostname();
+
+  // Fast path: localhost → default immediately, no network call
+  if (!hostname || hostname === "localhost") {
+    return null; // signals "use DEFAULT_TENANT_ID"
+  }
+
+  // Check in-memory cache
+  const cached = tenantCache.get(hostname);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  // Call resolve-tenant with 3s timeout
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    const { data, error } = await supabase.functions.invoke("resolve-tenant", {
+      method: "GET",
+      headers: {},
+    });
+
+    clearTimeout(timeout);
+
+    if (error || !data?.tenant_id) {
+      return null;
+    }
+
+    const resolution = data as TenantResolution;
+
+    // Cache the result
+    tenantCache.set(hostname, {
+      data: resolution,
+      expiresAt: Date.now() + CACHE_TTL,
+    });
+
+    return resolution;
+  } catch {
+    clearTimeout(timeout);
+    return null; // fallback to DEFAULT
+  }
+}
+
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -26,33 +92,44 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [isSuperboss, setIsSuperboss] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      setTenantId(DEFAULT_TENANT_ID);
-      setIsSuperboss(false);
-      setIsResolved(true);
-      return;
-    }
-
     let cancelled = false;
 
     const resolve = async () => {
-      const [tenantRes, roleRes] = await Promise.all([
-        supabase
-          .from("tenant_users")
-          .select("tenant_id")
-          .eq("user_id", user.id)
-          .limit(1),
-        supabase
+      // 1. Resolve tenant by hostname (works for anon AND logged-in users)
+      const resolution = await fetchTenantResolution();
+      if (cancelled) return;
+
+      const resolvedTenantId = resolution?.tenant_id ?? DEFAULT_TENANT_ID;
+      setTenantId(resolvedTenantId);
+
+      // 2. For logged-in users, check super_admin status separately
+      if (user) {
+        const { data: roleRow } = await supabase
           .from("tenant_users")
           .select("role")
           .eq("user_id", user.id)
           .eq("role", "super_admin")
-          .maybeSingle(),
-      ]);
+          .maybeSingle();
 
-      if (cancelled) return;
-      setTenantId(tenantRes.data?.[0]?.tenant_id ?? DEFAULT_TENANT_ID);
-      setIsSuperboss(!!roleRes.data);
+        if (cancelled) return;
+        setIsSuperboss(!!roleRow);
+
+        // If user is bound to a specific tenant via tenant_users,
+        // override hostname resolution for admin context
+        const { data: tenantRow } = await supabase
+          .from("tenant_users")
+          .select("tenant_id")
+          .eq("user_id", user.id)
+          .limit(1);
+
+        if (cancelled) return;
+        if (tenantRow?.[0]?.tenant_id) {
+          setTenantId(tenantRow[0].tenant_id);
+        }
+      } else {
+        setIsSuperboss(false);
+      }
+
       setIsResolved(true);
     };
 
