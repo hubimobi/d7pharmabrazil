@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from "react";
 import ProductComboSelect from "@/components/admin/ProductComboSelect";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import {
   Download, Upload, Search, Edit, Trash2, UserPlus, FileText, X, FolderOpen, CheckSquare, TrendingUp
 } from "lucide-react";
@@ -49,6 +50,7 @@ const LEAD_FIELDS = [
 
 export default function LeadsPage() {
   const queryClient = useQueryClient();
+  const { tenantId } = useTenant();
   const [search, setSearch] = useState("");
   const [filterTag, setFilterTag] = useState<string>("all");
   const [filterSource, setFilterSource] = useState<string>("all");

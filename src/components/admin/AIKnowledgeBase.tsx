@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ interface KBItem {
 
 export default function AIKnowledgeBase() {
   const [selectedKb, setSelectedKb] = useState<KnowledgeBase | null>(null);
+  const { tenantId } = useTenant();
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [addItemType, setAddItemType] = useState<string | null>(null);

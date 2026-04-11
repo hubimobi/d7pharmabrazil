@@ -3,6 +3,7 @@ import ProductComboSelect from "@/components/admin/ProductComboSelect";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -327,6 +328,7 @@ function PromoBannersAdmin() {
 
 export default function BannerPage() {
   const { canDelete } = useAuth();
+  const { tenantId } = useTenant();
   const { data: settings, isLoading: settingsLoading } = useStoreSettings();
   const { data: allProducts } = useProducts();
 

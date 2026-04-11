@@ -6,10 +6,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Settings2, Save, Loader2, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { toast } from "sonner";
 
 export default function CampaignConfigTool() {
   const [loading, setLoading] = useState(true);
+  const { tenantId } = useTenant();
   const [saving, setSaving] = useState(false);
   const [configId, setConfigId] = useState<string | null>(null);
   const [campaignTemplate, setCampaignTemplate] = useState("{produto} — {modelo}");
