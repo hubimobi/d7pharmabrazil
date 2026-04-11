@@ -5,6 +5,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/** Safely parse a fetch response as JSON, returning an error object if HTML/non-JSON */
+async function safeJson(res: Response): Promise<{ ok: boolean; status: number; data: any }> {
+  const text = await res.text();
+  try {
+    const data = JSON.parse(text);
+    return { ok: res.ok, status: res.status, data };
+  } catch {
+    return {
+      ok: false,
+      status: res.status,
+      data: { error: "Evolution API retornou resposta inválida (não-JSON)", status: res.status, body_preview: text.substring(0, 200) },
+    };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -111,9 +126,9 @@ Deno.serve(async (req) => {
           headers: { "Content-Type": "application/json", apikey: instance.api_key },
           body: JSON.stringify({ number: formattedPhone, text: msg.message_content }),
         });
-        const evoData = await evoRes.json();
+        const evo = await safeJson(evoRes);
 
-        if (evoRes.ok) {
+        if (evo.ok) {
           await supabase.from("whatsapp_message_queue").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", msg.id);
           await supabase.from("whatsapp_message_log").insert({
             contact_phone: msg.contact_phone,
@@ -136,7 +151,7 @@ Deno.serve(async (req) => {
           if (retryCount >= msg.max_retries) {
             await supabase.from("whatsapp_message_queue").update({
               status: "failed",
-              error_message: JSON.stringify(evoData),
+              error_message: JSON.stringify(evo.data),
               retry_count: retryCount,
             }).eq("id", msg.id);
             await supabase.from("whatsapp_message_log").insert({
@@ -149,13 +164,13 @@ Deno.serve(async (req) => {
               status: "error",
               funnel_id: msg.funnel_id,
               step_id: msg.step_id,
-              error_message: JSON.stringify(evoData),
+              error_message: JSON.stringify(evo.data),
             });
           } else {
             await supabase.from("whatsapp_message_queue").update({
               retry_count: retryCount,
               scheduled_at: new Date(Date.now() + 300000 * retryCount).toISOString(),
-              error_message: JSON.stringify(evoData),
+              error_message: JSON.stringify(evo.data),
             }).eq("id", msg.id);
           }
           errors++;

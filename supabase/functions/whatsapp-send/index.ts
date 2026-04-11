@@ -6,6 +6,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/** Safely parse a fetch response as JSON, returning an error object if HTML/non-JSON */
+async function safeJson(res: Response): Promise<{ ok: boolean; status: number; data: any }> {
+  const text = await res.text();
+  try {
+    const data = JSON.parse(text);
+    return { ok: res.ok, status: res.status, data };
+  } catch {
+    return {
+      ok: false,
+      status: res.status,
+      data: { error: "Evolution API retornou resposta inválida (não-JSON)", status: res.status, body_preview: text.substring(0, 200) },
+    };
+  }
+}
+
 // Spintax parser
 function parseSpintax(text: string): string {
   const regex = /\{([^{}]+)\}/;
@@ -152,8 +167,8 @@ Deno.serve(async (req) => {
       }),
     });
 
-    const evoData = await evoRes.json();
-    const success = evoRes.ok;
+    const evo = await safeJson(evoRes);
+    const success = evo.ok;
 
     // Log message
     await supabase.from("whatsapp_message_log").insert({
@@ -165,7 +180,7 @@ Deno.serve(async (req) => {
       direction: "outbound",
       status: success ? "sent" : "error",
       funnel_id, step_id,
-      error_message: success ? null : JSON.stringify(evoData),
+      error_message: success ? null : JSON.stringify(evo.data),
     });
 
     // Update instance counters
@@ -176,7 +191,7 @@ Deno.serve(async (req) => {
       }).eq("id", instance.id);
     }
 
-    return new Response(JSON.stringify({ success, instance_used: instance.name, evo_response: evoData }), {
+    return new Response(JSON.stringify({ success, instance_used: instance.name, evo_response: evo.data }), {
       status: success ? 200 : 502,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
