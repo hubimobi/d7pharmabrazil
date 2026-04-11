@@ -18,8 +18,9 @@ import {
   MessageSquare, Smartphone, FileText, GitBranch, Users, BarChart3,
   Plus, RefreshCw, QrCode, Wifi, WifiOff, Trash2, Edit, Play, Pause,
   Send, Clock, AlertTriangle, CheckCircle, XCircle, Eye, Search,
-  Zap, Settings2, Shuffle, Upload, Phone, Mail, UserPlus, Download
+  Zap, Settings2, Shuffle, Upload, Phone, Mail, UserPlus, Download, Inbox
 } from "lucide-react";
+import ConversationsTab from "@/components/admin/WhatsAppConversations";
 
 // ==================== TYPES ====================
 interface WhatsAppInstance {
@@ -1589,6 +1590,7 @@ export default function WhatsAppPage() {
       <Tabs defaultValue="dashboard">
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="dashboard" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Dashboard</TabsTrigger>
+          <TabsTrigger value="conversations" className="gap-1.5"><Inbox className="h-3.5 w-3.5" /> Conversas</TabsTrigger>
           <TabsTrigger value="instances" className="gap-1.5"><Smartphone className="h-3.5 w-3.5" /> WhatsApps</TabsTrigger>
           <TabsTrigger value="templates" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Templates</TabsTrigger>
           <TabsTrigger value="funnels" className="gap-1.5"><GitBranch className="h-3.5 w-3.5" /> Funis</TabsTrigger>
@@ -1597,6 +1599,7 @@ export default function WhatsAppPage() {
         </TabsList>
 
         <TabsContent value="dashboard"><DashboardTab /></TabsContent>
+        <TabsContent value="conversations"><ConversationsTab /></TabsContent>
         <TabsContent value="instances"><InstancesTab /></TabsContent>
         <TabsContent value="templates"><TemplatesTab /></TabsContent>
         <TabsContent value="funnels"><FunnelsTab /></TabsContent>
