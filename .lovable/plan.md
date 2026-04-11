@@ -1,59 +1,58 @@
 
 
-## Fase 0 — Execução
+# Fase 7 — Restauração de Backups
 
-### Migration SQL (1 migration com todos os passos)
+## Arquivos
 
-```sql
--- 1. Add role column to tenant_users
-ALTER TABLE tenant_users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'admin';
+| Arquivo | Ação |
+|---|---|
+| `supabase/functions/restore-backup/index.ts` | Criar |
+| `src/pages/superboss/SuperbossBackups.tsx` | Reescrever |
 
--- 2. Insert default tenant
-INSERT INTO tenants (id, name, slug, active, created_at, updated_at)
-VALUES ('00000000-0000-0000-0000-000000000000', 'D7 Pharma Brasil', 'main', true, now(), now())
-ON CONFLICT (id) DO NOTHING;
+## 7.1 — Edge Function `restore-backup`
 
--- 3. Associate admins to default tenant as super_admin
-INSERT INTO tenant_users (user_id, tenant_id, role, created_at)
-VALUES 
-  ('1387a8df-9aa7-4ba6-b67e-acdff37dfd12', '00000000-0000-0000-0000-000000000000', 'super_admin', now()),
-  ('80a6372a-7896-42bc-812a-367714ec9a94', '00000000-0000-0000-0000-000000000000', 'super_admin', now())
-ON CONFLICT (tenant_id, user_id) DO NOTHING;
+Nova função em `supabase/functions/restore-backup/index.ts`:
 
--- 4. Add super_admin role in user_roles
-INSERT INTO user_roles (user_id, role)
-VALUES 
-  ('1387a8df-9aa7-4ba6-b67e-acdff37dfd12', 'super_admin'),
-  ('80a6372a-7896-42bc-812a-367714ec9a94', 'super_admin')
-ON CONFLICT (user_id, role) DO NOTHING;
+- CORS + OPTIONS handling (mesmo padrão do clone-tenant)
+- Recebe `POST { backup_id }`
+- Cria cliente anon com token do caller para validar JWT
+- Verifica `super_admin` via query em `tenant_users`
+- Busca backup por ID em `tenant_config_backups`
+- Extrai `id` (recordId) do `data` JSONB
 
--- 5. Backfill tenant_id in 6 existing tables
-UPDATE orders SET tenant_id = '00000000-0000-0000-0000-000000000000' WHERE tenant_id IS NULL;
-UPDATE products SET tenant_id = '00000000-0000-0000-0000-000000000000' WHERE tenant_id IS NULL;
-UPDATE doctors SET tenant_id = '00000000-0000-0000-0000-000000000000' WHERE tenant_id IS NULL;
-UPDATE representatives SET tenant_id = '00000000-0000-0000-0000-000000000000' WHERE tenant_id IS NULL;
-UPDATE commissions SET tenant_id = '00000000-0000-0000-0000-000000000000' WHERE tenant_id IS NULL;
-UPDATE store_settings SET tenant_id = '00000000-0000-0000-0000-000000000000' WHERE tenant_id IS NULL;
-```
+**Fluxo de restauração (UPDATE-first com fallback INSERT):**
+1. Busca estado atual do registro (`SELECT * WHERE id = recordId AND tenant_id`)
+2. Se encontrou, salva como `pre_restore` em `tenant_config_backups`
+3. Extrai campos restauráveis: remove `id`, `tenant_id`, `created_at`, `updated_at` do backup data
+4. Tenta `UPDATE ... SET fieldsToRestore WHERE id = recordId AND tenant_id`
+5. Se UPDATE não encontrou registro (count = 0), faz `INSERT` com dados completos do backup como fallback
+6. Retorna `{ success, table_name, record_id }`
 
-### Arquivo novo
+Usa `service_role` client para as operações de dados (bypass RLS).
 
-**`src/constants/tenant.ts`**
-```typescript
-export const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000000';
-export const SUPERBOSS_ROUTE_PREFIX = '/superboss';
-```
+## 7.2 — SuperbossBackups.tsx (reescrita completa)
 
-### Verificação pós-execução
+**Backup manual (direto no frontend):**
+- Select com tabelas suportadas (store_settings, products, hero_banners, etc. — mesma lista do clone-tenant)
+- Campo de notas opcional
+- Botão "Criar Backup Manual"
+- Busca registros da tabela para o tenant selecionado via `useTenant()`
+- Insere cada registro como backup com `backup_type: 'manual'`
 
-Retornarei imediatamente os 4 SELECTs:
-1. `SELECT * FROM tenants`
-2. `SELECT * FROM tenant_users`
-3. `SELECT COUNT(*), tenant_id FROM orders GROUP BY tenant_id`
-4. `SELECT COUNT(*), tenant_id FROM products GROUP BY tenant_id`
+**Restauração:**
+- Botão "Restaurar" funcional (não mais disabled)
+- AlertDialog de confirmação antes de restaurar
+- Chama `supabase.functions.invoke("restore-backup", { body: { backup_id } })`
+- Toast de sucesso/erro
+- Recarrega lista após restauração
 
-### Impacto
-- Zero alteração em código existente
-- Dados preservados e vinculados ao tenant principal
-- Base pronta para Fase 1
+**Preview de dados:**
+- Coluna com preview truncado do JSON do backup (primeiros 80 chars)
+- Tooltip ou expand para ver JSON completo
+
+## 7.3 — Deploy e teste
+
+- Deploy da edge function `restore-backup`
+- Build limpo (tsc --noEmit)
+- Verificação visual do painel
 
