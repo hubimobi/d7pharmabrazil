@@ -89,6 +89,7 @@ function saveComboToStorage(combo: ComboState) {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { tenantId } = useTenant();
   const [items, setItems] = useState<CartItem[]>(() => loadCartFromStorage());
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [comboState, setComboState] = useState<ComboState>(() => loadComboFromStorage());
