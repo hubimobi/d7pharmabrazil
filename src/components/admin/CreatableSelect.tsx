@@ -32,7 +32,7 @@ export default function CreatableSelect({ table, value, onChange, placeholder }:
 
   const create = useMutation({
     mutationFn: async (name: string) => {
-      const { error } = await supabase.from(table).insert({ name });
+      const { error } = await supabase.from(table).insert({ name, tenant_id: tenantId });
       if (error) throw error;
     },
     onSuccess: () => {

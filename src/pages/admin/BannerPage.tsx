@@ -110,7 +110,7 @@ function PromoBannersAdmin() {
     mutationFn: async () => {
       const nextSlot = local.length + 1;
       const { error } = await (supabase.from("promo_banners" as any) as any)
-        .insert({ slot: nextSlot, active: true, title: "Novo Banner Promo", subtitle: "" });
+        .insert({ slot: nextSlot, active: true, title: "Novo Banner Promo", subtitle: "", tenant_id: tenantId });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -466,6 +466,7 @@ export default function BannerPage() {
           btn1_hover_color: defaultBtn1Hover || null,
           btn2_bg_color: defaultBtn2Bg || null,
           btn2_hover_color: defaultBtn2Hover || null,
+          tenant_id: tenantId,
         });
       if (error) throw error;
     },

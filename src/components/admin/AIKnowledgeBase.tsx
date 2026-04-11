@@ -62,7 +62,7 @@ export default function AIKnowledgeBase() {
 
   const createKb = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("ai_knowledge_bases" as any).insert({ name: newName } as any);
+      const { error } = await supabase.from("ai_knowledge_bases" as any).insert({ name: newName, tenant_id: tenantId } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -111,6 +111,7 @@ export default function AIKnowledgeBase() {
         type: addItemType,
         content,
         status,
+        tenant_id: tenantId,
       } as any);
       if (error) throw error;
     },

@@ -67,6 +67,7 @@ export default function CampaignConfigTool() {
           audience_template: audienceTemplate,
           default_objective: defaultObjective,
           notes,
+          tenant_id: tenantId,
         });
         if (error) throw error;
       }

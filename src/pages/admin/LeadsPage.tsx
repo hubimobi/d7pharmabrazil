@@ -169,6 +169,7 @@ export default function LeadsPage() {
       email: addForm.email, name: addForm.name || null, phone: addForm.phone || null,
       source: "manual", city: addForm.city || null, state: addForm.state || null, tags,
       product_id: addForm.product_id === "none" ? null : addForm.product_id, product_name: productName,
+      tenant_id: tenantId,
     } as any);
     toast.success("Lead adicionado");
     setShowAddLead(false);
@@ -248,7 +249,7 @@ export default function LeadsPage() {
         product_name: productName,
       };
 
-      const { error } = await supabase.from("popup_leads").insert(payload as any);
+      const { error } = await supabase.from("popup_leads").insert({ ...payload, tenant_id: tenantId } as any);
       if (!error) imported++;
     }
 

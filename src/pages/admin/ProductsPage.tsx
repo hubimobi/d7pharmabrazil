@@ -207,7 +207,7 @@ export default function ProductsPage() {
         const { error } = await supabase.from("products").update(payload).eq("id", editId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from("products").insert(payload).select("id").single();
+        const { data, error } = await supabase.from("products").insert({ ...payload, tenant_id: tenantId }).select("id").single();
         if (error) throw error;
         productId = data.id;
       }
@@ -250,7 +250,7 @@ export default function ProductsPage() {
         // Delete existing and re-insert
         await supabase.from("product_testimonials").delete().eq("product_id", productId);
         if (processedTestimonials.length > 0) {
-          const { error } = await supabase.from("product_testimonials").insert(processedTestimonials as any);
+          const { error } = await supabase.from("product_testimonials").insert(processedTestimonials.map((t: any) => ({ ...t, tenant_id: tenantId })) as any);
           if (error) throw error;
         }
 
@@ -263,7 +263,7 @@ export default function ProductsPage() {
             answer: f.answer,
             sort_order: i,
           }));
-          const { error: faqErr } = await supabase.from("product_faqs").insert(faqRows);
+          const { error: faqErr } = await supabase.from("product_faqs").insert(faqRows.map((f: any) => ({ ...f, tenant_id: tenantId })));
           if (faqErr) throw faqErr;
         }
       }
@@ -314,6 +314,7 @@ export default function ProductsPage() {
 
       const newSlug = `${p.slug}-copia-${Date.now()}`;
       const { data: newProd, error } = await supabase.from("products").insert({
+        tenant_id: tenantId,
         name: `${p.name} [COPIA]`,
         slug: newSlug,
         short_description: p.short_description,
@@ -361,6 +362,7 @@ export default function ProductsPage() {
             author_image_url: t.author_image_url,
             product_image_url: t.product_image_url,
             source: t.source || "manual",
+            tenant_id: tenantId,
           } as any))
         );
       }
@@ -373,6 +375,7 @@ export default function ProductsPage() {
             question: f.question,
             answer: f.answer,
             sort_order: i,
+            tenant_id: tenantId,
           }))
         );
       }
@@ -1350,6 +1353,7 @@ function BlingImportDialog({ onImported }: { onImported: () => void }) {
       try {
         const slug = bp.codigo?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "") || bp.nome.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
         const { error } = await supabase.from("products").insert({
+          tenant_id: tenantId,
           name: bp.nome,
           slug: slug + "-" + Date.now().toString(36).slice(-4),
           price: bp.preco || 0,

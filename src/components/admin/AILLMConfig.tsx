@@ -129,6 +129,7 @@ export default function AILLMConfig() {
           api_key_name: form.api_key_name,
           default_model: form.default_model,
           active: form.active,
+          tenant_id: tenantId,
         } as any);
         if (error) throw error;
       }

@@ -111,7 +111,7 @@ export default function CouponsPage() {
         const { error } = await supabase.from("coupons").update(payload).eq("id", editId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("coupons").insert(payload);
+        const { error } = await supabase.from("coupons").insert({ ...payload, tenant_id: tenantId });
         if (error) throw error;
       }
     },

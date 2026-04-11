@@ -186,6 +186,7 @@ export default function TestimonialGenerator() {
         author_name: `${t.persona.name} - ${t.persona.city}`,
         content: t.testimonial_text,
         rating: t.rating || 5,
+        tenant_id: tenantId,
       });
       if (error) throw error;
       toast.success("Testemunho salvo no produto!");

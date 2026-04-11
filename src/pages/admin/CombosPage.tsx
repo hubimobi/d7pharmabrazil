@@ -108,7 +108,7 @@ export default function CombosPage() {
         const { error } = await supabase.from("product_combos" as any).update(payload).eq("id", editId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("product_combos" as any).insert(payload);
+        const { error } = await supabase.from("product_combos" as any).insert({ ...payload, tenant_id: tenantId });
         if (error) throw error;
       }
     },
