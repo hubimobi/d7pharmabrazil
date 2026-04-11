@@ -1305,6 +1305,7 @@ interface BlingProduct {
 
 function BlingImportDialog({ onImported }: { onImported: () => void }) {
   const [open, setOpen] = useState(false);
+  const { tenantId } = useTenant();
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [blingProducts, setBlingProducts] = useState<BlingProduct[]>([]);

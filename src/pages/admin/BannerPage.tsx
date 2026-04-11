@@ -65,6 +65,7 @@ interface PromoBannerItem {
 
 function PromoBannersAdmin() {
   const qc = useQueryClient();
+  const { tenantId } = useTenant();
   const { data: allProducts } = useProducts();
   const [promoCropDialog, setPromoCropDialog] = useState<{ bannerId: string; imageUrl: string } | null>(null);
   const [promoRemovingBg, setPromoRemovingBg] = useState<string | null>(null);
