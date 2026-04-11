@@ -239,16 +239,22 @@ function DashboardTab() {
 function InstancesTab() {
   const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState<{ name: string; api_url: string; api_key: string; funnel_roles: FunnelRole[] }>({
+  const [form, setForm] = useState<{ name: string; funnel_roles: FunnelRole[] }>({
     name: "",
-    api_url: "",
-    api_key: "",
     funnel_roles: ["all"],
   });
   const [loading, setLoading] = useState(false);
   const [qrDialog, setQrDialog] = useState<{ open: boolean; qr: string | null; id: string }>({ open: false, qr: null, id: "" });
+  const [evoConfig, setEvoConfig] = useState<{ url: string; key: string } | null>(null);
 
-  useEffect(() => { loadInstances(); }, []);
+  useEffect(() => { loadInstances(); loadEvoConfig(); }, []);
+
+  async function loadEvoConfig() {
+    const { data } = await supabase.from("store_settings").select("evolution_api_url, evolution_api_key").limit(1).single();
+    if (data) {
+      setEvoConfig({ url: (data as any).evolution_api_url || "", key: (data as any).evolution_api_key || "" });
+    }
+  }
 
   async function loadInstances() {
     const { data } = await supabase.from("whatsapp_instances").select("*").order("created_at", { ascending: false });
@@ -256,16 +262,19 @@ function InstancesTab() {
   }
 
   async function createInstance() {
-    if (!form.name || !form.api_url || !form.api_key) { toast.error("Preencha todos os campos"); return; }
+    if (!form.name) { toast.error("Preencha o nome"); return; }
+    if (!evoConfig?.url || !evoConfig?.key) {
+      toast.error("Configure a Evolution API em Integrações primeiro!");
+      return;
+    }
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("whatsapp-instance", {
         body: {
           action: "create",
           name: form.name,
-          api_url: form.api_url,
-          api_key: form.api_key,
+          api_url: evoConfig.url,
+          api_key: evoConfig.key,
           funnel_roles: normalizeFunnelRoles(form.funnel_roles),
         },
       });
@@ -274,7 +283,7 @@ function InstancesTab() {
       if (res.data?.qrcode) {
         setQrDialog({ open: true, qr: res.data.qrcode, id: res.data.instance?.id });
       }
-      setForm({ name: "", api_url: "", api_key: "", funnel_roles: ["all"] });
+      setForm({ name: "", funnel_roles: ["all"] });
       setShowAdd(false);
       loadInstances();
     } catch (e: any) { toast.error(e.message); }
