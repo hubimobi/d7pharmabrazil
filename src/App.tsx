@@ -181,6 +181,7 @@ const App = () => (
             </Suspense>
           </BrowserRouter>
         </CartProvider>
+        </TenantProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
