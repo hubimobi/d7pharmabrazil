@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +69,7 @@ function formatTokens(n: number): string {
 
 export default function AILLMConfig() {
   const qc = useQueryClient();
+  const { tenantId } = useTenant();
   const [form, setForm] = useState({ provider: "lovable", api_key_name: "", default_model: "", active: false });
 
   const { data: configs, isLoading } = useQuery({
@@ -127,6 +129,7 @@ export default function AILLMConfig() {
           api_key_name: form.api_key_name,
           default_model: form.default_model,
           active: form.active,
+          tenant_id: tenantId,
         } as any);
         if (error) throw error;
       }

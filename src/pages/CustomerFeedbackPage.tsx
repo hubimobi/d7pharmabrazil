@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ export default function CustomerFeedbackPage() {
   const orderId = params.get("pedido") || "";
   const emailParam = params.get("email") || "";
 
+  const { tenantId } = useTenant();
   const { data: settings } = useStoreSettings();
   const [name, setName] = useState("");
   const [content, setContent] = useState("");
@@ -137,6 +139,7 @@ export default function CustomerFeedbackPage() {
         source: "customer",
         order_id: orderId || null,
         approved: false,
+        tenant_id: tenantId,
       } as any);
       if (error) throw error;
 

@@ -14,6 +14,7 @@ import ProductCard from "@/components/ProductCard";
 import { useCart } from "@/hooks/useCart";
 import { useSavedCustomer } from "@/hooks/useSavedCustomer";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
@@ -34,6 +35,7 @@ import {
 
 const ProductDetail = () => {
   const { slug } = useParams();
+  const { tenantId } = useTenant();
   const [searchParams] = useSearchParams();
   const { data: product, isLoading } = useProduct(slug);
   const { addItem } = useCart();
@@ -131,7 +133,7 @@ const ProductDetail = () => {
   const { data: productGroups } = useQuery({
     queryKey: ["product-groups"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("product_groups").select("*");
+      const { data, error } = await supabase.from("product_groups").select("*").eq("tenant_id", tenantId);
       if (error) throw error;
       return data;
     },

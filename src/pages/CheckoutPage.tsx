@@ -34,6 +34,7 @@ import ComboUpsell from "@/components/checkout/ComboUpsell";
 import CheckoutMotivation from "@/components/checkout/CheckoutMotivation";
 import CartItemTestimonial from "@/components/checkout/CartItemTestimonial";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { useQuery } from "@tanstack/react-query";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { Progress } from "@/components/ui/progress";
@@ -51,6 +52,7 @@ interface PaymentResult {
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
+  const { tenantId } = useTenant();
   const [searchParams] = useSearchParams();
   const isOneClick = searchParams.get("oneclick") === "1";
   const { savedCustomer, saveCustomer, hasSavedData } = useSavedCustomer();
@@ -378,6 +380,7 @@ const CheckoutPage = () => {
           short_link_id: ref.linkId,
           order_id: data.order_id,
           order_total: form.paymentMethod === "pix" ? pixTotal : finalTotal,
+          tenant_id: tenantId,
         }).then(() => {});
         supabase.rpc("increment_link_conversions", { link_id: ref.linkId }).then(() => {});
         // GA4 event

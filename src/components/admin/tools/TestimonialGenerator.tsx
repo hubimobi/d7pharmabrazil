@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Star, Copy, Check, Save, RefreshCw, Pencil, X, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { toast } from "sonner";
 import { useProducts } from "@/hooks/useProducts";
 import ProductComboSelect from "@/components/admin/ProductComboSelect";
@@ -43,6 +44,7 @@ interface GeneratedData {
 
 export default function TestimonialGenerator() {
   const { data: products } = useProducts();
+  const { tenantId } = useTenant();
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productUrl, setProductUrl] = useState("");
   const [productName, setProductName] = useState("");
@@ -184,6 +186,7 @@ export default function TestimonialGenerator() {
         author_name: `${t.persona.name} - ${t.persona.city}`,
         content: t.testimonial_text,
         rating: t.rating || 5,
+        tenant_id: tenantId,
       });
       if (error) throw error;
       toast.success("Testemunho salvo no produto!");

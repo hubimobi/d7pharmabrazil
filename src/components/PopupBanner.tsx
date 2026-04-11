@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ function markDismissed() {
 }
 
 export default function PopupBanner() {
+  const { tenantId } = useTenant();
   const { data: settings } = useStoreSettings();
   const location = useLocation();
   const [open, setOpen] = useState(false);
@@ -61,7 +63,7 @@ export default function PopupBanner() {
     if (!email) return;
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("popup_leads" as any).insert({ email, name, phone: phone || null, source: "popup" } as any);
+      const { error } = await supabase.from("popup_leads" as any).insert({ email, name, phone: phone || null, source: "popup", tenant_id: tenantId } as any);
       if (error) throw error;
       setSubmitted(true);
       toast.success("Cadastro realizado com sucesso!");

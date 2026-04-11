@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,6 +17,7 @@ interface Props {
 
 export default function CreatableSelect({ table, value, onChange, placeholder }: Props) {
   const [open, setOpen] = useState(false);
+  const { tenantId } = useTenant();
   const [search, setSearch] = useState("");
   const qc = useQueryClient();
 
@@ -30,7 +32,7 @@ export default function CreatableSelect({ table, value, onChange, placeholder }:
 
   const create = useMutation({
     mutationFn: async (name: string) => {
-      const { error } = await supabase.from(table).insert({ name });
+      const { error } = await supabase.from(table).insert({ name, tenant_id: tenantId });
       if (error) throw error;
     },
     onSuccess: () => {

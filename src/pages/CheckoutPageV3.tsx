@@ -29,6 +29,7 @@ import CreditCardForm, { CreditCardData, getInstallmentOptions } from "@/compone
 import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { useSavedCustomer } from "@/hooks/useSavedCustomer";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { useQuery } from "@tanstack/react-query";
@@ -45,6 +46,7 @@ interface PaymentResult {
 
 const CheckoutPageV3 = () => {
   const navigate = useNavigate();
+  const { tenantId } = useTenant();
   const [searchParams] = useSearchParams();
   const { savedCustomer, saveCustomer } = useSavedCustomer();
   const { items, updateQuantity, removeItem, total, discount, coupon, applyCoupon, clearCart, freeShipping, comboFreeShipping, comboDiscount, comboProductIds, comboQuantity, setComboQuantity, removeCombo, duplicateCombo } = useCart();
@@ -252,7 +254,7 @@ const CheckoutPageV3 = () => {
       // Link attribution
       const ref = getActiveRef();
       if (ref && data.order_id) {
-        supabase.from("link_conversions").insert({ short_link_id: ref.linkId, order_id: data.order_id, order_total: paymentValue }).then(() => {});
+        supabase.from("link_conversions").insert({ short_link_id: ref.linkId, order_id: data.order_id, order_total: paymentValue, tenant_id: tenantId }).then(() => {});
         supabase.rpc("increment_link_conversions", { link_id: ref.linkId }).then(() => {});
         // GA4 purchase attributed
         if (typeof window !== "undefined" && (window as any).gtag) {

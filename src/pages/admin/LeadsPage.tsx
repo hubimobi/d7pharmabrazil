@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from "react";
 import ProductComboSelect from "@/components/admin/ProductComboSelect";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import {
   Download, Upload, Search, Edit, Trash2, UserPlus, FileText, X, FolderOpen, CheckSquare, TrendingUp
 } from "lucide-react";
@@ -49,6 +50,7 @@ const LEAD_FIELDS = [
 
 export default function LeadsPage() {
   const queryClient = useQueryClient();
+  const { tenantId } = useTenant();
   const [search, setSearch] = useState("");
   const [filterTag, setFilterTag] = useState<string>("all");
   const [filterSource, setFilterSource] = useState<string>("all");
@@ -167,6 +169,7 @@ export default function LeadsPage() {
       email: addForm.email, name: addForm.name || null, phone: addForm.phone || null,
       source: "manual", city: addForm.city || null, state: addForm.state || null, tags,
       product_id: addForm.product_id === "none" ? null : addForm.product_id, product_name: productName,
+      tenant_id: tenantId,
     } as any);
     toast.success("Lead adicionado");
     setShowAddLead(false);
@@ -246,7 +249,7 @@ export default function LeadsPage() {
         product_name: productName,
       };
 
-      const { error } = await supabase.from("popup_leads").insert(payload as any);
+      const { error } = await supabase.from("popup_leads").insert({ ...payload, tenant_id: tenantId } as any);
       if (!error) imported++;
     }
 

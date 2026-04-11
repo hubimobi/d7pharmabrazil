@@ -3,6 +3,7 @@ import ProductComboSelect from "@/components/admin/ProductComboSelect";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,7 @@ interface PromoBannerItem {
 
 function PromoBannersAdmin() {
   const qc = useQueryClient();
+  const { tenantId } = useTenant();
   const { data: allProducts } = useProducts();
   const [promoCropDialog, setPromoCropDialog] = useState<{ bannerId: string; imageUrl: string } | null>(null);
   const [promoRemovingBg, setPromoRemovingBg] = useState<string | null>(null);
@@ -109,7 +111,7 @@ function PromoBannersAdmin() {
     mutationFn: async () => {
       const nextSlot = local.length + 1;
       const { error } = await (supabase.from("promo_banners" as any) as any)
-        .insert({ slot: nextSlot, active: true, title: "Novo Banner Promo", subtitle: "" });
+        .insert({ slot: nextSlot, active: true, title: "Novo Banner Promo", subtitle: "", tenant_id: tenantId });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -327,6 +329,7 @@ function PromoBannersAdmin() {
 
 export default function BannerPage() {
   const { canDelete } = useAuth();
+  const { tenantId } = useTenant();
   const { data: settings, isLoading: settingsLoading } = useStoreSettings();
   const { data: allProducts } = useProducts();
 
@@ -464,6 +467,7 @@ export default function BannerPage() {
           btn1_hover_color: defaultBtn1Hover || null,
           btn2_bg_color: defaultBtn2Bg || null,
           btn2_hover_color: defaultBtn2Hover || null,
+          tenant_id: tenantId,
         });
       if (error) throw error;
     },
