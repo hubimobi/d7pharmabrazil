@@ -2959,6 +2959,59 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_conversations: {
+        Row: {
+          assigned_to: string | null
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          id: string
+          last_message: string
+          last_message_at: string
+          status: string
+          tags: Json
+          tenant_id: string | null
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          contact_name?: string
+          contact_phone: string
+          created_at?: string
+          id?: string
+          last_message?: string
+          last_message_at?: string
+          status?: string
+          tags?: Json
+          tenant_id?: string | null
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          last_message?: string
+          last_message_at?: string
+          status?: string
+          tags?: Json
+          tenant_id?: string | null
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_funnel_steps: {
         Row: {
           active: boolean
@@ -3105,6 +3158,7 @@ export type Database = {
         Row: {
           contact_name: string
           contact_phone: string
+          conversation_id: string | null
           created_at: string
           direction: string
           error_message: string | null
@@ -3120,6 +3174,7 @@ export type Database = {
         Insert: {
           contact_name?: string
           contact_phone: string
+          conversation_id?: string | null
           created_at?: string
           direction?: string
           error_message?: string | null
@@ -3135,6 +3190,7 @@ export type Database = {
         Update: {
           contact_name?: string
           contact_phone?: string
+          conversation_id?: string | null
           created_at?: string
           direction?: string
           error_message?: string | null
@@ -3148,6 +3204,13 @@ export type Database = {
           step_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "whatsapp_message_log_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "whatsapp_message_log_funnel_id_fkey"
             columns: ["funnel_id"]
