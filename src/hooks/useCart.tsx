@@ -3,6 +3,7 @@ import { Product } from "@/hooks/useProducts";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { trackAddToCart } from "@/lib/tracking";
+import { useTenant } from "@/hooks/useTenant";
 
 interface CartItem {
   product: Product;
