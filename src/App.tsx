@@ -72,6 +72,15 @@ const RepurchasePage = lazy(() => import("./pages/admin/RepurchasePage"));
 const WhatsAppPage = lazy(() => import("./pages/admin/WhatsAppPage"));
 const FeedbackApprovalPage = lazy(() => import("./pages/admin/FeedbackApprovalPage"));
 
+// Lazy-loaded SUPERBOSS pages
+const RequireSuperboss = lazy(() => import("./components/superboss/RequireSuperboss"));
+const SuperbossLayout = lazy(() => import("./components/superboss/SuperbossLayout"));
+const SuperbossDashboard = lazy(() => import("./pages/superboss/SuperbossDashboard"));
+const SuperbossLojas = lazy(() => import("./pages/superboss/SuperbossLojas"));
+const SuperbossModulos = lazy(() => import("./pages/superboss/SuperbossModulos"));
+const SuperbossClonar = lazy(() => import("./pages/superboss/SuperbossClonar"));
+const SuperbossBackups = lazy(() => import("./pages/superboss/SuperbossBackups"));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
