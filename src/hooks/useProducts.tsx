@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 
 export interface Product {
   id: string;
@@ -86,13 +87,15 @@ function mapDbProduct(p: any): Product {
 }
 
 export function useProducts() {
+  const { tenantId } = useTenant();
   return useQuery({
-    queryKey: ["products"],
+    queryKey: ["products", tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
         .select("*")
         .eq("active", true)
+        .eq("tenant_id", tenantId)
         .order("created_at");
       if (error) throw error;
       return (data ?? []).map(mapDbProduct);
@@ -101,14 +104,16 @@ export function useProducts() {
 }
 
 export function useProduct(slug: string | undefined) {
+  const { tenantId } = useTenant();
   return useQuery({
-    queryKey: ["product", slug],
+    queryKey: ["product", slug, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
         .select("*")
         .eq("slug", slug!)
         .eq("active", true)
+        .eq("tenant_id", tenantId)
         .single();
       if (error) throw error;
       return mapDbProduct(data);

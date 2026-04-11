@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 
 export interface ProductCombo {
   id: string;
@@ -32,13 +33,15 @@ function mapCombo(c: any): ProductCombo {
 }
 
 export function useCombos() {
+  const { tenantId } = useTenant();
   return useQuery({
-    queryKey: ["combos"],
+    queryKey: ["combos", tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("product_combos" as any)
         .select("*")
         .eq("active", true)
+        .eq("tenant_id", tenantId)
         .order("created_at");
       if (error) throw error;
       return (data ?? []).map(mapCombo);
