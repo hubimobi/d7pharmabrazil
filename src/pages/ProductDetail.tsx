@@ -35,6 +35,7 @@ import {
 
 const ProductDetail = () => {
   const { slug } = useParams();
+  const { tenantId } = useTenant();
   const [searchParams] = useSearchParams();
   const { data: product, isLoading } = useProduct(slug);
   const { addItem } = useCart();
@@ -132,7 +133,7 @@ const ProductDetail = () => {
   const { data: productGroups } = useQuery({
     queryKey: ["product-groups"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("product_groups").select("*");
+      const { data, error } = await supabase.from("product_groups").select("*").eq("tenant_id", tenantId);
       if (error) throw error;
       return data;
     },

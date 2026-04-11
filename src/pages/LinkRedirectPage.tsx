@@ -31,6 +31,7 @@ function setRef(linkId: string, code: string, doctorId?: string, doctorName?: st
 const LinkRedirectPage = () => {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
+  const { tenantId } = useTenant();
 
   useEffect(() => {
     if (!code) { navigate("/", { replace: true }); return; }
@@ -69,6 +70,7 @@ const LinkRedirectPage = () => {
         short_link_id: link.id,
         device_type: isMobile ? "mobile" : "desktop",
         referrer: document.referrer || "",
+        tenant_id: tenantId,
       }).then(() => {});
 
       // Increment counter

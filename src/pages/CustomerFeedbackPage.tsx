@@ -26,6 +26,7 @@ export default function CustomerFeedbackPage() {
   const orderId = params.get("pedido") || "";
   const emailParam = params.get("email") || "";
 
+  const { tenantId } = useTenant();
   const { data: settings } = useStoreSettings();
   const [name, setName] = useState("");
   const [content, setContent] = useState("");
@@ -138,6 +139,7 @@ export default function CustomerFeedbackPage() {
         source: "customer",
         order_id: orderId || null,
         approved: false,
+        tenant_id: tenantId,
       } as any);
       if (error) throw error;
 

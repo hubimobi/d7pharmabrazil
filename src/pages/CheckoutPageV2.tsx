@@ -56,6 +56,7 @@ const STEPS = [
 
 const CheckoutPageV2 = () => {
   const navigate = useNavigate();
+  const { tenantId } = useTenant();
   const [searchParams] = useSearchParams();
   const isOneClick = searchParams.get("oneclick") === "1";
   const { savedCustomer, saveCustomer } = useSavedCustomer();
@@ -300,7 +301,7 @@ const CheckoutPageV2 = () => {
       // Link attribution
       const ref = getActiveRef();
       if (ref && data.order_id) {
-        supabase.from("link_conversions").insert({ short_link_id: ref.linkId, order_id: data.order_id, order_total: form.paymentMethod === "pix" ? pixTotal : finalTotal }).then(() => {});
+        supabase.from("link_conversions").insert({ short_link_id: ref.linkId, order_id: data.order_id, order_total: form.paymentMethod === "pix" ? pixTotal : finalTotal, tenant_id: tenantId }).then(() => {});
         supabase.rpc("increment_link_conversions", { link_id: ref.linkId }).then(() => {});
       }
       if (form.paymentMethod === "card" && (data.status === "CONFIRMED" || data.status === "RECEIVED")) {

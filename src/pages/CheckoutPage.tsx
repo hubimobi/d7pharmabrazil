@@ -52,6 +52,7 @@ interface PaymentResult {
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
+  const { tenantId } = useTenant();
   const [searchParams] = useSearchParams();
   const isOneClick = searchParams.get("oneclick") === "1";
   const { savedCustomer, saveCustomer, hasSavedData } = useSavedCustomer();
@@ -379,6 +380,7 @@ const CheckoutPage = () => {
           short_link_id: ref.linkId,
           order_id: data.order_id,
           order_total: form.paymentMethod === "pix" ? pixTotal : finalTotal,
+          tenant_id: tenantId,
         }).then(() => {});
         supabase.rpc("increment_link_conversions", { link_id: ref.linkId }).then(() => {});
         // GA4 event
