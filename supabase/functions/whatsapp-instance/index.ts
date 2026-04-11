@@ -15,6 +15,21 @@ const ActionSchema = z.object({
   funnel_roles: z.array(z.enum(["all", "recuperacao", "recompra", "upsell", "novidades"])).optional(),
 });
 
+/** Safely parse a fetch response as JSON, returning an error object if HTML/non-JSON */
+async function safeJson(res: Response): Promise<{ ok: boolean; status: number; data: any }> {
+  const text = await res.text();
+  try {
+    const data = JSON.parse(text);
+    return { ok: res.ok, status: res.status, data };
+  } catch {
+    return {
+      ok: false,
+      status: res.status,
+      data: { error: "Evolution API retornou resposta inválida (não-JSON)", status: res.status, body_preview: text.substring(0, 200) },
+    };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -24,7 +39,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Verify admin via direct role check (not RPC which fails with service_role)
     const authHeader = req.headers.get("authorization");
     if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     
@@ -51,7 +65,6 @@ Deno.serve(async (req) => {
 
       const instanceName = `d7pharma_${Date.now()}`;
       
-      // Create instance on Evolution API
       const evoRes = await fetch(`${api_url}/instance/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: api_key },
@@ -62,12 +75,12 @@ Deno.serve(async (req) => {
         }),
       });
 
-      const evoData = await evoRes.json();
-      if (!evoRes.ok) {
-        return new Response(JSON.stringify({ error: "Evolution API error", details: evoData }), { status: 502, headers: corsHeaders });
+      const evo = await safeJson(evoRes);
+      if (!evo.ok) {
+        return new Response(JSON.stringify({ error: "Evolution API error", details: evo.data }), { status: 502, headers: corsHeaders });
       }
 
-      const qrCode = evoData?.qrcode?.base64 || evoData?.qrcode?.pairingCode || null;
+      const qrCode = evo.data?.qrcode?.base64 || evo.data?.qrcode?.pairingCode || null;
 
       const { data: inst, error: dbErr } = await supabase.from("whatsapp_instances").insert({
         name,
@@ -92,14 +105,18 @@ Deno.serve(async (req) => {
         method: "GET",
         headers: { apikey: inst.api_key },
       });
-      const evoData = await evoRes.json();
-      const qrCode = evoData?.base64 || evoData?.qrcode?.base64 || null;
+      const evo = await safeJson(evoRes);
+      if (!evo.ok) {
+        return new Response(JSON.stringify({ error: "Evolution API indisponível", details: evo.data }), { status: 502, headers: corsHeaders });
+      }
+
+      const qrCode = evo.data?.base64 || evo.data?.qrcode?.base64 || null;
 
       if (qrCode) {
         await supabase.from("whatsapp_instances").update({ qr_code: qrCode, status: "qr_ready" }).eq("id", instance_id);
       }
 
-      return new Response(JSON.stringify({ qrcode: qrCode, raw: evoData }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ qrcode: qrCode, raw: evo.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "status" && instance_id) {
@@ -110,13 +127,17 @@ Deno.serve(async (req) => {
         method: "GET",
         headers: { apikey: inst.api_key },
       });
-      const evoData = await evoRes.json();
-      const state = evoData?.state || evoData?.instance?.state || "disconnected";
+      const evo = await safeJson(evoRes);
+      if (!evo.ok) {
+        return new Response(JSON.stringify({ error: "Evolution API indisponível", details: evo.data }), { status: 502, headers: corsHeaders });
+      }
+
+      const state = evo.data?.state || evo.data?.instance?.state || "disconnected";
       const mappedStatus = state === "open" ? "connected" : state === "close" ? "disconnected" : "qr_ready";
 
       await supabase.from("whatsapp_instances").update({ status: mappedStatus }).eq("id", instance_id);
 
-      return new Response(JSON.stringify({ status: mappedStatus, raw: evoData }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ status: mappedStatus, raw: evo.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "disconnect" && instance_id) {
