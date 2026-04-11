@@ -32,6 +32,7 @@ import CheckoutUrgency from "@/components/checkout/CheckoutUrgency";
 import ComboUpsell from "@/components/checkout/ComboUpsell";
 import CartItemTestimonial from "@/components/checkout/CartItemTestimonial";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { useQuery } from "@tanstack/react-query";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { getActiveRef } from "@/pages/LinkRedirectPage";

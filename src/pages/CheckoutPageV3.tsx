@@ -29,6 +29,7 @@ import CreditCardForm, { CreditCardData, getInstallmentOptions } from "@/compone
 import PixPaymentResult from "@/components/checkout/PixPaymentResult";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { useSavedCustomer } from "@/hooks/useSavedCustomer";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { useQuery } from "@tanstack/react-query";
