@@ -66,9 +66,9 @@ export default function SuperbossBackups() {
     setBackingUp(true);
     try {
       const { data: rows, error } = await supabase
-        .from(selectedTable)
+        .from(selectedTable as "products")
         .select("*")
-        .eq("tenant_id", tenantId);
+        .eq("tenant_id" as "id", tenantId);
 
       if (error) { toast.error(error.message); return; }
       if (!rows?.length) { toast.error("Nenhum registro encontrado nesta tabela"); return; }
@@ -76,7 +76,7 @@ export default function SuperbossBackups() {
       const entries = rows.map((row: Record<string, unknown>) => ({
         tenant_id: tenantId,
         table_name: selectedTable,
-        data: row,
+        data: row as unknown as import("@/integrations/supabase/types").Json,
         backup_type: "manual",
         notes: notes || null,
       }));
