@@ -2169,6 +2169,8 @@ export type Database = {
           design_title_color: string | null
           display_name: string | null
           email: string | null
+          evolution_api_key: string | null
+          evolution_api_url: string | null
           facebook: string | null
           favicon_url: string | null
           feedback_bonus_coupon_id: string | null
@@ -2311,6 +2313,8 @@ export type Database = {
           design_title_color?: string | null
           display_name?: string | null
           email?: string | null
+          evolution_api_key?: string | null
+          evolution_api_url?: string | null
           facebook?: string | null
           favicon_url?: string | null
           feedback_bonus_coupon_id?: string | null
@@ -2453,6 +2457,8 @@ export type Database = {
           design_title_color?: string | null
           display_name?: string | null
           email?: string | null
+          evolution_api_key?: string | null
+          evolution_api_url?: string | null
           facebook?: string | null
           favicon_url?: string | null
           feedback_bonus_coupon_id?: string | null
