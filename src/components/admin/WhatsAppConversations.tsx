@@ -189,8 +189,8 @@ export default function ConversationsTab() {
   function applyTemplate(tpl: Template) {
     let content = tpl.content;
     if (selected) {
-      content = content.replaceAll("{nome}", selected.contact_name || "");
-      content = content.replaceAll("{Nome}", selected.contact_name || "");
+      content = content.split("{nome}").join(selected.contact_name || "");
+      content = content.split("{Nome}").join(selected.contact_name || "");
     }
     content = parseSpintax(content);
     setMessageText(content);
