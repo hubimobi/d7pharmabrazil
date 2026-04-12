@@ -43,16 +43,35 @@ async function configureWebhook(apiUrl: string, apiKey: string, instanceName: st
   const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-evolution-webhook`;
 
   try {
-    const res = await fetch(`${apiUrl}/webhook/set/${instanceName}`, {
+    // Try v2 format first, fallback to v1
+    let res = await fetch(`${apiUrl}/webhook/set/${instanceName}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: apiKey },
       body: JSON.stringify({
-        url: webhookUrl,
-        webhook_by_events: false,
-        webhook_base64: false,
-        events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "MESSAGES_UPDATE"],
+        webhook: {
+          url: webhookUrl,
+          webhookByEvents: false,
+          webhookBase64: false,
+          events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "MESSAGES_UPDATE"],
+          enabled: true,
+        },
       }),
     });
+
+    // If v2 format fails, try v1 flat format
+    if (!res.ok) {
+      console.log(`[webhook-config] v2 format failed for ${instanceName}, trying v1...`);
+      res = await fetch(`${apiUrl}/webhook/set/${instanceName}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: apiKey },
+        body: JSON.stringify({
+          url: webhookUrl,
+          webhook_by_events: false,
+          webhook_base64: false,
+          events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "MESSAGES_UPDATE"],
+        }),
+      });
+    }
     const result = await safeJson(res);
     console.log(`[webhook-config] ${instanceName}:`, result.ok, JSON.stringify(result.data).substring(0, 200));
     return result.ok;
