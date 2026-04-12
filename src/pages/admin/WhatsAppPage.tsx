@@ -482,15 +482,33 @@ function InstancesTab() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => getQR(inst)}><QrCode className="h-3.5 w-3.5 mr-1" /> QR Code</Button>
-                  <Button size="sm" variant="outline" onClick={() => checkStatus(inst)}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Status</Button>
-                  <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteInstance(inst.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                   <Button size="sm" variant="outline" onClick={() => getQR(inst)}><QrCode className="h-3.5 w-3.5 mr-1" /> QR Code</Button>
+                   <Button size="sm" variant="outline" onClick={() => checkStatus(inst)}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Status</Button>
+                   <Button size="sm" variant="outline" onClick={() => openAccessDialog(inst)}><Users className="h-3.5 w-3.5 mr-1" /> Acessos</Button>
+                   <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteInstance(inst.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                 </div>
+               </CardContent>
+             </Card>
+           ))}
+         </div>
+       )}
+
+       {/* Webhook URL info */}
+       {webhookUrl && (
+         <Card className="bg-muted/30">
+           <CardContent className="py-3 px-4">
+             <p className="text-xs font-medium text-muted-foreground mb-1">Webhook URL da Evolution API</p>
+             <div className="flex items-center gap-2">
+               <code className="text-xs bg-background px-2 py-1 rounded border flex-1 truncate">{webhookUrl}</code>
+               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => {
+                 navigator.clipboard.writeText(webhookUrl);
+                 toast.success("URL copiada!");
+               }}>Copiar</Button>
+             </div>
+             <p className="text-[10px] text-muted-foreground mt-1">Configure esta URL nas configurações de Webhook da Evolution API para receber mensagens.</p>
+           </CardContent>
+         </Card>
+       )}
 
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent>
