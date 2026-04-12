@@ -354,12 +354,70 @@ function InstancesTab() {
     loadInstances();
   }
 
-  async function toggleActive(inst: WhatsAppInstance) {
-    await supabase.from("whatsapp_instances").update({ active: !inst.active }).eq("id", inst.id);
-    loadInstances();
-  }
+   async function toggleActive(inst: WhatsAppInstance) {
+     await supabase.from("whatsapp_instances").update({ active: !inst.active }).eq("id", inst.id);
+     loadInstances();
+   }
 
-  const statusBadge = (s: string) => {
+   async function openAccessDialog(inst: WhatsAppInstance) {
+     setAccessDialog({ open: true, instance: inst });
+     // Load users with access
+     const { data: accessData } = await supabase
+       .from("whatsapp_instance_users")
+       .select("*")
+       .eq("instance_id", inst.id);
+     
+     // Load all admin users (profiles)
+     const { data: profiles } = await supabase
+       .from("profiles")
+       .select("user_id, full_name")
+       .order("full_name");
+     
+     // Get emails from user_roles (admin-like users)
+     const { data: adminRoles } = await supabase
+       .from("user_roles")
+       .select("user_id, role");
+     
+     const adminUserIds = new Set((adminRoles || []).map(r => r.user_id));
+     const usersWithProfiles = (profiles || [])
+       .filter(p => adminUserIds.has(p.user_id))
+       .map(p => ({ id: p.user_id, email: p.full_name || p.user_id }));
+     
+     setAllUsers(usersWithProfiles);
+     setInstanceUsers((accessData || []) as unknown as InstanceUserAccess[]);
+     setAddUserId("");
+   }
+
+   async function addUserAccess() {
+     if (!addUserId || !accessDialog.instance) return;
+     const { error } = await supabase.from("whatsapp_instance_users").insert({
+       instance_id: accessDialog.instance.id,
+       user_id: addUserId,
+       can_view: true,
+       can_send: true,
+       tenant_id: accessDialog.instance.tenant_id || null,
+     } as any);
+     if (error) { toast.error("Erro ao adicionar acesso"); return; }
+     toast.success("Acesso adicionado!");
+     openAccessDialog(accessDialog.instance);
+   }
+
+   async function removeUserAccess(accessId: string) {
+     await supabase.from("whatsapp_instance_users").delete().eq("id", accessId);
+     if (accessDialog.instance) openAccessDialog(accessDialog.instance);
+     toast.success("Acesso removido");
+   }
+
+   async function toggleUserPermission(accessId: string, field: "can_view" | "can_send", value: boolean) {
+     await supabase.from("whatsapp_instance_users").update({ [field]: value } as any).eq("id", accessId);
+     setInstanceUsers(prev => prev.map(u => u.id === accessId ? { ...u, [field]: value } : u));
+   }
+
+   const webhookUrl = evoConfig?.url
+     ? `${import.meta.env.VITE_SUPABASE_URL || ""}/functions/v1/whatsapp-evolution-webhook`
+     : "";
+
+   const statusBadge = (s: string) => {
     const map: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       connected: { label: "Conectado", variant: "default" },
       disconnected: { label: "Desconectado", variant: "destructive" },
