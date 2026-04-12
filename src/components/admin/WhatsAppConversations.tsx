@@ -96,6 +96,25 @@ export default function ConversationsTab() {
     if (selected) loadMessages(selected);
   }, [selected?.id]);
 
+  async function loadInstances() {
+    const { data } = await supabase
+      .from("whatsapp_instances")
+      .select("id, name, status")
+      .eq("active", true)
+      .order("name");
+    const inst = (data || []) as unknown as { id: string; name: string; status: string }[];
+    setInstances(inst);
+    
+    // Diagnostic info
+    if (inst.length === 0) {
+      setDiagnosticInfo("Nenhuma instância WhatsApp cadastrada. Crie uma na aba Instâncias.");
+    } else if (inst.every(i => i.status !== "connected")) {
+      setDiagnosticInfo("Nenhuma instância conectada. Conecte pelo menos uma instância para receber mensagens.");
+    } else {
+      setDiagnosticInfo("");
+    }
+  }
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
