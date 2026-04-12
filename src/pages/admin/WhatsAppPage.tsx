@@ -32,6 +32,12 @@ interface WhatsAppInstance {
   status: string; qr_code: string | null; phone_number: string | null;
   daily_limit: number; messages_sent_today: number; active: boolean;
   last_message_at: string | null; created_at: string; funnel_roles?: string[];
+  tenant_id?: string | null;
+}
+interface InstanceUserAccess {
+  id: string; instance_id: string; user_id: string; can_view: boolean; can_send: boolean;
+  tenant_id?: string | null; created_at: string;
+  user_email?: string;
 }
 interface WhatsAppTemplate {
   id: string; name: string; category: string; content: string;
