@@ -101,6 +101,10 @@ Deno.serve(async (req) => {
     const isAdmin = (roles || []).some((r: any) => ["admin","super_admin","administrador","suporte","gestor"].includes(r.role));
     if (!isAdmin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
 
+    // Resolve tenant_id from the user
+    const { data: tenantUser } = await supabase.from("tenant_users").select("tenant_id").eq("user_id", user.id).limit(1).maybeSingle();
+    const tenantId = tenantUser?.tenant_id || null;
+
     const body = await req.json();
     const parsed = ActionSchema.safeParse(body);
     if (!parsed.success) {
@@ -142,6 +146,7 @@ Deno.serve(async (req) => {
         instance_name: instanceName,
         api_url,
         api_key,
+        tenant_id: tenantId,
         funnel_roles: funnel_roles && funnel_roles.length > 0 ? (funnel_roles.includes("all") ? ["all"] : funnel_roles) : ["all"],
         status: qrCode ? "qr_ready" : "disconnected",
         qr_code: qrCode,

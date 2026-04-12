@@ -80,17 +80,40 @@ export default function ConversationsTab() {
   const [sending, setSending] = useState(false);
   const [newTag, setNewTag] = useState("");
   const [showDetails, setShowDetails] = useState(true);
+  const [instances, setInstances] = useState<{ id: string; name: string; status: string }[]>([]);
+  const [selectedInstanceId, setSelectedInstanceId] = useState<string>("all");
+  const [diagnosticInfo, setDiagnosticInfo] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     loadConversations();
     loadTemplates();
+    loadInstances();
   }, []);
 
   useEffect(() => {
     if (selected) loadMessages(selected);
   }, [selected?.id]);
+
+  async function loadInstances() {
+    const { data } = await supabase
+      .from("whatsapp_instances")
+      .select("id, name, status")
+      .eq("active", true)
+      .order("name");
+    const inst = (data || []) as unknown as { id: string; name: string; status: string }[];
+    setInstances(inst);
+    
+    // Diagnostic info
+    if (inst.length === 0) {
+      setDiagnosticInfo("Nenhuma instância WhatsApp cadastrada. Crie uma na aba Instâncias.");
+    } else if (inst.every(i => i.status !== "connected")) {
+      setDiagnosticInfo("Nenhuma instância conectada. Conecte pelo menos uma instância para receber mensagens.");
+    } else {
+      setDiagnosticInfo("");
+    }
+  }
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -114,6 +137,7 @@ export default function ConversationsTab() {
       .order("last_message_at", { ascending: false })
       .limit(200);
 
+    if (selectedInstanceId !== "all") query = query.eq("instance_id", selectedInstanceId);
     if (filter === "open") query = query.eq("status", "open");
     else if (filter === "archived") query = query.eq("status", "archived");
     else if (filter === "unread") query = query.gt("unread_count", 0);
@@ -122,7 +146,7 @@ export default function ConversationsTab() {
     setConversations((data || []) as unknown as Conversation[]);
   }
 
-  useEffect(() => { loadConversations(); }, [filter]);
+  useEffect(() => { loadConversations(); }, [filter, selectedInstanceId]);
 
   async function loadMessages(conv: Conversation) {
     const { data } = await supabase
@@ -256,6 +280,20 @@ export default function ConversationsTab() {
               className="pl-9 h-9"
             />
           </div>
+          {instances.length > 1 && (
+            <select
+              value={selectedInstanceId}
+              onChange={(e) => setSelectedInstanceId(e.target.value)}
+              className="w-full h-8 text-xs border rounded px-2 bg-background"
+            >
+              <option value="all">Todos os WhatsApps</option>
+              {instances.map((inst) => (
+                <option key={inst.id} value={inst.id}>
+                  {inst.name} {inst.status === "connected" ? "🟢" : "🔴"}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="flex gap-1">
             {filterButtons.map((f) => (
               <Button
@@ -272,10 +310,17 @@ export default function ConversationsTab() {
         </div>
 
         <ScrollArea className="flex-1">
-          {filtered.length === 0 ? (
+          {diagnosticInfo && filtered.length === 0 ? (
+            <div className="py-12 px-4 text-center text-muted-foreground text-sm">
+              <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p className="font-medium mb-1">Sem conversas</p>
+              <p className="text-xs">{diagnosticInfo}</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground text-sm">
               <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
               <p>Nenhuma conversa</p>
+              <p className="text-xs mt-1">Aguardando mensagens do webhook...</p>
             </div>
           ) : (
             <div className="divide-y">
