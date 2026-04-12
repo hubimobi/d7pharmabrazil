@@ -6,22 +6,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-/** Safely parse a fetch response as JSON, returning an error object if HTML/non-JSON */
 async function safeJson(res: Response): Promise<{ ok: boolean; status: number; data: any }> {
   const text = await res.text();
   try {
     const data = JSON.parse(text);
     return { ok: res.ok, status: res.status, data };
   } catch {
-    return {
-      ok: false,
-      status: res.status,
-      data: { error: "Evolution API retornou resposta inválida (não-JSON)", status: res.status, body_preview: text.substring(0, 200) },
-    };
+    return { ok: false, status: res.status, data: { error: "Non-JSON response", body_preview: text.substring(0, 200) } };
   }
 }
 
-// Spintax parser
 function parseSpintax(text: string): string {
   const regex = /\{([^{}]+)\}/;
   let result = text;
@@ -77,7 +71,6 @@ Deno.serve(async (req) => {
       if (tpl) finalMessage = tpl.content;
     }
 
-    // Fetch store display_name and attendant_name
     const { data: storeSettings } = await supabase.from("store_settings").select("display_name, attendant_name, store_name").limit(1).single();
     const mergedVars = {
       ...variables,
@@ -85,7 +78,6 @@ Deno.serve(async (req) => {
       Atendente: storeSettings?.attendant_name || "",
     };
 
-    // Replace variables then parse spintax
     finalMessage = replaceVariables(finalMessage, mergedVars);
     finalMessage = parseSpintax(finalMessage);
 
@@ -93,13 +85,12 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "No message content" }), { status: 400, headers: corsHeaders });
     }
 
-    // Pick instance (rotation logic)
-    let instance;
+    // Pick instance
+    let instance: any = null;
     if (instance_id) {
       const { data } = await supabase.from("whatsapp_instances").select("*").eq("id", instance_id).eq("active", true).single();
       instance = data;
     } else {
-      // Auto-rotate: pick instance with least messages sent today, under daily limit
       const { data: instances } = await supabase
         .from("whatsapp_instances")
         .select("*")
@@ -111,46 +102,30 @@ Deno.serve(async (req) => {
     }
 
     if (!instance) {
-      // Queue for later
       await supabase.from("whatsapp_message_queue").insert({
-        contact_phone: phone,
-        contact_name: contact_name || "",
-        message_content: finalMessage,
-        template_id,
-        funnel_id,
-        step_id,
-        instance_id,
-        variables,
-        status: "pending",
-        scheduled_at: new Date().toISOString(),
+        contact_phone: phone, contact_name: contact_name || "",
+        message_content: finalMessage, template_id, funnel_id, step_id, instance_id,
+        variables, status: "pending", scheduled_at: new Date().toISOString(),
       });
       return new Response(JSON.stringify({ queued: true, reason: "No active instance" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Check daily limit
     if (instance.messages_sent_today >= instance.daily_limit) {
-      // Try another instance
       const { data: altInstances } = await supabase
-        .from("whatsapp_instances")
-        .select("*")
-        .eq("active", true)
-        .eq("status", "connected")
+        .from("whatsapp_instances").select("*")
+        .eq("active", true).eq("status", "connected")
         .neq("id", instance.id)
         .lt("messages_sent_today", instance.daily_limit)
-        .order("messages_sent_today", { ascending: true })
-        .limit(1);
+        .order("messages_sent_today", { ascending: true }).limit(1);
       
       if (altInstances?.[0]) {
         instance = altInstances[0];
       } else {
         await supabase.from("whatsapp_message_queue").insert({
-          contact_phone: phone,
-          contact_name: contact_name || "",
-          message_content: finalMessage,
-          template_id, funnel_id, step_id, instance_id: instance.id,
-          variables,
-          status: "pending",
-          scheduled_at: new Date(Date.now() + 3600000).toISOString(),
+          contact_phone: phone, contact_name: contact_name || "",
+          message_content: finalMessage, template_id, funnel_id, step_id, instance_id: instance.id,
+          variables, status: "pending", scheduled_at: new Date(Date.now() + 3600000).toISOString(),
         });
         return new Response(JSON.stringify({ queued: true, reason: "Daily limit reached" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -161,14 +136,13 @@ Deno.serve(async (req) => {
     const evoRes = await fetch(`${instance.api_url}/message/sendText/${instance.instance_name}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: instance.api_key },
-      body: JSON.stringify({
-        number: formattedPhone,
-        text: finalMessage,
-      }),
+      body: JSON.stringify({ number: formattedPhone, text: finalMessage }),
     });
 
     const evo = await safeJson(evoRes);
     const success = evo.ok;
+
+    const tenantId = instance.tenant_id || null;
 
     // Log message
     await supabase.from("whatsapp_message_log").insert({
@@ -181,10 +155,38 @@ Deno.serve(async (req) => {
       status: success ? "sent" : "error",
       funnel_id, step_id,
       error_message: success ? null : JSON.stringify(evo.data),
+      tenant_id: tenantId,
     });
 
-    // Update instance counters
+    // Upsert conversation so outbound messages appear in Conversas
     if (success) {
+      const { data: existingConv } = await supabase
+        .from("whatsapp_conversations")
+        .select("id")
+        .eq("contact_phone", phone)
+        .eq("instance_id", instance.id)
+        .maybeSingle();
+
+      if (existingConv) {
+        await supabase.from("whatsapp_conversations").update({
+          last_message: finalMessage.substring(0, 500),
+          last_message_at: new Date().toISOString(),
+          contact_name: contact_name || phone,
+        }).eq("id", existingConv.id);
+      } else {
+        await supabase.from("whatsapp_conversations").insert({
+          contact_phone: phone,
+          contact_name: contact_name || phone,
+          last_message: finalMessage.substring(0, 500),
+          last_message_at: new Date().toISOString(),
+          unread_count: 0,
+          status: "open",
+          instance_id: instance.id,
+          tenant_id: tenantId,
+        });
+      }
+
+      // Update instance counters
       await supabase.from("whatsapp_instances").update({
         messages_sent_today: instance.messages_sent_today + 1,
         last_message_at: new Date().toISOString(),
