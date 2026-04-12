@@ -3021,32 +3021,41 @@ export type Database = {
       whatsapp_funnel_steps: {
         Row: {
           active: boolean
+          config: Json
           created_at: string
           delay_minutes: number
           funnel_id: string
           id: string
           instance_id: string | null
+          label: string | null
           step_order: number
+          step_type: string
           template_id: string | null
         }
         Insert: {
           active?: boolean
+          config?: Json
           created_at?: string
           delay_minutes?: number
           funnel_id: string
           id?: string
           instance_id?: string | null
+          label?: string | null
           step_order?: number
+          step_type?: string
           template_id?: string | null
         }
         Update: {
           active?: boolean
+          config?: Json
           created_at?: string
           delay_minutes?: number
           funnel_id?: string
           id?: string
           instance_id?: string | null
+          label?: string | null
           step_order?: number
+          step_type?: string
           template_id?: string | null
         }
         Relationships: [
