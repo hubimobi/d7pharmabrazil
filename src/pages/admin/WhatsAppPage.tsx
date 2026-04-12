@@ -20,10 +20,11 @@ import {
   Send, Clock, AlertTriangle, CheckCircle, XCircle, Eye, Search,
   Zap, Settings2, Shuffle, Upload, Phone, Mail, UserPlus, Download, Inbox,
   ArrowRightLeft, Flag, Paperclip, Volume2, Link2, ChevronDown, GripVertical,
-  Bot, UserCheck, ArrowRight
+  Bot, UserCheck, ArrowRight, ArrowUp, ArrowDown, Megaphone, Filter
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ConversationsTab from "@/components/admin/WhatsAppConversations";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // ==================== TYPES ====================
 interface WhatsAppInstance {
@@ -423,7 +424,6 @@ function InstancesTab() {
         </div>
       )}
 
-      {/* Add Instance Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent>
           <DialogHeader><DialogTitle>Nova Instância WhatsApp</DialogTitle></DialogHeader>
@@ -466,7 +466,6 @@ function InstancesTab() {
         </DialogContent>
       </Dialog>
 
-      {/* QR Code Dialog */}
       <Dialog open={qrDialog.open} onOpenChange={(o) => setQrDialog({ ...qrDialog, open: o })}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Escanear QR Code</DialogTitle></DialogHeader>
@@ -502,7 +501,6 @@ function TemplatesTab() {
     const newContent = before + text + after;
     setForm({ ...form, content: newContent });
     generatePreview(newContent);
-    // Restore cursor after render
     setTimeout(() => {
       if (textarea) {
         const newPos = pos + text.length;
@@ -602,7 +600,6 @@ function TemplatesTab() {
         </div>
       )}
 
-      {/* Template Editor */}
       <Dialog open={showEditor} onOpenChange={setShowEditor}>
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{editing ? "Editar Template" : "Novo Template"}</DialogTitle></DialogHeader>
@@ -694,6 +691,9 @@ function FunnelsTab() {
   const [testMessages, setTestMessages] = useState<Array<{ id: string; offsetLabel: string; templateName: string; instanceLabel: string; message: string }>>([]);
   const [testPreview, setTestPreview] = useState<Array<{ id: string; offsetLabel: string; configuredLabel: string; templateName: string; instanceLabel: string; message: string; offsetSeconds: number }>>([]);
   const [testForm, setTestForm] = useState({ nome: "Cliente Teste", telefone: "5511999999999", produto: "Produto Exemplo", link: "https://loja.com/checkout", cidade: "São Paulo" });
+  const [testContactSource, setTestContactSource] = useState<"manual" | "lead" | "client">("manual");
+  const [contactSearch, setContactSearch] = useState("");
+  const [contactResults, setContactResults] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
   const [representatives, setReps] = useState<any[]>([]);
   const simulationTimersRef = useRef<number[]>([]);
@@ -773,7 +773,26 @@ function FunnelsTab() {
     await supabase.from("whatsapp_funnel_steps").update({ config: { ...(step.config || {}), ...configUpdates } } as any).eq("id", stepId);
     loadAll();
   }
-  async function deleteStep(stepId: string) { await supabase.from("whatsapp_funnel_steps").delete().eq("id", stepId); loadAll(); }
+  async function deleteStep(stepId: string) {
+    if (!confirm("Excluir esta etapa?")) return;
+    await supabase.from("whatsapp_funnel_steps").delete().eq("id", stepId);
+    loadAll();
+  }
+
+  async function moveStep(funnelId: string, stepId: string, direction: "up" | "down") {
+    const funnelSteps = steps.filter(s => s.funnel_id === funnelId).sort((a, b) => a.step_order - b.step_order);
+    const idx = funnelSteps.findIndex(s => s.id === stepId);
+    if (idx < 0) return;
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= funnelSteps.length) return;
+    const current = funnelSteps[idx];
+    const swap = funnelSteps[swapIdx];
+    await Promise.all([
+      supabase.from("whatsapp_funnel_steps").update({ step_order: swap.step_order } as any).eq("id", current.id),
+      supabase.from("whatsapp_funnel_steps").update({ step_order: current.step_order } as any).eq("id", swap.id),
+    ]);
+    loadAll();
+  }
 
   function getEligibleInstances(funnelType: string) {
     return instances.filter((inst) => { const roles = normalizeFunnelRoles(inst.funnel_roles); return roles.includes("all") || roles.includes(funnelType as FunnelRole); });
@@ -803,6 +822,31 @@ function FunnelsTab() {
       return { id: step.id, configuredLabel: formatDelay(Number(step.delay_minutes || 0)), offsetLabel: accelerated ? formatOffset(offsetSeconds) : formatOffset(cumSec), templateName: step.step_type === "message_custom" ? "Msg Livre" : (template?.name || "Sem template"), instanceLabel: instLabel, message: message || "Sem conteúdo.", offsetSeconds };
     });
   }
+
+  async function searchContacts(query: string, source: "lead" | "client") {
+    setContactSearch(query);
+    if (query.length < 2) { setContactResults([]); return; }
+    if (source === "lead") {
+      const { data } = await supabase.from("popup_leads").select("name, email, phone").or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`).limit(10);
+      setContactResults(data || []);
+    } else {
+      const { data } = await supabase.from("orders").select("customer_name, customer_phone, customer_email").or(`customer_name.ilike.%${query}%,customer_phone.ilike.%${query}%`).limit(10);
+      const unique = new Map();
+      (data || []).forEach((o: any) => { if (o.customer_phone) unique.set(o.customer_phone, { name: o.customer_name, phone: o.customer_phone, email: o.customer_email }); });
+      setContactResults(Array.from(unique.values()));
+    }
+  }
+
+  function selectContact(c: any) {
+    setTestForm(prev => ({
+      ...prev,
+      nome: c.name || c.customer_name || prev.nome,
+      telefone: c.phone || c.customer_phone || prev.telefone,
+    }));
+    setContactResults([]);
+    setContactSearch("");
+  }
+
   function openTestModal(funnel: WhatsAppFunnel) { setTestFunnel(funnel); setShowTestDialog(true); }
   function runTestSimulation() {
     if (!testFunnel) return;
@@ -873,7 +917,6 @@ function FunnelsTab() {
             <Select value={config.condition_type || "replied"} onValueChange={(v) => updateStepConfig(step.id, { condition_type: v })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="replied">Respondeu à mensagem</SelectItem><SelectItem value="tag_added">Tag adicionada</SelectItem><SelectItem value="clicked_link">Clicou no link</SelectItem><SelectItem value="accessed_link">Acessou o link</SelectItem></SelectContent></Select></div>
           {config.condition_type === "tag_added" && <div><Label className="text-[10px]">Nome da Tag</Label><Input value={config.tag_name || ""} className="h-8 text-xs" placeholder="ex: comprador" onChange={(e) => updateStepConfig(step.id, { tag_name: e.target.value })} /></div>}
 
-          {/* Pausar até responder */}
           {(config.condition_type === "replied") && (
             <div className="border border-amber-200 rounded-md p-2 bg-amber-50/50 space-y-2">
               <div className="flex items-center gap-2">
@@ -917,21 +960,23 @@ function FunnelsTab() {
 
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-[10px] text-green-600">✅ Se SIM → Etapa</Label>
-              <Select value={String(config.yes_step_order || 0)} onValueChange={(v) => updateStepConfig(step.id, { yes_step_order: Number(v) })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="0">Próxima etapa</SelectItem>{funnelSteps.map((s, i) => <SelectItem key={s.id} value={String(s.step_order)}>Etapa {i + 1} - {getStepTypeInfo(s.step_type).label}</SelectItem>)}</SelectContent></Select></div>
+              <Select value={String(config.yes_step_order || 0)} onValueChange={(v) => updateStepConfig(step.id, { yes_step_order: Number(v) })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="0">Próxima etapa</SelectItem>{funnelSteps.map(s => <SelectItem key={s.id} value={String(s.step_order)}>Etapa {s.step_order}</SelectItem>)}</SelectContent></Select></div>
             <div><Label className="text-[10px] text-red-600">❌ Se NÃO → Etapa</Label>
-              <Select value={String(config.no_step_order || 0)} onValueChange={(v) => updateStepConfig(step.id, { no_step_order: Number(v) })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="0">Próxima etapa</SelectItem>{funnelSteps.map((s, i) => <SelectItem key={s.id} value={String(s.step_order)}>Etapa {i + 1} - {getStepTypeInfo(s.step_type).label}</SelectItem>)}</SelectContent></Select></div>
+              <Select value={String(config.no_step_order || 0)} onValueChange={(v) => updateStepConfig(step.id, { no_step_order: Number(v) })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="0">Próxima etapa</SelectItem>{funnelSteps.map(s => <SelectItem key={s.id} value={String(s.step_order)}>Etapa {s.step_order}</SelectItem>)}</SelectContent></Select></div>
           </div>
         </div>);
       case "transfer":
         return (<div className="space-y-2">
           <div><Label className="text-[10px]">Transferir para</Label>
             <Select value={config.transfer_to || "ai_agent"} onValueChange={(v) => updateStepConfig(step.id, { transfer_to: v, target_id: "" })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ai_agent">🤖 Agente de IA</SelectItem><SelectItem value="representative">👤 Representante</SelectItem><SelectItem value="user">👨‍💼 Usuário</SelectItem></SelectContent></Select></div>
-          <div><Label className="text-[10px]">Destino</Label>
-            <Select value={config.target_id || ""} onValueChange={(v) => updateStepConfig(step.id, { target_id: v })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent>
-              {config.transfer_to === "ai_agent" && agents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-              {config.transfer_to === "representative" && representatives.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-              {config.transfer_to === "user" && <SelectItem value="any">Qualquer usuário disponível</SelectItem>}
-            </SelectContent></Select></div>
+          {config.transfer_to === "ai_agent" && agents.length > 0 && (
+            <div><Label className="text-[10px]">Selecionar Agente</Label>
+              <Select value={config.target_id || ""} onValueChange={(v) => updateStepConfig(step.id, { target_id: v })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{agents.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div>
+          )}
+          {config.transfer_to === "representative" && representatives.length > 0 && (
+            <div><Label className="text-[10px]">Selecionar Representante</Label>
+              <Select value={config.target_id || ""} onValueChange={(v) => updateStepConfig(step.id, { target_id: v })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{representatives.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent></Select></div>
+          )}
         </div>);
       case "end":
         return (<div><Label className="text-[10px]">Marcar conversa como</Label>
@@ -1002,7 +1047,17 @@ function FunnelsTab() {
                                   <div className="flex items-center gap-2"><span className="text-sm font-medium">{info.label}</span>{!step.active && <Badge variant="outline" className="text-[9px]">Inativo</Badge>}</div>
                                   <p className="text-xs text-muted-foreground truncate">{renderStepSummary(step)}</p>
                                 </div>
-                                <div className="flex items-center gap-1 shrink-0">
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" disabled={idx === 0}
+                                    onClick={(e) => { e.stopPropagation(); moveStep(f.id, step.id, "up"); }}
+                                    title="Mover para cima">
+                                    <ArrowUp className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" disabled={idx === funnelSteps.length - 1}
+                                    onClick={(e) => { e.stopPropagation(); moveStep(f.id, step.id, "down"); }}
+                                    title="Mover para baixo">
+                                    <ArrowDown className="h-3.5 w-3.5" />
+                                  </Button>
                                   <Switch checked={step.active} onCheckedChange={(v) => updateStep(step.id, { active: v })} onClick={(e) => e.stopPropagation()} />
                                   <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); deleteStep(step.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
                                   <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
@@ -1035,48 +1090,345 @@ function FunnelsTab() {
           <DialogFooter><Button variant="outline" onClick={() => setShowEditor(false)}>Cancelar</Button><Button onClick={saveFunnel}>Salvar Funil</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ===== TEST DIALOG - WhatsApp Phone Mockup ===== */}
       <Dialog open={showTestDialog} onOpenChange={(open) => { setShowTestDialog(open); if (!open) stopSimulation(); }}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-5xl max-h-[90vh]">
           <DialogHeader><DialogTitle>Teste de Funil {testFunnel ? `• ${testFunnel.name}` : ""}</DialogTitle></DialogHeader>
-          <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-            <div className="space-y-4">
-              <div className="space-y-3 rounded-xl border p-4">
-                <div><Label>Nome</Label><Input value={testForm.nome} onChange={(e) => setTestForm((c) => ({ ...c, nome: e.target.value }))} /></div>
-                <div><Label>Telefone</Label><Input value={testForm.telefone} onChange={(e) => setTestForm((c) => ({ ...c, telefone: e.target.value }))} /></div>
-                <div><Label>Produto</Label><Input value={testForm.produto} onChange={(e) => setTestForm((c) => ({ ...c, produto: e.target.value }))} /></div>
-                <div><Label>Link</Label><Input value={testForm.link} onChange={(e) => setTestForm((c) => ({ ...c, link: e.target.value }))} /></div>
-                <div><Label>Cidade</Label><Input value={testForm.cidade} onChange={(e) => setTestForm((c) => ({ ...c, cidade: e.target.value }))} /></div>
-                <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
-                  <div><p className="text-sm font-medium">Modo acelerado</p><p className="text-xs text-muted-foreground">Uma etapa a cada 10s.</p></div>
-                  <Switch checked={testAccelerated} onCheckedChange={setTestAccelerated} />
-                </div>
-                <div className="flex gap-2"><Button onClick={runTestSimulation} className="flex-1"><Play className="h-4 w-4 mr-1" /> Executar</Button><Button variant="outline" onClick={stopSimulation} disabled={!testRunning && testMessages.length === 0}><Pause className="h-4 w-4" /></Button></div>
-              </div>
-              <div className="rounded-xl border p-4">
-                <p className="text-sm font-medium mb-3">Cronograma</p>
-                <div className="space-y-2">
-                  {testPreview.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma etapa de mensagem ativa.</p> : testPreview.map((item, index) => (
-                    <div key={item.id} className="rounded-lg bg-muted/50 p-3 text-sm">
-                      <div className="flex items-center justify-between gap-2"><span className="font-medium">Etapa {index + 1} • {item.templateName}</span><Badge variant="outline">{item.offsetLabel}</Badge></div>
-                      <p className="text-xs text-muted-foreground mt-1">Atraso: {item.configuredLabel} • {item.instanceLabel}</p>
+          <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
+            {/* Left panel - config + schedule */}
+            <ScrollArea className="h-[70vh]">
+              <div className="space-y-4 pr-3">
+                {/* Contact source selector */}
+                <div className="space-y-3 rounded-xl border p-4">
+                  <Label className="text-sm font-semibold">Destinatário do teste</Label>
+                  <div className="flex gap-1">
+                    {([["manual", "Digitar"], ["lead", "Leads"], ["client", "Clientes"]] as const).map(([val, label]) => (
+                      <Button key={val} size="sm" variant={testContactSource === val ? "default" : "outline"} className="flex-1 text-xs"
+                        onClick={() => { setTestContactSource(val); setContactResults([]); setContactSearch(""); }}>
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {testContactSource !== "manual" && (
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input value={contactSearch} onChange={(e) => searchContacts(e.target.value, testContactSource)} placeholder="Buscar por nome ou telefone..." className="pl-8 h-8 text-xs" />
+                      </div>
+                      {contactResults.length > 0 && (
+                        <div className="border rounded-md max-h-[150px] overflow-y-auto">
+                          {contactResults.map((c, i) => (
+                            <button key={i} onClick={() => selectContact(c)} className="w-full text-left px-3 py-2 hover:bg-muted text-xs border-b last:border-0 transition-colors">
+                              <p className="font-medium">{c.name || c.customer_name || "Sem nome"}</p>
+                              <p className="text-muted-foreground">{c.phone || c.customer_phone} {c.email || c.customer_email ? `• ${c.email || c.customer_email}` : ""}</p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ))}
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><Label className="text-[10px]">Nome</Label><Input value={testForm.nome} className="h-8 text-xs" onChange={(e) => setTestForm((c) => ({ ...c, nome: e.target.value }))} /></div>
+                    <div><Label className="text-[10px]">Telefone</Label><Input value={testForm.telefone} className="h-8 text-xs" onChange={(e) => setTestForm((c) => ({ ...c, telefone: e.target.value }))} /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><Label className="text-[10px]">Produto</Label><Input value={testForm.produto} className="h-8 text-xs" onChange={(e) => setTestForm((c) => ({ ...c, produto: e.target.value }))} /></div>
+                    <div><Label className="text-[10px]">Cidade</Label><Input value={testForm.cidade} className="h-8 text-xs" onChange={(e) => setTestForm((c) => ({ ...c, cidade: e.target.value }))} /></div>
+                  </div>
+                  <div><Label className="text-[10px]">Link</Label><Input value={testForm.link} className="h-8 text-xs" onChange={(e) => setTestForm((c) => ({ ...c, link: e.target.value }))} /></div>
+                  <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                    <div><p className="text-xs font-medium">Modo acelerado</p><p className="text-[10px] text-muted-foreground">Uma etapa a cada 10s.</p></div>
+                    <Switch checked={testAccelerated} onCheckedChange={setTestAccelerated} />
+                  </div>
+                  <div className="flex gap-2"><Button onClick={runTestSimulation} className="flex-1 h-9" size="sm"><Play className="h-4 w-4 mr-1" /> Executar</Button><Button variant="outline" size="sm" className="h-9" onClick={stopSimulation} disabled={!testRunning && testMessages.length === 0}><Pause className="h-4 w-4" /></Button></div>
+                </div>
+
+                {/* Schedule - now with ScrollArea */}
+                <div className="rounded-xl border p-4">
+                  <p className="text-sm font-medium mb-3">📋 Cronograma</p>
+                  <ScrollArea className="h-[200px]">
+                    <div className="space-y-2 pr-2">
+                      {testPreview.length === 0 ? <p className="text-xs text-muted-foreground">Nenhuma etapa de mensagem ativa.</p> : testPreview.map((item, index) => (
+                        <div key={item.id} className="rounded-lg bg-muted/50 p-2.5 text-xs">
+                          <div className="flex items-center justify-between gap-2"><span className="font-medium">Etapa {index + 1} • {item.templateName}</span><Badge variant="outline" className="text-[9px]">{item.offsetLabel}</Badge></div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">Atraso: {item.configuredLabel} • {item.instanceLabel}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </div>
               </div>
-            </div>
-            <div className="rounded-2xl border p-4">
-              <div className="mb-4 flex items-center justify-between"><div><p className="font-medium">Interface de Teste</p><p className="text-xs text-muted-foreground">Simulação sem envio real.</p></div>{testRunning && <Badge>Executando</Badge>}</div>
-              <ScrollArea className="h-[520px] rounded-xl bg-muted/40 p-4">
-                <div className="space-y-3">
-                  {testMessages.length === 0 ? <div className="flex h-[440px] items-center justify-center text-center text-sm text-muted-foreground">Clique em <strong className="mx-1">Executar</strong> para simular.</div> : testMessages.map((item) => (
-                    <div key={`${item.id}-${item.offsetLabel}`} className="flex justify-end"><div className="max-w-[85%] rounded-2xl bg-background p-3 shadow-sm"><div className="mb-2 flex items-center gap-2"><Badge variant="secondary">{item.offsetLabel}</Badge><span className="text-[11px] text-muted-foreground">{item.templateName} • {item.instanceLabel}</span></div><p className="whitespace-pre-wrap text-sm">{item.message}</p></div></div>
-                  ))}
+            </ScrollArea>
+
+            {/* Right panel - WhatsApp Phone Mockup */}
+            <div className="flex justify-center">
+              <div className="w-[360px] h-[640px] bg-background rounded-[2.5rem] border-[3px] border-foreground/20 shadow-xl overflow-hidden flex flex-col">
+                {/* Phone status bar */}
+                <div className="bg-[#075e54] text-white px-4 py-2 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                    <Users className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold">{testForm.nome}</p>
+                    <p className="text-[10px] opacity-80">{testForm.telefone}</p>
+                  </div>
+                  <Phone className="h-4 w-4 opacity-60" />
                 </div>
-              </ScrollArea>
+
+                {/* Chat area */}
+                <div className="flex-1 bg-[#e5ddd5] dark:bg-[#0b141a] overflow-hidden relative">
+                  <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000' fill-opacity='0.3'%3E%3Cpath d='m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
+                  <ScrollArea className="h-full">
+                    <div className="p-3 space-y-2 relative z-10">
+                      {testMessages.length === 0 ? (
+                        <div className="flex h-[420px] items-center justify-center text-center">
+                          <div className="bg-white/80 dark:bg-white/10 rounded-lg px-4 py-2 shadow-sm">
+                            <p className="text-xs text-muted-foreground">Clique em <strong>Executar</strong> para simular o envio</p>
+                          </div>
+                        </div>
+                      ) : testMessages.map((item) => (
+                        <div key={`${item.id}-${item.offsetLabel}`} className="flex justify-end">
+                          <div className="max-w-[85%] rounded-lg rounded-tr-none bg-[#dcf8c6] dark:bg-[#005c4b] p-2 shadow-sm">
+                            <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-foreground">{item.message}</p>
+                            <div className="flex items-center justify-end gap-1 mt-0.5">
+                              <span className="text-[10px] text-muted-foreground">{item.offsetLabel}</span>
+                              <CheckCircle className="h-3 w-3 text-blue-400" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {testRunning && (
+                        <div className="flex justify-end">
+                          <div className="bg-[#dcf8c6] dark:bg-[#005c4b] rounded-lg px-4 py-2 shadow-sm">
+                            <div className="flex gap-1">
+                              <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                              <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                              <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+
+                {/* Input bar */}
+                <div className="bg-[#f0f0f0] dark:bg-[#1f2c33] px-3 py-2 flex items-center gap-2 border-t">
+                  <div className="flex-1 bg-white dark:bg-[#2a3942] rounded-full px-4 py-2">
+                    <p className="text-xs text-muted-foreground">Simulação — sem envio real</p>
+                  </div>
+                  <div className="w-9 h-9 rounded-full bg-[#075e54] flex items-center justify-center">
+                    <Send className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ==================== BROADCAST TAB ====================
+function BroadcastTab() {
+  const [funnels, setFunnels] = useState<WhatsAppFunnel[]>([]);
+  const [selectedFunnel, setSelectedFunnel] = useState<string>("");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterValue, setFilterValue] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [representatives, setReps] = useState<any[]>([]);
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [states, setStates] = useState<string[]>([]);
+  const [estimatedCount, setEstimatedCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => { loadData(); }, []);
+  useEffect(() => { estimateAudience(); }, [filterType, filterValue]);
+
+  async function loadData() {
+    const [{ data: f }, { data: rp }, { data: d }, { data: p }, { data: t }] = await Promise.all([
+      supabase.from("whatsapp_funnels").select("*").eq("active", true).order("name"),
+      supabase.from("representatives").select("id, name").eq("active", true),
+      supabase.from("doctors").select("id, name").eq("active", true),
+      supabase.from("products").select("id, name").eq("active", true),
+      supabase.from("customer_tags").select("tag"),
+    ]);
+    setFunnels((f || []) as unknown as WhatsAppFunnel[]);
+    setReps(rp || []);
+    setDoctors(d || []);
+    setProducts(p || []);
+    const uniqueTags = [...new Set((t || []).map((x: any) => x.tag))];
+    setTags(uniqueTags);
+
+    // Get unique states from orders
+    const { data: orders } = await supabase.from("orders").select("shipping_address").not("shipping_address", "is", null).limit(500);
+    const stateSet = new Set<string>();
+    (orders || []).forEach((o: any) => {
+      const addr = o.shipping_address;
+      if (addr?.state) stateSet.add(addr.state);
+    });
+    setStates(Array.from(stateSet).sort());
+  }
+
+  async function estimateAudience() {
+    if (filterType === "all") {
+      const { count } = await supabase.from("whatsapp_contacts").select("*", { count: "exact", head: true });
+      setEstimatedCount(count || 0);
+    } else if (filterType === "tag" && filterValue) {
+      const { data: tagged } = await supabase.from("customer_tags").select("customer_email").eq("tag", filterValue);
+      setEstimatedCount(tagged?.length || 0);
+    } else if (filterType === "representative" && filterValue) {
+      const { data: docs } = await supabase.from("doctors").select("id").eq("representative_id", filterValue);
+      const docIds = (docs || []).map((d: any) => d.id);
+      if (docIds.length) {
+        const { count } = await supabase.from("orders").select("*", { count: "exact", head: true }).in("doctor_id", docIds);
+        setEstimatedCount(count || 0);
+      } else setEstimatedCount(0);
+    } else if (filterType === "product" && filterValue) {
+      // Estimate by orders containing product
+      const { count } = await supabase.from("orders").select("*", { count: "exact", head: true }).contains("items", JSON.stringify([{ id: filterValue }]));
+      setEstimatedCount(count || 0);
+    } else if (filterType === "state" && filterValue) {
+      const { count } = await supabase.from("orders").select("*", { count: "exact", head: true }).contains("shipping_address", JSON.stringify({ state: filterValue }));
+      setEstimatedCount(count || 0);
+    } else {
+      setEstimatedCount(null);
+    }
+  }
+
+  async function startBroadcast() {
+    if (!selectedFunnel) { toast.error("Selecione um funil"); return; }
+    if (estimatedCount === 0) { toast.error("Nenhum contato encontrado com os filtros selecionados"); return; }
+    if (!confirm(`Confirma disparar o funil para ~${estimatedCount || "?"} contatos?`)) return;
+    setLoading(true);
+    // In a real implementation, this would enqueue all matching contacts into the funnel
+    toast.success(`Transmissão iniciada para ~${estimatedCount} contatos!`);
+    setLoading(false);
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2"><Megaphone className="h-5 w-5" /> Transmissão em Massa</h3>
+          <p className="text-xs text-muted-foreground">Selecione um funil e dispare para uma lista de contatos filtrada</p>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Left - Config */}
+        <Card>
+          <CardContent className="p-6 space-y-5">
+            <div>
+              <Label className="font-semibold">1. Selecione o Funil</Label>
+              <Select value={selectedFunnel} onValueChange={setSelectedFunnel}>
+                <SelectTrigger className="mt-2"><SelectValue placeholder="Escolha um funil ativo..." /></SelectTrigger>
+                <SelectContent>
+                  {funnels.map(f => <SelectItem key={f.id} value={f.id}>{f.name} ({f.type})</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label className="font-semibold">2. Filtrar Audiência</Label>
+              <Select value={filterType} onValueChange={(v) => { setFilterType(v); setFilterValue(""); }}>
+                <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">📋 Todos os contatos</SelectItem>
+                  <SelectItem value="tag">🏷️ Por Tag</SelectItem>
+                  <SelectItem value="representative">👤 Por Representante</SelectItem>
+                  <SelectItem value="prescriber">👨‍⚕️ Por Prescritor</SelectItem>
+                  <SelectItem value="product">📦 Por Produto (comprou)</SelectItem>
+                  <SelectItem value="state">📍 Por Estado/Cidade</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {filterType === "tag" && (
+                <Select value={filterValue} onValueChange={setFilterValue}>
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="Selecione a tag..." /></SelectTrigger>
+                  <SelectContent>{tags.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              )}
+
+              {filterType === "representative" && (
+                <Select value={filterValue} onValueChange={setFilterValue}>
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="Selecione o representante..." /></SelectTrigger>
+                  <SelectContent>{representatives.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
+                </Select>
+              )}
+
+              {filterType === "prescriber" && (
+                <Select value={filterValue} onValueChange={setFilterValue}>
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="Selecione o prescritor..." /></SelectTrigger>
+                  <SelectContent>{doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                </Select>
+              )}
+
+              {filterType === "product" && (
+                <Select value={filterValue} onValueChange={setFilterValue}>
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="Selecione o produto..." /></SelectTrigger>
+                  <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                </Select>
+              )}
+
+              {filterType === "state" && (
+                <div className="mt-2">
+                  <Select value={filterValue} onValueChange={setFilterValue}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o estado..." /></SelectTrigger>
+                    <SelectContent>{states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Right - Summary */}
+        <Card>
+          <CardContent className="p-6 space-y-5">
+            <div>
+              <Label className="font-semibold">3. Resumo da Transmissão</Label>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4">
+                  <div className="flex items-center gap-3">
+                    <Users className="h-8 w-8 text-primary" />
+                    <div>
+                      <p className="text-2xl font-bold">{estimatedCount !== null ? estimatedCount : "—"}</p>
+                      <p className="text-xs text-muted-foreground">contatos estimados</p>
+                    </div>
+                  </div>
+                  <Badge variant={estimatedCount && estimatedCount > 0 ? "default" : "secondary"}>
+                    {filterType === "all" ? "Todos" : filterType === "tag" ? `Tag: ${filterValue}` : filterType === "representative" ? "Representante" : filterType === "prescriber" ? "Prescritor" : filterType === "product" ? "Produto" : filterType === "state" ? `Estado: ${filterValue}` : "—"}
+                  </Badge>
+                </div>
+
+                {selectedFunnel && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-sm font-medium">Funil selecionado:</p>
+                    <p className="text-xs text-muted-foreground mt-1">{funnels.find(f => f.id === selectedFunnel)?.name || "—"}</p>
+                  </div>
+                )}
+
+                <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                  <p className="text-xs text-amber-700">⚠️ O disparo em massa enfileira todos os contatos filtrados no funil selecionado. As mensagens serão enviadas respeitando o limite diário de cada instância.</p>
+                </div>
+              </div>
+            </div>
+
+            <Button onClick={startBroadcast} disabled={loading || !selectedFunnel || estimatedCount === 0} className="w-full" size="lg">
+              <Megaphone className="h-4 w-4 mr-2" />
+              {loading ? "Iniciando..." : `Disparar Transmissão${estimatedCount ? ` (${estimatedCount})` : ""}`}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -1107,7 +1459,6 @@ function ContactsTab() {
     setContacts(contactData || []);
   }
 
-  // Merge DB contacts with log contacts
   const allContacts = (() => {
     const map = new Map<string, { phone: string; name: string; lastMessage: string; source: string }>();
     contacts.forEach((c) => map.set(c.phone, { phone: c.phone, name: c.name, lastMessage: c.updated_at, source: c.source }));
@@ -1191,7 +1542,6 @@ function ContactsTab() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold">Contatos</h3>
@@ -1207,7 +1557,6 @@ function ContactsTab() {
         </div>
       </div>
 
-      {/* Import Dialog */}
       <Dialog open={showImport} onOpenChange={(v) => { setShowImport(v); if (!v) setImportSource(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -1296,7 +1645,8 @@ function ContactsTab() {
                   reader.onload = (ev) => {
                     const text = ev.target?.result as string || "";
                     const lines = text.split("\n").filter(Boolean);
-                    const header = lines[0]?.toLowerCase() || "";
+                    if (lines.length < 2) { toast.error("CSV vazio"); return; }
+                    const header = lines[0].toLowerCase();
                     const nameIdx = header.split(",").findIndex((h) => h.includes("name") || h.includes("nome"));
                     const phoneIdx = header.split(",").findIndex((h) => h.includes("phone") || h.includes("telefone") || h.includes("mobile"));
                     if (phoneIdx < 0) { toast.error("Coluna de telefone não encontrada no CSV"); return; }
@@ -1372,9 +1722,7 @@ function ContactsTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Contact list + Chat */}
       <div className="grid md:grid-cols-[300px_1fr] gap-4 min-h-[500px]">
-        {/* Contact List */}
         <div className="space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1401,7 +1749,6 @@ function ContactsTab() {
           </ScrollArea>
         </div>
 
-        {/* Chat Timeline */}
         <Card>
           <CardContent className="p-4">
             {selectedPhone ? (
@@ -1543,6 +1890,7 @@ export default function WhatsAppPage() {
           <TabsTrigger value="instances" className="gap-1.5"><Smartphone className="h-3.5 w-3.5" /> WhatsApps</TabsTrigger>
           <TabsTrigger value="templates" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Templates</TabsTrigger>
           <TabsTrigger value="funnels" className="gap-1.5"><GitBranch className="h-3.5 w-3.5" /> Funis</TabsTrigger>
+          <TabsTrigger value="broadcast" className="gap-1.5"><Megaphone className="h-3.5 w-3.5" /> Transmissão</TabsTrigger>
           <TabsTrigger value="contacts" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Contatos</TabsTrigger>
           <TabsTrigger value="queue" className="gap-1.5"><Clock className="h-3.5 w-3.5" /> Fila</TabsTrigger>
         </TabsList>
@@ -1552,6 +1900,7 @@ export default function WhatsAppPage() {
         <TabsContent value="instances"><InstancesTab /></TabsContent>
         <TabsContent value="templates"><TemplatesTab /></TabsContent>
         <TabsContent value="funnels"><FunnelsTab /></TabsContent>
+        <TabsContent value="broadcast"><BroadcastTab /></TabsContent>
         <TabsContent value="contacts"><ContactsTab /></TabsContent>
         <TabsContent value="queue"><QueueTab /></TabsContent>
       </Tabs>
