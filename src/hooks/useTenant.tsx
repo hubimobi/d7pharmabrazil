@@ -94,6 +94,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
+    // Reset resolved state when user changes to prevent premature redirects
+    setIsResolved(false);
+
     const resolve = async () => {
       // 1. Resolve tenant by hostname (works for anon AND logged-in users)
       const resolution = await fetchTenantResolution();
@@ -104,15 +107,24 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
       // 2. For logged-in users, check super_admin status separately
       if (user) {
-        const { data: roleRow } = await supabase
-          .from("tenant_users")
-          .select("role")
-          .eq("user_id", user.id)
-          .eq("role", "super_admin")
-          .maybeSingle();
+        // Check both tenant_users AND user_roles for super_admin
+        const [{ data: tenantRole }, { data: userRole }] = await Promise.all([
+          supabase
+            .from("tenant_users")
+            .select("role")
+            .eq("user_id", user.id)
+            .eq("role", "super_admin")
+            .maybeSingle(),
+          supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id)
+            .eq("role", "super_admin")
+            .maybeSingle(),
+        ]);
 
         if (cancelled) return;
-        setIsSuperboss(!!roleRow);
+        setIsSuperboss(!!tenantRole || !!userRole);
 
         // If user is bound to a specific tenant via tenant_users,
         // override hostname resolution for admin context
