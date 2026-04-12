@@ -1,96 +1,103 @@
 
 
-# Gestor de Mensagens WhatsApp — estilo GHL simplificado
+# Funil de Automação WhatsApp — estilo ManyChat simplificado
 
-## Objetivo
-Adicionar uma nova aba **"Conversas"** ao módulo WhatsApp com interface de inbox estilo GHL: lista de conversas à esquerda, chat à direita, envio manual de mensagens, respostas rápidas, tags e filtros por status.
+## Situação atual
 
-## O que já existe
-- Aba "Contatos" com timeline de mensagens (somente leitura, sem envio)
-- `whatsapp_message_log` com campo `direction` (outbound/inbound)
-- `whatsapp_contacts` com `tags`, `notes`, `source`
-- `whatsapp_instances` conectadas via Evolution API
-- Edge Function `whatsapp-send` para envio real
-- `whatsapp_templates` com Spintax
+A tabela `whatsapp_funnel_steps` tem apenas: `delay_minutes`, `template_id`, `instance_id`, `active`, `step_order`. Cada etapa é sempre "espera X minutos + envia template". Sem condicionais, sem tipos de ação, sem transferência.
 
-## O que será criado
+## Novo modelo de etapas
 
-### 7A. Migration — tabela `whatsapp_conversations`
-Nova tabela para agrupar conversas por contato:
+Cada step ganha um campo `step_type` e um campo `config` (JSONB) que armazena a configuração específica do tipo:
 
-| Coluna | Tipo | Descrição |
+| Tipo | Descrição | config JSONB |
 |---|---|---|
-| id | uuid PK | |
-| tenant_id | uuid | Isolamento |
-| contact_phone | text | Telefone do contato |
-| contact_name | text | Nome |
-| last_message | text | Última mensagem (preview) |
-| last_message_at | timestamptz | Timestamp da última msg |
-| unread_count | int | Mensagens não lidas |
-| status | text | open / closed / archived |
-| assigned_to | uuid? | Usuário atendente |
-| tags | jsonb | Tags da conversa |
-| created_at / updated_at | timestamptz | |
+| `message_template` | Envia template existente | `{ template_id }` |
+| `message_custom` | Envia mensagem livre | `{ content, variables }` |
+| `pause` | Aguarda tempo | `{ delay_value, delay_unit }` (m/h/d) |
+| `send_file` | Envia arquivo/áudio/link | `{ file_type: "file"|"audio"|"link", url, caption?, use_shortener? }` |
+| `condition` | Condicional (branch) | `{ condition_type: "replied"|"tag_added"|"clicked_link"|"accessed_link", expected: true|false, tag_name?, link_code?, yes_step_order, no_step_order }` |
+| `transfer` | Transferir conversa | `{ transfer_to: "ai_agent"|"representative"|"user", target_id? }` |
+| `end` | Finalizar funil | `{ condition?: { type, value }, mark_as? }` |
 
-RLS: tenant_iso padrão + `is_super_admin()`.
+## Migration SQL
 
-Adicionar `conversation_id` à `whatsapp_message_log` (nullable, para retrocompatibilidade).
-
-### 7B. Nova aba "Conversas" no WhatsAppPage
-
-Layout 3 colunas (responsivo para 2 em telas menores):
-
-```text
-┌─────────────┬──────────────────────┬────────────┐
-│  Lista de   │                      │  Detalhes  │
-│  Conversas  │   Chat / Timeline    │  Contato   │
-│  (filtros)  │   + Input de envio   │  Tags/Info │
-└─────────────┴──────────────────────┴────────────┘
+```sql
+ALTER TABLE public.whatsapp_funnel_steps
+  ADD COLUMN IF NOT EXISTS step_type text NOT NULL DEFAULT 'message_template',
+  ADD COLUMN IF NOT EXISTS config jsonb NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS label text DEFAULT '';
 ```
 
-**Coluna 1 — Lista de Conversas:**
-- Filtros: Todas / Abertas / Arquivadas / Não lidas
-- Busca por nome/telefone
-- Card de conversa: avatar, nome, preview da última msg, horário, badge de não lidas
-- Ordenação por `last_message_at` desc
+Retrocompatibilidade: steps existentes mantêm `step_type = 'message_template'` e continuam funcionando com `template_id`.
 
-**Coluna 2 — Chat:**
-- Timeline estilo WhatsApp (bolhas verdes = outbound, brancas = inbound)
-- Campo de texto + botão enviar (chama `whatsapp-send`)
-- Botão de respostas rápidas (popover com templates)
-- Indicador de status (enviado/erro)
+## UI — Nova experiência de adição de etapa
 
-**Coluna 3 — Detalhes do Contato:**
-- Nome, telefone, email
-- Tags (adicionar/remover)
-- Notas do contato
-- Ações: Abrir WhatsApp Web, Fechar conversa, Arquivar
-- Histórico resumido: total de msgs, primeira/última interação
+Substituir o botão "+ Etapa" por um menu dropdown com os tipos disponíveis. Cada tipo renderiza um card visual diferente na timeline do funil:
 
-### 7C. Envio manual via Edge Function
+```text
+┌──────────────────────────────────────┐
+│ [1] 📩 Mensagem Template             │
+│     Template: "Boas vindas"          │
+│     WhatsApp: Auto                   │
+├──────────────────────────────────────┤
+│ [2] ⏸️  Pausa — 2 horas              │
+├──────────────────────────────────────┤
+│ [3] ✉️  Mensagem Livre               │
+│     "Olá {Nome}, tudo bem?"          │
+├──────────────────────────────────────┤
+│ [4] 🔀 Condicional: Respondeu?       │
+│     ✅ Sim → Etapa 6 (Transferir)    │
+│     ❌ Não → Etapa 5 (Lembrete)      │
+├──────────────────────────────────────┤
+│ [5] 📎 Enviar Arquivo                │
+│     Tipo: Link encurtado             │
+├──────────────────────────────────────┤
+│ [6] 🔄 Transferir → Agente de IA    │
+├──────────────────────────────────────┤
+│ [7] 🏁 Finalizar                     │
+└──────────────────────────────────────┘
+```
 
-Reutilizar `whatsapp-send` existente. No frontend:
-1. Selecionar instância ativa (ou usar a primeira disponível)
-2. Digitar mensagem
-3. Enviar via `supabase.functions.invoke("whatsapp-send")`
-4. Inserir log em `whatsapp_message_log`
-5. Atualizar `whatsapp_conversations` (last_message, last_message_at)
+Cada card é editável inline (expandível ao clicar). O tipo `condition` mostra dois caminhos (sim/não) com select para qual etapa segue.
 
-### 7D. Respostas Rápidas
-
-Popover no campo de mensagem que lista `whatsapp_templates` ativos. Ao clicar, preenche o campo com o conteúdo do template (variáveis substituídas pelo nome do contato). Suporte a Spintax (gera variação ao selecionar).
-
-## Arquivos a criar/editar
+## Arquivos
 
 | Arquivo | Ação |
 |---|---|
-| Migration SQL | Criar tabela `whatsapp_conversations` + alter `whatsapp_message_log` |
-| `src/pages/admin/WhatsAppPage.tsx` | Adicionar aba "Conversas" com componente `ConversationsTab` |
+| Migration SQL | ALTER whatsapp_funnel_steps + step_type, config, label |
+| `src/pages/admin/WhatsAppPage.tsx` | Reescrever seção de Funis: novo addStep com tipo, cards visuais por tipo, editor inline de config |
+| `supabase/functions/whatsapp-webhook/index.ts` | Adaptar para processar step_type (message_template fica igual, pause vira delay, condition avalia e pula, transfer cria ação, end finaliza) |
+| `supabase/functions/whatsapp-process-queue/index.ts` | Suporte a novos tipos na fila |
 
-## Detalhes técnicos
+## Detalhes de implementação
 
-- A aba "Conversas" substitui a funcionalidade da aba "Contatos" atual (que fica como está para retrocompatibilidade)
-- Auto-criar conversa ao enviar primeira mensagem para um contato
-- Ao receber mensagem inbound (via webhook futuro), incrementar `unread_count`
-- Marcar como lida ao abrir a conversa
+**Frontend (WhatsAppPage.tsx):**
+- Dropdown "+ Nova Etapa" com ícones por tipo
+- Ao adicionar, insere step com `step_type` e `config` padrão
+- Card visual diferente por tipo (cor de fundo, ícone, campos específicos)
+- Tipo `pause`: input de valor + select min/h/d (substitui o delay_minutes genérico)
+- Tipo `message_custom`: textarea com suporte a variáveis
+- Tipo `condition`: select do tipo de condição + toggle sim/não + selects de destino
+- Tipo `transfer`: select com agentes IA, representantes, usuários
+- Tipo `send_file`: select tipo (arquivo/áudio/link) + input URL + checkbox encurtador
+- Tipo `end`: checkbox "com condição" + select condição
+
+**Backend (webhook + process-queue):**
+- `message_template`: comportamento atual (busca template, substitui vars, enfileira)
+- `message_custom`: usa `config.content` diretamente
+- `pause`: adiciona delay ao cumulativo (já funciona via delay_minutes, migrar para config)
+- `send_file`: enfileira com tipo de mídia
+- `condition`: avalia condição (check em whatsapp_message_log/contacts/link_clicks) e pula para step correto
+- `transfer`: atualiza `whatsapp_conversations.assigned_to` ou aciona agente IA
+- `end`: marca conversa como fechada
+
+**Link encurtado (send_file com shortener):**
+- Reutiliza a tabela `short_links` existente para criar link rastreável
+- Gera código automático no formato `/l/:code`
+- Rastreia cliques via `link_clicks` (já existe)
+
+## O que falta (essencial para ManyChat-like)
+
+Itens já incluídos no plano acima. Nada faltando para um MVP funcional de automação estilo ManyChat simplificado.
 
