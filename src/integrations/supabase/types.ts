@@ -2972,6 +2972,7 @@ export type Database = {
           contact_phone: string
           created_at: string
           id: string
+          instance_id: string | null
           last_message: string
           last_message_at: string
           status: string
@@ -2986,6 +2987,7 @@ export type Database = {
           contact_phone: string
           created_at?: string
           id?: string
+          instance_id?: string | null
           last_message?: string
           last_message_at?: string
           status?: string
@@ -3000,6 +3002,7 @@ export type Database = {
           contact_phone?: string
           created_at?: string
           id?: string
+          instance_id?: string | null
           last_message?: string
           last_message_at?: string
           status?: string
@@ -3009,6 +3012,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "whatsapp_conversations_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "whatsapp_conversations_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -3112,6 +3122,51 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_instance_users: {
+        Row: {
+          can_send: boolean
+          can_view: boolean
+          created_at: string
+          id: string
+          instance_id: string
+          tenant_id: string | null
+          user_id: string
+        }
+        Insert: {
+          can_send?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          instance_id: string
+          tenant_id?: string | null
+          user_id: string
+        }
+        Update: {
+          can_send?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          instance_id?: string
+          tenant_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instance_users_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_instance_users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_instances: {
         Row: {
           active: boolean
@@ -3129,6 +3184,7 @@ export type Database = {
           phone_number: string | null
           qr_code: string | null
           status: string
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -3147,6 +3203,7 @@ export type Database = {
           phone_number?: string | null
           qr_code?: string | null
           status?: string
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -3165,9 +3222,18 @@ export type Database = {
           phone_number?: string | null
           qr_code?: string | null
           status?: string
+          tenant_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_message_log: {
         Row: {
@@ -3185,6 +3251,7 @@ export type Database = {
           message_content: string
           status: string
           step_id: string | null
+          tenant_id: string | null
         }
         Insert: {
           contact_name?: string
@@ -3201,6 +3268,7 @@ export type Database = {
           message_content?: string
           status?: string
           step_id?: string | null
+          tenant_id?: string | null
         }
         Update: {
           contact_name?: string
@@ -3217,6 +3285,7 @@ export type Database = {
           message_content?: string
           status?: string
           step_id?: string | null
+          tenant_id?: string | null
         }
         Relationships: [
           {
@@ -3245,6 +3314,13 @@ export type Database = {
             columns: ["step_id"]
             isOneToOne: false
             referencedRelation: "whatsapp_funnel_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_message_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
