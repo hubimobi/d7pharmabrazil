@@ -14,7 +14,7 @@ function normalizeUrl(url: string): string {
 }
 
 const ActionSchema = z.object({
-  action: z.enum(["create", "qrcode", "status", "disconnect", "restart"]),
+  action: z.enum(["create", "qrcode", "status", "disconnect", "restart", "set_webhook"]),
   instance_id: z.string().uuid().optional(),
   name: z.string().min(1).max(100).optional(),
   api_url: z.string().min(1).transform(normalizeUrl).pipe(z.string().url()).optional(),
@@ -34,6 +34,31 @@ async function safeJson(res: Response): Promise<{ ok: boolean; status: number; d
       status: res.status,
       data: { error: "Evolution API retornou resposta inválida (não-JSON)", status: res.status, body_preview: text.substring(0, 200) },
     };
+  }
+}
+
+/** Auto-configure webhook on Evolution API */
+async function configureWebhook(apiUrl: string, apiKey: string, instanceName: string): Promise<boolean> {
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-evolution-webhook`;
+
+  try {
+    const res = await fetch(`${apiUrl}/webhook/set/${instanceName}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: apiKey },
+      body: JSON.stringify({
+        url: webhookUrl,
+        webhook_by_events: false,
+        webhook_base64: false,
+        events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "MESSAGES_UPDATE"],
+      }),
+    });
+    const result = await safeJson(res);
+    console.log(`[webhook-config] ${instanceName}:`, result.ok, JSON.stringify(result.data).substring(0, 200));
+    return result.ok;
+  } catch (err) {
+    console.error(`[webhook-config] failed for ${instanceName}:`, err);
+    return false;
   }
 }
 
@@ -65,6 +90,7 @@ Deno.serve(async (req) => {
 
     const { action, instance_id, name, api_url, api_key, funnel_roles } = parsed.data;
 
+    // ── CREATE ──
     if (action === "create") {
       if (!api_url || !api_key || !name) {
         return new Response(JSON.stringify({ error: "name, api_url, api_key required" }), { status: 400, headers: corsHeaders });
@@ -89,6 +115,9 @@ Deno.serve(async (req) => {
 
       const qrCode = evo.data?.qrcode?.base64 || evo.data?.qrcode?.pairingCode || null;
 
+      // Auto-configure webhook
+      const webhookOk = await configureWebhook(api_url, api_key, instanceName);
+
       const { data: inst, error: dbErr } = await supabase.from("whatsapp_instances").insert({
         name,
         instance_name: instanceName,
@@ -101,9 +130,10 @@ Deno.serve(async (req) => {
 
       if (dbErr) return new Response(JSON.stringify({ error: dbErr.message }), { status: 500, headers: corsHeaders });
 
-      return new Response(JSON.stringify({ instance: inst, qrcode: qrCode }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ instance: inst, qrcode: qrCode, webhook_configured: webhookOk }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── QRCODE ──
     if (action === "qrcode" && instance_id) {
       const { data: inst } = await supabase.from("whatsapp_instances").select("*").eq("id", instance_id).single();
       if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: corsHeaders });
@@ -126,6 +156,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ qrcode: qrCode, raw: evo.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── STATUS ──
     if (action === "status" && instance_id) {
       const { data: inst } = await supabase.from("whatsapp_instances").select("*").eq("id", instance_id).single();
       if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: corsHeaders });
@@ -144,9 +175,15 @@ Deno.serve(async (req) => {
 
       await supabase.from("whatsapp_instances").update({ status: mappedStatus }).eq("id", instance_id);
 
+      // Auto-configure webhook when connected
+      if (mappedStatus === "connected") {
+        await configureWebhook(inst.api_url, inst.api_key, inst.instance_name);
+      }
+
       return new Response(JSON.stringify({ status: mappedStatus, raw: evo.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── DISCONNECT ──
     if (action === "disconnect" && instance_id) {
       const { data: inst } = await supabase.from("whatsapp_instances").select("*").eq("id", instance_id).single();
       if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: corsHeaders });
@@ -160,6 +197,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── RESTART ──
     if (action === "restart" && instance_id) {
       const { data: inst } = await supabase.from("whatsapp_instances").select("*").eq("id", instance_id).single();
       if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: corsHeaders });
@@ -170,6 +208,15 @@ Deno.serve(async (req) => {
       });
 
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── SET_WEBHOOK (manual re-configure) ──
+    if (action === "set_webhook" && instance_id) {
+      const { data: inst } = await supabase.from("whatsapp_instances").select("*").eq("id", instance_id).single();
+      if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: corsHeaders });
+
+      const ok = await configureWebhook(inst.api_url, inst.api_key, inst.instance_name);
+      return new Response(JSON.stringify({ success: ok, webhook_configured: ok }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400, headers: corsHeaders });

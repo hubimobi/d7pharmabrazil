@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -7,12 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  Search, Send, MessageSquare, User, Phone, Archive,
+  Search, Send, MessageSquare, User, Phone, Tag, Archive,
   CheckCircle, XCircle, Clock, FileText, ExternalLink, X, Plus,
-  ChevronRight, Inbox, MailOpen, Smartphone,
+  ChevronRight, Inbox, MailOpen,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -29,7 +33,6 @@ interface Conversation {
   assigned_to: string | null;
   tags: string[];
   created_at: string;
-  instance_id: string | null;
 }
 
 interface Message {
@@ -52,15 +55,6 @@ interface Template {
   active: boolean;
 }
 
-interface Instance {
-  id: string;
-  name: string;
-  instance_name: string;
-  status: string;
-  phone_number: string | null;
-  active: boolean;
-}
-
 function parseSpintax(text: string): string {
   const regex = /\{([^{}]+)\}/;
   let result = text;
@@ -80,8 +74,6 @@ export default function ConversationsTab() {
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [instances, setInstances] = useState<Instance[]>([]);
-  const [selectedInstanceId, setSelectedInstanceId] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [messageText, setMessageText] = useState("");
@@ -92,7 +84,6 @@ export default function ConversationsTab() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    loadInstances();
     loadConversations();
     loadTemplates();
   }, []);
@@ -105,30 +96,16 @@ export default function ConversationsTab() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Realtime
+  // Realtime subscription
   useEffect(() => {
     const channel = supabase
       .channel("wa-conversations")
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_conversations" }, () => {
         loadConversations();
       })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_message_log" }, (payload) => {
-        if (selected && (payload.new as any)?.contact_phone === selected.contact_phone) {
-          loadMessages(selected);
-        }
-      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [selected?.id]);
-
-  async function loadInstances() {
-    const { data } = await supabase
-      .from("whatsapp_instances")
-      .select("id, name, instance_name, status, phone_number, active")
-      .eq("active", true)
-      .order("name");
-    setInstances((data || []) as unknown as Instance[]);
-  }
+  }, []);
 
   async function loadConversations() {
     let query = supabase
@@ -141,15 +118,11 @@ export default function ConversationsTab() {
     else if (filter === "archived") query = query.eq("status", "archived");
     else if (filter === "unread") query = query.gt("unread_count", 0);
 
-    if (selectedInstanceId !== "all") {
-      query = query.eq("instance_id", selectedInstanceId);
-    }
-
     const { data } = await query;
     setConversations((data || []) as unknown as Conversation[]);
   }
 
-  useEffect(() => { loadConversations(); }, [filter, selectedInstanceId]);
+  useEffect(() => { loadConversations(); }, [filter]);
 
   async function loadMessages(conv: Conversation) {
     const { data } = await supabase
@@ -160,6 +133,7 @@ export default function ConversationsTab() {
       .limit(500);
     setMessages((data || []) as unknown as Message[]);
 
+    // Mark as read
     if (conv.unread_count > 0) {
       await supabase
         .from("whatsapp_conversations")
@@ -182,17 +156,24 @@ export default function ConversationsTab() {
     if (!messageText.trim() || !selected) return;
     setSending(true);
     try {
-      const sendInstanceId = selected.instance_id || (selectedInstanceId !== "all" ? selectedInstanceId : undefined);
       const res = await supabase.functions.invoke("whatsapp-send", {
         body: {
           phone: selected.contact_phone,
           message: messageText,
           contact_name: selected.contact_name,
-          instance_id: sendInstanceId,
         },
       });
       if (res.error) throw new Error(res.error.message);
       if (res.data?.error) throw new Error(typeof res.data.error === "string" ? res.data.error : JSON.stringify(res.data.error));
+
+      // Update conversation
+      await supabase
+        .from("whatsapp_conversations")
+        .update({
+          last_message: messageText.substring(0, 200),
+          last_message_at: new Date().toISOString(),
+        } as any)
+        .eq("id", selected.id);
 
       setMessageText("");
       textareaRef.current?.focus();
@@ -261,38 +242,11 @@ export default function ConversationsTab() {
     { value: "archived", label: "Arquivadas", icon: Archive },
   ];
 
-  const getInstanceName = (instanceId: string | null) => {
-    if (!instanceId) return null;
-    return instances.find((i) => i.id === instanceId)?.name || null;
-  };
-
   return (
     <div className="flex h-[calc(100vh-220px)] min-h-[500px] border rounded-lg overflow-hidden bg-background">
       {/* Column 1 — Conversation List */}
       <div className="w-80 flex-shrink-0 border-r flex flex-col">
         <div className="p-3 border-b space-y-2">
-          {/* Instance filter */}
-          {instances.length > 1 && (
-            <Select value={selectedInstanceId} onValueChange={setSelectedInstanceId}>
-              <SelectTrigger className="h-8 text-xs">
-                <Smartphone className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                <SelectValue placeholder="Todas instâncias" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas instâncias</SelectItem>
-                {instances.map((inst) => (
-                  <SelectItem key={inst.id} value={inst.id}>
-                    <span className="flex items-center gap-1.5">
-                      <span className={`h-1.5 w-1.5 rounded-full ${inst.status === "connected" ? "bg-emerald-500" : "bg-muted-foreground"}`} />
-                      {inst.name}
-                      {inst.phone_number && <span className="text-muted-foreground ml-1">({inst.phone_number})</span>}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -322,53 +276,44 @@ export default function ConversationsTab() {
             <div className="py-12 text-center text-muted-foreground text-sm">
               <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
               <p>Nenhuma conversa</p>
-              <p className="text-xs mt-1">As conversas aparecerão quando mensagens forem enviadas/recebidas</p>
             </div>
           ) : (
             <div className="divide-y">
-              {filtered.map((conv) => {
-                const instName = getInstanceName(conv.instance_id);
-                return (
-                  <button
-                    key={conv.id}
-                    onClick={() => setSelected(conv)}
-                    className={`w-full text-left px-3 py-3 hover:bg-muted/50 transition-colors ${
-                      selected?.id === conv.id ? "bg-muted" : ""
-                    }`}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <User className="h-4 w-4 text-primary" />
+              {filtered.map((conv) => (
+                <button
+                  key={conv.id}
+                  onClick={() => setSelected(conv)}
+                  className={`w-full text-left px-3 py-3 hover:bg-muted/50 transition-colors ${
+                    selected?.id === conv.id ? "bg-muted" : ""
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm truncate">
+                          {conv.contact_name || conv.contact_phone}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                          {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: false, locale: ptBR })}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm truncate">
-                            {conv.contact_name || conv.contact_phone}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                            {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: false, locale: ptBR })}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between mt-0.5">
-                          <p className="text-xs text-muted-foreground truncate pr-2">
-                            {conv.last_message || "Sem mensagens"}
-                          </p>
-                          {conv.unread_count > 0 && (
-                            <Badge className="h-5 min-w-[20px] text-[10px] px-1.5 bg-primary">
-                              {conv.unread_count}
-                            </Badge>
-                          )}
-                        </div>
-                        {instName && instances.length > 1 && (
-                          <p className="text-[10px] text-muted-foreground/60 mt-0.5 flex items-center gap-1">
-                            <Smartphone className="h-2.5 w-2.5" /> {instName}
-                          </p>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <p className="text-xs text-muted-foreground truncate pr-2">
+                          {conv.last_message || "Sem mensagens"}
+                        </p>
+                        {conv.unread_count > 0 && (
+                          <Badge className="h-5 min-w-[20px] text-[10px] px-1.5 bg-primary">
+                            {conv.unread_count}
+                          </Badge>
                         )}
                       </div>
                     </div>
-                  </button>
-                );
-              })}
+                  </div>
+                </button>
+              ))}
             </div>
           )}
         </ScrollArea>
@@ -393,14 +338,7 @@ export default function ConversationsTab() {
                 </div>
                 <div>
                   <h4 className="font-semibold text-sm">{selected.contact_name || selected.contact_phone}</h4>
-                  <div className="flex items-center gap-2">
-                    <p className="text-[11px] text-muted-foreground">{selected.contact_phone}</p>
-                    {getInstanceName(selected.instance_id) && (
-                      <Badge variant="outline" className="text-[9px] h-4 px-1">
-                        {getInstanceName(selected.instance_id)}
-                      </Badge>
-                    )}
-                  </div>
+                  <p className="text-[11px] text-muted-foreground">{selected.contact_phone}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -563,20 +501,6 @@ export default function ConversationsTab() {
               </div>
 
               <Separator />
-
-              {/* Instance info */}
-              {getInstanceName(selected.instance_id) && (
-                <>
-                  <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground uppercase">Instância</p>
-                    <div className="flex items-center gap-2">
-                      <Smartphone className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-xs">{getInstanceName(selected.instance_id)}</span>
-                    </div>
-                  </div>
-                  <Separator />
-                </>
-              )}
 
               {/* Tags */}
               <div className="space-y-2">

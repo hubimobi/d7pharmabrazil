@@ -5,151 +5,132 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-/**
- * Webhook endpoint for Evolution API events.
- * Handles incoming messages and status updates, creating/updating conversations.
- * 
- * Evolution API sends events like:
- * - messages.upsert: new incoming/outgoing message
- * - connection.update: instance connection status changes
- * - messages.update: message delivery status updates
- */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const body = await req.json();
-    const event = body.event || body.action || "";
-    const instanceName = body.instance || body.instanceName || "";
+    const payload = await req.json();
+    const event = payload.event || payload.type || "";
+    const instanceName = payload.instance || payload.instanceName || "";
 
-    console.log(`[evolution-webhook] event=${event} instance=${instanceName}`);
+    console.log(`[webhook] event=${event} instance=${instanceName}`);
 
-    // Resolve instance
-    let instance: any = null;
+    // Find our instance record
+    let instanceRecord: any = null;
     if (instanceName) {
       const { data } = await supabase
         .from("whatsapp_instances")
-        .select("id, tenant_id, name")
+        .select("id, tenant_id")
         .eq("instance_name", instanceName)
-        .limit(1)
         .maybeSingle();
-      instance = data;
+      instanceRecord = data;
     }
 
-    // ── Handle connection updates ──
-    if (event === "connection.update") {
-      const state = body.data?.state || body.state || "";
-      if (instance && state) {
-        const statusMap: Record<string, string> = {
-          open: "connected",
-          close: "disconnected",
-          connecting: "connecting",
-        };
-        const mappedStatus = statusMap[state] || state;
+    // ── CONNECTION_UPDATE ──
+    if (event === "connection.update" || event === "CONNECTION_UPDATE") {
+      const state = payload.data?.state || payload.state || "";
+      const mappedStatus = state === "open" ? "connected" : state === "close" ? "disconnected" : "qr_ready";
+
+      if (instanceRecord) {
         await supabase
           .from("whatsapp_instances")
           .update({ status: mappedStatus })
-          .eq("id", instance.id);
-        console.log(`[evolution-webhook] instance ${instance.name} status → ${mappedStatus}`);
-      }
-      return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // ── Handle incoming messages ──
-    if (event === "messages.upsert") {
-      const data = body.data || {};
-      const key = data.key || {};
-      const fromMe = key.fromMe === true;
-      const remoteJid = key.remoteJid || "";
-      const messageContent = data.message?.conversation
-        || data.message?.extendedTextMessage?.text
-        || data.message?.imageMessage?.caption
-        || data.message?.videoMessage?.caption
-        || data.message?.documentMessage?.fileName
-        || "[mídia]";
-      const pushName = data.pushName || "";
-
-      // Extract phone from JID (e.g., "5511999999999@s.whatsapp.net")
-      const phone = remoteJid.split("@")[0];
-      if (!phone || phone.includes("-")) {
-        // Skip group messages
-        return new Response(JSON.stringify({ ok: true, skipped: "group" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          .eq("id", instanceRecord.id);
       }
 
-      const tenantId = instance?.tenant_id || null;
-      const instanceId = instance?.id || null;
-
-      // Log the message
-      await supabase.from("whatsapp_message_log").insert({
-        contact_phone: phone,
-        contact_name: pushName || "",
-        instance_id: instanceId,
-        instance_name: instance?.name || instanceName,
-        message_content: messageContent.substring(0, 5000),
-        direction: fromMe ? "outbound" : "inbound",
-        status: "sent",
-        tenant_id: tenantId,
-      });
-
-      // Upsert conversation
-      const { data: existingConv } = await supabase
-        .from("whatsapp_conversations")
-        .select("id, unread_count")
-        .eq("contact_phone", phone)
-        .eq("tenant_id", tenantId)
-        .limit(1)
-        .maybeSingle();
-
-      if (existingConv) {
-        await supabase
-          .from("whatsapp_conversations")
-          .update({
-            last_message: messageContent.substring(0, 200),
-            last_message_at: new Date().toISOString(),
-            unread_count: fromMe ? existingConv.unread_count : existingConv.unread_count + 1,
-            contact_name: pushName || undefined,
-            instance_id: instanceId,
-            status: "open",
-          })
-          .eq("id", existingConv.id);
-      } else {
-        await supabase.from("whatsapp_conversations").insert({
-          contact_phone: phone,
-          contact_name: pushName || phone,
-          last_message: messageContent.substring(0, 200),
-          last_message_at: new Date().toISOString(),
-          unread_count: fromMe ? 0 : 1,
-          status: "open",
-          instance_id: instanceId,
-          tenant_id: tenantId,
-          tags: [],
-        });
-      }
-
-      console.log(`[evolution-webhook] message ${fromMe ? "out" : "in"} from ${phone}: ${messageContent.substring(0, 50)}`);
-
-      return new Response(JSON.stringify({ ok: true, phone, direction: fromMe ? "outbound" : "inbound" }), {
+      return new Response(JSON.stringify({ ok: true, status: mappedStatus }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ── Handle message status updates ──
-    if (event === "messages.update") {
-      // Could update delivery status (delivered, read) — future enhancement
-      return new Response(JSON.stringify({ ok: true, event: "status_update" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // ── MESSAGES_UPSERT ──
+    if (event === "messages.upsert" || event === "MESSAGES_UPSERT") {
+      const messages = payload.data?.messages || payload.data || [];
+      const msgList = Array.isArray(messages) ? messages : [messages];
+
+      for (const msg of msgList) {
+        const key = msg.key || {};
+        const isFromMe = key.fromMe === true;
+        const remoteJid = key.remoteJid || "";
+        // Skip status@broadcast and groups
+        if (!remoteJid || remoteJid === "status@broadcast" || remoteJid.includes("@g.us")) continue;
+
+        const phone = remoteJid.replace("@s.whatsapp.net", "");
+        const contactName = msg.pushName || msg.verifiedBizName || phone;
+        const content =
+          msg.message?.conversation ||
+          msg.message?.extendedTextMessage?.text ||
+          msg.message?.imageMessage?.caption ||
+          msg.message?.documentMessage?.caption ||
+          "[mídia]";
+        const direction = isFromMe ? "outbound" : "inbound";
+        const tenantId = instanceRecord?.tenant_id || null;
+        const instanceId = instanceRecord?.id || null;
+
+        // Upsert conversation
+        const { data: existing } = await supabase
+          .from("whatsapp_conversations")
+          .select("id, unread_count")
+          .eq("contact_phone", phone)
+          .eq("instance_id", instanceId)
+          .maybeSingle();
+
+        if (existing) {
+          await supabase
+            .from("whatsapp_conversations")
+            .update({
+              contact_name: contactName,
+              last_message: typeof content === "string" ? content.substring(0, 500) : "[mídia]",
+              last_message_at: new Date().toISOString(),
+              unread_count: direction === "inbound" ? (existing.unread_count || 0) + 1 : existing.unread_count,
+              status: "open",
+              instance_id: instanceId,
+            })
+            .eq("id", existing.id);
+        } else {
+          await supabase.from("whatsapp_conversations").insert({
+            contact_phone: phone,
+            contact_name: contactName,
+            last_message: typeof content === "string" ? content.substring(0, 500) : "[mídia]",
+            last_message_at: new Date().toISOString(),
+            unread_count: direction === "inbound" ? 1 : 0,
+            status: "open",
+            instance_id: instanceId,
+            tenant_id: tenantId,
+          });
+        }
+
+        // Log message
+        await supabase.from("whatsapp_message_log").insert({
+          contact_phone: phone,
+          contact_name: contactName,
+          instance_name: instanceName || null,
+          message_content: typeof content === "string" ? content.substring(0, 2000) : "[mídia]",
+          direction,
+          status: "delivered",
+          tenant_id: tenantId,
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true, processed: msgList.length }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Unknown event — just acknowledge
+    // Other events — acknowledge
     return new Response(JSON.stringify({ ok: true, event, ignored: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[evolution-webhook] error:", err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+    console.error("[whatsapp-evolution-webhook] error:", err);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

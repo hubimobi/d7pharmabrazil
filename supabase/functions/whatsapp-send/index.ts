@@ -170,8 +170,6 @@ Deno.serve(async (req) => {
     const evo = await safeJson(evoRes);
     const success = evo.ok;
 
-    const tenantId = instance.tenant_id || null;
-
     // Log message
     await supabase.from("whatsapp_message_log").insert({
       contact_phone: phone,
@@ -183,38 +181,7 @@ Deno.serve(async (req) => {
       status: success ? "sent" : "error",
       funnel_id, step_id,
       error_message: success ? null : JSON.stringify(evo.data),
-      tenant_id: tenantId,
     });
-
-    // Upsert conversation
-    if (success) {
-      const { data: existingConv } = await supabase
-        .from("whatsapp_conversations")
-        .select("id")
-        .eq("contact_phone", phone)
-        .limit(1)
-        .maybeSingle();
-
-      if (existingConv) {
-        await supabase.from("whatsapp_conversations").update({
-          last_message: finalMessage.substring(0, 200),
-          last_message_at: new Date().toISOString(),
-          instance_id: instance.id,
-        }).eq("id", existingConv.id);
-      } else {
-        await supabase.from("whatsapp_conversations").insert({
-          contact_phone: phone,
-          contact_name: contact_name || phone,
-          last_message: finalMessage.substring(0, 200),
-          last_message_at: new Date().toISOString(),
-          unread_count: 0,
-          status: "open",
-          instance_id: instance.id,
-          tenant_id: tenantId,
-          tags: [],
-        });
-      }
-    }
 
     // Update instance counters
     if (success) {

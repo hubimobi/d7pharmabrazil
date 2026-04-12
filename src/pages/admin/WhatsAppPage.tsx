@@ -32,12 +32,6 @@ interface WhatsAppInstance {
   status: string; qr_code: string | null; phone_number: string | null;
   daily_limit: number; messages_sent_today: number; active: boolean;
   last_message_at: string | null; created_at: string; funnel_roles?: string[];
-  tenant_id?: string | null;
-}
-interface InstanceUserAccess {
-  id: string; instance_id: string; user_id: string; can_view: boolean; can_send: boolean;
-  tenant_id?: string | null; created_at: string;
-  user_email?: string;
 }
 interface WhatsAppTemplate {
   id: string; name: string; category: string; content: string;
@@ -260,21 +254,17 @@ function DashboardTab() {
 
 // ==================== INSTANCES TAB ====================
 function InstancesTab() {
-   const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
-   const [showAdd, setShowAdd] = useState(false);
-   const [form, setForm] = useState<{ name: string; funnel_roles: FunnelRole[] }>({
-     name: "",
-     funnel_roles: ["all"],
-   });
-   const [loading, setLoading] = useState(false);
-   const [qrDialog, setQrDialog] = useState<{ open: boolean; qr: string | null; id: string }>({ open: false, qr: null, id: "" });
-   const [evoConfig, setEvoConfig] = useState<{ url: string; key: string } | null>(null);
-   const [accessDialog, setAccessDialog] = useState<{ open: boolean; instance: WhatsAppInstance | null }>({ open: false, instance: null });
-   const [instanceUsers, setInstanceUsers] = useState<InstanceUserAccess[]>([]);
-   const [allUsers, setAllUsers] = useState<{ id: string; email: string }[]>([]);
-   const [addUserId, setAddUserId] = useState("");
+  const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState<{ name: string; funnel_roles: FunnelRole[] }>({
+    name: "",
+    funnel_roles: ["all"],
+  });
+  const [loading, setLoading] = useState(false);
+  const [qrDialog, setQrDialog] = useState<{ open: boolean; qr: string | null; id: string }>({ open: false, qr: null, id: "" });
+  const [evoConfig, setEvoConfig] = useState<{ url: string; key: string } | null>(null);
 
-   useEffect(() => { loadInstances(); loadEvoConfig(); }, []);
+  useEffect(() => { loadInstances(); loadEvoConfig(); }, []);
 
   async function loadEvoConfig() {
     const { data } = await supabase.from("store_settings").select("evolution_api_url, evolution_api_key").limit(1).single();
@@ -354,70 +344,12 @@ function InstancesTab() {
     loadInstances();
   }
 
-   async function toggleActive(inst: WhatsAppInstance) {
-     await supabase.from("whatsapp_instances").update({ active: !inst.active }).eq("id", inst.id);
-     loadInstances();
-   }
+  async function toggleActive(inst: WhatsAppInstance) {
+    await supabase.from("whatsapp_instances").update({ active: !inst.active }).eq("id", inst.id);
+    loadInstances();
+  }
 
-   async function openAccessDialog(inst: WhatsAppInstance) {
-     setAccessDialog({ open: true, instance: inst });
-     // Load users with access
-     const { data: accessData } = await supabase
-       .from("whatsapp_instance_users")
-       .select("*")
-       .eq("instance_id", inst.id);
-     
-     // Load all admin users (profiles)
-     const { data: profiles } = await supabase
-       .from("profiles")
-       .select("user_id, full_name")
-       .order("full_name");
-     
-     // Get emails from user_roles (admin-like users)
-     const { data: adminRoles } = await supabase
-       .from("user_roles")
-       .select("user_id, role");
-     
-     const adminUserIds = new Set((adminRoles || []).map(r => r.user_id));
-     const usersWithProfiles = (profiles || [])
-       .filter(p => adminUserIds.has(p.user_id))
-       .map(p => ({ id: p.user_id, email: p.full_name || p.user_id }));
-     
-     setAllUsers(usersWithProfiles);
-     setInstanceUsers((accessData || []) as unknown as InstanceUserAccess[]);
-     setAddUserId("");
-   }
-
-   async function addUserAccess() {
-     if (!addUserId || !accessDialog.instance) return;
-     const { error } = await supabase.from("whatsapp_instance_users").insert({
-       instance_id: accessDialog.instance.id,
-       user_id: addUserId,
-       can_view: true,
-       can_send: true,
-       tenant_id: accessDialog.instance.tenant_id || null,
-     } as any);
-     if (error) { toast.error("Erro ao adicionar acesso"); return; }
-     toast.success("Acesso adicionado!");
-     openAccessDialog(accessDialog.instance);
-   }
-
-   async function removeUserAccess(accessId: string) {
-     await supabase.from("whatsapp_instance_users").delete().eq("id", accessId);
-     if (accessDialog.instance) openAccessDialog(accessDialog.instance);
-     toast.success("Acesso removido");
-   }
-
-   async function toggleUserPermission(accessId: string, field: "can_view" | "can_send", value: boolean) {
-     await supabase.from("whatsapp_instance_users").update({ [field]: value } as any).eq("id", accessId);
-     setInstanceUsers(prev => prev.map(u => u.id === accessId ? { ...u, [field]: value } : u));
-   }
-
-   const webhookUrl = evoConfig?.url
-     ? `${import.meta.env.VITE_SUPABASE_URL || ""}/functions/v1/whatsapp-evolution-webhook`
-     : "";
-
-   const statusBadge = (s: string) => {
+  const statusBadge = (s: string) => {
     const map: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       connected: { label: "Conectado", variant: "default" },
       disconnected: { label: "Desconectado", variant: "destructive" },
@@ -481,34 +413,25 @@ function InstancesTab() {
                     })}
                   </div>
                 </div>
-                <div className="flex gap-2">
-                   <Button size="sm" variant="outline" onClick={() => getQR(inst)}><QrCode className="h-3.5 w-3.5 mr-1" /> QR Code</Button>
-                   <Button size="sm" variant="outline" onClick={() => checkStatus(inst)}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Status</Button>
-                   <Button size="sm" variant="outline" onClick={() => openAccessDialog(inst)}><Users className="h-3.5 w-3.5 mr-1" /> Acessos</Button>
-                   <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteInstance(inst.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                 </div>
-               </CardContent>
-             </Card>
-           ))}
-         </div>
-       )}
-
-       {/* Webhook URL info */}
-       {webhookUrl && (
-         <Card className="bg-muted/30">
-           <CardContent className="py-3 px-4">
-             <p className="text-xs font-medium text-muted-foreground mb-1">Webhook URL da Evolution API</p>
-             <div className="flex items-center gap-2">
-               <code className="text-xs bg-background px-2 py-1 rounded border flex-1 truncate">{webhookUrl}</code>
-               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => {
-                 navigator.clipboard.writeText(webhookUrl);
-                 toast.success("URL copiada!");
-               }}>Copiar</Button>
-             </div>
-             <p className="text-[10px] text-muted-foreground mt-1">Configure esta URL nas configurações de Webhook da Evolution API para receber mensagens.</p>
-           </CardContent>
-         </Card>
-       )}
+                <div className="flex gap-2 flex-wrap">
+                  <Button size="sm" variant="outline" onClick={() => getQR(inst)}><QrCode className="h-3.5 w-3.5 mr-1" /> QR Code</Button>
+                  <Button size="sm" variant="outline" onClick={() => checkStatus(inst)}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Status</Button>
+                  <Button size="sm" variant="outline" onClick={async () => {
+                    try {
+                      const res = await supabase.functions.invoke("whatsapp-instance", {
+                        body: { action: "set_webhook", instance_id: inst.id },
+                      });
+                      if (res.data?.webhook_configured) toast.success("Webhook configurado com sucesso!");
+                      else toast.error("Falha ao configurar webhook");
+                    } catch (e: any) { toast.error(e.message); }
+                  }}><Zap className="h-3.5 w-3.5 mr-1" /> Webhook</Button>
+                  <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteInstance(inst.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent>
@@ -564,47 +487,8 @@ function InstancesTab() {
             <p className="text-xs text-muted-foreground text-center">Abra o WhatsApp no celular → Dispositivos Conectados → Conectar Dispositivo</p>
           </div>
         </DialogContent>
-       </Dialog>
-
-       {/* Access Dialog */}
-       <Dialog open={accessDialog.open} onOpenChange={(o) => setAccessDialog({ ...accessDialog, open: o })}>
-         <DialogContent className="max-w-md">
-           <DialogHeader><DialogTitle>Acessos — {accessDialog.instance?.name}</DialogTitle></DialogHeader>
-           <div className="space-y-4">
-             <div className="flex gap-2">
-               <Select value={addUserId} onValueChange={setAddUserId}>
-                 <SelectTrigger className="flex-1 h-9 text-sm"><SelectValue placeholder="Selecionar usuário..." /></SelectTrigger>
-                 <SelectContent>
-                   {allUsers.filter(u => !instanceUsers.some(iu => iu.user_id === u.id)).map(u => (
-                     <SelectItem key={u.id} value={u.id}>{u.email}</SelectItem>
-                   ))}
-                 </SelectContent>
-               </Select>
-               <Button size="sm" onClick={addUserAccess} disabled={!addUserId}><Plus className="h-4 w-4 mr-1" /> Adicionar</Button>
-             </div>
-             {instanceUsers.length === 0 ? (
-               <p className="text-sm text-muted-foreground text-center py-4">Nenhum acesso configurado. Todos os admins podem usar.</p>
-             ) : (
-               <div className="space-y-2">
-                 {instanceUsers.map(u => {
-                   const userInfo = allUsers.find(a => a.id === u.user_id);
-                   return (
-                     <div key={u.id} className="flex items-center justify-between border rounded-lg px-3 py-2">
-                       <span className="text-sm font-medium truncate flex-1">{userInfo?.email || u.user_id.substring(0, 8)}</span>
-                       <div className="flex items-center gap-3">
-                         <label className="flex items-center gap-1 text-xs"><Checkbox checked={u.can_view} onCheckedChange={(v) => toggleUserPermission(u.id, "can_view", !!v)} /> Ver</label>
-                         <label className="flex items-center gap-1 text-xs"><Checkbox checked={u.can_send} onCheckedChange={(v) => toggleUserPermission(u.id, "can_send", !!v)} /> Enviar</label>
-                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => removeUserAccess(u.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                       </div>
-                     </div>
-                   );
-                 })}
-               </div>
-             )}
-           </div>
-         </DialogContent>
-       </Dialog>
-     </div>
+      </Dialog>
+    </div>
   );
 }
 

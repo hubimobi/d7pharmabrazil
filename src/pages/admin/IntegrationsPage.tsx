@@ -1392,6 +1392,7 @@ function EvolutionApiCard() {
             <li>Copie a URL do servidor e a <code className="bg-background px-1 rounded">AUTHENTICATION_API_KEY</code></li>
             <li>Cole os valores acima e clique em <strong>Testar Conexão</strong></li>
           </ol>
+          <p className="text-xs text-green-600 mt-2">✅ O webhook é configurado automaticamente ao criar/conectar instâncias.</p>
         </div>
       </CardContent>
     </Card>
