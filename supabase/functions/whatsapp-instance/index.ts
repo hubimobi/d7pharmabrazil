@@ -6,11 +6,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/** Ensure URL has https:// prefix */
+function normalizeUrl(url: string): string {
+  let u = url.trim();
+  if (!/^https?:\/\//i.test(u)) u = `https://${u}`;
+  return u.replace(/\/+$/, "");
+}
+
 const ActionSchema = z.object({
   action: z.enum(["create", "qrcode", "status", "disconnect", "restart"]),
   instance_id: z.string().uuid().optional(),
   name: z.string().min(1).max(100).optional(),
-  api_url: z.string().url().optional(),
+  api_url: z.string().min(1).transform(normalizeUrl).pipe(z.string().url()).optional(),
   api_key: z.string().min(1).optional(),
   funnel_roles: z.array(z.enum(["all", "recuperacao", "recompra", "upsell", "novidades"])).optional(),
 });
