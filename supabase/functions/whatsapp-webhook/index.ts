@@ -6,7 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Spintax parser
 function parseSpintax(text: string): string {
   const regex = /\{([^{}]+)\}/;
   let result = text;
@@ -25,6 +24,14 @@ function replaceVariables(text: string, vars: Record<string, string>): string {
     result = result.replaceAll(`{${key}}`, value);
   }
   return result;
+}
+
+function configDelayToMinutes(config: any): number {
+  const value = Number(config?.delay_value || 0);
+  const unit = config?.delay_unit || "m";
+  if (unit === "h") return value * 60;
+  if (unit === "d") return value * 1440;
+  return value; // minutes
 }
 
 const WebhookSchema = z.object({
@@ -54,7 +61,6 @@ Deno.serve(async (req) => {
 
     const { evento, nome, telefone, produto, link, cidade, extra } = parsed.data;
 
-    // Find active funnel matching trigger event
     const { data: funnels } = await supabase
       .from("whatsapp_funnels")
       .select("*, whatsapp_funnel_steps(*, whatsapp_templates(*))")
@@ -68,11 +74,7 @@ Deno.serve(async (req) => {
     }
 
     const variables: Record<string, string> = {
-      Nome: nome || "",
-      Produto: produto || "",
-      Link: link || "",
-      Cidade: cidade || "",
-      ...extra,
+      Nome: nome || "", Produto: produto || "", Link: link || "", Cidade: cidade || "", ...extra,
     };
 
     let queued = 0;
@@ -83,10 +85,92 @@ Deno.serve(async (req) => {
       let cumulativeDelay = 0;
       for (const step of steps) {
         if (!step.active) continue;
-        cumulativeDelay += step.delay_minutes;
 
-        const template = step.whatsapp_templates;
-        let messageContent = template?.content || "";
+        const stepType = step.step_type || "message_template";
+        const config = step.config || {};
+
+        // Handle pause steps - just add delay
+        if (stepType === "pause") {
+          cumulativeDelay += configDelayToMinutes(config);
+          continue;
+        }
+
+        // Handle end steps - stop processing
+        if (stepType === "end") {
+          break;
+        }
+
+        // Handle condition steps - enqueue evaluation marker
+        if (stepType === "condition") {
+          const scheduledAt = new Date(Date.now() + cumulativeDelay * 60 * 1000).toISOString();
+          await supabase.from("whatsapp_message_queue").insert({
+            contact_phone: telefone,
+            contact_name: nome || "",
+            template_id: null,
+            funnel_id: funnel.id,
+            step_id: step.id,
+            instance_id: null,
+            message_content: JSON.stringify({ step_type: "condition", config }),
+            variables,
+            status: "pending",
+            scheduled_at: scheduledAt,
+            priority: 1,
+          });
+          queued++;
+          continue;
+        }
+
+        // Handle transfer steps
+        if (stepType === "transfer") {
+          const scheduledAt = new Date(Date.now() + cumulativeDelay * 60 * 1000).toISOString();
+          await supabase.from("whatsapp_message_queue").insert({
+            contact_phone: telefone,
+            contact_name: nome || "",
+            template_id: null,
+            funnel_id: funnel.id,
+            step_id: step.id,
+            instance_id: null,
+            message_content: JSON.stringify({ step_type: "transfer", config }),
+            variables,
+            status: "pending",
+            scheduled_at: scheduledAt,
+            priority: 1,
+          });
+          queued++;
+          continue;
+        }
+
+        // Add legacy delay_minutes to cumulative
+        cumulativeDelay += step.delay_minutes || 0;
+
+        // Resolve message content based on step type
+        let messageContent = "";
+
+        if (stepType === "message_template") {
+          const template = step.whatsapp_templates;
+          messageContent = template?.content || "";
+        } else if (stepType === "message_custom") {
+          messageContent = config.content || "";
+        } else if (stepType === "send_file") {
+          // For send_file, store config as JSON so process-queue knows how to send it
+          const scheduledAt = new Date(Date.now() + cumulativeDelay * 60 * 1000).toISOString();
+          await supabase.from("whatsapp_message_queue").insert({
+            contact_phone: telefone,
+            contact_name: nome || "",
+            template_id: null,
+            funnel_id: funnel.id,
+            step_id: step.id,
+            instance_id: step.instance_id || null,
+            message_content: JSON.stringify({ step_type: "send_file", config }),
+            variables,
+            status: "pending",
+            scheduled_at: scheduledAt,
+            priority: evento === "carrinho_abandonado" ? 3 : 5,
+          });
+          queued++;
+          continue;
+        }
+
         messageContent = replaceVariables(messageContent, variables);
         messageContent = parseSpintax(messageContent);
 
@@ -95,7 +179,7 @@ Deno.serve(async (req) => {
         await supabase.from("whatsapp_message_queue").insert({
           contact_phone: telefone,
           contact_name: nome || "",
-          template_id: template?.id || null,
+          template_id: step.whatsapp_templates?.id || null,
           funnel_id: funnel.id,
           step_id: step.id,
           instance_id: step.instance_id || null,
