@@ -564,8 +564,47 @@ function InstancesTab() {
             <p className="text-xs text-muted-foreground text-center">Abra o WhatsApp no celular → Dispositivos Conectados → Conectar Dispositivo</p>
           </div>
         </DialogContent>
-      </Dialog>
-    </div>
+       </Dialog>
+
+       {/* Access Dialog */}
+       <Dialog open={accessDialog.open} onOpenChange={(o) => setAccessDialog({ ...accessDialog, open: o })}>
+         <DialogContent className="max-w-md">
+           <DialogHeader><DialogTitle>Acessos — {accessDialog.instance?.name}</DialogTitle></DialogHeader>
+           <div className="space-y-4">
+             <div className="flex gap-2">
+               <Select value={addUserId} onValueChange={setAddUserId}>
+                 <SelectTrigger className="flex-1 h-9 text-sm"><SelectValue placeholder="Selecionar usuário..." /></SelectTrigger>
+                 <SelectContent>
+                   {allUsers.filter(u => !instanceUsers.some(iu => iu.user_id === u.id)).map(u => (
+                     <SelectItem key={u.id} value={u.id}>{u.email}</SelectItem>
+                   ))}
+                 </SelectContent>
+               </Select>
+               <Button size="sm" onClick={addUserAccess} disabled={!addUserId}><Plus className="h-4 w-4 mr-1" /> Adicionar</Button>
+             </div>
+             {instanceUsers.length === 0 ? (
+               <p className="text-sm text-muted-foreground text-center py-4">Nenhum acesso configurado. Todos os admins podem usar.</p>
+             ) : (
+               <div className="space-y-2">
+                 {instanceUsers.map(u => {
+                   const userInfo = allUsers.find(a => a.id === u.user_id);
+                   return (
+                     <div key={u.id} className="flex items-center justify-between border rounded-lg px-3 py-2">
+                       <span className="text-sm font-medium truncate flex-1">{userInfo?.email || u.user_id.substring(0, 8)}</span>
+                       <div className="flex items-center gap-3">
+                         <label className="flex items-center gap-1 text-xs"><Checkbox checked={u.can_view} onCheckedChange={(v) => toggleUserPermission(u.id, "can_view", !!v)} /> Ver</label>
+                         <label className="flex items-center gap-1 text-xs"><Checkbox checked={u.can_send} onCheckedChange={(v) => toggleUserPermission(u.id, "can_send", !!v)} /> Enviar</label>
+                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => removeUserAccess(u.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                       </div>
+                     </div>
+                   );
+                 })}
+               </div>
+             )}
+           </div>
+         </DialogContent>
+       </Dialog>
+     </div>
   );
 }
 
