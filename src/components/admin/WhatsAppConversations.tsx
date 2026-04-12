@@ -137,6 +137,7 @@ export default function ConversationsTab() {
       .order("last_message_at", { ascending: false })
       .limit(200);
 
+    if (selectedInstanceId !== "all") query = query.eq("instance_id", selectedInstanceId);
     if (filter === "open") query = query.eq("status", "open");
     else if (filter === "archived") query = query.eq("status", "archived");
     else if (filter === "unread") query = query.gt("unread_count", 0);
@@ -145,7 +146,7 @@ export default function ConversationsTab() {
     setConversations((data || []) as unknown as Conversation[]);
   }
 
-  useEffect(() => { loadConversations(); }, [filter]);
+  useEffect(() => { loadConversations(); }, [filter, selectedInstanceId]);
 
   async function loadMessages(conv: Conversation) {
     const { data } = await supabase
