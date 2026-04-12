@@ -413,9 +413,18 @@ function InstancesTab() {
                     })}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button size="sm" variant="outline" onClick={() => getQR(inst)}><QrCode className="h-3.5 w-3.5 mr-1" /> QR Code</Button>
                   <Button size="sm" variant="outline" onClick={() => checkStatus(inst)}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Status</Button>
+                  <Button size="sm" variant="outline" onClick={async () => {
+                    try {
+                      const res = await supabase.functions.invoke("whatsapp-instance", {
+                        body: { action: "set_webhook", instance_id: inst.id },
+                      });
+                      if (res.data?.webhook_configured) toast.success("Webhook configurado com sucesso!");
+                      else toast.error("Falha ao configurar webhook");
+                    } catch (e: any) { toast.error(e.message); }
+                  }}><Zap className="h-3.5 w-3.5 mr-1" /> Webhook</Button>
                   <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteInstance(inst.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>
               </CardContent>
