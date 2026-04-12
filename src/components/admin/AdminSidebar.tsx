@@ -211,27 +211,52 @@ export function AdminSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { isAdmin, signOut, user } = useAuth();
+  const { isAdmin, isSuperAdmin, signOut, user } = useAuth();
+  const { isSuperboss } = useTenant();
+  const { data: settings } = useStoreSettings();
   const sections = isAdmin ? adminSections : repSections;
 
   const initials = user?.email
     ? user.email.substring(0, 2).toUpperCase()
     : "AD";
 
+  const storeName = settings?.store_name || "Painel";
+  const storeInitials = storeName.substring(0, 2).toUpperCase();
+
   return (
     <Sidebar collapsible="icon">
-      {/* Logo */}
+      {/* Logo / Branding */}
       <SidebarHeader className="px-4 py-4 border-b border-sidebar-border">
         {!collapsed ? (
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0">
-              <span className="text-sidebar-primary-foreground font-bold text-xs">D7</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0">
+                <span className="text-sidebar-primary-foreground font-bold text-xs">{storeInitials}</span>
+              </div>
+              <span className="text-sm font-semibold text-sidebar-accent-foreground tracking-tight truncate">
+                {storeName}
+              </span>
             </div>
-            <span className="text-sm font-semibold text-sidebar-accent-foreground tracking-tight">D7 Pharma</span>
+            {isSuperboss && (
+              <Link
+                to="/superboss"
+                className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors text-xs font-semibold"
+              >
+                <Crown className="h-3.5 w-3.5" />
+                Super Boss
+              </Link>
+            )}
           </div>
         ) : (
-          <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center mx-auto">
-            <span className="text-sidebar-primary-foreground font-bold text-xs">D7</span>
+          <div className="flex flex-col items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
+              <span className="text-sidebar-primary-foreground font-bold text-xs">{storeInitials}</span>
+            </div>
+            {isSuperboss && (
+              <Link to="/superboss" className="h-6 w-6 rounded bg-amber-500/10 flex items-center justify-center text-amber-600 hover:bg-amber-500/20 transition-colors">
+                <Crown className="h-3 w-3" />
+              </Link>
+            )}
           </div>
         )}
       </SidebarHeader>
