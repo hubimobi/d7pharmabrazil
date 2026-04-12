@@ -280,6 +280,20 @@ export default function ConversationsTab() {
               className="pl-9 h-9"
             />
           </div>
+          {instances.length > 1 && (
+            <select
+              value={selectedInstanceId}
+              onChange={(e) => setSelectedInstanceId(e.target.value)}
+              className="w-full h-8 text-xs border rounded px-2 bg-background"
+            >
+              <option value="all">Todos os WhatsApps</option>
+              {instances.map((inst) => (
+                <option key={inst.id} value={inst.id}>
+                  {inst.name} {inst.status === "connected" ? "🟢" : "🔴"}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="flex gap-1">
             {filterButtons.map((f) => (
               <Button
@@ -296,10 +310,17 @@ export default function ConversationsTab() {
         </div>
 
         <ScrollArea className="flex-1">
-          {filtered.length === 0 ? (
+          {diagnosticInfo && filtered.length === 0 ? (
+            <div className="py-12 px-4 text-center text-muted-foreground text-sm">
+              <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p className="font-medium mb-1">Sem conversas</p>
+              <p className="text-xs">{diagnosticInfo}</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground text-sm">
               <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
               <p>Nenhuma conversa</p>
+              <p className="text-xs mt-1">Aguardando mensagens do webhook...</p>
             </div>
           ) : (
             <div className="divide-y">
