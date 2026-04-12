@@ -43,7 +43,20 @@ interface WhatsAppFunnel {
 interface FunnelStep {
   id: string; funnel_id: string; step_order: number; delay_minutes: number;
   template_id: string | null; instance_id: string | null; active: boolean;
+  step_type: string; config: any; label: string;
 }
+
+type StepType = "message_template" | "message_custom" | "pause" | "send_file" | "condition" | "transfer" | "end";
+
+const STEP_TYPE_OPTIONS: Array<{ value: StepType; label: string; icon: any; color: string; description: string }> = [
+  { value: "message_template", label: "Mensagem Template", icon: FileText, color: "bg-blue-500/10 text-blue-600 border-blue-200", description: "Envia um template existente" },
+  { value: "message_custom", label: "Mensagem Livre", icon: MessageSquare, color: "bg-green-500/10 text-green-600 border-green-200", description: "Envia mensagem personalizada" },
+  { value: "pause", label: "Pausa", icon: Clock, color: "bg-amber-500/10 text-amber-600 border-amber-200", description: "Aguarda um tempo antes de continuar" },
+  { value: "send_file", label: "Enviar Arquivo/Link", icon: Paperclip, color: "bg-purple-500/10 text-purple-600 border-purple-200", description: "Envia arquivo, áudio ou link rastreável" },
+  { value: "condition", label: "Condicional", icon: ArrowRightLeft, color: "bg-orange-500/10 text-orange-600 border-orange-200", description: "Avalia condição e direciona fluxo" },
+  { value: "transfer", label: "Transferir", icon: UserCheck, color: "bg-cyan-500/10 text-cyan-600 border-cyan-200", description: "Transfere para agente IA, representante ou usuário" },
+  { value: "end", label: "Finalizar", icon: Flag, color: "bg-red-500/10 text-red-600 border-red-200", description: "Encerra o funil" },
+];
 interface MessageLog {
   id: string; contact_phone: string; contact_name: string; instance_name: string | null;
   message_content: string; direction: string; status: string;
