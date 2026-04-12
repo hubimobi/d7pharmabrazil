@@ -80,12 +80,16 @@ export default function ConversationsTab() {
   const [sending, setSending] = useState(false);
   const [newTag, setNewTag] = useState("");
   const [showDetails, setShowDetails] = useState(true);
+  const [instances, setInstances] = useState<{ id: string; name: string; status: string }[]>([]);
+  const [selectedInstanceId, setSelectedInstanceId] = useState<string>("all");
+  const [diagnosticInfo, setDiagnosticInfo] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     loadConversations();
     loadTemplates();
+    loadInstances();
   }, []);
 
   useEffect(() => {
