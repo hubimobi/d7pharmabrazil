@@ -18,8 +18,11 @@ import {
   MessageSquare, Smartphone, FileText, GitBranch, Users, BarChart3,
   Plus, RefreshCw, QrCode, Wifi, WifiOff, Trash2, Edit, Play, Pause,
   Send, Clock, AlertTriangle, CheckCircle, XCircle, Eye, Search,
-  Zap, Settings2, Shuffle, Upload, Phone, Mail, UserPlus, Download, Inbox
+  Zap, Settings2, Shuffle, Upload, Phone, Mail, UserPlus, Download, Inbox,
+  ArrowRightLeft, Flag, Paperclip, Volume2, Link2, ChevronDown, GripVertical,
+  Bot, UserCheck, ArrowRight
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ConversationsTab from "@/components/admin/WhatsAppConversations";
 
 // ==================== TYPES ====================
