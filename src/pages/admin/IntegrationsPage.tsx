@@ -1307,14 +1307,21 @@ function EvolutionApiCard() {
     if (!url || !key) { toast.error("Configure URL e chave primeiro"); return; }
     setTesting(true);
     try {
-      const res = await fetch(`${url.replace(/\/+$/, "")}/instance/fetchInstances`, {
+      const normalizedUrl = url.replace(/\/+$/, "").trim();
+      const finalUrl = /^https?:\/\//i.test(normalizedUrl) ? normalizedUrl : `https://${normalizedUrl}`;
+      const res = await fetch(`${finalUrl}/instance/fetchInstances`, {
         headers: { apikey: key },
       });
-      if (res.ok) {
-        const data = await res.json();
-        toast.success(`Conexão OK! ${Array.isArray(data) ? data.length : 0} instância(s) encontrada(s).`);
-      } else {
+      const text = await res.text();
+      if (!res.ok) {
         toast.error(`Erro ${res.status}: Verifique URL e chave.`);
+        return;
+      }
+      try {
+        const data = JSON.parse(text);
+        toast.success(`Conexão OK! ${Array.isArray(data) ? data.length : 0} instância(s) encontrada(s).`);
+      } catch {
+        toast.error("A API retornou uma resposta inválida (não-JSON). Verifique se a URL está correta.");
       }
     } catch (e: any) {
       toast.error(`Falha na conexão: ${e.message}`);
