@@ -755,7 +755,7 @@ function FunnelsTab() {
       message_template: {}, message_custom: { content: "" },
       pause: { delay_value: 15, delay_unit: "m" },
       send_file: { file_type: "link", url: "", caption: "", use_shortener: false },
-      condition: { condition_type: "replied", expected: true, yes_step_order: 0, no_step_order: 0 },
+      condition: { condition_type: "replied", expected: true, yes_step_order: 0, no_step_order: 0, wait_for_reply: false, wait_timeout_value: 0, wait_timeout_unit: "h", wait_timeout_date: "" },
       transfer: { transfer_to: "ai_agent", target_id: "" },
       end: { mark_as: "closed" },
     };
@@ -828,7 +828,7 @@ function FunnelsTab() {
       case "message_custom": return config.content ? `"${String(config.content).substring(0, 60)}${String(config.content).length > 60 ? "..." : ""}"` : "Mensagem vazia";
       case "pause": { const units: Record<string, string> = { m: "minutos", h: "horas", d: "dias" }; return `Aguardar ${config.delay_value || 0} ${units[config.delay_unit] || "minutos"}`; }
       case "send_file": { const types: Record<string, string> = { file: "📄 Arquivo", audio: "🎵 Áudio", link: "🔗 Link" }; return `${types[config.file_type] || "Arquivo"}: ${config.url ? String(config.url).substring(0, 40) : "Não configurado"}`; }
-      case "condition": { const conds: Record<string, string> = { replied: "Respondeu", tag_added: "Tag adicionada", clicked_link: "Clicou no link", accessed_link: "Acessou link" }; return `${conds[config.condition_type] || "Condição"}?`; }
+      case "condition": { const conds: Record<string, string> = { replied: "Respondeu", tag_added: "Tag adicionada", clicked_link: "Clicou no link", accessed_link: "Acessou link" }; const waitInfo = config.wait_for_reply ? (config.wait_timeout_value > 0 ? ` (aguarda ${config.wait_timeout_value}${config.wait_timeout_unit})` : config.wait_timeout_date ? ` (até ${config.wait_timeout_date})` : " (aguarda indefinidamente)") : ""; return `${conds[config.condition_type] || "Condição"}?${waitInfo}`; }
       case "transfer": { const targets: Record<string, string> = { ai_agent: "🤖 Agente IA", representative: "👤 Representante", user: "👨‍💼 Usuário" }; return targets[config.transfer_to] || "Transferir"; }
       case "end": return `Finalizar (${config.mark_as || "closed"})`;
       default: return "";
@@ -868,10 +868,53 @@ function FunnelsTab() {
           {config.file_type === "link" && <div className="flex items-center gap-2"><Switch checked={config.use_shortener || false} onCheckedChange={(v) => updateStepConfig(step.id, { use_shortener: v })} /><Label className="text-xs">Encurtador com rastreamento</Label></div>}
         </div>);
       case "condition":
-        return (<div className="space-y-2">
+        return (<div className="space-y-3">
           <div><Label className="text-[10px]">Tipo de condição</Label>
             <Select value={config.condition_type || "replied"} onValueChange={(v) => updateStepConfig(step.id, { condition_type: v })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="replied">Respondeu à mensagem</SelectItem><SelectItem value="tag_added">Tag adicionada</SelectItem><SelectItem value="clicked_link">Clicou no link</SelectItem><SelectItem value="accessed_link">Acessou o link</SelectItem></SelectContent></Select></div>
           {config.condition_type === "tag_added" && <div><Label className="text-[10px]">Nome da Tag</Label><Input value={config.tag_name || ""} className="h-8 text-xs" placeholder="ex: comprador" onChange={(e) => updateStepConfig(step.id, { tag_name: e.target.value })} /></div>}
+
+          {/* Pausar até responder */}
+          {(config.condition_type === "replied") && (
+            <div className="border border-amber-200 rounded-md p-2 bg-amber-50/50 space-y-2">
+              <div className="flex items-center gap-2">
+                <Switch checked={config.wait_for_reply || false} onCheckedChange={(v) => updateStepConfig(step.id, { wait_for_reply: v, wait_timeout_value: v ? (config.wait_timeout_value || 0) : 0, wait_timeout_unit: config.wait_timeout_unit || "h", wait_timeout_date: "" })} />
+                <Label className="text-[10px] font-medium text-amber-700">⏸️ Pausar até responder</Label>
+              </div>
+              {config.wait_for_reply && (
+                <div className="space-y-2 pl-1">
+                  <div><Label className="text-[10px] text-muted-foreground">Limite de espera (opcional — vazio = aguarda indefinidamente)</Label></div>
+                  <div className="flex items-center gap-2">
+                    <Select value={config.wait_timeout_type || "duration"} onValueChange={(v) => updateStepConfig(step.id, { wait_timeout_type: v, wait_timeout_value: 0, wait_timeout_date: "" })}>
+                      <SelectTrigger className="h-7 text-xs w-[130px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="duration">Tempo relativo</SelectItem>
+                        <SelectItem value="date">Data específica</SelectItem>
+                        <SelectItem value="none">Sem limite</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {(config.wait_timeout_type || "duration") === "duration" && (
+                      <div className="flex items-center gap-1 flex-1">
+                        <Input type="number" min={0} value={config.wait_timeout_value || ""} className="h-7 text-xs w-16" placeholder="0" onChange={(e) => updateStepConfig(step.id, { wait_timeout_value: Number(e.target.value) })} />
+                        <Select value={config.wait_timeout_unit || "h"} onValueChange={(v) => updateStepConfig(step.id, { wait_timeout_unit: v })}>
+                          <SelectTrigger className="h-7 text-xs w-[90px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="m">Minutos</SelectItem>
+                            <SelectItem value="h">Horas</SelectItem>
+                            <SelectItem value="d">Dias</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {(config.wait_timeout_type) === "date" && (
+                      <Input type="datetime-local" value={config.wait_timeout_date || ""} className="h-7 text-xs flex-1" onChange={(e) => updateStepConfig(step.id, { wait_timeout_date: e.target.value })} />
+                    )}
+                  </div>
+                  <p className="text-[9px] text-muted-foreground">Se o tempo expirar sem resposta, segue pelo caminho "NÃO".</p>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-[10px] text-green-600">✅ Se SIM → Etapa</Label>
               <Select value={String(config.yes_step_order || 0)} onValueChange={(v) => updateStepConfig(step.id, { yes_step_order: Number(v) })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="0">Próxima etapa</SelectItem>{funnelSteps.map((s, i) => <SelectItem key={s.id} value={String(s.step_order)}>Etapa {i + 1} - {getStepTypeInfo(s.step_type).label}</SelectItem>)}</SelectContent></Select></div>
