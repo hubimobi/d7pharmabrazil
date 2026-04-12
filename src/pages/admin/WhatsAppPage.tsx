@@ -18,8 +18,11 @@ import {
   MessageSquare, Smartphone, FileText, GitBranch, Users, BarChart3,
   Plus, RefreshCw, QrCode, Wifi, WifiOff, Trash2, Edit, Play, Pause,
   Send, Clock, AlertTriangle, CheckCircle, XCircle, Eye, Search,
-  Zap, Settings2, Shuffle, Upload, Phone, Mail, UserPlus, Download, Inbox
+  Zap, Settings2, Shuffle, Upload, Phone, Mail, UserPlus, Download, Inbox,
+  ArrowRightLeft, Flag, Paperclip, Volume2, Link2, ChevronDown, GripVertical,
+  Bot, UserCheck, ArrowRight
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ConversationsTab from "@/components/admin/WhatsAppConversations";
 
 // ==================== TYPES ====================
@@ -40,7 +43,20 @@ interface WhatsAppFunnel {
 interface FunnelStep {
   id: string; funnel_id: string; step_order: number; delay_minutes: number;
   template_id: string | null; instance_id: string | null; active: boolean;
+  step_type: string; config: any; label: string;
 }
+
+type StepType = "message_template" | "message_custom" | "pause" | "send_file" | "condition" | "transfer" | "end";
+
+const STEP_TYPE_OPTIONS: Array<{ value: StepType; label: string; icon: any; color: string; description: string }> = [
+  { value: "message_template", label: "Mensagem Template", icon: FileText, color: "bg-blue-500/10 text-blue-600 border-blue-200", description: "Envia um template existente" },
+  { value: "message_custom", label: "Mensagem Livre", icon: MessageSquare, color: "bg-green-500/10 text-green-600 border-green-200", description: "Envia mensagem personalizada" },
+  { value: "pause", label: "Pausa", icon: Clock, color: "bg-amber-500/10 text-amber-600 border-amber-200", description: "Aguarda um tempo antes de continuar" },
+  { value: "send_file", label: "Enviar Arquivo/Link", icon: Paperclip, color: "bg-purple-500/10 text-purple-600 border-purple-200", description: "Envia arquivo, áudio ou link rastreável" },
+  { value: "condition", label: "Condicional", icon: ArrowRightLeft, color: "bg-orange-500/10 text-orange-600 border-orange-200", description: "Avalia condição e direciona fluxo" },
+  { value: "transfer", label: "Transferir", icon: UserCheck, color: "bg-cyan-500/10 text-cyan-600 border-cyan-200", description: "Transfere para agente IA, representante ou usuário" },
+  { value: "end", label: "Finalizar", icon: Flag, color: "bg-red-500/10 text-red-600 border-red-200", description: "Encerra o funil" },
+];
 interface MessageLog {
   id: string; contact_phone: string; contact_name: string; instance_name: string | null;
   message_content: string; direction: string; status: string;
@@ -662,6 +678,365 @@ function TemplatesTab() {
 
 // ==================== FUNNELS TAB ====================
 function FunnelsTab() {
+  const [funnels, setFunnels] = useState<WhatsAppFunnel[]>([]);
+  const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+  const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
+  const [steps, setSteps] = useState<FunnelStep[]>([]);
+  const [showEditor, setShowEditor] = useState(false);
+  const [editing, setEditing] = useState<WhatsAppFunnel | null>(null);
+  const [form, setForm] = useState({ name: "", type: "recuperacao", trigger_event: "carrinho_abandonado" });
+  const [showSteps, setShowSteps] = useState<string | null>(null);
+  const [delayDrafts, setDelayDrafts] = useState<Record<string, { value: string; unit: DelayUnit }>>({});
+  const [showTestDialog, setShowTestDialog] = useState(false);
+  const [testFunnel, setTestFunnel] = useState<WhatsAppFunnel | null>(null);
+  const [testAccelerated, setTestAccelerated] = useState(true);
+  const [testRunning, setTestRunning] = useState(false);
+  const [testMessages, setTestMessages] = useState<Array<{ id: string; offsetLabel: string; templateName: string; instanceLabel: string; message: string }>>([]);
+  const [testPreview, setTestPreview] = useState<Array<{ id: string; offsetLabel: string; configuredLabel: string; templateName: string; instanceLabel: string; message: string; offsetSeconds: number }>>([]);
+  const [testForm, setTestForm] = useState({ nome: "Cliente Teste", telefone: "5511999999999", produto: "Produto Exemplo", link: "https://loja.com/checkout", cidade: "São Paulo" });
+  const [agents, setAgents] = useState<any[]>([]);
+  const [representatives, setReps] = useState<any[]>([]);
+  const simulationTimersRef = useRef<number[]>([]);
+  const [expandedStep, setExpandedStep] = useState<string | null>(null);
+
+  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    setDelayDrafts((current) => {
+      const next: Record<string, { value: string; unit: DelayUnit }> = {};
+      for (const step of steps) { if (current[step.id]) next[step.id] = current[step.id]; }
+      return next;
+    });
+  }, [steps]);
+  useEffect(() => {
+    if (!showTestDialog || !testFunnel) return;
+    stopSimulation();
+    setTestPreview(buildTestSequence(testFunnel, testAccelerated));
+    setTestMessages([]);
+  }, [showTestDialog, testFunnel, testAccelerated, steps, templates, instances, testForm.nome, testForm.telefone, testForm.produto, testForm.link, testForm.cidade]);
+
+  async function loadAll() {
+    const [{ data: f }, { data: t }, { data: i }, { data: s }, { data: ag }, { data: rp }] = await Promise.all([
+      supabase.from("whatsapp_funnels").select("*").order("created_at", { ascending: false }),
+      supabase.from("whatsapp_templates").select("*").eq("active", true),
+      supabase.from("whatsapp_instances").select("*").eq("active", true),
+      supabase.from("whatsapp_funnel_steps").select("*").order("step_order"),
+      supabase.from("ai_agents").select("id, name").eq("active", true),
+      supabase.from("representatives").select("id, name").eq("active", true),
+    ]);
+    setFunnels((f || []) as unknown as WhatsAppFunnel[]);
+    setTemplates((t || []) as unknown as WhatsAppTemplate[]);
+    setInstances((i || []) as unknown as WhatsAppInstance[]);
+    setSteps((s || []) as unknown as FunnelStep[]);
+    setAgents(ag || []);
+    setReps(rp || []);
+  }
+
+  const funnelTypes: Record<string, string> = { recuperacao: "🛒 Recuperação", recompra: "🔁 Recompra", upsell: "📦 Upsell", novidades: "🆕 Novidades" };
+  const triggerEvents: Record<string, string> = { carrinho_abandonado: "Carrinho Abandonado", compra_confirmada: "Compra Confirmada", entrega_confirmada: "Entrega Confirmada", recompra_aviso: "Aviso de Recompra", campanha_manual: "Campanha Manual" };
+
+  function openEditor(funnel?: WhatsAppFunnel) {
+    if (funnel) { setEditing(funnel); setForm({ name: funnel.name, type: funnel.type, trigger_event: funnel.trigger_event }); }
+    else { setEditing(null); setForm({ name: "", type: "recuperacao", trigger_event: "carrinho_abandonado" }); }
+    setShowEditor(true);
+  }
+  async function saveFunnel() {
+    if (!form.name) { toast.error("Preencha o nome"); return; }
+    if (editing) await supabase.from("whatsapp_funnels").update(form).eq("id", editing.id);
+    else await supabase.from("whatsapp_funnels").insert(form);
+    toast.success("Funil salvo!"); setShowEditor(false); loadAll();
+  }
+  async function toggleFunnel(f: WhatsAppFunnel) { await supabase.from("whatsapp_funnels").update({ active: !f.active }).eq("id", f.id); loadAll(); }
+  async function deleteFunnel(id: string) { if (!confirm("Excluir funil e todas as etapas?")) return; await supabase.from("whatsapp_funnels").delete().eq("id", id); toast.success("Funil excluído"); loadAll(); }
+
+  async function addStep(funnelId: string, stepType: StepType = "message_template") {
+    const funnelSteps = steps.filter((s) => s.funnel_id === funnelId);
+    const nextOrder = funnelSteps.length + 1;
+    const defaultConfigs: Record<StepType, any> = {
+      message_template: {}, message_custom: { content: "" },
+      pause: { delay_value: 15, delay_unit: "m" },
+      send_file: { file_type: "link", url: "", caption: "", use_shortener: false },
+      condition: { condition_type: "replied", expected: true, yes_step_order: 0, no_step_order: 0 },
+      transfer: { transfer_to: "ai_agent", target_id: "" },
+      end: { mark_as: "closed" },
+    };
+    await supabase.from("whatsapp_funnel_steps").insert({
+      funnel_id: funnelId, step_order: nextOrder, delay_minutes: 0,
+      step_type: stepType, config: defaultConfigs[stepType],
+      label: STEP_TYPE_OPTIONS.find(o => o.value === stepType)?.label || "",
+    } as any);
+    loadAll();
+  }
+  async function updateStep(stepId: string, updates: Partial<FunnelStep>) { await supabase.from("whatsapp_funnel_steps").update(updates as any).eq("id", stepId); loadAll(); }
+  async function updateStepConfig(stepId: string, configUpdates: any) {
+    const step = steps.find(s => s.id === stepId);
+    if (!step) return;
+    await supabase.from("whatsapp_funnel_steps").update({ config: { ...(step.config || {}), ...configUpdates } } as any).eq("id", stepId);
+    loadAll();
+  }
+  async function deleteStep(stepId: string) { await supabase.from("whatsapp_funnel_steps").delete().eq("id", stepId); loadAll(); }
+
+  function getEligibleInstances(funnelType: string) {
+    return instances.filter((inst) => { const roles = normalizeFunnelRoles(inst.funnel_roles); return roles.includes("all") || roles.includes(funnelType as FunnelRole); });
+  }
+  function getDelayDraft(step: FunnelStep) { return delayDrafts[step.id] || { value: getDelayValue(step.delay_minutes), unit: getDelayUnit(step.delay_minutes) }; }
+  async function saveDelayDraft(step: FunnelStep, nextDraft?: { value: string; unit: DelayUnit }) {
+    const draft = nextDraft || getDelayDraft(step);
+    const delayMinutes = toDelayMinutes(draft.value, draft.unit);
+    setDelayDrafts((c) => ({ ...c, [step.id]: { value: getDelayValue(delayMinutes, draft.unit), unit: draft.unit } }));
+    await updateStep(step.id, { delay_minutes: delayMinutes });
+  }
+  function stopSimulation() { simulationTimersRef.current.forEach((t) => window.clearTimeout(t)); simulationTimersRef.current = []; setTestRunning(false); }
+
+  function buildTestSequence(funnel: WhatsAppFunnel, accelerated: boolean) {
+    const funnelSteps = steps.filter((s) => s.funnel_id === funnel.id && s.active).sort((a, b) => a.step_order - b.step_order);
+    const variables = { Nome: testForm.nome, Produto: testForm.produto, Link: testForm.link, Cidade: testForm.cidade, Nome_da_Empresa: "D7 Pharma", Atendente: "Atendente" };
+    let cumSec = 0;
+    return funnelSteps.filter(s => s.step_type === "message_template" || s.step_type === "message_custom").map((step, index) => {
+      const template = templates.find((t) => t.id === step.template_id);
+      const eligible = getEligibleInstances(funnel.type);
+      cumSec += Math.round(Number(step.delay_minutes || 0) * 60);
+      const offsetSeconds = accelerated ? index * 10 : cumSec;
+      const content = step.step_type === "message_custom" ? (step.config?.content || "") : (template?.content || "");
+      const message = parseSpintax(replaceTemplateVariables(content, variables));
+      const selInst = instances.find((i) => i.id === step.instance_id);
+      const instLabel = selInst?.name || (eligible[0]?.name ? `Auto (${eligible[0].name})` : "Auto");
+      return { id: step.id, configuredLabel: formatDelay(Number(step.delay_minutes || 0)), offsetLabel: accelerated ? formatOffset(offsetSeconds) : formatOffset(cumSec), templateName: step.step_type === "message_custom" ? "Msg Livre" : (template?.name || "Sem template"), instanceLabel: instLabel, message: message || "Sem conteúdo.", offsetSeconds };
+    });
+  }
+  function openTestModal(funnel: WhatsAppFunnel) { setTestFunnel(funnel); setShowTestDialog(true); }
+  function runTestSimulation() {
+    if (!testFunnel) return;
+    stopSimulation();
+    const seq = buildTestSequence(testFunnel, testAccelerated);
+    setTestPreview(seq); setTestMessages([]);
+    if (seq.length === 0) { toast.error("Adicione pelo menos uma etapa de mensagem ativa."); return; }
+    if (!testAccelerated && (seq[seq.length - 1]?.offsetSeconds || 0) > 120) {
+      setTestMessages(seq.map(({ id, offsetLabel, templateName, instanceLabel, message }) => ({ id, offsetLabel, templateName, instanceLabel, message })));
+      toast.info("Ative o modo acelerado para executar automaticamente."); return;
+    }
+    setTestRunning(true);
+    seq.forEach((item) => { simulationTimersRef.current.push(window.setTimeout(() => { setTestMessages((c) => [...c, { id: item.id, offsetLabel: item.offsetLabel, templateName: item.templateName, instanceLabel: item.instanceLabel, message: item.message }]); }, item.offsetSeconds * 1000)); });
+    simulationTimersRef.current.push(window.setTimeout(() => setTestRunning(false), (seq[seq.length - 1]?.offsetSeconds || 0) * 1000 + 300));
+  }
+
+  function getStepTypeInfo(type: string) { return STEP_TYPE_OPTIONS.find(o => o.value === type) || STEP_TYPE_OPTIONS[0]; }
+
+  function renderStepSummary(step: FunnelStep) {
+    const config = step.config || {};
+    switch (step.step_type) {
+      case "message_template": { const tpl = templates.find(t => t.id === step.template_id); return tpl ? `Template: "${tpl.name}"` : "Selecione um template"; }
+      case "message_custom": return config.content ? `"${String(config.content).substring(0, 60)}${String(config.content).length > 60 ? "..." : ""}"` : "Mensagem vazia";
+      case "pause": { const units: Record<string, string> = { m: "minutos", h: "horas", d: "dias" }; return `Aguardar ${config.delay_value || 0} ${units[config.delay_unit] || "minutos"}`; }
+      case "send_file": { const types: Record<string, string> = { file: "📄 Arquivo", audio: "🎵 Áudio", link: "🔗 Link" }; return `${types[config.file_type] || "Arquivo"}: ${config.url ? String(config.url).substring(0, 40) : "Não configurado"}`; }
+      case "condition": { const conds: Record<string, string> = { replied: "Respondeu", tag_added: "Tag adicionada", clicked_link: "Clicou no link", accessed_link: "Acessou link" }; return `${conds[config.condition_type] || "Condição"}?`; }
+      case "transfer": { const targets: Record<string, string> = { ai_agent: "🤖 Agente IA", representative: "👤 Representante", user: "👨‍💼 Usuário" }; return targets[config.transfer_to] || "Transferir"; }
+      case "end": return `Finalizar (${config.mark_as || "closed"})`;
+      default: return "";
+    }
+  }
+
+  function renderStepEditor(step: FunnelStep, funnel: WhatsAppFunnel) {
+    const config = step.config || {};
+    const funnelSteps = steps.filter(s => s.funnel_id === funnel.id).sort((a, b) => a.step_order - b.step_order);
+    switch (step.step_type) {
+      case "message_template":
+        return (<div className="grid grid-cols-2 gap-3">
+          <div><Label className="text-[10px]">Template</Label>
+            <Select value={step.template_id || ""} onValueChange={(v) => updateStep(step.id, { template_id: v || null })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{templates.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select></div>
+          <div><Label className="text-[10px]">WhatsApp</Label>
+            <Select value={step.instance_id || "auto"} onValueChange={(v) => updateStep(step.id, { instance_id: v === "auto" ? null : v })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="auto">🔄 Automático</SelectItem>{getEligibleInstances(funnel.type).map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent></Select></div>
+        </div>);
+      case "message_custom":
+        return (<div className="space-y-2">
+          <Textarea value={config.content || ""} onChange={(e) => updateStepConfig(step.id, { content: e.target.value })} placeholder="Olá {Nome}, tudo bem? ..." className="min-h-[80px] text-xs font-mono" />
+          <div className="flex flex-wrap gap-1">{["{Nome}", "{Produto}", "{Link}", "{Cidade}"].map((v) => (<Badge key={v} variant="secondary" className="cursor-pointer text-[10px]" onClick={() => updateStepConfig(step.id, { content: (config.content || "") + v })}>{v}</Badge>))}</div>
+          <div><Label className="text-[10px]">WhatsApp</Label>
+            <Select value={step.instance_id || "auto"} onValueChange={(v) => updateStep(step.id, { instance_id: v === "auto" ? null : v })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="auto">🔄 Automático</SelectItem>{getEligibleInstances(funnel.type).map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent></Select></div>
+        </div>);
+      case "pause":
+        return (<div className="flex items-center gap-2">
+          <div><Label className="text-[10px]">Valor</Label><Input type="number" min={0} value={config.delay_value || 0} className="h-8 text-xs w-20" onChange={(e) => updateStepConfig(step.id, { delay_value: Number(e.target.value) })} /></div>
+          <div><Label className="text-[10px]">Unidade</Label>
+            <Select value={config.delay_unit || "m"} onValueChange={(v) => updateStepConfig(step.id, { delay_unit: v })}><SelectTrigger className="h-8 text-xs w-24"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="m">Minutos</SelectItem><SelectItem value="h">Horas</SelectItem><SelectItem value="d">Dias</SelectItem></SelectContent></Select></div>
+        </div>);
+      case "send_file":
+        return (<div className="space-y-2">
+          <div><Label className="text-[10px]">Tipo</Label>
+            <Select value={config.file_type || "link"} onValueChange={(v) => updateStepConfig(step.id, { file_type: v })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="file">📄 Arquivo</SelectItem><SelectItem value="audio">🎵 Áudio</SelectItem><SelectItem value="link">🔗 Link</SelectItem></SelectContent></Select></div>
+          <div><Label className="text-[10px]">URL</Label><Input value={config.url || ""} className="h-8 text-xs" placeholder="https://..." onChange={(e) => updateStepConfig(step.id, { url: e.target.value })} /></div>
+          {config.file_type !== "audio" && <div><Label className="text-[10px]">Legenda</Label><Input value={config.caption || ""} className="h-8 text-xs" placeholder="Descrição..." onChange={(e) => updateStepConfig(step.id, { caption: e.target.value })} /></div>}
+          {config.file_type === "link" && <div className="flex items-center gap-2"><Switch checked={config.use_shortener || false} onCheckedChange={(v) => updateStepConfig(step.id, { use_shortener: v })} /><Label className="text-xs">Encurtador com rastreamento</Label></div>}
+        </div>);
+      case "condition":
+        return (<div className="space-y-2">
+          <div><Label className="text-[10px]">Tipo de condição</Label>
+            <Select value={config.condition_type || "replied"} onValueChange={(v) => updateStepConfig(step.id, { condition_type: v })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="replied">Respondeu à mensagem</SelectItem><SelectItem value="tag_added">Tag adicionada</SelectItem><SelectItem value="clicked_link">Clicou no link</SelectItem><SelectItem value="accessed_link">Acessou o link</SelectItem></SelectContent></Select></div>
+          {config.condition_type === "tag_added" && <div><Label className="text-[10px]">Nome da Tag</Label><Input value={config.tag_name || ""} className="h-8 text-xs" placeholder="ex: comprador" onChange={(e) => updateStepConfig(step.id, { tag_name: e.target.value })} /></div>}
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-[10px] text-green-600">✅ Se SIM → Etapa</Label>
+              <Select value={String(config.yes_step_order || 0)} onValueChange={(v) => updateStepConfig(step.id, { yes_step_order: Number(v) })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="0">Próxima etapa</SelectItem>{funnelSteps.map((s, i) => <SelectItem key={s.id} value={String(s.step_order)}>Etapa {i + 1} - {getStepTypeInfo(s.step_type).label}</SelectItem>)}</SelectContent></Select></div>
+            <div><Label className="text-[10px] text-red-600">❌ Se NÃO → Etapa</Label>
+              <Select value={String(config.no_step_order || 0)} onValueChange={(v) => updateStepConfig(step.id, { no_step_order: Number(v) })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="0">Próxima etapa</SelectItem>{funnelSteps.map((s, i) => <SelectItem key={s.id} value={String(s.step_order)}>Etapa {i + 1} - {getStepTypeInfo(s.step_type).label}</SelectItem>)}</SelectContent></Select></div>
+          </div>
+        </div>);
+      case "transfer":
+        return (<div className="space-y-2">
+          <div><Label className="text-[10px]">Transferir para</Label>
+            <Select value={config.transfer_to || "ai_agent"} onValueChange={(v) => updateStepConfig(step.id, { transfer_to: v, target_id: "" })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ai_agent">🤖 Agente de IA</SelectItem><SelectItem value="representative">👤 Representante</SelectItem><SelectItem value="user">👨‍💼 Usuário</SelectItem></SelectContent></Select></div>
+          <div><Label className="text-[10px]">Destino</Label>
+            <Select value={config.target_id || ""} onValueChange={(v) => updateStepConfig(step.id, { target_id: v })}><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent>
+              {config.transfer_to === "ai_agent" && agents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+              {config.transfer_to === "representative" && representatives.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+              {config.transfer_to === "user" && <SelectItem value="any">Qualquer usuário disponível</SelectItem>}
+            </SelectContent></Select></div>
+        </div>);
+      case "end":
+        return (<div><Label className="text-[10px]">Marcar conversa como</Label>
+          <Select value={config.mark_as || "closed"} onValueChange={(v) => updateStepConfig(step.id, { mark_as: v })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="closed">Fechada</SelectItem><SelectItem value="archived">Arquivada</SelectItem><SelectItem value="resolved">Resolvida</SelectItem></SelectContent></Select></div>);
+      default: return null;
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Funis de Automação</h3>
+        <Button onClick={() => openEditor()} size="sm"><Plus className="h-4 w-4 mr-1" /> Novo Funil</Button>
+      </div>
+      {funnels.length === 0 ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground"><GitBranch className="h-12 w-12 mx-auto mb-3 opacity-40" /><p>Nenhum funil criado</p></CardContent></Card>
+      ) : (
+        <div className="space-y-3">
+          {funnels.map((f) => {
+            const funnelSteps = steps.filter((s) => s.funnel_id === f.id).sort((a, b) => a.step_order - b.step_order);
+            const isOpen = showSteps === f.id;
+            return (
+              <Card key={f.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">{funnelTypes[f.type]?.split(" ")[0]}</span>
+                      <div><h4 className="font-semibold">{f.name}</h4><p className="text-xs text-muted-foreground">Gatilho: {triggerEvents[f.trigger_event] || f.trigger_event} • {funnelSteps.length} etapas</p></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => openTestModal(f)}><Play className="h-3.5 w-3.5 mr-1" /> Testar</Button>
+                      <Button size="sm" variant={f.active ? "default" : "outline"} onClick={() => toggleFunnel(f)}>{f.active ? <><Pause className="h-3.5 w-3.5 mr-1" /> Pausar</> : <><Play className="h-3.5 w-3.5 mr-1" /> Ativar</>}</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setShowSteps(isOpen ? null : f.id)}><Settings2 className="h-3.5 w-3.5" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => openEditor(f)}><Edit className="h-3.5 w-3.5" /></Button>
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteFunnel(f.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  </div>
+                  {isOpen && (
+                    <div className="mt-4 space-y-2 border-t pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium">Etapas do Funil</span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="outline"><Plus className="h-3.5 w-3.5 mr-1" /> Nova Etapa <ChevronDown className="h-3 w-3 ml-1" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            {STEP_TYPE_OPTIONS.map((opt) => (
+                              <DropdownMenuItem key={opt.value} onClick={() => addStep(f.id, opt.value)} className="flex items-center gap-2">
+                                <opt.icon className="h-4 w-4" />
+                                <div><p className="text-sm font-medium">{opt.label}</p><p className="text-[10px] text-muted-foreground">{opt.description}</p></div>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {funnelSteps.map((step, idx) => {
+                        const info = getStepTypeInfo(step.step_type);
+                        const isExpanded = expandedStep === step.id;
+                        return (
+                          <div key={step.id} className="relative">
+                            {idx > 0 && <div className="absolute left-5 -top-2 w-0.5 h-2 bg-border" />}
+                            {idx < funnelSteps.length - 1 && <div className="absolute left-5 -bottom-2 w-0.5 h-2 bg-border" />}
+                            <div className={`border rounded-lg transition-all ${info.color} ${isExpanded ? "ring-2 ring-primary/20" : ""}`}>
+                              <button onClick={() => setExpandedStep(isExpanded ? null : step.id)} className="w-full flex items-center gap-3 p-3 text-left">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-background border font-bold text-sm shrink-0">{idx + 1}</div>
+                                <info.icon className="h-4 w-4 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2"><span className="text-sm font-medium">{info.label}</span>{!step.active && <Badge variant="outline" className="text-[9px]">Inativo</Badge>}</div>
+                                  <p className="text-xs text-muted-foreground truncate">{renderStepSummary(step)}</p>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <Switch checked={step.active} onCheckedChange={(v) => updateStep(step.id, { active: v })} onClick={(e) => e.stopPropagation()} />
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); deleteStep(step.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                  <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                                </div>
+                              </button>
+                              {isExpanded && (
+                                <div className="px-3 pb-3 pt-0 border-t bg-background/50 rounded-b-lg"><div className="pt-3 space-y-3">{renderStepEditor(step, f)}</div></div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {funnelSteps.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Adicione etapas usando o botão acima</p>}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+      <Dialog open={showEditor} onOpenChange={setShowEditor}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{editing ? "Editar Funil" : "Novo Funil"}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Nome</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Recuperação de Carrinho" /></div>
+            <div><Label>Tipo</Label><Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(funnelTypes).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select></div>
+            <div><Label>Evento Gatilho</Label><Select value={form.trigger_event} onValueChange={(v) => setForm({ ...form, trigger_event: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(triggerEvents).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setShowEditor(false)}>Cancelar</Button><Button onClick={saveFunnel}>Salvar Funil</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showTestDialog} onOpenChange={(open) => { setShowTestDialog(open); if (!open) stopSimulation(); }}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader><DialogTitle>Teste de Funil {testFunnel ? `• ${testFunnel.name}` : ""}</DialogTitle></DialogHeader>
+          <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+            <div className="space-y-4">
+              <div className="space-y-3 rounded-xl border p-4">
+                <div><Label>Nome</Label><Input value={testForm.nome} onChange={(e) => setTestForm((c) => ({ ...c, nome: e.target.value }))} /></div>
+                <div><Label>Telefone</Label><Input value={testForm.telefone} onChange={(e) => setTestForm((c) => ({ ...c, telefone: e.target.value }))} /></div>
+                <div><Label>Produto</Label><Input value={testForm.produto} onChange={(e) => setTestForm((c) => ({ ...c, produto: e.target.value }))} /></div>
+                <div><Label>Link</Label><Input value={testForm.link} onChange={(e) => setTestForm((c) => ({ ...c, link: e.target.value }))} /></div>
+                <div><Label>Cidade</Label><Input value={testForm.cidade} onChange={(e) => setTestForm((c) => ({ ...c, cidade: e.target.value }))} /></div>
+                <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                  <div><p className="text-sm font-medium">Modo acelerado</p><p className="text-xs text-muted-foreground">Uma etapa a cada 10s.</p></div>
+                  <Switch checked={testAccelerated} onCheckedChange={setTestAccelerated} />
+                </div>
+                <div className="flex gap-2"><Button onClick={runTestSimulation} className="flex-1"><Play className="h-4 w-4 mr-1" /> Executar</Button><Button variant="outline" onClick={stopSimulation} disabled={!testRunning && testMessages.length === 0}><Pause className="h-4 w-4" /></Button></div>
+              </div>
+              <div className="rounded-xl border p-4">
+                <p className="text-sm font-medium mb-3">Cronograma</p>
+                <div className="space-y-2">
+                  {testPreview.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma etapa de mensagem ativa.</p> : testPreview.map((item, index) => (
+                    <div key={item.id} className="rounded-lg bg-muted/50 p-3 text-sm">
+                      <div className="flex items-center justify-between gap-2"><span className="font-medium">Etapa {index + 1} • {item.templateName}</span><Badge variant="outline">{item.offsetLabel}</Badge></div>
+                      <p className="text-xs text-muted-foreground mt-1">Atraso: {item.configuredLabel} • {item.instanceLabel}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl border p-4">
+              <div className="mb-4 flex items-center justify-between"><div><p className="font-medium">Interface de Teste</p><p className="text-xs text-muted-foreground">Simulação sem envio real.</p></div>{testRunning && <Badge>Executando</Badge>}</div>
+              <ScrollArea className="h-[520px] rounded-xl bg-muted/40 p-4">
+                <div className="space-y-3">
+                  {testMessages.length === 0 ? <div className="flex h-[440px] items-center justify-center text-center text-sm text-muted-foreground">Clique em <strong className="mx-1">Executar</strong> para simular.</div> : testMessages.map((item) => (
+                    <div key={`${item.id}-${item.offsetLabel}`} className="flex justify-end"><div className="max-w-[85%] rounded-2xl bg-background p-3 shadow-sm"><div className="mb-2 flex items-center gap-2"><Badge variant="secondary">{item.offsetLabel}</Badge><span className="text-[11px] text-muted-foreground">{item.templateName} • {item.instanceLabel}</span></div><p className="whitespace-pre-wrap text-sm">{item.message}</p></div></div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
   const [funnels, setFunnels] = useState<WhatsAppFunnel[]>([]);
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
