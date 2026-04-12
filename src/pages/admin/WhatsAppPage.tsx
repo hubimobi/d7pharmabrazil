@@ -260,17 +260,21 @@ function DashboardTab() {
 
 // ==================== INSTANCES TAB ====================
 function InstancesTab() {
-  const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState<{ name: string; funnel_roles: FunnelRole[] }>({
-    name: "",
-    funnel_roles: ["all"],
-  });
-  const [loading, setLoading] = useState(false);
-  const [qrDialog, setQrDialog] = useState<{ open: boolean; qr: string | null; id: string }>({ open: false, qr: null, id: "" });
-  const [evoConfig, setEvoConfig] = useState<{ url: string; key: string } | null>(null);
+   const [instances, setInstances] = useState<WhatsAppInstance[]>([]);
+   const [showAdd, setShowAdd] = useState(false);
+   const [form, setForm] = useState<{ name: string; funnel_roles: FunnelRole[] }>({
+     name: "",
+     funnel_roles: ["all"],
+   });
+   const [loading, setLoading] = useState(false);
+   const [qrDialog, setQrDialog] = useState<{ open: boolean; qr: string | null; id: string }>({ open: false, qr: null, id: "" });
+   const [evoConfig, setEvoConfig] = useState<{ url: string; key: string } | null>(null);
+   const [accessDialog, setAccessDialog] = useState<{ open: boolean; instance: WhatsAppInstance | null }>({ open: false, instance: null });
+   const [instanceUsers, setInstanceUsers] = useState<InstanceUserAccess[]>([]);
+   const [allUsers, setAllUsers] = useState<{ id: string; email: string }[]>([]);
+   const [addUserId, setAddUserId] = useState("");
 
-  useEffect(() => { loadInstances(); loadEvoConfig(); }, []);
+   useEffect(() => { loadInstances(); loadEvoConfig(); }, []);
 
   async function loadEvoConfig() {
     const { data } = await supabase.from("store_settings").select("evolution_api_url, evolution_api_key").limit(1).single();
