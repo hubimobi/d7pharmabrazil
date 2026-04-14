@@ -1179,7 +1179,13 @@ function FunnelsTab() {
                     <div><p className="text-xs font-medium">Modo acelerado</p><p className="text-[10px] text-muted-foreground">Uma etapa a cada 10s.</p></div>
                     <Switch checked={testAccelerated} onCheckedChange={setTestAccelerated} />
                   </div>
-                  <div className="flex gap-2"><Button onClick={runTestSimulation} className="flex-1 h-9" size="sm"><Play className="h-4 w-4 mr-1" /> Executar</Button><Button variant="outline" size="sm" className="h-9" onClick={stopSimulation} disabled={!testRunning && testMessages.length === 0}><Pause className="h-4 w-4" /></Button></div>
+                  <div className="flex gap-2">
+                    <Button onClick={runTestSimulation} variant="outline" className="flex-1 h-9" size="sm" disabled={testRunning || realExecuting}><Play className="h-4 w-4 mr-1" /> Testar</Button>
+                    <Button onClick={runRealExecution} className="flex-1 h-9" size="sm" disabled={testRunning || realExecuting}>
+                      {realExecuting ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Enviando...</> : <><Send className="h-4 w-4 mr-1" /> Executar</>}
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-9" onClick={stopSimulation} disabled={!testRunning && testMessages.length === 0}><Pause className="h-4 w-4" /></Button>
+                  </div>
                 </div>
 
                 {/* Schedule - now with ScrollArea */}
