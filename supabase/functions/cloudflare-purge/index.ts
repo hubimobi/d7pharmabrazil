@@ -33,6 +33,17 @@ Deno.serve(async (req) => {
       });
     }
 
+    // --- Role check: only admins can purge cache ---
+    const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: roles } = await serviceClient.from("user_roles").select("role").eq("user_id", user.id);
+    const isAdmin = (roles || []).some((r: any) => ["admin", "super_admin", "administrador", "suporte"].includes(r.role));
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: "Acesso negado" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const cfToken = Deno.env.get("CLOUDFLARE_API_TOKEN");
     const cfZoneId = Deno.env.get("CLOUDFLARE_ZONE_ID");
 
