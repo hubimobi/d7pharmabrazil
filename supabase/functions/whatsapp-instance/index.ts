@@ -23,15 +23,17 @@ const ActionSchema = z.object({
 });
 
 /** Safely parse a fetch response as JSON, returning an error object if HTML/non-JSON */
-async function safeJson(res: Response): Promise<{ ok: boolean; status: number; data: any }> {
+async function safeJson(res: Response): Promise<{ ok: boolean; status: number; data: any; isInfraError: boolean }> {
   const text = await res.text();
+  const isInfraError = res.status >= 500 || text.trimStart().startsWith("<!doctype") || text.trimStart().startsWith("<html");
   try {
     const data = JSON.parse(text);
-    return { ok: res.ok, status: res.status, data };
+    return { ok: res.ok, status: res.status, data, isInfraError };
   } catch {
     return {
       ok: false,
       status: res.status,
+      isInfraError,
       data: { error: "Evolution API retornou resposta inválida (não-JSON)", status: res.status, body_preview: text.substring(0, 200) },
     };
   }
