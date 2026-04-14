@@ -881,13 +881,16 @@ function FunnelsTab() {
     }
     setRealExecuting(true);
     try {
-      const payload = {
+      const payload: any = {
         evento: testFunnel.trigger_event,
         nome: testForm.nome,
         telefone: testForm.telefone,
         produto: testForm.produto,
         link: testForm.link,
         cidade: testForm.cidade,
+        funnel_id: testFunnel.id,
+        force: true,
+        ...(testInstanceId !== "auto" ? { instance_id: testInstanceId } : {}),
       };
       const res = await supabase.functions.invoke("whatsapp-webhook", { body: payload });
       if (res.error) throw res.error;
