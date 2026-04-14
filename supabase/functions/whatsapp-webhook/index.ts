@@ -31,7 +31,7 @@ function configDelayToMinutes(config: any): number {
   const unit = config?.delay_unit || "m";
   if (unit === "h") return value * 60;
   if (unit === "d") return value * 1440;
-  return value; // minutes
+  return value;
 }
 
 const WebhookSchema = z.object({
@@ -42,6 +42,10 @@ const WebhookSchema = z.object({
   link: z.string().max(2000).optional(),
   cidade: z.string().max(200).optional(),
   extra: z.record(z.string()).optional(),
+  // New fields for test execution
+  funnel_id: z.string().uuid().optional(),
+  force: z.boolean().optional(),
+  instance_id: z.string().uuid().optional(),
 });
 
 Deno.serve(async (req) => {
@@ -59,13 +63,21 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), { status: 400, headers: corsHeaders });
     }
 
-    const { evento, nome, telefone, produto, link, cidade, extra } = parsed.data;
+    const { evento, nome, telefone, produto, link, cidade, extra, funnel_id, force, instance_id: overrideInstanceId } = parsed.data;
 
-    const { data: funnels } = await supabase
+    let query = supabase
       .from("whatsapp_funnels")
       .select("*, whatsapp_funnel_steps(*, whatsapp_templates(*))")
-      .eq("trigger_event", evento)
-      .eq("active", true);
+      .eq("trigger_event", evento);
+
+    // If force mode (test execution), allow inactive funnels and filter by specific funnel_id
+    if (force && funnel_id) {
+      query = query.eq("id", funnel_id);
+    } else {
+      query = query.eq("active", true);
+    }
+
+    const { data: funnels } = await query;
 
     if (!funnels || funnels.length === 0) {
       return new Response(JSON.stringify({ message: "No active funnel for event", evento }), {
@@ -89,18 +101,13 @@ Deno.serve(async (req) => {
         const stepType = step.step_type || "message_template";
         const config = step.config || {};
 
-        // Handle pause steps - just add delay
         if (stepType === "pause") {
           cumulativeDelay += configDelayToMinutes(config);
           continue;
         }
 
-        // Handle end steps - stop processing
-        if (stepType === "end") {
-          break;
-        }
+        if (stepType === "end") break;
 
-        // Handle condition steps - enqueue evaluation marker
         if (stepType === "condition") {
           const scheduledAt = new Date(Date.now() + cumulativeDelay * 60 * 1000).toISOString();
           await supabase.from("whatsapp_message_queue").insert({
@@ -120,7 +127,6 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Handle transfer steps
         if (stepType === "transfer") {
           const scheduledAt = new Date(Date.now() + cumulativeDelay * 60 * 1000).toISOString();
           await supabase.from("whatsapp_message_queue").insert({
@@ -140,10 +146,8 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Add legacy delay_minutes to cumulative
         cumulativeDelay += step.delay_minutes || 0;
 
-        // Resolve message content based on step type
         let messageContent = "";
 
         if (stepType === "message_template") {
@@ -152,7 +156,6 @@ Deno.serve(async (req) => {
         } else if (stepType === "message_custom") {
           messageContent = config.content || "";
         } else if (stepType === "send_file") {
-          // For send_file, store config as JSON so process-queue knows how to send it
           const scheduledAt = new Date(Date.now() + cumulativeDelay * 60 * 1000).toISOString();
           await supabase.from("whatsapp_message_queue").insert({
             contact_phone: telefone,
@@ -160,7 +163,7 @@ Deno.serve(async (req) => {
             template_id: null,
             funnel_id: funnel.id,
             step_id: step.id,
-            instance_id: step.instance_id || null,
+            instance_id: overrideInstanceId || step.instance_id || null,
             message_content: JSON.stringify({ step_type: "send_file", config }),
             variables,
             status: "pending",
@@ -182,7 +185,7 @@ Deno.serve(async (req) => {
           template_id: step.whatsapp_templates?.id || null,
           funnel_id: funnel.id,
           step_id: step.id,
-          instance_id: step.instance_id || null,
+          instance_id: overrideInstanceId || step.instance_id || null,
           message_content: messageContent,
           variables,
           status: "pending",

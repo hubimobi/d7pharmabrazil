@@ -698,6 +698,7 @@ function FunnelsTab() {
   const [testAccelerated, setTestAccelerated] = useState(true);
   const [testRunning, setTestRunning] = useState(false);
   const [realExecuting, setRealExecuting] = useState(false);
+  const [testInstanceId, setTestInstanceId] = useState<string>("auto");
   const [testMessages, setTestMessages] = useState<Array<{ id: string; offsetLabel: string; templateName: string; instanceLabel: string; message: string }>>([]);
   const [testPreview, setTestPreview] = useState<Array<{ id: string; offsetLabel: string; configuredLabel: string; templateName: string; instanceLabel: string; message: string; offsetSeconds: number }>>([]);
   const [testForm, setTestForm] = useState({ nome: "Cliente Teste", telefone: "5511999999999", produto: "Produto Exemplo", link: "https://loja.com/checkout", cidade: "São Paulo" });
@@ -880,13 +881,16 @@ function FunnelsTab() {
     }
     setRealExecuting(true);
     try {
-      const payload = {
+      const payload: any = {
         evento: testFunnel.trigger_event,
         nome: testForm.nome,
         telefone: testForm.telefone,
         produto: testForm.produto,
         link: testForm.link,
         cidade: testForm.cidade,
+        funnel_id: testFunnel.id,
+        force: true,
+        ...(testInstanceId !== "auto" ? { instance_id: testInstanceId } : {}),
       };
       const res = await supabase.functions.invoke("whatsapp-webhook", { body: payload });
       if (res.error) throw res.error;
@@ -1178,6 +1182,20 @@ function FunnelsTab() {
                   <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
                     <div><p className="text-xs font-medium">Modo acelerado</p><p className="text-[10px] text-muted-foreground">Uma etapa a cada 10s.</p></div>
                     <Switch checked={testAccelerated} onCheckedChange={setTestAccelerated} />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Enviar por (instância WhatsApp)</Label>
+                    <Select value={testInstanceId} onValueChange={setTestInstanceId}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">🔄 Automático (definido nas etapas)</SelectItem>
+                        {instances.filter(i => i.active).map(i => (
+                          <SelectItem key={i.id} value={i.id}>
+                            {i.status === "connected" ? "🟢" : "🔴"} {i.name} {i.phone_number ? `(${i.phone_number})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex gap-2">
                     <Button onClick={runTestSimulation} variant="outline" className="flex-1 h-9" size="sm" disabled={testRunning || realExecuting}><Play className="h-4 w-4 mr-1" /> Testar</Button>
