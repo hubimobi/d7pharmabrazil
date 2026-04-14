@@ -697,6 +697,7 @@ function FunnelsTab() {
   const [testFunnel, setTestFunnel] = useState<WhatsAppFunnel | null>(null);
   const [testAccelerated, setTestAccelerated] = useState(true);
   const [testRunning, setTestRunning] = useState(false);
+  const [realExecuting, setRealExecuting] = useState(false);
   const [testMessages, setTestMessages] = useState<Array<{ id: string; offsetLabel: string; templateName: string; instanceLabel: string; message: string }>>([]);
   const [testPreview, setTestPreview] = useState<Array<{ id: string; offsetLabel: string; configuredLabel: string; templateName: string; instanceLabel: string; message: string; offsetSeconds: number }>>([]);
   const [testForm, setTestForm] = useState({ nome: "Cliente Teste", telefone: "5511999999999", produto: "Produto Exemplo", link: "https://loja.com/checkout", cidade: "São Paulo" });
