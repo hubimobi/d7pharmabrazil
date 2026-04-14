@@ -873,6 +873,32 @@ function FunnelsTab() {
     simulationTimersRef.current.push(window.setTimeout(() => setTestRunning(false), (seq[seq.length - 1]?.offsetSeconds || 0) * 1000 + 300));
   }
 
+  async function runRealExecution() {
+    if (!testFunnel) return;
+    if (!testForm.telefone || testForm.telefone.length < 10) {
+      toast.error("Preencha um telefone válido para executar."); return;
+    }
+    setRealExecuting(true);
+    try {
+      const payload = {
+        evento: testFunnel.trigger_event,
+        nome: testForm.nome,
+        telefone: testForm.telefone,
+        produto: testForm.produto,
+        link: testForm.link,
+        cidade: testForm.cidade,
+      };
+      const res = await supabase.functions.invoke("whatsapp-webhook", { body: payload });
+      if (res.error) throw res.error;
+      const data = res.data as any;
+      toast.success(`Funil executado! ${data?.queued || 0} mensagem(ns) na fila.`);
+    } catch (err: any) {
+      toast.error("Erro ao executar funil: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setRealExecuting(false);
+    }
+  }
+
   function getStepTypeInfo(type: string) { return STEP_TYPE_OPTIONS.find(o => o.value === type) || STEP_TYPE_OPTIONS[0]; }
 
   function renderStepSummary(step: FunnelStep) {
