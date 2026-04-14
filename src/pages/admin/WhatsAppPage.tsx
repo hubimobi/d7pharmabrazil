@@ -1183,6 +1183,20 @@ function FunnelsTab() {
                     <div><p className="text-xs font-medium">Modo acelerado</p><p className="text-[10px] text-muted-foreground">Uma etapa a cada 10s.</p></div>
                     <Switch checked={testAccelerated} onCheckedChange={setTestAccelerated} />
                   </div>
+                  <div>
+                    <Label className="text-[10px]">Enviar por (instância WhatsApp)</Label>
+                    <Select value={testInstanceId} onValueChange={setTestInstanceId}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">🔄 Automático (definido nas etapas)</SelectItem>
+                        {instances.filter(i => i.active).map(i => (
+                          <SelectItem key={i.id} value={i.id}>
+                            {i.status === "connected" ? "🟢" : "🔴"} {i.name} {i.phone_number ? `(${i.phone_number})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="flex gap-2">
                     <Button onClick={runTestSimulation} variant="outline" className="flex-1 h-9" size="sm" disabled={testRunning || realExecuting}><Play className="h-4 w-4 mr-1" /> Testar</Button>
                     <Button onClick={runRealExecution} className="flex-1 h-9" size="sm" disabled={testRunning || realExecuting}>
