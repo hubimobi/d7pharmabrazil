@@ -135,7 +135,8 @@ Deno.serve(async (req) => {
 
       const evo = await safeJson(evoRes);
       if (!evo.ok) {
-        return new Response(JSON.stringify({ error: "Evolution API error", details: evo.data }), { status: 502, headers: corsHeaders });
+        const msg = evo.isInfraError ? "Evolution API temporariamente indisponível. Tente novamente em alguns minutos." : "Evolution API error";
+        return new Response(JSON.stringify({ error: msg, details: evo.data, retryable: evo.isInfraError }), { status: evo.isInfraError ? 503 : 502, headers: corsHeaders });
       }
 
       const qrCode = evo.data?.qrcode?.base64 || evo.data?.qrcode?.pairingCode || null;
@@ -170,7 +171,7 @@ Deno.serve(async (req) => {
       });
       const evo = await safeJson(evoRes);
       if (!evo.ok) {
-        return new Response(JSON.stringify({ error: "Evolution API indisponível", details: evo.data }), { status: 502, headers: corsHeaders });
+        return new Response(JSON.stringify({ error: "Evolution API temporariamente indisponível. Tente novamente em alguns minutos.", details: evo.data, retryable: evo.isInfraError }), { status: evo.isInfraError ? 503 : 502, headers: corsHeaders });
       }
 
       const qrCode = evo.data?.base64 || evo.data?.qrcode?.base64 || null;
@@ -193,6 +194,10 @@ Deno.serve(async (req) => {
       });
       const evo = await safeJson(evoRes);
       if (!evo.ok) {
+        // If infra error, mark instance as potentially disconnected but don't block UI
+        if (evo.isInfraError) {
+          return new Response(JSON.stringify({ status: "unknown", error: "Evolution API temporariamente indisponível", retryable: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
         return new Response(JSON.stringify({ error: "Evolution API indisponível", details: evo.data }), { status: 502, headers: corsHeaders });
       }
 
