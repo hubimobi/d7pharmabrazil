@@ -20,7 +20,7 @@ import {
   Send, Clock, AlertTriangle, CheckCircle, XCircle, Eye, Search,
   Zap, Settings2, Shuffle, Upload, Phone, Mail, UserPlus, Download, Inbox,
   ArrowRightLeft, Flag, Paperclip, Volume2, Link2, ChevronDown, GripVertical,
-  Bot, UserCheck, ArrowRight, ArrowUp, ArrowDown, Megaphone, Filter
+  Bot, UserCheck, ArrowRight, ArrowUp, ArrowDown, Megaphone, Filter, Loader2
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ConversationsTab from "@/components/admin/WhatsAppConversations";
@@ -697,6 +697,7 @@ function FunnelsTab() {
   const [testFunnel, setTestFunnel] = useState<WhatsAppFunnel | null>(null);
   const [testAccelerated, setTestAccelerated] = useState(true);
   const [testRunning, setTestRunning] = useState(false);
+  const [realExecuting, setRealExecuting] = useState(false);
   const [testMessages, setTestMessages] = useState<Array<{ id: string; offsetLabel: string; templateName: string; instanceLabel: string; message: string }>>([]);
   const [testPreview, setTestPreview] = useState<Array<{ id: string; offsetLabel: string; configuredLabel: string; templateName: string; instanceLabel: string; message: string; offsetSeconds: number }>>([]);
   const [testForm, setTestForm] = useState({ nome: "Cliente Teste", telefone: "5511999999999", produto: "Produto Exemplo", link: "https://loja.com/checkout", cidade: "São Paulo" });
@@ -870,6 +871,32 @@ function FunnelsTab() {
     setTestRunning(true);
     seq.forEach((item) => { simulationTimersRef.current.push(window.setTimeout(() => { setTestMessages((c) => [...c, { id: item.id, offsetLabel: item.offsetLabel, templateName: item.templateName, instanceLabel: item.instanceLabel, message: item.message }]); }, item.offsetSeconds * 1000)); });
     simulationTimersRef.current.push(window.setTimeout(() => setTestRunning(false), (seq[seq.length - 1]?.offsetSeconds || 0) * 1000 + 300));
+  }
+
+  async function runRealExecution() {
+    if (!testFunnel) return;
+    if (!testForm.telefone || testForm.telefone.length < 10) {
+      toast.error("Preencha um telefone válido para executar."); return;
+    }
+    setRealExecuting(true);
+    try {
+      const payload = {
+        evento: testFunnel.trigger_event,
+        nome: testForm.nome,
+        telefone: testForm.telefone,
+        produto: testForm.produto,
+        link: testForm.link,
+        cidade: testForm.cidade,
+      };
+      const res = await supabase.functions.invoke("whatsapp-webhook", { body: payload });
+      if (res.error) throw res.error;
+      const data = res.data as any;
+      toast.success(`Funil executado! ${data?.queued || 0} mensagem(ns) na fila.`);
+    } catch (err: any) {
+      toast.error("Erro ao executar funil: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setRealExecuting(false);
+    }
   }
 
   function getStepTypeInfo(type: string) { return STEP_TYPE_OPTIONS.find(o => o.value === type) || STEP_TYPE_OPTIONS[0]; }
@@ -1152,7 +1179,13 @@ function FunnelsTab() {
                     <div><p className="text-xs font-medium">Modo acelerado</p><p className="text-[10px] text-muted-foreground">Uma etapa a cada 10s.</p></div>
                     <Switch checked={testAccelerated} onCheckedChange={setTestAccelerated} />
                   </div>
-                  <div className="flex gap-2"><Button onClick={runTestSimulation} className="flex-1 h-9" size="sm"><Play className="h-4 w-4 mr-1" /> Executar</Button><Button variant="outline" size="sm" className="h-9" onClick={stopSimulation} disabled={!testRunning && testMessages.length === 0}><Pause className="h-4 w-4" /></Button></div>
+                  <div className="flex gap-2">
+                    <Button onClick={runTestSimulation} variant="outline" className="flex-1 h-9" size="sm" disabled={testRunning || realExecuting}><Play className="h-4 w-4 mr-1" /> Testar</Button>
+                    <Button onClick={runRealExecution} className="flex-1 h-9" size="sm" disabled={testRunning || realExecuting}>
+                      {realExecuting ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Enviando...</> : <><Send className="h-4 w-4 mr-1" /> Executar</>}
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-9" onClick={stopSimulation} disabled={!testRunning && testMessages.length === 0}><Pause className="h-4 w-4" /></Button>
+                  </div>
                 </div>
 
                 {/* Schedule - now with ScrollArea */}
