@@ -78,18 +78,26 @@ Deno.serve(async (req) => {
     // ── CONNECTION_UPDATE ──
     if (event === "connection.update") {
       const state = payload.data?.state || payload.state || "";
-      const mappedStatus = state === "open" ? "connected" : state === "close" ? "disconnected" : "qr_ready";
+      
+      // Only act on definitive states: "open" or "close"
+      // Ignore "connecting" and other intermediate states to prevent downgrading "connected" instances
+      let mappedStatus: string | null = null;
+      if (state === "open") {
+        mappedStatus = "connected";
+      } else if (state === "close") {
+        mappedStatus = "disconnected";
+      }
 
-      console.log(`[webhook] connection.update state="${state}" → "${mappedStatus}" instanceId=${instanceId}`);
+      console.log(`[webhook] connection.update state="${state}" → "${mappedStatus ?? 'IGNORED'}" instanceId=${instanceId}`);
 
-      if (instanceRecord) {
+      if (mappedStatus && instanceRecord) {
         await supabase
           .from("whatsapp_instances")
           .update({ status: mappedStatus })
           .eq("id", instanceRecord.id);
       }
 
-      return new Response(JSON.stringify({ ok: true, status: mappedStatus }), {
+      return new Response(JSON.stringify({ ok: true, status: mappedStatus ?? "ignored", state }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
