@@ -295,7 +295,12 @@ function InstancesTab() {
           funnel_roles: normalizeFunnelRoles(form.funnel_roles),
         },
       });
-      if (res.error) throw new Error(res.error.message);
+      if (res.error) {
+        const body = typeof res.error === "object" && "context" in res.error ? await (res.error as any).context?.json?.().catch(() => null) : null;
+        const msg = body?.error || res.data?.error || res.error?.message || "Erro ao criar instância";
+        if (body?.retryable || res.data?.retryable) { toast.warning(msg); } else { toast.error(msg); }
+        setLoading(false); return;
+      }
       toast.success("Instância criada!");
       if (res.data?.qrcode) {
         setQrDialog({ open: true, qr: res.data.qrcode, id: res.data.instance?.id });
@@ -318,6 +323,11 @@ function InstancesTab() {
       const res = await supabase.functions.invoke("whatsapp-instance", {
         body: { action: "qrcode", instance_id: inst.id },
       });
+      if (res.error || res.data?.error) {
+        const msg = res.data?.error || "Erro ao obter QR Code";
+        if (res.data?.retryable) { toast.warning(msg); } else { toast.error(msg); }
+        return;
+      }
       if (res.data?.qrcode) {
         setQrDialog({ open: true, qr: res.data.qrcode, id: inst.id });
       } else {
@@ -332,7 +342,17 @@ function InstancesTab() {
       const res = await supabase.functions.invoke("whatsapp-instance", {
         body: { action: "status", instance_id: inst.id },
       });
-      toast.success(`Status: ${res.data?.status || "desconhecido"}`);
+      if (res.error || res.data?.error) {
+        const msg = res.data?.error || "Erro ao verificar status";
+        if (res.data?.retryable) { toast.warning(msg); } else { toast.error(msg); }
+        return;
+      }
+      const status = res.data?.status || "desconhecido";
+      if (status === "unknown") {
+        toast.warning("Evolution API temporariamente indisponível. Status não pôde ser verificado.");
+      } else {
+        toast.success(`Status: ${status}`);
+      }
       loadInstances();
     } catch (e: any) { toast.error(e.message); }
   }
@@ -421,8 +441,14 @@ function InstancesTab() {
                       const res = await supabase.functions.invoke("whatsapp-instance", {
                         body: { action: "set_webhook", instance_id: inst.id },
                       });
-                      if (res.data?.webhook_configured) toast.success("Webhook configurado com sucesso!");
-                      else toast.error("Falha ao configurar webhook");
+                      if (res.error || res.data?.error) {
+                        const msg = res.data?.error || "Falha ao configurar webhook";
+                        if (res.data?.retryable) toast.warning(msg); else toast.error(msg);
+                      } else if (res.data?.webhook_configured) {
+                        toast.success("Webhook configurado com sucesso!");
+                      } else {
+                        toast.error("Falha ao configurar webhook");
+                      }
                     } catch (e: any) { toast.error(e.message); }
                   }}><Zap className="h-3.5 w-3.5 mr-1" /> Webhook</Button>
                   <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteInstance(inst.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
