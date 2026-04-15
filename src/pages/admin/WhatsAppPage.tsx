@@ -441,8 +441,14 @@ function InstancesTab() {
                       const res = await supabase.functions.invoke("whatsapp-instance", {
                         body: { action: "set_webhook", instance_id: inst.id },
                       });
-                      if (res.data?.webhook_configured) toast.success("Webhook configurado com sucesso!");
-                      else toast.error("Falha ao configurar webhook");
+                      if (res.error || res.data?.error) {
+                        const msg = res.data?.error || "Falha ao configurar webhook";
+                        if (res.data?.retryable) toast.warning(msg); else toast.error(msg);
+                      } else if (res.data?.webhook_configured) {
+                        toast.success("Webhook configurado com sucesso!");
+                      } else {
+                        toast.error("Falha ao configurar webhook");
+                      }
                     } catch (e: any) { toast.error(e.message); }
                   }}><Zap className="h-3.5 w-3.5 mr-1" /> Webhook</Button>
                   <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteInstance(inst.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
