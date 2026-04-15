@@ -2939,6 +2939,7 @@ export type Database = {
           phone: string
           source: string
           tags: Json
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2950,6 +2951,7 @@ export type Database = {
           phone: string
           source?: string
           tags?: Json
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2961,9 +2963,18 @@ export type Database = {
           phone?: string
           source?: string
           tags?: Json
+          tenant_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_conversations: {
         Row: {
@@ -3343,6 +3354,7 @@ export type Database = {
           status: string
           step_id: string | null
           template_id: string | null
+          tenant_id: string | null
           variables: Json
         }
         Insert: {
@@ -3362,6 +3374,7 @@ export type Database = {
           status?: string
           step_id?: string | null
           template_id?: string | null
+          tenant_id?: string | null
           variables?: Json
         }
         Update: {
@@ -3381,6 +3394,7 @@ export type Database = {
           status?: string
           step_id?: string | null
           template_id?: string | null
+          tenant_id?: string | null
           variables?: Json
         }
         Relationships: [
@@ -3410,6 +3424,13 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "whatsapp_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_message_queue_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
