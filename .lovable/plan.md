@@ -1,40 +1,70 @@
 
+Objetivo: fazer o WhatsApp voltar a funcionar de ponta a ponta: executar funis, mostrar fila real, enviar transmissões e preencher Conversas com filtros funcionando.
 
-# Templates e Funis Sumiram — Diagnóstico e Correção
+O que eu confirmei no projeto
+- Existem mensagens na fila no banco: hoje há 16 registros pendentes em `whatsapp_message_queue`.
+- A fila aparece vazia no painel porque a policy dessa tabela ainda usa `is_admin()` (role exato `admin`). Isso bloqueia contas como `super_admin` e `administrador`.
+- A aba Transmissão ainda não dispara nada de verdade: o botão `startBroadcast()` só mostra toast de sucesso e não enfileira contatos.
+- Conversas está vazia porque também não há nenhuma mensagem gravada em `whatsapp_message_log` e nenhuma linha em `whatsapp_conversations`.
+- O processador da fila não está enviando porque não existe nenhuma instância conectada no banco: as 3 estão com `status = 'qr_ready'` e `connected_instances = 0`.
+- Os logs recentes do webhook mostram apenas `connection.update`; não apareceu `messages.upsert`, então as mensagens recebidas não estão entrando no banco.
+- Há um risco adicional de visibilidade por tenant: existe usuário com role `administrador` sem vínculo em `tenant_users`, então tabelas com policy `tenant_id = current_tenant_id()` podem voltar vazias para esse perfil.
 
-## Problema
-Os dados estão no banco de dados (9 templates, 4 funis), mas não aparecem no painel. A causa é um problema de **permissões (RLS)**.
+Plano de implementação
+1. Corrigir acesso/RLS do módulo WhatsApp
+- Atualizar as policies de `whatsapp_message_queue` e `whatsapp_contacts` para usar `has_any_role(...)` no mesmo padrão já aplicado a templates/funis.
+- Revisar as policies de `whatsapp_instances`, `whatsapp_message_log` e `whatsapp_conversations` para garantir acesso consistente para papéis administrativos.
+- Fazer backfill seguro de `tenant_users` para usuários administrativos que hoje têm role mas não têm tenant associado.
 
-As tabelas `whatsapp_templates`, `whatsapp_funnels` e `whatsapp_funnel_steps` têm RLS ativa com uma única policy: `is_admin()`. Essa função só aceita o role exato `admin`. Usuários com roles como `administrador`, `super_admin`, `gestor` etc. são bloqueados.
+2. Consertar a entrada de mensagens em Conversas
+- Reforçar `whatsapp-evolution-webhook` para aceitar variações reais do payload da Evolution e registrar melhor qual evento chegou.
+- Garantir resolução correta da instância e gravação consistente em `whatsapp_message_log` e `whatsapp_conversations`.
+- Melhorar atualização de status/conexão em `whatsapp-instance` e persistir corretamente quando a instância estiver aberta.
 
-Por exemplo, o usuário "BOSS" tem role `administrador` — que não é reconhecido pela policy atual.
+3. Consertar o disparo da fila
+- Melhorar `whatsapp-process-queue` para retornar diagnóstico útil: quantas estavam aptas, quantas foram adiadas, quantas falharam por falta de instância conectada.
+- Não deixar “sumir” da UI: se a mensagem for reagendada por falta de instância, isso deve aparecer claramente no painel.
+- Opcionalmente disparar processamento imediato logo após um teste real / disparo manual, sem depender só do botão “Processar Fila”.
 
-## Solução
+4. Implementar a Transmissão de verdade
+- Substituir o placeholder da aba Transmissão por um fluxo real de seleção de audiência + enfileiramento em lote.
+- Criar lógica backend para montar a lista de contatos e inserir na fila com o funil escolhido.
+- Exibir resumo real: contatos encontrados, enfileirados, ignorados por falta de telefone, etc.
 
-### 1. Migração SQL — Atualizar policies das 3 tabelas WhatsApp
+5. Melhorar a tela de Conversas
+- Corrigir carregamento e filtros por instância/status para refletir o que existe no banco.
+- Exibir estados vazios corretos: “sem mensagens recebidas”, “sem instância conectada”, “sem acesso por tenant”.
+- Ajustar envio manual para atualizar a conversa e log só quando o backend realmente confirmar.
 
-Substituir a policy `is_admin()` por uma que aceite todos os roles administrativos e super_admin:
+6. Validar ponta a ponta
+- Testar: conectar instância -> receber mensagem -> aparecer em Conversas.
+- Testar: executar funil real -> entrar na fila -> processar -> gravar log -> aparecer na conversa.
+- Testar: transmissão em massa -> enfileirar -> processar -> acompanhar status na fila.
+- Testar com usuário `super_admin` e com usuário `administrador`.
 
-```sql
--- whatsapp_templates
-DROP POLICY "Admins can manage whatsapp_templates" ON whatsapp_templates;
-CREATE POLICY "staff_manage_templates" ON whatsapp_templates FOR ALL TO authenticated
-  USING (has_any_role(auth.uid(), ARRAY['admin','super_admin','administrador','gestor']::app_role[]))
-  WITH CHECK (has_any_role(auth.uid(), ARRAY['admin','super_admin','administrador','gestor']::app_role[]));
+Arquivos que devem ser mexidos
+- `supabase/functions/whatsapp-evolution-webhook/index.ts`
+- `supabase/functions/whatsapp-process-queue/index.ts`
+- `supabase/functions/whatsapp-instance/index.ts`
+- `supabase/functions/whatsapp-webhook/index.ts`
+- `src/pages/admin/WhatsAppPage.tsx`
+- `src/components/admin/WhatsAppConversations.tsx`
+- nova migration SQL para RLS/backfill de tenant e, se necessário, apoio ao disparo em massa
 
--- whatsapp_funnels (mesma lógica)
--- whatsapp_funnel_steps (mesma lógica)
-```
-
-Isso usa a função `has_any_role()` que já existe no projeto, cobrindo todos os roles relevantes.
-
-### 2. Nenhuma alteração de código necessária
-
-O frontend já faz `select("*")` normalmente — o bloqueio é 100% na camada de banco.
-
-## Detalhes técnicos
-- **Causa raiz**: Policy RLS restrita a `is_admin()` que verifica apenas role `admin` exato
-- **Afetadas**: `whatsapp_templates`, `whatsapp_funnels`, `whatsapp_funnel_steps`
-- **Correção**: Trocar policy para `has_any_role()` com array de roles administrativos
-- **Risco**: Zero — só amplia acesso para roles que já são administrativos
-
+Detalhes técnicos
+- Diagnóstico principal: não é um único bug; hoje existem 4 falhas combinadas:
+  1) fila já é criada, mas a UI pode não enxergar por RLS;
+  2) transmissão em massa não foi implementada de verdade;
+  3) nenhuma instância está marcada como conectada, então o processador não envia;
+  4) o webhook de entrada não está registrando `messages.upsert`, por isso Conversas fica zerado.
+- Estado atual confirmado no banco:
+  - `queue_pending = 16`
+  - `logs_total = 0`
+  - `conversations_total = 0`
+  - `connected_instances = 0`
+- Resultado esperado após a correção:
+  - a fila aparece no painel para perfis administrativos corretos;
+  - transmissões realmente criam itens na fila;
+  - mensagens recebidas entram em `whatsapp_message_log` e `whatsapp_conversations`;
+  - os filtros de Conversas passam a funcionar com dados reais;
+  - o sistema deixa claro quando o bloqueio é “sem instância conectada” em vez de parecer que “não fez nada”.
