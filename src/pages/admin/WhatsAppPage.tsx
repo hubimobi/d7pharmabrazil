@@ -344,12 +344,17 @@ function InstancesTab() {
       });
       if (res.error || res.data?.error) {
         const msg = res.data?.error || "Erro ao verificar status";
-        if (res.data?.retryable) { toast.warning(msg); } else { toast.error(msg); }
+        if (res.data?.retryable) {
+          // Evolution API unreachable — show DB-stored status instead of failing
+          toast.warning(`${msg}. Exibindo status salvo: ${inst.status}`);
+        } else {
+          toast.error(msg);
+        }
         return;
       }
       const status = res.data?.status || "desconhecido";
       if (status === "unknown") {
-        toast.warning("Evolution API temporariamente indisponível. Status não pôde ser verificado.");
+        toast.warning(`Evolution API indisponível. Status salvo: ${inst.status}`);
       } else {
         toast.success(`Status: ${status}`);
       }
