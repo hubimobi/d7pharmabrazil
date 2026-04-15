@@ -1434,8 +1434,8 @@ function BroadcastTab() {
       if (firstStep.step_type === "message_template" && firstStep.template_id) {
         const { data: tpl } = await supabase.from("whatsapp_templates").select("content").eq("id", firstStep.template_id).single();
         messageContent = tpl?.content || "";
-      } else if (firstStep.step_type === "message_custom" && firstStep.config?.custom_message) {
-        messageContent = firstStep.config.custom_message;
+      } else if (firstStep.step_type === "message_custom" && (firstStep.config as any)?.custom_message) {
+        messageContent = (firstStep.config as any).custom_message;
       } else {
         messageContent = firstStep.label || "Mensagem do funil";
       }
