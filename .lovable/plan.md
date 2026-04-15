@@ -1,70 +1,30 @@
 
-Objetivo: fazer o WhatsApp voltar a funcionar de ponta a ponta: executar funis, mostrar fila real, enviar transmissões e preencher Conversas com filtros funcionando.
 
-O que eu confirmei no projeto
-- Existem mensagens na fila no banco: hoje há 16 registros pendentes em `whatsapp_message_queue`.
-- A fila aparece vazia no painel porque a policy dessa tabela ainda usa `is_admin()` (role exato `admin`). Isso bloqueia contas como `super_admin` e `administrador`.
-- A aba Transmissão ainda não dispara nada de verdade: o botão `startBroadcast()` só mostra toast de sucesso e não enfileira contatos.
-- Conversas está vazia porque também não há nenhuma mensagem gravada em `whatsapp_message_log` e nenhuma linha em `whatsapp_conversations`.
-- O processador da fila não está enviando porque não existe nenhuma instância conectada no banco: as 3 estão com `status = 'qr_ready'` e `connected_instances = 0`.
-- Os logs recentes do webhook mostram apenas `connection.update`; não apareceu `messages.upsert`, então as mensagens recebidas não estão entrando no banco.
-- Há um risco adicional de visibilidade por tenant: existe usuário com role `administrador` sem vínculo em `tenant_users`, então tabelas com policy `tenant_id = current_tenant_id()` podem voltar vazias para esse perfil.
+# Fix: Evolution API Status Loop + Unreachability
 
-Plano de implementação
-1. Corrigir acesso/RLS do módulo WhatsApp
-- Atualizar as policies de `whatsapp_message_queue` e `whatsapp_contacts` para usar `has_any_role(...)` no mesmo padrão já aplicado a templates/funis.
-- Revisar as policies de `whatsapp_instances`, `whatsapp_message_log` e `whatsapp_conversations` para garantir acesso consistente para papéis administrativos.
-- Fazer backfill seguro de `tenant_users` para usuários administrativos que hoje têm role mas não têm tenant associado.
+## Root Cause
+Two combined issues:
+1. The Evolution API webhook sends `connection.update` with state `"connecting"` every ~30s. The webhook code maps ANY state that isn't `"open"` or `"close"` to `"qr_ready"`, constantly overwriting the `"connected"` status.
+2. The Evolution API at `evolution.d7pharmabrazil.com.br` is returning Cloudflare 530 (origin unreachable) when called FROM the edge function. The reverse direction works (Evolution → our webhook). This means the status check, QR code, and other actions that call Evolution will fail.
 
-2. Consertar a entrada de mensagens em Conversas
-- Reforçar `whatsapp-evolution-webhook` para aceitar variações reais do payload da Evolution e registrar melhor qual evento chegou.
-- Garantir resolução correta da instância e gravação consistente em `whatsapp_message_log` e `whatsapp_conversations`.
-- Melhorar atualização de status/conexão em `whatsapp-instance` e persistir corretamente quando a instância estiver aberta.
+## Plan
 
-3. Consertar o disparo da fila
-- Melhorar `whatsapp-process-queue` para retornar diagnóstico útil: quantas estavam aptas, quantas foram adiadas, quantas falharam por falta de instância conectada.
-- Não deixar “sumir” da UI: se a mensagem for reagendada por falta de instância, isso deve aparecer claramente no painel.
-- Opcionalmente disparar processamento imediato logo após um teste real / disparo manual, sem depender só do botão “Processar Fila”.
+### 1. Fix webhook status logic (prevents downgrade)
+**File**: `supabase/functions/whatsapp-evolution-webhook/index.ts`
+- When `connection.update` state is `"connecting"`, check the current DB status first
+- If instance is already `"connected"`, do NOT downgrade to `"qr_ready"`
+- Only update status when the new state is definitively `"open"` (connected) or `"close"` (disconnected)
 
-4. Implementar a Transmissão de verdade
-- Substituir o placeholder da aba Transmissão por um fluxo real de seleção de audiência + enfileiramento em lote.
-- Criar lógica backend para montar a lista de contatos e inserir na fila com o funil escolhido.
-- Exibir resumo real: contatos encontrados, enfileirados, ignorados por falta de telefone, etc.
+### 2. Re-sync instances to connected
+**Migration SQL**: Set the 3 instances back to `connected` (the webhook overwrote our previous fix).
 
-5. Melhorar a tela de Conversas
-- Corrigir carregamento e filtros por instância/status para refletir o que existe no banco.
-- Exibir estados vazios corretos: “sem mensagens recebidas”, “sem instância conectada”, “sem acesso por tenant”.
-- Ajustar envio manual para atualizar a conversa e log só quando o backend realmente confirmar.
+### 3. Improve UI resilience for unreachable Evolution API
+**File**: `src/pages/admin/WhatsAppPage.tsx`
+- When status check returns 503/retryable, show the DB-stored status instead of failing
+- Add a visual indicator that the Evolution API server is temporarily unreachable
+- Don't block the entire UI when Evolution is down
 
-6. Validar ponta a ponta
-- Testar: conectar instância -> receber mensagem -> aparecer em Conversas.
-- Testar: executar funil real -> entrar na fila -> processar -> gravar log -> aparecer na conversa.
-- Testar: transmissão em massa -> enfileirar -> processar -> acompanhar status na fila.
-- Testar com usuário `super_admin` e com usuário `administrador`.
+## Technical details
+- The Cloudflare 530 means the origin server (`evolution.d7pharmabrazil.com.br`) is not responding to requests from our edge function's IP range — this is an infrastructure issue on the Evolution server side, not something we can fix in code
+- We CAN make the system resilient: trust the webhook-reported status and the DB state when direct API calls fail
 
-Arquivos que devem ser mexidos
-- `supabase/functions/whatsapp-evolution-webhook/index.ts`
-- `supabase/functions/whatsapp-process-queue/index.ts`
-- `supabase/functions/whatsapp-instance/index.ts`
-- `supabase/functions/whatsapp-webhook/index.ts`
-- `src/pages/admin/WhatsAppPage.tsx`
-- `src/components/admin/WhatsAppConversations.tsx`
-- nova migration SQL para RLS/backfill de tenant e, se necessário, apoio ao disparo em massa
-
-Detalhes técnicos
-- Diagnóstico principal: não é um único bug; hoje existem 4 falhas combinadas:
-  1) fila já é criada, mas a UI pode não enxergar por RLS;
-  2) transmissão em massa não foi implementada de verdade;
-  3) nenhuma instância está marcada como conectada, então o processador não envia;
-  4) o webhook de entrada não está registrando `messages.upsert`, por isso Conversas fica zerado.
-- Estado atual confirmado no banco:
-  - `queue_pending = 16`
-  - `logs_total = 0`
-  - `conversations_total = 0`
-  - `connected_instances = 0`
-- Resultado esperado após a correção:
-  - a fila aparece no painel para perfis administrativos corretos;
-  - transmissões realmente criam itens na fila;
-  - mensagens recebidas entram em `whatsapp_message_log` e `whatsapp_conversations`;
-  - os filtros de Conversas passam a funcionar com dados reais;
-  - o sistema deixa claro quando o bloqueio é “sem instância conectada” em vez de parecer que “não fez nada”.
