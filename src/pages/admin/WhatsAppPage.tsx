@@ -1986,7 +1986,15 @@ function QueueTab() {
   async function processQueue() {
     try {
       const res = await supabase.functions.invoke("whatsapp-process-queue");
-      toast.success(`Processado: ${res.data?.processed || 0} mensagens`);
+      const d = res.data || {};
+      if (d.diagnostic) {
+        toast.info(d.diagnostic);
+      } else {
+        toast.success(`Processado: ${d.processed || 0} mensagens`);
+      }
+      if (d.postponed > 0) {
+        toast.warning(`${d.postponed} mensagem(ns) adiada(s): ${d.connected_instances === 0 ? "nenhuma instância conectada" : "limite diário atingido"}`);
+      }
       loadQueue();
     } catch (e: any) { toast.error(e.message); }
   }
