@@ -1366,8 +1366,113 @@ function BroadcastTab() {
     if (estimatedCount === 0) { toast.error("Nenhum contato encontrado com os filtros selecionados"); return; }
     if (!confirm(`Confirma disparar o funil para ~${estimatedCount || "?"} contatos?`)) return;
     setLoading(true);
-    // In a real implementation, this would enqueue all matching contacts into the funnel
-    toast.success(`Transmissão iniciada para ~${estimatedCount} contatos!`);
+    try {
+      // 1. Get funnel steps to build messages
+      const { data: steps } = await supabase
+        .from("whatsapp_funnel_steps")
+        .select("*")
+        .eq("funnel_id", selectedFunnel)
+        .eq("active", true)
+        .order("step_order");
+
+      if (!steps || steps.length === 0) {
+        toast.error("Funil sem etapas ativas");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Gather contacts based on filter
+      let contactPhones: { phone: string; name: string }[] = [];
+
+      if (filterType === "all") {
+        const { data: allContacts } = await supabase.from("whatsapp_contacts").select("phone, name");
+        contactPhones = (allContacts || []).map(c => ({ phone: c.phone, name: c.name || c.phone }));
+      } else if (filterType === "tag" && filterValue) {
+        const { data: tagged } = await supabase.from("customer_tags").select("customer_email").eq("tag", filterValue);
+        // customer_email might be a phone in some cases; also cross-reference with orders
+        const emails = (tagged || []).map(t => t.customer_email);
+        if (emails.length > 0) {
+          const { data: orders } = await supabase.from("orders").select("customer_phone, customer_name, customer_email").in("customer_email", emails).not("customer_phone", "is", null);
+          const phoneMap = new Map<string, string>();
+          (orders || []).forEach(o => {
+            if (o.customer_phone) phoneMap.set(o.customer_phone, o.customer_name);
+          });
+          contactPhones = Array.from(phoneMap.entries()).map(([phone, name]) => ({ phone, name }));
+        }
+      } else if (filterType === "representative" && filterValue) {
+        const { data: docs } = await supabase.from("doctors").select("id").eq("representative_id", filterValue);
+        const docIds = (docs || []).map(d => d.id);
+        if (docIds.length > 0) {
+          const { data: orders } = await supabase.from("orders").select("customer_phone, customer_name").in("doctor_id", docIds).not("customer_phone", "is", null);
+          const phoneMap = new Map<string, string>();
+          (orders || []).forEach(o => {
+            if (o.customer_phone) phoneMap.set(o.customer_phone, o.customer_name);
+          });
+          contactPhones = Array.from(phoneMap.entries()).map(([phone, name]) => ({ phone, name }));
+        }
+      } else if (filterType === "state" && filterValue) {
+        const { data: orders } = await supabase.from("orders").select("customer_phone, customer_name, shipping_address").not("customer_phone", "is", null).limit(1000);
+        const phoneMap = new Map<string, string>();
+        (orders || []).forEach((o: any) => {
+          if (o.customer_phone && o.shipping_address?.state === filterValue) {
+            phoneMap.set(o.customer_phone, o.customer_name);
+          }
+        });
+        contactPhones = Array.from(phoneMap.entries()).map(([phone, name]) => ({ phone, name }));
+      }
+
+      if (contactPhones.length === 0) {
+        toast.error("Nenhum contato com telefone encontrado para o filtro selecionado");
+        setLoading(false);
+        return;
+      }
+
+      // 3. Enqueue first step of funnel for each contact
+      const firstStep = steps[0];
+      let messageContent = "";
+      
+      if (firstStep.step_type === "message_template" && firstStep.template_id) {
+        const { data: tpl } = await supabase.from("whatsapp_templates").select("content").eq("id", firstStep.template_id).single();
+        messageContent = tpl?.content || "";
+      } else if (firstStep.step_type === "message_custom" && firstStep.config?.custom_message) {
+        messageContent = firstStep.config.custom_message;
+      } else {
+        messageContent = firstStep.label || "Mensagem do funil";
+      }
+
+      // Get current tenant
+      const { data: { user } } = await supabase.auth.getUser();
+      let tenantId: string | null = null;
+      if (user) {
+        const { data: tu } = await supabase.from("tenant_users").select("tenant_id").eq("user_id", user.id).limit(1).maybeSingle();
+        tenantId = tu?.tenant_id || null;
+      }
+
+      // Batch insert into queue
+      const queueItems = contactPhones.map((c, idx) => ({
+        contact_phone: c.phone.replace(/\D/g, ""),
+        contact_name: c.name,
+        message_content: messageContent,
+        funnel_id: selectedFunnel,
+        step_id: firstStep.id,
+        template_id: firstStep.template_id || null,
+        status: "pending",
+        scheduled_at: new Date(Date.now() + idx * 5000).toISOString(), // stagger by 5s
+        tenant_id: tenantId,
+      }));
+
+      // Insert in batches of 50
+      let enqueued = 0;
+      for (let i = 0; i < queueItems.length; i += 50) {
+        const batch = queueItems.slice(i, i + 50);
+        const { error } = await supabase.from("whatsapp_message_queue").insert(batch);
+        if (!error) enqueued += batch.length;
+      }
+
+      toast.success(`Transmissão criada: ${enqueued} mensagens enfileiradas de ${contactPhones.length} contatos`);
+    } catch (e: any) {
+      toast.error(`Erro ao criar transmissão: ${e.message}`);
+    }
     setLoading(false);
   }
 
