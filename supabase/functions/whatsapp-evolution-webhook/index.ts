@@ -17,20 +17,21 @@ Deno.serve(async (req) => {
     const payload = await req.json();
     
     // Normalize event name (Evolution v1 vs v2 formats)
-    const event = (payload.event || payload.type || "").toLowerCase().replace(/_/g, ".");
+    const rawEvent = payload.event || payload.type || "";
+    const event = rawEvent.toLowerCase().replace(/_/g, ".").replace(/\s+/g, ".");
     
     // Extract instance name from multiple possible fields
     const instanceName = payload.instance || payload.instanceName || payload.sender?.instance || "";
     const apiInstanceId = payload.instanceId || payload.instance_id || "";
 
-    console.log(`[webhook] event=${event} instance=${instanceName} apiId=${apiInstanceId} keys=${Object.keys(payload).join(",")}`);
+    console.log(`[webhook] event="${rawEvent}" normalized="${event}" instance="${instanceName}" apiId="${apiInstanceId}" keys=${Object.keys(payload).join(",")}`);
 
     // Find our instance record - try multiple strategies
     let instanceRecord: any = null;
     if (instanceName) {
       const { data } = await supabase
         .from("whatsapp_instances")
-        .select("id, tenant_id")
+        .select("id, tenant_id, instance_name")
         .eq("instance_name", instanceName)
         .maybeSingle();
       instanceRecord = data;
@@ -39,8 +40,18 @@ Deno.serve(async (req) => {
     if (!instanceRecord && apiInstanceId) {
       const { data } = await supabase
         .from("whatsapp_instances")
-        .select("id, tenant_id")
+        .select("id, tenant_id, instance_name")
         .eq("instance_name", apiInstanceId)
+        .maybeSingle();
+      instanceRecord = data;
+    }
+    // Fallback: try partial match on instance_name
+    if (!instanceRecord && instanceName) {
+      const { data } = await supabase
+        .from("whatsapp_instances")
+        .select("id, tenant_id, instance_name")
+        .ilike("instance_name", `%${instanceName}%`)
+        .limit(1)
         .maybeSingle();
       instanceRecord = data;
     }
@@ -48,7 +59,7 @@ Deno.serve(async (req) => {
     if (!instanceRecord) {
       const { data, count } = await supabase
         .from("whatsapp_instances")
-        .select("id, tenant_id", { count: "exact" })
+        .select("id, tenant_id, instance_name", { count: "exact" })
         .eq("active", true)
         .limit(1);
       if (count === 1 && data?.[0]) {
@@ -58,7 +69,7 @@ Deno.serve(async (req) => {
     }
 
     if (!instanceRecord) {
-      console.warn(`[webhook] NO INSTANCE FOUND for name=${instanceName} apiId=${apiInstanceId}`);
+      console.warn(`[webhook] NO INSTANCE FOUND for name="${instanceName}" apiId="${apiInstanceId}"`);
     }
 
     const tenantId = instanceRecord?.tenant_id || null;
@@ -68,6 +79,8 @@ Deno.serve(async (req) => {
     if (event === "connection.update") {
       const state = payload.data?.state || payload.state || "";
       const mappedStatus = state === "open" ? "connected" : state === "close" ? "disconnected" : "qr_ready";
+
+      console.log(`[webhook] connection.update state="${state}" → "${mappedStatus}" instanceId=${instanceId}`);
 
       if (instanceRecord) {
         await supabase
@@ -82,29 +95,63 @@ Deno.serve(async (req) => {
     }
 
     // ── MESSAGES_UPSERT ──
-    if (event === "messages.upsert") {
-      const messages = payload.data?.messages || payload.data || [];
-      const msgList = Array.isArray(messages) ? messages : [messages];
+    // Handle various event name formats: messages.upsert, messages.upsert, MESSAGES_UPSERT
+    if (event === "messages.upsert" || event === "messages.upsert" || rawEvent === "MESSAGES_UPSERT" || rawEvent === "messages.upsert") {
+      // Extract messages from various payload structures
+      let messages: any[] = [];
+      if (Array.isArray(payload.data?.messages)) {
+        messages = payload.data.messages;
+      } else if (Array.isArray(payload.data)) {
+        messages = payload.data;
+      } else if (payload.data?.message) {
+        messages = [payload.data];
+      } else if (payload.data?.key) {
+        // Single message at data level
+        messages = [payload.data];
+      } else if (payload.message) {
+        messages = [payload];
+      }
 
-      for (const msg of msgList) {
+      console.log(`[webhook] messages.upsert: ${messages.length} message(s) to process`);
+
+      let processed = 0;
+      for (const msg of messages) {
         const key = msg.key || {};
         const isFromMe = key.fromMe === true;
-        const remoteJid = key.remoteJid || "";
+        const remoteJid = key.remoteJid || msg.remoteJid || "";
+        
         // Skip status@broadcast and groups
-        if (!remoteJid || remoteJid === "status@broadcast" || remoteJid.includes("@g.us")) continue;
+        if (!remoteJid || remoteJid === "status@broadcast" || remoteJid.includes("@g.us")) {
+          console.log(`[webhook] skipping jid=${remoteJid}`);
+          continue;
+        }
 
         const phone = remoteJid.replace("@s.whatsapp.net", "").replace("@c.us", "");
         const contactName = msg.pushName || msg.verifiedBizName || phone;
+        
+        // Extract message content from various message types
+        const msgBody = msg.message || {};
         const content =
-          msg.message?.conversation ||
-          msg.message?.extendedTextMessage?.text ||
-          msg.message?.imageMessage?.caption ||
-          msg.message?.videoMessage?.caption ||
-          msg.message?.documentMessage?.caption ||
-          msg.message?.buttonsResponseMessage?.selectedDisplayText ||
-          msg.message?.listResponseMessage?.title ||
+          msgBody.conversation ||
+          msgBody.extendedTextMessage?.text ||
+          msgBody.imageMessage?.caption ||
+          msgBody.videoMessage?.caption ||
+          msgBody.documentMessage?.caption ||
+          msgBody.buttonsResponseMessage?.selectedDisplayText ||
+          msgBody.listResponseMessage?.title ||
+          msgBody.templateButtonReplyMessage?.selectedDisplayText ||
+          msgBody.contactMessage?.displayName ||
+          (msgBody.audioMessage ? "[áudio]" : null) ||
+          (msgBody.stickerMessage ? "[figurinha]" : null) ||
+          (msgBody.imageMessage ? "[imagem]" : null) ||
+          (msgBody.videoMessage ? "[vídeo]" : null) ||
+          (msgBody.documentMessage ? "[documento]" : null) ||
+          (msgBody.locationMessage ? "[localização]" : null) ||
           "[mídia]";
+        
         const direction = isFromMe ? "outbound" : "inbound";
+
+        console.log(`[webhook] msg: phone=${phone} name=${contactName} dir=${direction} content="${typeof content === 'string' ? content.substring(0, 50) : '[obj]'}"`);
 
         // Upsert conversation
         const { data: existing } = await supabase
@@ -114,12 +161,14 @@ Deno.serve(async (req) => {
           .eq("instance_id", instanceId)
           .maybeSingle();
 
+        const safeContent = typeof content === "string" ? content.substring(0, 500) : "[mídia]";
+
         if (existing) {
           await supabase
             .from("whatsapp_conversations")
             .update({
               contact_name: contactName,
-              last_message: typeof content === "string" ? content.substring(0, 500) : "[mídia]",
+              last_message: safeContent,
               last_message_at: new Date().toISOString(),
               unread_count: direction === "inbound" ? (existing.unread_count || 0) + 1 : existing.unread_count,
               status: "open",
@@ -129,7 +178,7 @@ Deno.serve(async (req) => {
           await supabase.from("whatsapp_conversations").insert({
             contact_phone: phone,
             contact_name: contactName,
-            last_message: typeof content === "string" ? content.substring(0, 500) : "[mídia]",
+            last_message: safeContent,
             last_message_at: new Date().toISOString(),
             unread_count: direction === "inbound" ? 1 : 0,
             status: "open",
@@ -142,22 +191,33 @@ Deno.serve(async (req) => {
         await supabase.from("whatsapp_message_log").insert({
           contact_phone: phone,
           contact_name: contactName,
-          instance_name: instanceName || null,
+          instance_name: instanceRecord?.instance_name || instanceName || null,
           instance_id: instanceId,
           message_content: typeof content === "string" ? content.substring(0, 2000) : "[mídia]",
           direction,
           status: "delivered",
           tenant_id: tenantId,
         });
+
+        processed++;
       }
 
-      return new Response(JSON.stringify({ ok: true, processed: msgList.length }), {
+      console.log(`[webhook] messages.upsert: processed=${processed}/${messages.length}`);
+      return new Response(JSON.stringify({ ok: true, processed }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── MESSAGES_UPDATE (status updates like delivered, read) ──
+    if (event === "messages.update" || rawEvent === "MESSAGES_UPDATE") {
+      console.log(`[webhook] messages.update received, acknowledging`);
+      return new Response(JSON.stringify({ ok: true, event: "messages.update" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     // Other events — acknowledge
-    console.log(`[webhook] ignored event: ${event}`);
+    console.log(`[webhook] ignored event: ${event} (raw: ${rawEvent})`);
     return new Response(JSON.stringify({ ok: true, event, ignored: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

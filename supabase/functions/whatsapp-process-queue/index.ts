@@ -45,6 +45,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Check connected instances
+    const connectedInstances = (allInstances || []).filter(i => i.status === "connected");
+
     // Fetch pending messages due for sending
     const { data: messages } = await supabase
       .from("whatsapp_message_queue")
@@ -56,7 +59,34 @@ Deno.serve(async (req) => {
       .limit(20);
 
     if (!messages || messages.length === 0) {
-      return new Response(JSON.stringify({ processed: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ 
+        processed: 0, 
+        total: 0,
+        connected_instances: connectedInstances.length,
+        total_instances: (allInstances || []).length,
+        diagnostic: connectedInstances.length === 0 
+          ? "Nenhuma instância conectada. Conecte pelo menos uma instância para enviar mensagens."
+          : "Nenhuma mensagem pendente na fila."
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // If no connected instances, mark all as postponed with clear reason
+    if (connectedInstances.length === 0) {
+      const postponedAt = new Date(Date.now() + 600000).toISOString(); // retry in 10 min
+      for (const msg of messages) {
+        await supabase.from("whatsapp_message_queue").update({
+          scheduled_at: postponedAt,
+          error_message: "Aguardando instância conectada",
+        }).eq("id", msg.id);
+      }
+      return new Response(JSON.stringify({
+        processed: 0,
+        postponed: messages.length,
+        total: messages.length,
+        connected_instances: 0,
+        total_instances: (allInstances || []).length,
+        diagnostic: `${messages.length} mensagem(ns) adiada(s): nenhuma instância WhatsApp conectada.`,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const funnelIds = Array.from(new Set(messages.map((msg) => msg.funnel_id).filter(Boolean)));
@@ -74,6 +104,7 @@ Deno.serve(async (req) => {
 
     let processed = 0;
     let errors = 0;
+    let postponed = 0;
 
     for (const msg of messages) {
       // Check if this is a special step type (condition, transfer, send_file)
@@ -86,7 +117,6 @@ Deno.serve(async (req) => {
         let conditionMet = false;
 
         if (config.condition_type === "replied") {
-          // Check if contact has sent any inbound message
           const { count } = await supabase
             .from("whatsapp_message_log")
             .select("*", { count: "exact", head: true })
@@ -101,13 +131,11 @@ Deno.serve(async (req) => {
             .eq("tag", config.tag_name || "");
           conditionMet = (count || 0) > 0;
         } else if (config.condition_type === "clicked_link" || config.condition_type === "accessed_link") {
-          // Check link_clicks for this contact (by link_code if available)
-          conditionMet = false; // Default: not clicked
+          conditionMet = false;
         }
 
         if (config.expected === false) conditionMet = !conditionMet;
 
-        // Mark as processed
         await supabase.from("whatsapp_message_queue").update({
           status: "sent",
           sent_at: new Date().toISOString(),
@@ -121,8 +149,6 @@ Deno.serve(async (req) => {
       // Handle transfer steps
       if (parsedContent?.step_type === "transfer") {
         const config = parsedContent.config || {};
-
-        // Update conversation assignment if exists
         if (config.transfer_to && config.target_id) {
           await supabase
             .from("whatsapp_conversations")
@@ -140,8 +166,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Random delay between 5-20 seconds
-      const delay = 5000 + Math.random() * 15000;
+      // Random delay between 3-10 seconds (reduced for faster processing)
+      const delay = 3000 + Math.random() * 7000;
       await new Promise(r => setTimeout(r, delay));
 
       // Pick instance
@@ -152,24 +178,23 @@ Deno.serve(async (req) => {
       }
       if (!instance) {
         const funnelType = msg.funnel_id ? funnelTypeById.get(msg.funnel_id) : null;
-        const { data: avail } = await supabase
-          .from("whatsapp_instances")
-          .select("*")
-          .eq("active", true)
-          .eq("status", "connected")
-          .order("messages_sent_today", { ascending: true })
-          .limit(20);
-
-        instance = (avail || []).find((candidate) => {
+        instance = connectedInstances.find((candidate) => {
           const roles = normalizeRoles(candidate.funnel_roles);
+          if (candidate.messages_sent_today >= candidate.daily_limit) return false;
           return roles.includes("all") || (!!funnelType && roles.includes(funnelType));
         });
+        // Fallback: any connected instance with capacity
+        if (!instance) {
+          instance = connectedInstances.find(i => i.messages_sent_today < i.daily_limit);
+        }
       }
 
-      if (!instance || instance.messages_sent_today >= instance.daily_limit) {
+      if (!instance) {
         await supabase.from("whatsapp_message_queue").update({
           scheduled_at: new Date(Date.now() + 1800000).toISOString(),
+          error_message: "Limite diário atingido em todas as instâncias",
         }).eq("id", msg.id);
+        postponed++;
         continue;
       }
 
@@ -190,7 +215,6 @@ Deno.serve(async (req) => {
               caption: config.caption || "",
             };
           } else if (config.file_type === "link") {
-            // Create short link if shortener enabled
             let finalUrl = config.url;
             if (config.use_shortener) {
               const code = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -216,6 +240,7 @@ Deno.serve(async (req) => {
             await supabase.from("whatsapp_message_log").insert({
               contact_phone: msg.contact_phone, contact_name: msg.contact_name, instance_id: instance.id, instance_name: instance.name,
               message_content: `[${config.file_type}] ${config.url}`, direction: "outbound", status: "sent", funnel_id: msg.funnel_id, step_id: msg.step_id,
+              tenant_id: instance.tenant_id || msg.tenant_id || null,
             });
             await supabase.from("whatsapp_instances").update({ messages_sent_today: instance.messages_sent_today + 1, last_message_at: new Date().toISOString() }).eq("id", instance.id);
             processed++;
@@ -245,7 +270,36 @@ Deno.serve(async (req) => {
           await supabase.from("whatsapp_message_log").insert({
             contact_phone: msg.contact_phone, contact_name: msg.contact_name, instance_id: instance.id, instance_name: instance.name,
             message_content: msg.message_content, direction: "outbound", status: "sent", funnel_id: msg.funnel_id, step_id: msg.step_id,
+            tenant_id: instance.tenant_id || msg.tenant_id || null,
           });
+
+          // Upsert conversation
+          const { data: existingConv } = await supabase
+            .from("whatsapp_conversations")
+            .select("id")
+            .eq("contact_phone", msg.contact_phone)
+            .eq("instance_id", instance.id)
+            .maybeSingle();
+
+          if (existingConv) {
+            await supabase.from("whatsapp_conversations").update({
+              last_message: msg.message_content.substring(0, 500),
+              last_message_at: new Date().toISOString(),
+              contact_name: msg.contact_name || msg.contact_phone,
+            }).eq("id", existingConv.id);
+          } else {
+            await supabase.from("whatsapp_conversations").insert({
+              contact_phone: msg.contact_phone,
+              contact_name: msg.contact_name || msg.contact_phone,
+              last_message: msg.message_content.substring(0, 500),
+              last_message_at: new Date().toISOString(),
+              unread_count: 0,
+              status: "open",
+              instance_id: instance.id,
+              tenant_id: instance.tenant_id || msg.tenant_id || null,
+            });
+          }
+
           await supabase.from("whatsapp_instances").update({ messages_sent_today: instance.messages_sent_today + 1, last_message_at: new Date().toISOString() }).eq("id", instance.id);
           processed++;
         } else {
@@ -258,7 +312,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ processed, errors, total: messages.length }), {
+    return new Response(JSON.stringify({ 
+      processed, errors, postponed, total: messages.length,
+      connected_instances: connectedInstances.length,
+      diagnostic: processed > 0 
+        ? `${processed} enviada(s), ${errors} erro(s), ${postponed} adiada(s)`
+        : errors > 0 
+          ? `Todas falharam: ${errors} erro(s)`
+          : `${postponed} adiada(s) por falta de capacidade`
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
@@ -277,6 +339,7 @@ async function handleSendError(supabase: any, msg: any, errorData: any) {
       contact_phone: msg.contact_phone, contact_name: msg.contact_name, instance_id: null, instance_name: null,
       message_content: msg.message_content, direction: "outbound", status: "error", funnel_id: msg.funnel_id, step_id: msg.step_id,
       error_message: JSON.stringify(errorData),
+      tenant_id: msg.tenant_id || null,
     });
   } else {
     await supabase.from("whatsapp_message_queue").update({

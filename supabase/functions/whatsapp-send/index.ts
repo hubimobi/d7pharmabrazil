@@ -117,11 +117,16 @@ Deno.serve(async (req) => {
       instance = instances?.[0];
     }
 
+    // Resolve tenant
+    const { data: tenantRow } = await supabase.from("tenant_users").select("tenant_id").eq("user_id", user.id).limit(1).maybeSingle();
+    const callerTenantId = tenantRow?.tenant_id || null;
+
     if (!instance) {
       await supabase.from("whatsapp_message_queue").insert({
         contact_phone: phone, contact_name: contact_name || "",
         message_content: finalMessage, template_id, funnel_id, step_id, instance_id,
         variables, status: "pending", scheduled_at: new Date().toISOString(),
+        tenant_id: callerTenantId,
       });
       return new Response(JSON.stringify({ queued: true, reason: "No active instance" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -138,10 +143,11 @@ Deno.serve(async (req) => {
       if (altInstances?.[0]) {
         instance = altInstances[0];
       } else {
-        await supabase.from("whatsapp_message_queue").insert({
+      await supabase.from("whatsapp_message_queue").insert({
           contact_phone: phone, contact_name: contact_name || "",
           message_content: finalMessage, template_id, funnel_id, step_id, instance_id: instance.id,
           variables, status: "pending", scheduled_at: new Date(Date.now() + 3600000).toISOString(),
+          tenant_id: callerTenantId,
         });
         return new Response(JSON.stringify({ queued: true, reason: "Daily limit reached" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
