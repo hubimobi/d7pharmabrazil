@@ -554,6 +554,16 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     supabase.from("ai_llm_config").select("provider, default_model").eq("active", true).limit(1).single().then(({ data }) => {
       if (data) setLlmConfig(data as any);
     });
+    supabase.from("customer_tags").select("tag").then(({ data }) => {
+      const tags = Array.from(new Set((data || []).map((r: any) => r.tag).filter(Boolean))) as string[];
+      setCustomerTags(tags);
+    });
+    supabase.from("coupons").select("code").eq("active", true).order("code").then(({ data }) => {
+      setCouponsList((data || []) as any);
+    });
+    supabase.from("representatives").select("id, name").eq("active", true).order("name").then(({ data }) => {
+      setRepresentatives((data || []) as any);
+    });
   }, []);
 
   function addNode(type: NodeType) {
