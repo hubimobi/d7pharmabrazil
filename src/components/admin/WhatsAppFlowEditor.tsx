@@ -1639,7 +1639,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                       <GripVertical className="h-3 w-3 text-slate-400 cursor-grab flex-shrink-0" />
                       {!isStart && (
                         <button
-                          onClick={e => { e.stopPropagation(); deleteNode(node.id); }}
+                          onClick={e => { e.stopPropagation(); setDeleteConfirmId(node.id); }}
                           className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0"
                         >
                           <Trash2 className="h-3 w-3" />
