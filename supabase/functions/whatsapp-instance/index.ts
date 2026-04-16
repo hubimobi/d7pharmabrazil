@@ -220,7 +220,8 @@ Deno.serve(async (req) => {
         await configureWebhook(inst.api_url, inst.api_key, inst.instance_name);
       }
 
-      return new Response(JSON.stringify({ status: mappedStatus, raw: evo.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const finalStatus = mappedStatus || inst.status || "unknown";
+      return new Response(JSON.stringify({ status: finalStatus, raw: evo.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ── DISCONNECT ──
