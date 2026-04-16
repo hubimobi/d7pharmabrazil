@@ -1395,48 +1395,110 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
 
               return (
                 <div key={node.id}
-                  className={`absolute select-none ${isSelected ? "ring-2 ring-blue-500" : ""}`}
-                  style={{ left: node.position.x, top: node.position.y, width: 240 }}
+                  className={`absolute select-none transition-all`}
+                  style={{ left: node.position.x, top: node.position.y, width: 260 }}
                   onMouseDown={e => handleNodeMouseDown(e, node.id)}>
-                  <div className={`rounded-lg border-2 bg-white shadow-sm overflow-hidden ${isSelected ? "border-blue-400" : "border-slate-200"}`}>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5" style={{ backgroundColor: meta.color + "15" }}>
-                      <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab" />
-                      <Icon className="h-3.5 w-3.5" style={{ color: meta.color }} />
-                      <span className="text-xs font-semibold flex-1" style={{ color: meta.color }}>{isStart ? "Início" : meta.label}</span>
+                  <div
+                    className={`rounded-xl bg-white shadow-md overflow-hidden transition-all ${isSelected ? "ring-2 ring-offset-1 shadow-lg" : "hover:shadow-md"}`}
+                    style={{
+                      borderWidth: 2,
+                      borderStyle: "solid",
+                      borderColor: isSelected ? meta.color : meta.color + "40",
+                      boxShadow: isSelected ? `0 8px 24px -8px ${meta.color}66` : undefined,
+                    }}
+                  >
+                    {/* Header */}
+                    <div
+                      className="flex items-center gap-2 px-3 py-2"
+                      style={{ background: `linear-gradient(135deg, ${meta.color}22, ${meta.color}10)` }}
+                    >
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: meta.color, color: "white" }}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[9px] uppercase tracking-wider text-slate-500 leading-none mb-0.5">WhatsApp</p>
+                        <p className="text-xs font-semibold leading-tight truncate" style={{ color: meta.color }}>
+                          {isStart ? "Início" : meta.label}
+                        </p>
+                      </div>
+                      <GripVertical className="h-3 w-3 text-slate-400 cursor-grab flex-shrink-0" />
                       {!isStart && (
-                        <button onClick={e => { e.stopPropagation(); deleteNode(node.id); }} className="text-slate-400 hover:text-red-500">
+                        <button
+                          onClick={e => { e.stopPropagation(); deleteNode(node.id); }}
+                          className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0"
+                        >
                           <Trash2 className="h-3 w-3" />
                         </button>
                       )}
                     </div>
-                    <div className="px-3 py-2 min-h-[28px]">{renderNodePreview(node)}</div>
-                    {/* Multiple output handles inline */}
+
+                    {/* Body */}
+                    <div className="px-3 py-2.5 bg-white min-h-[36px]">
+                      {renderNodePreview(node)}
+                    </div>
+
+                    {/* Multiple output handles (footer) */}
                     {hasMultipleOutputs && (
-                      <div className="px-3 pb-2 space-y-1">
+                      <div className="border-t border-slate-100 bg-slate-50/50 px-3 py-2 space-y-1.5">
                         {handles.map((h, i) => (
-                          <div key={i} className="flex items-center gap-1.5 text-[10px]">
+                          <div key={i} className="flex items-center justify-between gap-2 text-[10px] group">
+                            <span className="text-slate-600 font-medium truncate">{h.label}</span>
                             <div
-                              title="Arraste para conectar ou solte no vazio"
-                              className={`w-2.5 h-2.5 rounded-full border-2 cursor-crosshair flex-shrink-0 transition-colors ${connecting?.nodeId === node.id && connecting?.handle === h.label ? "border-blue-500 bg-blue-200 animate-pulse" : "border-slate-300 bg-white hover:border-blue-400"}`}
-                              onMouseDown={e => handleOutputMouseDown(e, node.id, h.label)} />
-                            <span className="text-slate-500">{h.label}</span>
+                              title="Arraste para conectar"
+                              className={`w-3 h-3 rounded-full border-2 cursor-crosshair flex-shrink-0 transition-all ${
+                                connecting?.nodeId === node.id && connecting?.handle === h.label
+                                  ? "border-slate-700 bg-slate-700 scale-125 animate-pulse"
+                                  : "border-slate-400 bg-white hover:border-slate-700 hover:scale-125"
+                              }`}
+                              onMouseDown={e => handleOutputMouseDown(e, node.id, h.label)}
+                            />
                           </div>
                         ))}
                       </div>
                     )}
+
+                    {/* Single output footer */}
+                    {!hasMultipleOutputs && node.type !== "end" && !isStart && (
+                      <div className="border-t border-slate-100 bg-slate-50/50 px-3 py-1.5 flex items-center justify-between text-[10px]">
+                        <span className="text-slate-500">Próximo</span>
+                        <div
+                          title="Arraste para conectar"
+                          className={`w-3 h-3 rounded-full border-2 cursor-crosshair transition-all ${
+                            connecting?.nodeId === node.id
+                              ? "border-slate-700 bg-slate-700 scale-125 animate-pulse"
+                              : "border-slate-400 bg-white hover:border-slate-700 hover:scale-125"
+                          }`}
+                          onMouseDown={e => handleOutputMouseDown(e, node.id)}
+                        />
+                      </div>
+                    )}
+                    {isStart && (
+                      <div className="border-t border-slate-100 bg-slate-50/50 px-3 py-1.5 flex items-center justify-between text-[10px]">
+                        <span className="text-slate-500">Iniciar fluxo</span>
+                        <div
+                          title="Arraste para conectar"
+                          className={`w-3 h-3 rounded-full border-2 cursor-crosshair transition-all ${
+                            connecting?.nodeId === node.id
+                              ? "border-slate-700 bg-slate-700 scale-125 animate-pulse"
+                              : "border-slate-400 bg-white hover:border-slate-700 hover:scale-125"
+                          }`}
+                          onMouseDown={e => handleOutputMouseDown(e, node.id)}
+                        />
+                      </div>
+                    )}
                   </div>
+
                   {/* Input handle */}
                   {!isStart && (
-                    <div data-input-node={node.id}
-                      className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-slate-300 bg-white hover:border-blue-500 hover:scale-125 cursor-pointer transition-all"
-                      onMouseDown={e => e.stopPropagation()} />
-                  )}
-                  {/* Single output handle */}
-                  {!hasMultipleOutputs && node.type !== "end" && (
                     <div
-                      title="Arraste para conectar ou solte no vazio para criar bloco"
-                      className={`absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 bg-white hover:border-blue-500 hover:scale-125 cursor-crosshair transition-all ${connecting?.nodeId === node.id ? "border-blue-500 animate-pulse" : "border-slate-300"}`}
-                      onMouseDown={e => handleOutputMouseDown(e, node.id)} />
+                      data-input-node={node.id}
+                      title="Soltar aqui para conectar"
+                      className="absolute -left-2 top-8 w-4 h-4 rounded-full border-2 border-slate-400 bg-white hover:border-slate-700 hover:scale-125 cursor-pointer transition-all"
+                      onMouseDown={e => e.stopPropagation()}
+                    />
                   )}
                 </div>
               );
