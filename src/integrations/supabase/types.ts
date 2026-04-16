@@ -3871,6 +3871,7 @@ export type Database = {
           section_testimonials_visible: boolean | null
           section_trust_badges_visible: boolean | null
           store_name: string | null
+          tenant_id: string | null
           tiktok: string | null
           visual_theme: string | null
           webchat_delay_seconds: number | null
@@ -3995,6 +3996,7 @@ export type Database = {
           section_testimonials_visible?: boolean | null
           section_trust_badges_visible?: boolean | null
           store_name?: string | null
+          tenant_id?: string | null
           tiktok?: string | null
           visual_theme?: string | null
           webchat_delay_seconds?: number | null
@@ -4119,6 +4121,7 @@ export type Database = {
           section_testimonials_visible?: boolean | null
           section_trust_badges_visible?: boolean | null
           store_name?: string | null
+          tenant_id?: string | null
           tiktok?: string | null
           visual_theme?: string | null
           webchat_delay_seconds?: number | null
@@ -4136,7 +4139,15 @@ export type Database = {
           whatsapp_support?: string | null
           youtube?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "store_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

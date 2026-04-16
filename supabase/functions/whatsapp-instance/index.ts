@@ -201,17 +201,27 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "Evolution API indisponível", details: evo.data }), { status: 502, headers: corsHeaders });
       }
 
-      const state = evo.data?.state || evo.data?.instance?.state || "disconnected";
-      const mappedStatus = state === "open" ? "connected" : state === "close" ? "disconnected" : "qr_ready";
+      const state = evo.data?.state || evo.data?.instance?.state || "unknown";
+      
+      // Only update DB for definitive states — ignore "connecting" and other intermediate states
+      let mappedStatus: string | null = null;
+      if (state === "open") {
+        mappedStatus = "connected";
+      } else if (state === "close") {
+        mappedStatus = "disconnected";
+      }
 
-      await supabase.from("whatsapp_instances").update({ status: mappedStatus }).eq("id", instance_id);
+      if (mappedStatus) {
+        await supabase.from("whatsapp_instances").update({ status: mappedStatus }).eq("id", instance_id);
+      }
 
       // Auto-configure webhook when connected
       if (mappedStatus === "connected") {
         await configureWebhook(inst.api_url, inst.api_key, inst.instance_name);
       }
 
-      return new Response(JSON.stringify({ status: mappedStatus, raw: evo.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const finalStatus = mappedStatus || inst.status || "unknown";
+      return new Response(JSON.stringify({ status: finalStatus, raw: evo.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ── DISCONNECT ──
