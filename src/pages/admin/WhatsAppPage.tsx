@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1488,7 +1489,7 @@ function BroadcastTab() {
         step_id: firstStep.id,
         template_id: firstStep.template_id || null,
         status: "pending",
-        scheduled_at: new Date(Date.now() + idx * 5000).toISOString(), // stagger by 5s
+        scheduled_at: new Date(Date.now() + idx * broadcastInterval).toISOString(),
         tenant_id: tenantId,
       }));
 
