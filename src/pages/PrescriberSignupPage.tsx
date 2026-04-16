@@ -174,7 +174,7 @@ export default function PrescriberSignupPage() {
     setCreatingUser(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-prescriber-signup", {
-        body: { email: userEmail, password: userPassword },
+        body: { email: userEmail, password: userPassword, tenant_id: tenantId },
       });
 
       if (error) throw error;
