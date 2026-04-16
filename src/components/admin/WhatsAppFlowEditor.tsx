@@ -484,7 +484,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   const selectedNodeObj = nodes.find(n => n.id === selectedNode);
 
   useEffect(() => {
-    supabase.from("whatsapp_templates").select("id, name").then(({ data }) => setTemplates(data || []));
+    supabase.from("whatsapp_templates").select("id, name, content").then(({ data }) => setTemplates(data || []));
     supabase.from("whatsapp_flows").select("id, name").then(({ data }) => setAllFlows((data || []) as any));
     supabase.from("ai_agents").select("id, name, model").eq("active", true).then(({ data }) => setAgents((data || []) as any));
     supabase.from("profiles").select("id, full_name").then(({ data }) => setUsers((data || []) as any));
