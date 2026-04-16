@@ -52,6 +52,7 @@ type Step = "form" | "pending" | "create-user" | "done";
 export default function PrescriberSignupPage() {
   const [searchParams] = useSearchParams();
   const repCode = searchParams.get("rep");
+  const { tenantId } = useTenant();
 
   const [step, setStep] = useState<Step>("form");
   const [saving, setSaving] = useState(false);
