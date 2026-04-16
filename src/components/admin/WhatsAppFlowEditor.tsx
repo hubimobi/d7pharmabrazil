@@ -478,6 +478,8 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   const [allFlows, setAllFlows] = useState<{ id: string; name: string }[]>([]);
   const [agents, setAgents] = useState<{ id: string; name: string; model: string }[]>([]);
   const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
+  const [productsList, setProductsList] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [doctorsCoupons, setDoctorsCoupons] = useState<{ doctor_id: string; doctor_name: string; coupon_code: string }[]>([]);
   const [llmConfig, setLlmConfig] = useState<{ provider: string; default_model: string } | null>(null);
   const [aiTestResult, setAiTestResult] = useState<string | null>(null);
   const [aiTesting, setAiTesting] = useState(false);
@@ -490,6 +492,10 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     supabase.from("whatsapp_flows").select("id, name").then(({ data }) => setAllFlows((data || []) as any));
     supabase.from("ai_agents").select("id, name, model").eq("active", true).then(({ data }) => setAgents((data || []) as any));
     supabase.from("profiles").select("id, full_name").then(({ data }) => setUsers((data || []) as any));
+    supabase.from("products").select("id, name, slug").eq("active", true).order("name").then(({ data }) => setProductsList((data || []) as any));
+    supabase.from("coupons").select("code, doctor_id, doctors(id, name)").not("doctor_id", "is", null).eq("active", true).then(({ data }) => {
+      setDoctorsCoupons((data || []).map((c: any) => ({ doctor_id: c.doctor_id, doctor_name: c.doctors?.name || "—", coupon_code: c.code })));
+    });
     supabase.from("ai_llm_config").select("provider, default_model").eq("active", true).limit(1).single().then(({ data }) => {
       if (data) setLlmConfig(data as any);
     });
@@ -667,6 +673,12 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
 
   function getOutputHandles(node: FlowNode): { label: string; index: number }[] {
     if (node.type === "condition") {
+      if (node.data.condition_type === "any_response") {
+        return [
+          { label: "Qualquer resposta", index: 0 },
+          { label: "Sem resposta", index: 1 },
+        ];
+      }
       const opts = (node.data.options || []) as { label: string }[];
       const handles = opts.map((o, i) => ({ label: o.label, index: i }));
       handles.push({ label: "Default", index: opts.length });
@@ -678,6 +690,21 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     return [];
   }
 
+  function resolveLinkUrl(cfg: any): string {
+    if (!cfg?.product_id) return "";
+    const prod = productsList.find(p => p.id === cfg.product_id);
+    if (!prod) return "";
+    const base = typeof window !== "undefined" ? window.location.origin : "";
+    const params = new URLSearchParams();
+    if (cfg.doctor_id) {
+      const d = doctorsCoupons.find(x => x.doctor_id === cfg.doctor_id);
+      if (d) params.set("cupom", d.coupon_code);
+    }
+    if (cfg.checkout_version && cfg.checkout_version !== "default") params.set("ck", cfg.checkout_version);
+    const qs = params.toString();
+    return `${base}/produto/${prod.slug}${qs ? `?${qs}` : ""}`;
+  }
+
   function renderEdges() {
     return edges.map(edge => {
       const fromNode = nodes.find(n => n.id === edge.from);
@@ -685,16 +712,17 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
       if (!fromNode || !toNode) return null;
 
       const handles = getOutputHandles(fromNode);
-      let y1Offset = 30;
+      // Header ~46, body ~36 → footer starts ~y=90. Each multi-handle row ~22px.
+      let y1Offset = handles.length > 0 ? 100 : 100;
       if (handles.length > 0 && edge.label) {
         const hIdx = handles.findIndex(h => h.label === edge.label);
-        if (hIdx >= 0) y1Offset = 38 + hIdx * 18;
+        if (hIdx >= 0) y1Offset = 100 + hIdx * 22;
       }
 
-      const x1 = fromNode.position.x + 240;
+      const x1 = fromNode.position.x + 260;
       const y1 = fromNode.position.y + y1Offset;
       const x2 = toNode.position.x;
-      const y2 = toNode.position.y + 30;
+      const y2 = toNode.position.y + 32;
       const midX = (x1 + x2) / 2;
 
       return (
@@ -726,10 +754,21 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
             </div>
           );
         }
+        if (ct === "link") {
+          const cfg = node.data.link_config;
+          const url = cfg?.product_id ? resolveLinkUrl(cfg) : node.data.link_url;
+          const prod = cfg?.product_id ? productsList.find(p => p.id === cfg.product_id) : null;
+          return (
+            <div className="space-y-1">
+              {prod && <Badge variant="outline" className="text-[9px] h-4"><ShoppingBag className="h-2.5 w-2.5 mr-1" />{prod.name}</Badge>}
+              <p className="text-[10px] text-blue-600 break-all line-clamp-2">{url || "Configurar link..."}</p>
+            </div>
+          );
+        }
         return (
           <div className="flex items-center gap-1.5">
             <I className="h-3 w-3 text-blue-400 flex-shrink-0" />
-            <p className="text-[11px] text-slate-600 line-clamp-1">
+            <p className="text-[11px] text-slate-600 line-clamp-2 whitespace-pre-wrap">
               {ct === "text" ? (node.data.content || "Configurar...") : labels[ct] || ct}
             </p>
           </div>
@@ -740,7 +779,14 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-[9px] h-4">{o.label}</Badge>)}</div>;
       }
       case "condition": {
-        if (node.data.condition_type === "any_response") return <p className="text-[11px] text-slate-600">Qualquer resposta</p>;
+        if (node.data.condition_type === "any_response") {
+          return (
+            <div className="flex gap-1 flex-wrap">
+              <Badge variant="outline" className="text-[9px] h-4">Qualquer resposta</Badge>
+              <Badge variant="outline" className="text-[9px] h-4 border-dashed">Sem resposta</Badge>
+            </div>
+          );
+        }
         const opts = (node.data.options || []) as { label: string }[];
         return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-[9px] h-4">{o.label}</Badge>)}<Badge variant="outline" className="text-[9px] h-4 border-dashed">Default</Badge></div>;
       }
@@ -847,51 +893,62 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                   </div>
                 )}
                 {n.data.content_type === "link" && (
-                  <>
+                  <div className="space-y-2">
                     <div>
-                      <Label className="text-xs">Tipo de link</Label>
-                      <Select value={n.data.link_type || "custom"} onValueChange={v => updateNodeData(n.id, { link_type: v })}>
-                        <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                      <Label className="text-xs">Produto</Label>
+                      <Select
+                        value={n.data.link_config?.product_id || ""}
+                        onValueChange={v => {
+                          const cfg = { ...(n.data.link_config || {}), product_id: v };
+                          updateNodeData(n.id, { link_config: cfg, link_url: resolveLinkUrl(cfg) });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Selecionar produto..." /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="custom">Link personalizado</SelectItem>
-                          <SelectItem value="product">Link de produto (com prescritor)</SelectItem>
+                          {productsList.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
-                    {n.data.link_type === "product" ? (
-                      <div className="space-y-2">
-                        <div>
-                          <Label className="text-xs">ID do Produto</Label>
-                          <Input value={n.data.product_link_config?.product_id || ""} className="h-8 text-xs mt-1"
-                            onChange={e => updateNodeData(n.id, { product_link_config: { ...n.data.product_link_config, product_id: e.target.value } })}
-                            placeholder="UUID do produto" />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox checked={n.data.product_link_config?.include_prescriber || false}
-                            onCheckedChange={v => updateNodeData(n.id, { product_link_config: { ...n.data.product_link_config, include_prescriber: v } })} />
-                          <Label className="text-xs">Incluir prescritor</Label>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Versão checkout</Label>
-                          <Select value={n.data.product_link_config?.checkout_version || "3"}
-                            onValueChange={v => updateNodeData(n.id, { product_link_config: { ...n.data.product_link_config, checkout_version: v } })}>
-                            <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1">V1</SelectItem>
-                              <SelectItem value="2">V2</SelectItem>
-                              <SelectItem value="3">V3</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <Label className="text-xs">URL</Label>
-                        <Input value={n.data.link_url || ""} onChange={e => updateNodeData(n.id, { link_url: e.target.value })}
-                          placeholder="https://..." className="h-8 text-xs mt-1" />
+                    <div>
+                      <Label className="text-xs">Prescritor (opcional — aplica cupom)</Label>
+                      <Select
+                        value={n.data.link_config?.doctor_id || "__none__"}
+                        onValueChange={v => {
+                          const cfg = { ...(n.data.link_config || {}), doctor_id: v === "__none__" ? "" : v };
+                          updateNodeData(n.id, { link_config: cfg, link_url: resolveLinkUrl(cfg) });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Nenhum</SelectItem>
+                          {doctorsCoupons.map(d => <SelectItem key={d.doctor_id} value={d.doctor_id}>{d.doctor_name} ({d.coupon_code})</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Versão do Checkout</Label>
+                      <Select
+                        value={n.data.link_config?.checkout_version || "default"}
+                        onValueChange={v => {
+                          const cfg = { ...(n.data.link_config || {}), checkout_version: v };
+                          updateNodeData(n.id, { link_config: cfg, link_url: resolveLinkUrl(cfg) });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Padrão</SelectItem>
+                          <SelectItem value="1">V1</SelectItem>
+                          <SelectItem value="2">V2</SelectItem>
+                          <SelectItem value="3">V3</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {n.data.link_url && (
+                      <div className="p-2 rounded border bg-slate-50 text-[10px] break-all text-blue-700">
+                        🔗 {n.data.link_url}
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
                 {n.data.content_type === "catalog" && (
                   <p className="text-xs text-muted-foreground">Enviará o catálogo de produtos do WhatsApp Business.</p>
@@ -1312,12 +1369,12 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
             const fromNode = nodes.find(n => n.id === connecting.nodeId);
             if (!fromNode) return null;
             const handles = getOutputHandles(fromNode);
-            let yOff = 30;
+            let yOff = 100;
             if (handles.length > 0 && connecting.handle) {
               const hi = handles.findIndex(h => h.label === connecting.handle);
-              if (hi >= 0) yOff = 38 + hi * 18;
+              if (hi >= 0) yOff = 100 + hi * 22;
             }
-            const sx = (fromNode.position.x + 240) * zoom + pan.x;
+            const sx = (fromNode.position.x + 260) * zoom + pan.x;
             const sy = (fromNode.position.y + yOff) * zoom + pan.y;
             return (
               <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
@@ -1339,48 +1396,110 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
 
               return (
                 <div key={node.id}
-                  className={`absolute select-none ${isSelected ? "ring-2 ring-blue-500" : ""}`}
-                  style={{ left: node.position.x, top: node.position.y, width: 240 }}
+                  className={`absolute select-none transition-all`}
+                  style={{ left: node.position.x, top: node.position.y, width: 260 }}
                   onMouseDown={e => handleNodeMouseDown(e, node.id)}>
-                  <div className={`rounded-lg border-2 bg-white shadow-sm overflow-hidden ${isSelected ? "border-blue-400" : "border-slate-200"}`}>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5" style={{ backgroundColor: meta.color + "15" }}>
-                      <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab" />
-                      <Icon className="h-3.5 w-3.5" style={{ color: meta.color }} />
-                      <span className="text-xs font-semibold flex-1" style={{ color: meta.color }}>{isStart ? "Início" : meta.label}</span>
+                  <div
+                    className={`rounded-xl bg-white shadow-md overflow-hidden transition-all ${isSelected ? "ring-2 ring-offset-1 shadow-lg" : "hover:shadow-md"}`}
+                    style={{
+                      borderWidth: 2,
+                      borderStyle: "solid",
+                      borderColor: isSelected ? meta.color : meta.color + "40",
+                      boxShadow: isSelected ? `0 8px 24px -8px ${meta.color}66` : undefined,
+                    }}
+                  >
+                    {/* Header */}
+                    <div
+                      className="flex items-center gap-2 px-3 py-2"
+                      style={{ background: `linear-gradient(135deg, ${meta.color}22, ${meta.color}10)` }}
+                    >
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: meta.color, color: "white" }}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[9px] uppercase tracking-wider text-slate-500 leading-none mb-0.5">WhatsApp</p>
+                        <p className="text-xs font-semibold leading-tight truncate" style={{ color: meta.color }}>
+                          {isStart ? "Início" : meta.label}
+                        </p>
+                      </div>
+                      <GripVertical className="h-3 w-3 text-slate-400 cursor-grab flex-shrink-0" />
                       {!isStart && (
-                        <button onClick={e => { e.stopPropagation(); deleteNode(node.id); }} className="text-slate-400 hover:text-red-500">
+                        <button
+                          onClick={e => { e.stopPropagation(); deleteNode(node.id); }}
+                          className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0"
+                        >
                           <Trash2 className="h-3 w-3" />
                         </button>
                       )}
                     </div>
-                    <div className="px-3 py-2 min-h-[28px]">{renderNodePreview(node)}</div>
-                    {/* Multiple output handles inline */}
+
+                    {/* Body */}
+                    <div className="px-3 py-2.5 bg-white min-h-[36px]">
+                      {renderNodePreview(node)}
+                    </div>
+
+                    {/* Multiple output handles (footer) */}
                     {hasMultipleOutputs && (
-                      <div className="px-3 pb-2 space-y-1">
+                      <div className="border-t border-slate-100 bg-slate-50/50 px-3 py-2 space-y-1.5">
                         {handles.map((h, i) => (
-                          <div key={i} className="flex items-center gap-1.5 text-[10px]">
+                          <div key={i} className="flex items-center justify-between gap-2 text-[10px] group">
+                            <span className="text-slate-600 font-medium truncate">{h.label}</span>
                             <div
-                              title="Arraste para conectar ou solte no vazio"
-                              className={`w-2.5 h-2.5 rounded-full border-2 cursor-crosshair flex-shrink-0 transition-colors ${connecting?.nodeId === node.id && connecting?.handle === h.label ? "border-blue-500 bg-blue-200 animate-pulse" : "border-slate-300 bg-white hover:border-blue-400"}`}
-                              onMouseDown={e => handleOutputMouseDown(e, node.id, h.label)} />
-                            <span className="text-slate-500">{h.label}</span>
+                              title="Arraste para conectar"
+                              className={`w-3 h-3 rounded-full border-2 cursor-crosshair flex-shrink-0 transition-all ${
+                                connecting?.nodeId === node.id && connecting?.handle === h.label
+                                  ? "border-slate-700 bg-slate-700 scale-125 animate-pulse"
+                                  : "border-slate-400 bg-white hover:border-slate-700 hover:scale-125"
+                              }`}
+                              onMouseDown={e => handleOutputMouseDown(e, node.id, h.label)}
+                            />
                           </div>
                         ))}
                       </div>
                     )}
+
+                    {/* Single output footer */}
+                    {!hasMultipleOutputs && node.type !== "end" && !isStart && (
+                      <div className="border-t border-slate-100 bg-slate-50/50 px-3 py-1.5 flex items-center justify-between text-[10px]">
+                        <span className="text-slate-500">Próximo</span>
+                        <div
+                          title="Arraste para conectar"
+                          className={`w-3 h-3 rounded-full border-2 cursor-crosshair transition-all ${
+                            connecting?.nodeId === node.id
+                              ? "border-slate-700 bg-slate-700 scale-125 animate-pulse"
+                              : "border-slate-400 bg-white hover:border-slate-700 hover:scale-125"
+                          }`}
+                          onMouseDown={e => handleOutputMouseDown(e, node.id)}
+                        />
+                      </div>
+                    )}
+                    {isStart && (
+                      <div className="border-t border-slate-100 bg-slate-50/50 px-3 py-1.5 flex items-center justify-between text-[10px]">
+                        <span className="text-slate-500">Iniciar fluxo</span>
+                        <div
+                          title="Arraste para conectar"
+                          className={`w-3 h-3 rounded-full border-2 cursor-crosshair transition-all ${
+                            connecting?.nodeId === node.id
+                              ? "border-slate-700 bg-slate-700 scale-125 animate-pulse"
+                              : "border-slate-400 bg-white hover:border-slate-700 hover:scale-125"
+                          }`}
+                          onMouseDown={e => handleOutputMouseDown(e, node.id)}
+                        />
+                      </div>
+                    )}
                   </div>
+
                   {/* Input handle */}
                   {!isStart && (
-                    <div data-input-node={node.id}
-                      className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-slate-300 bg-white hover:border-blue-500 hover:scale-125 cursor-pointer transition-all"
-                      onMouseDown={e => e.stopPropagation()} />
-                  )}
-                  {/* Single output handle */}
-                  {!hasMultipleOutputs && node.type !== "end" && (
                     <div
-                      title="Arraste para conectar ou solte no vazio para criar bloco"
-                      className={`absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 bg-white hover:border-blue-500 hover:scale-125 cursor-crosshair transition-all ${connecting?.nodeId === node.id ? "border-blue-500 animate-pulse" : "border-slate-300"}`}
-                      onMouseDown={e => handleOutputMouseDown(e, node.id)} />
+                      data-input-node={node.id}
+                      title="Soltar aqui para conectar"
+                      className="absolute -left-2 top-8 w-4 h-4 rounded-full border-2 border-slate-400 bg-white hover:border-slate-700 hover:scale-125 cursor-pointer transition-all"
+                      onMouseDown={e => e.stopPropagation()}
+                    />
                   )}
                 </div>
               );
