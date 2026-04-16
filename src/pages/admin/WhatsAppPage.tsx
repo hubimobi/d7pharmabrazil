@@ -2271,6 +2271,7 @@ export default function WhatsAppPage() {
           <TabsTrigger value="broadcast" className="gap-1.5"><Megaphone className="h-3.5 w-3.5" /> Transmissão</TabsTrigger>
           <TabsTrigger value="contacts" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Contatos</TabsTrigger>
           <TabsTrigger value="queue" className="gap-1.5"><Clock className="h-3.5 w-3.5" /> Fila</TabsTrigger>
+          <TabsTrigger value="sending-config" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" /> Envio</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard"><DashboardTab /></TabsContent>
@@ -2281,6 +2282,7 @@ export default function WhatsAppPage() {
         <TabsContent value="broadcast"><BroadcastTab /></TabsContent>
         <TabsContent value="contacts"><ContactsTab /></TabsContent>
         <TabsContent value="queue"><QueueTab /></TabsContent>
+        <TabsContent value="sending-config"><SendingConfigTab /></TabsContent>
       </Tabs>
     </div>
   );
