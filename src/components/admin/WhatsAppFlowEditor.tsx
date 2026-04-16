@@ -851,7 +851,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           return (
             <div className="space-y-1">
               <Badge variant="outline" className="text-[9px] h-4"><FileText className="h-2.5 w-2.5 mr-1" />{tpl?.name || "Template"}</Badge>
-              {tpl?.content && <p className="text-[10px] text-slate-600 line-clamp-2 italic">{String(tpl.content).substring(0, 80)}{String(tpl.content).length > 80 ? "..." : ""}</p>}
+              {tpl?.content && <p className="text-[11px] text-slate-600 italic whitespace-pre-wrap break-words">{tpl.content}</p>}
             </div>
           );
         }
