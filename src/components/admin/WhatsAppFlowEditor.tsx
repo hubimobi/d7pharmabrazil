@@ -524,6 +524,10 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [customerTags, setCustomerTags] = useState<string[]>([]);
+  const [couponsList, setCouponsList] = useState<{ code: string }[]>([]);
+  const [representatives, setRepresentatives] = useState<{ id: string; name: string }[]>([]);
   
   const [templates, setTemplates] = useState<any[]>([]);
   const [allFlows, setAllFlows] = useState<{ id: string; name: string }[]>([]);
