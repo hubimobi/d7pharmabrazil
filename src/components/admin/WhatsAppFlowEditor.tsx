@@ -1770,6 +1770,27 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           <FlowTestPanel onClose={() => setTestPanelOpen(false)} nodes={nodes} edges={edges} />
         )}
       </div>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir bloco?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este bloco? Esta ação não pode ser desfeita e todas as conexões com ele serão removidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (deleteConfirmId) deleteNode(deleteConfirmId); setDeleteConfirmId(null); }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
