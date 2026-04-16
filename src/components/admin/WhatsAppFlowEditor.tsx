@@ -492,6 +492,10 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     supabase.from("whatsapp_flows").select("id, name").then(({ data }) => setAllFlows((data || []) as any));
     supabase.from("ai_agents").select("id, name, model").eq("active", true).then(({ data }) => setAgents((data || []) as any));
     supabase.from("profiles").select("id, full_name").then(({ data }) => setUsers((data || []) as any));
+    supabase.from("products").select("id, name, slug").eq("active", true).order("name").then(({ data }) => setProductsList((data || []) as any));
+    supabase.from("coupons").select("code, doctor_id, doctors(id, name)").not("doctor_id", "is", null).eq("active", true).then(({ data }) => {
+      setDoctorsCoupons((data || []).map((c: any) => ({ doctor_id: c.doctor_id, doctor_name: c.doctors?.name || "—", coupon_code: c.code })));
+    });
     supabase.from("ai_llm_config").select("provider, default_model").eq("active", true).limit(1).single().then(({ data }) => {
       if (data) setLlmConfig(data as any);
     });
