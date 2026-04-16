@@ -16,6 +16,9 @@ Deno.serve(async (req) => {
 
     const payload = await req.json();
     
+    // Log full payload for debugging
+    console.log(`[webhook] FULL PAYLOAD: ${JSON.stringify(payload).substring(0, 2000)}`);
+    
     // Normalize event name (Evolution v1 vs v2 formats)
     const rawEvent = payload.event || payload.type || "";
     const event = rawEvent.toLowerCase().replace(/_/g, ".").replace(/\s+/g, ".");
