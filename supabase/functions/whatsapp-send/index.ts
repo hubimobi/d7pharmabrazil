@@ -6,6 +6,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function ensureBrazilCountryCode(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10 || digits.length === 11) {
+    return "55" + digits;
+  }
+  return digits;
+}
+
 async function safeJson(res: Response): Promise<{ ok: boolean; status: number; data: any }> {
   const text = await res.text();
   try {
@@ -154,7 +162,7 @@ Deno.serve(async (req) => {
     }
 
     // Send via Evolution API
-    const formattedPhone = phone.replace(/\D/g, "");
+    const formattedPhone = ensureBrazilCountryCode(phone);
     const evoRes = await fetch(`${instance.api_url}/message/sendText/${instance.instance_name}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: instance.api_key },

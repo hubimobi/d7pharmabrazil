@@ -5,6 +5,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function ensureBrazilCountryCode(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10 || digits.length === 11) {
+    return "55" + digits;
+  }
+  return digits;
+}
+
 async function safeJson(res: Response): Promise<{ ok: boolean; status: number; data: any }> {
   const text = await res.text();
   try {
@@ -201,7 +209,7 @@ Deno.serve(async (req) => {
       // Handle send_file step type
       if (parsedContent?.step_type === "send_file") {
         const config = parsedContent.config || {};
-        const formattedPhone = msg.contact_phone.replace(/\D/g, "");
+        const formattedPhone = ensureBrazilCountryCode(msg.contact_phone);
         try {
           let endpoint = "sendText";
           let body: any = { number: formattedPhone, text: config.caption || config.url || "" };
@@ -256,7 +264,7 @@ Deno.serve(async (req) => {
       }
 
       // Standard text message send
-      const formattedPhone = msg.contact_phone.replace(/\D/g, "");
+      const formattedPhone = ensureBrazilCountryCode(msg.contact_phone);
       try {
         const evoRes = await fetch(`${instance.api_url}/message/sendText/${instance.instance_name}`, {
           method: "POST",
