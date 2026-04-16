@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { X, RotateCcw } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -174,7 +175,7 @@ function FlowList({ onEdit }: { onEdit: (flow: Flow | null) => void }) {
 }
 
 /* ───── Test Flow Simulator ───── */
-function FlowTestDialog({ open, onClose, nodes, edges }: { open: boolean; onClose: () => void; nodes: FlowNode[]; edges: FlowEdge[] }) {
+function FlowTestPanel({ onClose, nodes, edges }: { onClose: () => void; nodes: FlowNode[]; edges: FlowEdge[] }) {
   const [messages, setMessages] = useState<{ from: "bot" | "user"; text: string }[]>([]);
   const [variables, setVariables] = useState<Record<string, string>>({ Nome: "João", Telefone: "11999999999", Produto: "Produto Exemplo" });
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
@@ -373,62 +374,81 @@ function FlowTestDialog({ open, onClose, nodes, edges }: { open: boolean; onClos
   useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md p-0 overflow-hidden">
-        <div className="flex flex-col h-[600px]">
-          {/* WhatsApp header */}
-          <div className="bg-[#075E54] text-white px-4 py-3 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">T</div>
-            <div>
-              <p className="font-semibold text-sm">Teste de Fluxo</p>
-              <p className="text-[10px] opacity-80">Simulador</p>
-            </div>
-          </div>
+    <div className="w-[380px] flex-shrink-0 border-l bg-slate-900 flex flex-col">
+      {/* Phone-style header with controls */}
+      <div className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700">
+        <p className="text-xs font-semibold text-white">Testar Fluxo</p>
+        <div className="flex items-center gap-1">
+          <Button size="icon" variant="ghost" className="h-6 w-6 text-white hover:bg-slate-700"
+            onClick={() => { setMessages([]); setRunning(false); setWaitingInput(false); setUserInput(""); }}>
+            <RotateCcw className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-6 w-6 text-white hover:bg-slate-700" onClick={onClose}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
 
-          {/* Variables */}
-          <div className="bg-amber-50 border-b px-3 py-2">
-            <p className="text-[10px] font-semibold text-amber-700 mb-1">Variáveis de teste:</p>
-            <div className="flex flex-wrap gap-1">
-              {Object.entries(variables).map(([k, v]) => (
-                <Input key={k} className="h-6 text-[10px] w-auto inline-flex max-w-[140px]" value={`${k}=${v}`}
-                  onChange={e => { const [key, ...rest] = e.target.value.split("="); setVariables(prev => ({ ...prev, [key]: rest.join("=") })); }}
-                />
+      {/* Phone mockup */}
+      <div className="flex-1 p-3 overflow-hidden flex items-center justify-center">
+        <div className="w-full max-w-[320px] h-full bg-black rounded-[2rem] p-2 shadow-2xl flex flex-col">
+          <div className="flex-1 bg-white rounded-[1.5rem] overflow-hidden flex flex-col">
+            {/* WhatsApp header */}
+            <div className="bg-[#075E54] text-white px-3 py-2 flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold">T</div>
+              <div className="flex-1">
+                <p className="font-semibold text-xs">Teste de Fluxo</p>
+                <p className="text-[9px] opacity-80">Simulador</p>
+              </div>
+            </div>
+
+            {/* Variables */}
+            <div className="bg-amber-50 border-b px-2 py-1">
+              <div className="flex flex-wrap gap-1">
+                {Object.entries(variables).map(([k, v]) => (
+                  <Input key={k} className="h-5 text-[9px] w-auto inline-flex max-w-[120px] px-1" value={`${k}=${v}`}
+                    onChange={e => { const [key, ...rest] = e.target.value.split("="); setVariables(prev => ({ ...prev, [key]: rest.join("=") })); }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Chat */}
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-2 space-y-1.5" style={{ backgroundColor: "#ECE5DD" }}>
+              {messages.length === 0 && !running && (
+                <p className="text-center text-[10px] text-slate-500 mt-4">Clique em Iniciar para começar</p>
+              )}
+              {messages.map((m, i) => (
+                <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[85%] px-2 py-1 rounded-lg text-[11px] ${m.from === "user" ? "bg-[#DCF8C6] text-slate-800" : "bg-white text-slate-800 shadow-sm"}`}>
+                    {m.text}
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
 
-          {/* Chat area */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2" style={{ backgroundImage: "url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"300\" height=\"300\"><rect fill=\"%23ECE5DD\" width=\"300\" height=\"300\"/></svg>')", backgroundColor: "#ECE5DD" }}>
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] px-3 py-1.5 rounded-lg text-xs ${m.from === "user" ? "bg-[#DCF8C6] text-slate-800" : "bg-white text-slate-800 shadow-sm"}`}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Input / Start */}
-          <div className="border-t bg-[#F0F0F0] p-2 flex gap-2">
-            {!running ? (
-              <Button onClick={startTest} className="w-full bg-[#075E54] hover:bg-[#064E46]">
-                <Play className="h-4 w-4 mr-2" /> Iniciar Teste
-              </Button>
-            ) : waitingInput ? (
-              <>
-                <Input value={userInput} onChange={e => setUserInput(e.target.value)} placeholder="Digite sua resposta..."
-                  className="flex-1 h-9 text-sm" onKeyDown={e => e.key === "Enter" && handleUserSend()} />
-                <Button size="icon" className="h-9 w-9 bg-[#075E54]" onClick={handleUserSend}>
-                  <Send className="h-4 w-4" />
+            {/* Input */}
+            <div className="border-t bg-[#F0F0F0] p-1.5 flex gap-1">
+              {!running ? (
+                <Button onClick={startTest} size="sm" className="w-full bg-[#075E54] hover:bg-[#064E46] text-xs h-7">
+                  <Play className="h-3 w-3 mr-1" /> Iniciar
                 </Button>
-              </>
-            ) : (
-              <p className="text-xs text-muted-foreground text-center w-full py-2">Processando...</p>
-            )}
+              ) : waitingInput ? (
+                <>
+                  <Input value={userInput} onChange={e => setUserInput(e.target.value)} placeholder="Resposta..."
+                    className="flex-1 h-7 text-[11px]" onKeyDown={e => e.key === "Enter" && handleUserSend()} />
+                  <Button size="icon" className="h-7 w-7 bg-[#075E54]" onClick={handleUserSend}>
+                    <Send className="h-3 w-3" />
+                  </Button>
+                </>
+              ) : (
+                <p className="text-[10px] text-muted-foreground text-center w-full py-1">Processando...</p>
+              )}
+            </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
 
@@ -444,14 +464,16 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   const [edges, setEdges] = useState<FlowEdge[]>((flow?.edges as unknown as FlowEdge[]) || []);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [connecting, setConnecting] = useState<{ nodeId: string; handle?: string } | null>(null);
+  const [connecting, setConnecting] = useState<{ nodeId: string; handle?: string; mouseX: number; mouseY: number } | null>(null);
+  const [addNodeMenu, setAddNodeMenu] = useState<{ sourceId: string; sourceHandle?: string; x: number; y: number } | null>(null);
+  const [testPanelOpen, setTestPanelOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [showTest, setShowTest] = useState(false);
+  
   const [templates, setTemplates] = useState<any[]>([]);
   const [allFlows, setAllFlows] = useState<{ id: string; name: string }[]>([]);
   const [agents, setAgents] = useState<{ id: string; name: string; model: string }[]>([]);
@@ -464,7 +486,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   const selectedNodeObj = nodes.find(n => n.id === selectedNode);
 
   useEffect(() => {
-    supabase.from("whatsapp_templates").select("id, name").then(({ data }) => setTemplates(data || []));
+    supabase.from("whatsapp_templates").select("id, name, content").then(({ data }) => setTemplates(data || []));
     supabase.from("whatsapp_flows").select("id, name").then(({ data }) => setAllFlows((data || []) as any));
     supabase.from("ai_agents").select("id, name, model").eq("active", true).then(({ data }) => setAgents((data || []) as any));
     supabase.from("profiles").select("id, full_name").then(({ data }) => setUsers((data || []) as any));
@@ -554,12 +576,14 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.target === canvasRef.current || (e.target as HTMLElement).classList.contains("flow-canvas-bg")) {
+      // If menu open, close it on canvas click
+      if (addNodeMenu) { setAddNodeMenu(null); return; }
+      if (connecting) { setConnecting(null); return; }
       setPanning(true);
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
       setSelectedNode(null);
-      if (connecting) setConnecting(null);
     }
-  }, [pan, connecting]);
+  }, [pan, connecting, addNodeMenu]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (dragging) {
@@ -571,29 +595,75 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     if (panning) {
       setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
     }
-  }, [dragging, dragStart, panning, panStart, zoom]);
-
-  const handleMouseUp = useCallback(() => { setDragging(null); setPanning(false); }, []);
-
-  function handleOutputClick(nodeId: string, handleLabel?: string) {
     if (connecting) {
-      if (connecting.nodeId !== nodeId) {
-        addEdge(connecting.nodeId, nodeId, connecting.handle);
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        setConnecting(c => c ? { ...c, mouseX: e.clientX - rect.left, mouseY: e.clientY - rect.top } : c);
+      }
+    }
+  }, [dragging, dragStart, panning, panStart, zoom, connecting]);
+
+  const handleCanvasMouseUp = useCallback((e: React.MouseEvent) => {
+    setDragging(null);
+    setPanning(false);
+    if (connecting) {
+      // Check if released over an input handle
+      const target = e.target as HTMLElement;
+      const inputEl = target.closest("[data-input-node]") as HTMLElement | null;
+      if (inputEl) {
+        const targetId = inputEl.getAttribute("data-input-node");
+        if (targetId && targetId !== connecting.nodeId) {
+          addEdge(connecting.nodeId, targetId, connecting.handle);
+        }
+        setConnecting(null);
+        return;
+      }
+      // Released on canvas background → open add menu
+      if (target === canvasRef.current || target.classList.contains("flow-canvas-bg")) {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (rect) {
+          setAddNodeMenu({ sourceId: connecting.nodeId, sourceHandle: connecting.handle, x: e.clientX - rect.left, y: e.clientY - rect.top });
+        }
       }
       setConnecting(null);
-    } else {
-      setConnecting({ nodeId, handle: handleLabel });
     }
+  }, [connecting]);
+
+  function handleOutputMouseDown(e: React.MouseEvent, nodeId: string, handleLabel?: string) {
+    e.stopPropagation();
+    if (e.button !== 0) return;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    setConnecting({
+      nodeId, handle: handleLabel,
+      mouseX: rect ? e.clientX - rect.left : 0,
+      mouseY: rect ? e.clientY - rect.top : 0,
+    });
   }
 
-  function handleInputClick(nodeId: string) {
-    if (connecting) {
-      if (connecting.nodeId !== nodeId) {
-        addEdge(connecting.nodeId, nodeId, connecting.handle);
-      }
-      setConnecting(null);
-    }
+  function handleAddFromMenu(type: NodeType) {
+    if (!addNodeMenu) return;
+    // Position in canvas coords
+    const x = (addNodeMenu.x - pan.x) / zoom;
+    const y = (addNodeMenu.y - pan.y) / zoom - 30;
+    const newNode: FlowNode = {
+      id: genId(), type,
+      position: { x: Math.round(x), y: Math.round(y) },
+      data: getDefaultData(type),
+    };
+    setNodes(prev => [...prev, newNode]);
+    addEdge(addNodeMenu.sourceId, newNode.id, addNodeMenu.sourceHandle);
+    setSelectedNode(newNode.id);
+    setAddNodeMenu(null);
   }
+
+  // ESC to cancel
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") { setConnecting(null); setAddNodeMenu(null); }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   function getOutputHandles(node: FlowNode): { label: string; index: number }[] {
     if (node.type === "condition") {
@@ -647,6 +717,15 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         const icons: Record<string, any> = { text: MessageSquare, template: FileText, file: Image, audio: Mic, video: Video, catalog: ShoppingBag, link: Link2 };
         const labels: Record<string, string> = { text: "Texto", template: "Template", file: "Arquivo", audio: "Áudio", video: "Vídeo", catalog: "Catálogo", link: "Link" };
         const I = icons[ct] || MessageSquare;
+        if (ct === "template" && node.data.template_id) {
+          const tpl = templates.find(t => t.id === node.data.template_id);
+          return (
+            <div className="space-y-1">
+              <Badge variant="outline" className="text-[9px] h-4"><FileText className="h-2.5 w-2.5 mr-1" />{tpl?.name || "Template"}</Badge>
+              {tpl?.content && <p className="text-[10px] text-slate-600 line-clamp-2 italic">{String(tpl.content).substring(0, 80)}{String(tpl.content).length > 80 ? "..." : ""}</p>}
+            </div>
+          );
+        }
         return (
           <div className="flex items-center gap-1.5">
             <I className="h-3 w-3 text-blue-400 flex-shrink-0" />
@@ -1182,7 +1261,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.min(2, z + 0.1))}><ZoomIn className="h-3.5 w-3.5" /></Button>
           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}><Maximize2 className="h-3.5 w-3.5" /></Button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setShowTest(true)}><Play className="h-4 w-4 mr-1" /> Testar</Button>
+        <Button variant={testPanelOpen ? "default" : "outline"} size="sm" onClick={() => setTestPanelOpen(v => !v)}><Play className="h-4 w-4 mr-1" /> Testar</Button>
         <Button onClick={save} disabled={saving} size="sm"><Save className="h-4 w-4 mr-1" /> {saving ? "..." : "Salvar"}</Button>
       </div>
 
@@ -1202,7 +1281,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           })}
           {connecting && (
             <div className="mt-4 p-2 rounded-md bg-blue-50 border border-blue-200 text-[10px] text-blue-700">
-              🔗 Clique no destino para conectar{connecting.handle ? ` (${connecting.handle})` : ""}
+              🔗 Arraste até o destino ou solte no vazio para criar bloco
               <Button size="sm" variant="ghost" className="h-5 text-[10px] mt-1 w-full" onClick={() => setConnecting(null)}>Cancelar</Button>
             </div>
           )}
@@ -1210,7 +1289,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
 
         {/* Canvas */}
         <div ref={canvasRef} className="flex-1 relative overflow-hidden bg-slate-50 cursor-grab active:cursor-grabbing"
-          onMouseDown={handleCanvasMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+          onMouseDown={handleCanvasMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleCanvasMouseUp} onMouseLeave={handleCanvasMouseUp}>
           <div className="flow-canvas-bg absolute inset-0" style={{
             backgroundImage: "radial-gradient(circle, #CBD5E1 1px, transparent 1px)",
             backgroundSize: `${20 * zoom}px ${20 * zoom}px`,
@@ -1226,6 +1305,27 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
             </defs>
             <g className="pointer-events-auto">{renderEdges()}</g>
           </svg>
+
+          {/* Temporary drag-connect line (in screen coords, no transform) */}
+          {connecting && (() => {
+            const fromNode = nodes.find(n => n.id === connecting.nodeId);
+            if (!fromNode) return null;
+            const handles = getOutputHandles(fromNode);
+            let yOff = 30;
+            if (handles.length > 0 && connecting.handle) {
+              const hi = handles.findIndex(h => h.label === connecting.handle);
+              if (hi >= 0) yOff = 38 + hi * 18;
+            }
+            const sx = (fromNode.position.x + 240) * zoom + pan.x;
+            const sy = (fromNode.position.y + yOff) * zoom + pan.y;
+            return (
+              <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
+                <path d={`M ${sx} ${sy} L ${connecting.mouseX} ${connecting.mouseY}`}
+                  stroke="hsl(var(--primary))" strokeWidth="2" strokeDasharray="6 4" fill="none" />
+                <circle cx={connecting.mouseX} cy={connecting.mouseY} r="4" fill="hsl(var(--primary))" />
+              </svg>
+            );
+          })()}
 
           <div style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0" }} className="absolute">
             {nodes.map(node => {
@@ -1258,8 +1358,10 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                       <div className="px-3 pb-2 space-y-1">
                         {handles.map((h, i) => (
                           <div key={i} className="flex items-center gap-1.5 text-[10px]">
-                            <div className={`w-2.5 h-2.5 rounded-full border-2 cursor-pointer flex-shrink-0 transition-colors ${connecting?.nodeId === node.id && connecting?.handle === h.label ? "border-blue-500 bg-blue-200 animate-pulse" : "border-slate-300 bg-white hover:border-blue-400"}`}
-                              onClick={e => { e.stopPropagation(); handleOutputClick(node.id, h.label); }} />
+                            <div
+                              title="Arraste para conectar ou solte no vazio"
+                              className={`w-2.5 h-2.5 rounded-full border-2 cursor-crosshair flex-shrink-0 transition-colors ${connecting?.nodeId === node.id && connecting?.handle === h.label ? "border-blue-500 bg-blue-200 animate-pulse" : "border-slate-300 bg-white hover:border-blue-400"}`}
+                              onMouseDown={e => handleOutputMouseDown(e, node.id, h.label)} />
                             <span className="text-slate-500">{h.label}</span>
                           </div>
                         ))}
@@ -1268,25 +1370,75 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                   </div>
                   {/* Input handle */}
                   {!isStart && (
-                    <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-slate-300 bg-white hover:border-blue-500 cursor-pointer transition-colors"
-                      onClick={e => { e.stopPropagation(); handleInputClick(node.id); }} />
+                    <div data-input-node={node.id}
+                      className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-slate-300 bg-white hover:border-blue-500 hover:scale-125 cursor-pointer transition-all"
+                      onMouseDown={e => e.stopPropagation()} />
                   )}
                   {/* Single output handle */}
                   {!hasMultipleOutputs && node.type !== "end" && (
-                    <div className={`absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 bg-white hover:border-blue-500 cursor-pointer transition-colors ${connecting?.nodeId === node.id ? "border-blue-500 animate-pulse" : "border-slate-300"}`}
-                      onClick={e => { e.stopPropagation(); handleOutputClick(node.id); }} />
+                    <div
+                      title="Arraste para conectar ou solte no vazio para criar bloco"
+                      className={`absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 bg-white hover:border-blue-500 hover:scale-125 cursor-crosshair transition-all ${connecting?.nodeId === node.id ? "border-blue-500 animate-pulse" : "border-slate-300"}`}
+                      onMouseDown={e => handleOutputMouseDown(e, node.id)} />
                   )}
                 </div>
               );
             })}
           </div>
+
+          {/* Add Next Step Menu */}
+          {addNodeMenu && (
+            <div
+              className="absolute z-40 w-[260px] bg-popover border rounded-lg shadow-2xl overflow-hidden"
+              style={{ left: Math.min(addNodeMenu.x, (canvasRef.current?.clientWidth || 800) - 270), top: Math.min(addNodeMenu.y, (canvasRef.current?.clientHeight || 600) - 400) }}
+              onMouseDown={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
+                <p className="text-xs font-semibold">Próxima etapa</p>
+                <button onClick={() => setAddNodeMenu(null)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="max-h-[400px] overflow-y-auto p-2 space-y-2">
+                <div>
+                  <p className="text-[9px] font-semibold text-muted-foreground uppercase px-1 mb-1">Conteúdo</p>
+                  {(["message", "input", "choice"] as NodeType[]).map(t => {
+                    const m = NODE_TYPES.find(x => x.type === t)!;
+                    const I = m.icon;
+                    return (
+                      <button key={t} onClick={() => handleAddFromMenu(t)}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium hover:shadow-sm transition-all border ${m.bg}`}>
+                        <I className="h-3.5 w-3.5" style={{ color: m.color }} /> {m.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div>
+                  <p className="text-[9px] font-semibold text-muted-foreground uppercase px-1 mb-1">Lógica</p>
+                  {(["condition", "wait", "ai_gen", "transfer", "action", "set_variable", "end"] as NodeType[]).map(t => {
+                    const m = NODE_TYPES.find(x => x.type === t)!;
+                    const I = m.icon;
+                    return (
+                      <button key={t} onClick={() => handleAddFromMenu(t)}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium hover:shadow-sm transition-all border ${m.bg} mt-1`}>
+                        <I className="h-3.5 w-3.5" style={{ color: m.color }} /> {m.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Properties */}
         {renderPropertiesPanel()}
-      </div>
 
-      <FlowTestDialog open={showTest} onClose={() => setShowTest(false)} nodes={nodes} edges={edges} />
+        {/* Test Panel (lateral) */}
+        {testPanelOpen && (
+          <FlowTestPanel onClose={() => setTestPanelOpen(false)} nodes={nodes} edges={edges} />
+        )}
+      </div>
     </div>
   );
 }
