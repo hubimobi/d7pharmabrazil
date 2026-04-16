@@ -736,6 +736,42 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Wheel zoom: hold right mouse button + scroll
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    function onWheel(e: WheelEvent) {
+      // Right-button held → zoom; otherwise allow normal scroll/pan
+      if (e.buttons === 2 || e.ctrlKey) {
+        e.preventDefault();
+        const rect = el!.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        setZoom(prevZoom => {
+          const newZoom = Math.min(2, Math.max(0.3, +(prevZoom + delta).toFixed(2)));
+          if (newZoom === prevZoom) return prevZoom;
+          // Zoom centered at mouse: adjust pan so the point under cursor stays put
+          setPan(prevPan => {
+            const ratio = newZoom / prevZoom;
+            return {
+              x: mx - (mx - prevPan.x) * ratio,
+              y: my - (my - prevPan.y) * ratio,
+            };
+          });
+          return newZoom;
+        });
+      }
+    }
+    function onContextMenu(e: MouseEvent) { e.preventDefault(); }
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("contextmenu", onContextMenu);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("contextmenu", onContextMenu);
+    };
+  }, []);
+
   function getOutputHandles(node: FlowNode): { label: string; index: number }[] {
     if (node.type === "condition") {
       if (node.data.condition_type === "any_response") {
