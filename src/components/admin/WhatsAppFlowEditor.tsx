@@ -454,6 +454,11 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   const [showTest, setShowTest] = useState(false);
   const [templates, setTemplates] = useState<any[]>([]);
   const [allFlows, setAllFlows] = useState<{ id: string; name: string }[]>([]);
+  const [agents, setAgents] = useState<{ id: string; name: string; model: string }[]>([]);
+  const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
+  const [llmConfig, setLlmConfig] = useState<{ provider: string; default_model: string } | null>(null);
+  const [aiTestResult, setAiTestResult] = useState<string | null>(null);
+  const [aiTesting, setAiTesting] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const selectedNodeObj = nodes.find(n => n.id === selectedNode);
@@ -461,6 +466,11 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   useEffect(() => {
     supabase.from("whatsapp_templates").select("id, name").then(({ data }) => setTemplates(data || []));
     supabase.from("whatsapp_flows").select("id, name").then(({ data }) => setAllFlows((data || []) as any));
+    supabase.from("ai_agents").select("id, name, model").eq("active", true).then(({ data }) => setAgents((data || []) as any));
+    supabase.from("profiles").select("id, full_name").then(({ data }) => setUsers((data || []) as any));
+    supabase.from("ai_llm_config").select("provider, default_model").eq("active", true).limit(1).single().then(({ data }) => {
+      if (data) setLlmConfig(data as any);
+    });
   }, []);
 
   function addNode(type: NodeType) {
