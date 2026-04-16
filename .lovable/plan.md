@@ -1,39 +1,44 @@
 
 
-# Diagnóstico: Evolution API — Erro de Conexão
+# Fix: Números WhatsApp sem código de país (55)
 
-## O que está acontecendo
+## Problema
+A Evolution API rejeita o número `47984826726` com `{"exists": false}` porque o envia como `47984826726@s.whatsapp.net`. O formato correto para a API é `5547984826726@s.whatsapp.net` — com o código do Brasil (`55`) no início.
 
-A Evolution API **está funcionando** — confirmei isso chamando a edge function diretamente. O servidor `evolution.d7pharmabrazil.com.br` respondeu normalmente com estado `"connecting"` para a instância Bia.
+O código atual só faz `phone.replace(/\D/g, "")` (remove caracteres não-numéricos), mas nunca adiciona o `55`.
 
-Existem **3 problemas combinados** causando a impressão de erro:
+## Solução
+Criar uma função `ensureBrazilCountryCode(phone)` que:
+1. Remove caracteres não-numéricos
+2. Se o número tem 10 ou 11 dígitos (formato brasileiro DDD + número), adiciona `55` no início
+3. Se já começa com `55` e tem 12-13 dígitos, mantém como está
 
-### 1. URL errada no `store_settings`
-A tabela `store_settings` tem uma URL de ngrok antiga (`jenni-unelongated-messily.ngrok-free.dev`) em vez de `evolution.d7pharmabrazil.com.br`. O botão "Testar Conexão" na página de Integrações chama essa URL **direto do navegador**, que falha porque o ngrok está offline.
+Aplicar essa função em **3 arquivos**:
 
-### 2. Status "connecting" resetando instâncias
-As 3 instâncias estão com estado `"connecting"` na Evolution (não `"open"`). Isso significa que elas precisam ser escaneadas via QR code. Além disso, a ação `status` na edge function `whatsapp-instance` **ainda mapeia `connecting` → `qr_ready`** e sobrescreve o banco, desfazendo as correções anteriores.
+### Arquivos modificados
 
-### 3. `tenant_users` com recursão infinita
-A tabela `tenant_users` tem uma policy com recursão infinita (erro `42P17`), e `store_settings_public` não tem coluna `tenant_id`. Esses são bugs separados que afetam toda a aplicação.
+1. **`supabase/functions/whatsapp-process-queue/index.ts`**
+   - Substituir `msg.contact_phone.replace(/\D/g, "")` pela nova função (2 ocorrências: `send_file` e texto padrão)
 
-## Plano de implementação
+2. **`supabase/functions/whatsapp-send/index.ts`**
+   - Substituir `phone.replace(/\D/g, "")` pela nova função
 
-### Etapa 1: Atualizar URL no store_settings (migration SQL)
-- Alterar `evolution_api_url` de `jenni-unelongated-messily.ngrok-free.dev` para `evolution.d7pharmabrazil.com.br`
+3. **`supabase/functions/whatsapp-webhook/index.ts`**
+   - Verificar se números inseridos na fila já estão formatados corretamente
 
-### Etapa 2: Corrigir mapeamento de status na edge function
-**Arquivo**: `supabase/functions/whatsapp-instance/index.ts`
-- Na ação `status` (linha 205), aplicar a mesma lógica do webhook: só atualizar o banco para estados definitivos (`open` → `connected`, `close` → `disconnected`). Para `connecting`, manter o status atual do banco.
+### Lógica da função
 
-### Etapa 3: Corrigir recursão em `tenant_users`
-- Identificar e corrigir a policy RLS que causa recursão infinita na tabela `tenant_users`
-- Isso resolve os erros 500 que aparecem em toda a aplicação
+```typescript
+function ensureBrazilCountryCode(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  // 10-11 digits = Brazilian national format (DDD + number)
+  if (digits.length === 10 || digits.length === 11) {
+    return "55" + digits;
+  }
+  return digits;
+}
+```
 
-### Etapa 4: Corrigir `store_settings_public` 
-- A view `store_settings_public` não tem coluna `tenant_id`, mas o código filtra por ela. Recriar a view incluindo `tenant_id`.
-
-## Arquivos que serão modificados
-- `supabase/functions/whatsapp-instance/index.ts` — status mapping fix
-- Nova migration SQL — URL fix, tenant_users policy, store_settings_public view
+### Correção retroativa
+- Executar migration para corrigir as mensagens pendentes do Luciano Leal, atualizando `contact_phone` de `47984826726` para `5547984826726` e resetando `retry_count` e `error_message`
 
