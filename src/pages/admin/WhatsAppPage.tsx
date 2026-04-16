@@ -1532,6 +1532,12 @@ function BroadcastTab() {
       if (addr?.state) stateSet.add(addr.state);
     });
     setStates(Array.from(stateSet).sort());
+
+    // Load sending config for broadcast stagger
+    const { data: sc } = await supabase.from("whatsapp_sending_config").select("batch_interval_seconds").limit(1).maybeSingle();
+    if (sc?.batch_interval_seconds) {
+      setBroadcastInterval(sc.batch_interval_seconds * 1000);
+    }
   }
 
   async function estimateAudience() {
