@@ -10,6 +10,7 @@ import { CheckCircle, UserPlus, Clock, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useTenant } from "@/hooks/useTenant";
 
 const STATES = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA",
