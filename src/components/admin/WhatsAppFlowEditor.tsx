@@ -1261,7 +1261,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.min(2, z + 0.1))}><ZoomIn className="h-3.5 w-3.5" /></Button>
           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}><Maximize2 className="h-3.5 w-3.5" /></Button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setShowTest(true)}><Play className="h-4 w-4 mr-1" /> Testar</Button>
+        <Button variant={testPanelOpen ? "default" : "outline"} size="sm" onClick={() => setTestPanelOpen(v => !v)}><Play className="h-4 w-4 mr-1" /> Testar</Button>
         <Button onClick={save} disabled={saving} size="sm"><Save className="h-4 w-4 mr-1" /> {saving ? "..." : "Salvar"}</Button>
       </div>
 
