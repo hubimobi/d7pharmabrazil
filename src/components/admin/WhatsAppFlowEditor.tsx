@@ -1103,13 +1103,14 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
               <>
                 <div>
                   <Label className="text-xs">Agente IA (opcional)</Label>
-                  <Select value={n.data.agent_id || ""} onValueChange={v => {
-                    const agent = agents.find(a => a.id === v);
-                    updateNodeData(n.id, { agent_id: v, model: agent?.model || n.data.model });
+                  <Select value={n.data.agent_id || "__default__"} onValueChange={v => {
+                    const actualValue = v === "__default__" ? "" : v;
+                    const agent = agents.find(a => a.id === actualValue);
+                    updateNodeData(n.id, { agent_id: actualValue, model: agent?.model || n.data.model });
                   }}>
                     <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Usar configuração padrão" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Padrão ({llmConfig?.default_model || "Lovable AI"})</SelectItem>
+                      <SelectItem value="__default__">Padrão ({llmConfig?.default_model || "Lovable AI"})</SelectItem>
                       {agents.map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.model})</SelectItem>)}
                     </SelectContent>
                   </Select>
