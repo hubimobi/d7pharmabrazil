@@ -1,38 +1,42 @@
 
 
-## Fix: mensagem cortada nos blocos
+## Fix: cadastro de prescritor (`/cadastrar`) sem tenant_id
 
-Dois pontos cortando o conteúdo no bloco Mensagem:
+### Diagnóstico
 
-### 1. Template truncado em 80 caracteres (linha 854)
-Atualmente:
-```tsx
-<p className="text-[10px] text-slate-600 line-clamp-2 italic">
-  {String(tpl.content).substring(0, 80)}{...length > 80 ? "..." : ""}
-</p>
+A Edge Function `register-prescriber` retorna `success: true`, mas insere os registros em `doctors` e `coupons` com `tenant_id = NULL`. Resultado:
+- O prescritor não aparece em nenhum painel admin (filtros RLS por `tenant_id`).
+- O cupom gerado não funciona em checkout (não pertence ao tenant).
+- Da perspectiva do admin/usuário, o cadastro "deu erro" porque desaparece.
+
+Confirmado em teste real:
 ```
-Trocar por preview completo:
-```tsx
-<p className="text-[11px] text-slate-600 italic whitespace-pre-wrap break-words">
-  {tpl.content}
-</p>
+psql> SELECT id, email, tenant_id FROM doctors WHERE email = 'teste-...';
+→ tenant_id = NULL
 ```
 
-### 2. maxWidth do nó limita templates a 320px (linha 1614)
-Atualmente só mensagens tipo `text` recebem 500px. Estender para todos os subtipos de mensagem (text, template, link):
-```tsx
-maxWidth: node.type === "message" ? 520 : 320,
-```
+A função `create-prescriber-signup` (passo 2, criar usuário) também não atribui `tenant_id` ao registro de `user_roles` nem garante vínculo com o tenant.
 
-### 3. Preview de mensagem texto também tem `max-w-[460px]` rígido (linha 870)
-Remover esse cap interno — deixar herdar do container do nó:
-```tsx
-<div className="flex items-start gap-1.5">
-```
+### Correção
 
-### 4. Link preview com `line-clamp-2` (linha 865)
-Trocar por `break-all` sem clamp para mostrar URL inteira.
+**1. `supabase/functions/register-prescriber/index.ts`**
+- Aceitar `tenant_id` no body (obrigatório).
+- Fallback: resolver via hostname (`req.headers.get("origin")` → consulta `tenants` por `domain`/`subdomain`).
+- Inserir `tenant_id` em `doctors` E em `coupons`.
+- Verificar email duplicado **escopado ao tenant** (`.eq("email", email).eq("tenant_id", tenantId)`).
+- Validar que `representative_id` pertence ao mesmo tenant antes de inserir.
 
-### Arquivo modificado
-- `src/components/admin/WhatsAppFlowEditor.tsx`
+**2. `src/pages/PrescriberSignupPage.tsx`**
+- Importar `useTenant()` e enviar `tenant_id: tenantId` no body de `register-prescriber`.
+- Enviar também `tenant_id` na chamada `create-prescriber-signup`.
+
+**3. `supabase/functions/create-prescriber-signup/index.ts`**
+- Aceitar `tenant_id` no body.
+- Buscar doctor com `.eq("email", email).eq("tenant_id", tenant_id)` para evitar colisão entre tenants.
+- Inserir em `tenant_users` (vincular novo user ao tenant) além de `user_roles`.
+
+### Arquivos modificados
+- `supabase/functions/register-prescriber/index.ts`
+- `supabase/functions/create-prescriber-signup/index.ts`
+- `src/pages/PrescriberSignupPage.tsx`
 
