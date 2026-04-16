@@ -140,6 +140,7 @@ export default function PrescriberSignupPage() {
           city: form.city || null,
           representative_id: representativeId,
           rep_code: repCode || null,
+          tenant_id: tenantId,
         },
       });
 
