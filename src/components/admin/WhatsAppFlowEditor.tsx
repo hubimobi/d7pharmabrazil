@@ -454,6 +454,11 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   const [showTest, setShowTest] = useState(false);
   const [templates, setTemplates] = useState<any[]>([]);
   const [allFlows, setAllFlows] = useState<{ id: string; name: string }[]>([]);
+  const [agents, setAgents] = useState<{ id: string; name: string; model: string }[]>([]);
+  const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
+  const [llmConfig, setLlmConfig] = useState<{ provider: string; default_model: string } | null>(null);
+  const [aiTestResult, setAiTestResult] = useState<string | null>(null);
+  const [aiTesting, setAiTesting] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const selectedNodeObj = nodes.find(n => n.id === selectedNode);
@@ -461,6 +466,11 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   useEffect(() => {
     supabase.from("whatsapp_templates").select("id, name").then(({ data }) => setTemplates(data || []));
     supabase.from("whatsapp_flows").select("id, name").then(({ data }) => setAllFlows((data || []) as any));
+    supabase.from("ai_agents").select("id, name, model").eq("active", true).then(({ data }) => setAgents((data || []) as any));
+    supabase.from("profiles").select("id, full_name").then(({ data }) => setUsers((data || []) as any));
+    supabase.from("ai_llm_config").select("provider, default_model").eq("active", true).limit(1).single().then(({ data }) => {
+      if (data) setLlmConfig(data as any);
+    });
   }, []);
 
   function addNode(type: NodeType) {
@@ -481,8 +491,8 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
       case "condition": return { condition_type: "keywords", options: [{ label: "Sim", keywords: ["sim", "quero"] }, { label: "Não", keywords: ["não", "nao"] }] };
       case "wait": return { wait_type: "delay", delay_value: 5, delay_unit: "m" };
       case "input": return { question: "", variable_name: "resposta" };
-      case "ai_gen": return { prompt: "", model: "gpt-5-mini" };
-      case "transfer": return { target: "human" };
+      case "ai_gen": return { prompt: "", model: llmConfig?.default_model || "google/gemini-3-flash-preview", agent_id: "" };
+      case "transfer": return { target: "human", target_user_id: "", target_agent_id: "" };
       case "set_variable": return { variable: "", value: "" };
       case "choice": return { question: "Escolha uma opção:", options: [{ label: "Opção 1", tag: "" }, { label: "Opção 2", tag: "" }] };
       case "action": return { action_type: "add_tag", tag: "" };
@@ -665,8 +675,21 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         const labels: Record<string, string> = { add_tag: "➕ Tag", remove_tag: "➖ Tag", go_to_flow: "↗️ Ir p/ fluxo", trigger_block: "⚡ Acionar bloco", mark_converted: "✅ Convertido" };
         return <p className="text-[11px] text-slate-600">{labels[node.data.action_type] || "Ação"}: {node.data.tag || node.data.flow_id?.substring(0, 8) || node.data.block_id || ""}</p>;
       }
-      case "ai_gen": return <p className="text-[11px] text-slate-600 line-clamp-1">🤖 {node.data.prompt || "Prompt..."}</p>;
-      case "transfer": return <p className="text-[11px] text-slate-600">→ {node.data.target}</p>;
+      case "ai_gen": {
+        const agentName = node.data.agent_id ? agents.find(a => a.id === node.data.agent_id)?.name : null;
+        return <p className="text-[11px] text-slate-600 line-clamp-1">🤖 {agentName ? `[${agentName}] ` : ""}{node.data.prompt || "Prompt..."}</p>;
+      }
+      case "transfer": {
+        if (node.data.target === "human" && node.data.target_user_id) {
+          const userName = users.find(u => u.id === node.data.target_user_id)?.full_name;
+          return <p className="text-[11px] text-slate-600">👤 {userName || node.data.target_user_id.substring(0, 8)}</p>;
+        }
+        if (node.data.target === "ai_agent" && node.data.target_agent_id) {
+          const agName = agents.find(a => a.id === node.data.target_agent_id)?.name;
+          return <p className="text-[11px] text-slate-600">🤖 {agName || "Agente"}</p>;
+        }
+        return <p className="text-[11px] text-slate-600">→ {node.data.target === "human" ? "Atendente" : node.data.target === "ai_agent" ? "Agente IA" : "Fila"}</p>;
+      }
       case "set_variable": return <p className="text-[11px] text-slate-600">{node.data.variable || "var"} = {node.data.value || "..."}</p>;
       case "start": return <p className="text-[11px] text-slate-500">Ponto de entrada</p>;
       case "end": return <p className="text-[11px] text-slate-500">Encerra fluxo</p>;
@@ -1000,37 +1023,106 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
             {n.type === "ai_gen" && (
               <>
                 <div>
+                  <Label className="text-xs">Agente IA (opcional)</Label>
+                  <Select value={n.data.agent_id || ""} onValueChange={v => {
+                    const agent = agents.find(a => a.id === v);
+                    updateNodeData(n.id, { agent_id: v, model: agent?.model || n.data.model });
+                  }}>
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Usar configuração padrão" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Padrão ({llmConfig?.default_model || "Lovable AI"})</SelectItem>
+                      {agents.map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.model})</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label className="text-xs">Prompt</Label>
                   <Textarea value={n.data.prompt || ""} onChange={e => updateNodeData(n.id, { prompt: e.target.value })}
-                    placeholder="Gere uma resposta..." rows={4} className="text-xs mt-1" />
+                    placeholder="Gere uma resposta personalizada baseada no contexto da conversa e dados do lead..." rows={4} className="text-xs mt-1" />
+                  <p className="text-[10px] text-muted-foreground mt-1">Variáveis: {"{Nome}"}, {"{Telefone}"}, {"{mensagem_anterior}"}, {"{contexto_conversa}"}</p>
                 </div>
                 <div>
                   <Label className="text-xs">Modelo</Label>
-                  <Select value={n.data.model || "gpt-5-mini"} onValueChange={v => updateNodeData(n.id, { model: v })}>
+                  <Select value={n.data.model || "google/gemini-3-flash-preview"} onValueChange={v => updateNodeData(n.id, { model: v })}>
                     <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="gpt-5-mini">GPT-5 Mini</SelectItem>
-                      <SelectItem value="gpt-5">GPT-5</SelectItem>
-                      <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
+                      <SelectItem value="google/gemini-3-flash-preview">Gemini 3 Flash</SelectItem>
+                      <SelectItem value="google/gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
+                      <SelectItem value="google/gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
+                      <SelectItem value="openai/gpt-5-mini">GPT-5 Mini</SelectItem>
+                      <SelectItem value="openai/gpt-5">GPT-5</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="pt-2">
+                  <Button variant="outline" size="sm" className="w-full text-xs" disabled={aiTesting || !n.data.prompt}
+                    onClick={async () => {
+                      setAiTesting(true);
+                      setAiTestResult(null);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("ai-agent-chat", {
+                          body: {
+                            message: n.data.prompt.replace("{Nome}", "João").replace("{mensagem_anterior}", "Olá, preciso de ajuda").replace("{contexto_conversa}", "Cliente interessado em produtos"),
+                            agentId: n.data.agent_id || undefined,
+                            model: n.data.model,
+                          },
+                        });
+                        if (error) throw error;
+                        setAiTestResult(data?.reply || data?.message || JSON.stringify(data));
+                      } catch (e: any) {
+                        setAiTestResult(`❌ Erro: ${e.message}`);
+                      }
+                      setAiTesting(false);
+                    }}>
+                    <Play className="h-3 w-3 mr-1" /> {aiTesting ? "Testando..." : "Testar Prompt"}
+                  </Button>
+                  {aiTestResult && (
+                    <div className="mt-2 p-2 rounded border bg-slate-50 text-[11px] text-slate-700 max-h-32 overflow-y-auto whitespace-pre-wrap">
+                      {aiTestResult}
+                    </div>
+                  )}
                 </div>
               </>
             )}
 
             {/* ── Transfer ── */}
             {n.type === "transfer" && (
-              <div>
-                <Label className="text-xs">Transferir para</Label>
-                <Select value={n.data.target || "human"} onValueChange={v => updateNodeData(n.id, { target: v })}>
-                  <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="human">Atendente Humano</SelectItem>
-                    <SelectItem value="ai_agent">Agente IA</SelectItem>
-                    <SelectItem value="queue">Fila de Espera</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <>
+                <div>
+                  <Label className="text-xs">Transferir para</Label>
+                  <Select value={n.data.target || "human"} onValueChange={v => updateNodeData(n.id, { target: v, target_user_id: "", target_agent_id: "" })}>
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="human">Atendente Humano</SelectItem>
+                      <SelectItem value="ai_agent">Agente IA</SelectItem>
+                      <SelectItem value="queue">Fila de Espera</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {n.data.target === "human" && (
+                  <div>
+                    <Label className="text-xs">Atendente</Label>
+                    <Select value={n.data.target_user_id || ""} onValueChange={v => updateNodeData(n.id, { target_user_id: v })}>
+                      <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Qualquer disponível" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Qualquer disponível</SelectItem>
+                        {users.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name || "Sem nome"}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {n.data.target === "ai_agent" && (
+                  <div>
+                    <Label className="text-xs">Agente IA</Label>
+                    <Select value={n.data.target_agent_id || ""} onValueChange={v => updateNodeData(n.id, { target_agent_id: v })}>
+                      <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Selecionar agente..." /></SelectTrigger>
+                      <SelectContent>
+                        {agents.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </>
             )}
 
             {/* ── Set Variable ── */}
