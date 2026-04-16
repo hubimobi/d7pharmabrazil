@@ -1,95 +1,105 @@
 
 
-# Revisao Completa: Interface de Conversas Estilo Chatwoot
+# Correções WhatsApp + Nova Aba Flows (Typebot)
 
-## Problemas atuais vs Chatwoot real (screenshot)
+## Problemas Identificados
 
-A implementacao atual tem uma estrutura basica de 3 colunas mas falta a maioria dos elementos visuais e funcionais do Chatwoot:
+### 1. Conversas não aparecem (0 registros)
+- **Causa raiz**: O webhook da Evolution API só recebe eventos `connection.update` com `state="connecting"`. Nenhum evento `messages.upsert` chega, então conversas e mensagens nunca são criadas.
+- **Solução**: O webhook está configurado corretamente no código (`configureWebhook` envia `MESSAGES_UPSERT`), mas as instâncias mostram `state="connecting"` repetidamente — estão em loop de reconexão. Precisamos:
+  1. Corrigir o `whatsapp-evolution-webhook` para também tratar `state="connecting"` sem ignorar, e logar melhor
+  2. Adicionar um botão "Reconfigurar Webhook" na UI para forçar recadastro do webhook
+  3. Adicionar na aba Conversas um indicador quando não há dados + botão de diagnóstico
 
-### O que falta
+### 2. Envio de mensagens não funciona
+- **Causa raiz**: O `whatsapp-send` funciona em teoria, mas as instâncias podem não estar realmente conectadas (loop de "connecting"). Também, ao enviar pela UI de Conversas, o `contact_phone` pode não ter o código `55`.
+- **Solução**: Aplicar `ensureBrazilCountryCode` no frontend antes de enviar, e melhorar feedback de erro na UI
 
-**Sidebar esquerda (atual: icones simples)**
-- Falta: secoes Conversations (All/Mentions/Unattended), Folders, Priority Conversations, Leads Inbox, Teams (Sales, Support L1), Channels (lista de instancias com icone), Labels com contadores, perfil do usuario no rodape
+### 3. Funis com problemas
+- O `whatsapp-webhook` (trigger de funis) depende de receber eventos via webhook que não estão chegando
+- Steps sem `template_id` (config vazio) não produzem conteúdo
+- **Solução**: Validar steps ao salvar, alertar quando step não tem template
 
-**Lista de conversas (atual: lista simples)**
-- Falta: tabs "Minhas N" / "Nao atribuidas N" / "Todas N" com contadores
-- Falta: icones de canal (WhatsApp icon) antes do nome da instancia acima de cada conversa
-- Falta: botoes de sort/filter no header
-- Falta: labels coloridas inline (vermelho/azul) como no screenshot
+### 4. Nova aba Flows (inspirado Typebot)
+- Editor visual de fluxos com nós arrastáveis e conexões
+- Diferente dos funis lineares atuais: suporta ramificações, condições, loops
+- Nós: Start, Mensagem, Condição, Espera, Input (pergunta), AI Gen, Transferir, Fim
 
-**Area de chat (atual: bolhas basicas)**
-- Falta: tabs "Messages" / "Customer Dashboard" no topo
-- Falta: eventos do sistema inline (e.g. "Mathew M self-assigned this conversation", "set priority to high")
-- Falta: tabs "Reply" / "Private Note" no input com toggle visual
-- Falta: toolbar rica (Bold, Italic, link, quote, code, list)
-- Falta: botao "AI Assist" destacado
-- Falta: icones de acao no input (emoji, attachment, audio, signature)
-- Falta: botao "Resolve" grande no header superior direito (azul, nao ghost)
-- Falta: "Close details" link clicavel ao lado do nome do canal
+## Plano de Implementação
 
-**Painel de contato (atual: info basica)**
-- Falta: tabs "Contact" / "Copilot"
-- Falta: titulo/empresa abaixo do nome
-- Falta: icones de copiar ao lado de email/telefone
-- Falta: localizacao com bandeira
-- Falta: social links (Facebook, Twitter, LinkedIn)
-- Falta: 4 action icons (chat, edit, merge, delete)
-- Falta: secoes expansiveis com "+" : Conversation Actions, Conversation participants, Macros, Contact Attributes, Conversation Information, Previous Conversations
+### Arquivo 1: `supabase/functions/whatsapp-evolution-webhook/index.ts`
+- Melhorar logs para debug (logar payload completo em `messages.upsert`)
+- Tratar variações de formato do Evolution API v2
+- Adicionar fallback para `connection.update` com `state="connecting"` (logar mas não atualizar)
 
-## Plano de implementacao
+### Arquivo 2: `src/components/admin/WhatsAppConversations.tsx`
+- Adicionar `ensureBrazilCountryCode` ao enviar mensagem
+- Mostrar estado vazio informativo com diagnóstico quando 0 conversas
+- Melhorar tratamento de erro no envio
 
-### Arquivo modificado
-- `src/components/admin/WhatsAppConversations.tsx` — reescrita completa (~1000 linhas)
+### Arquivo 3: `src/pages/admin/WhatsAppPage.tsx`
+- Na aba Instâncias: adicionar botão "Reconfigurar Webhook" que chama `whatsapp-instance` com `action: "set_webhook"`
+- Na aba Funis: validar que steps têm template/conteúdo antes de ativar
+- Adicionar nova aba **Flows**
 
-### Mudancas estruturais
+### Arquivo 4 (novo): `src/components/admin/WhatsAppFlowEditor.tsx`
+- Editor visual de fluxos estilo Typebot
+- Canvas com nós arrastáveis (usando posicionamento absoluto + SVG para conexões)
+- Tipos de nó: Start, Message, Condition, Wait, Input, AI Generate, Transfer, End
+- Cada nó tem configuração inline (template, delay, condição)
+- Conexões entre nós via drag de pontos de saída
+- Salva estrutura como JSON no banco
 
-**1. Sidebar esquerda expandida (~200px em vez de 56px)**
-- Header com nome da loja + dropdown
-- Campo de busca global
-- Icone de compose (nova conversa)
-- Secao "Conversations" expansivel: All Conversations, Mentions, Unattended
-- Secao "Folders": Priority Conversations, Leads Inbox
-- Secao "Teams": Sales, Support L1
-- Secao "Channels": lista de instancias WhatsApp ativas com icone verde/vermelho
-- Secao "Labels": tags existentes com contadores
-- Rodape: avatar + nome do usuario logado
+### Migration SQL
+- Criar tabela `whatsapp_flows` (id, name, nodes JSON, edges JSON, active, tenant_id, trigger_event, created_at)
+- RLS com tenant isolation
 
-**2. Lista de conversas redesenhada**
-- Tabs: "Minhas N" / "Nao atribuidas N" / "Todas N" com badges de contagem
-- Icone de canal WhatsApp + nome da instancia acima de cada item
-- Labels coloridas (badges com cores) inline
-- Icones de sort e filter no header
+## Arquitetura do Flow Editor
 
-**3. Chat area profissional**
-- Header: avatar + nome + icone de alerta + canal + "Fechar detalhes" link + botao "Resolve" azul grande no canto direito
-- Tabs "Mensagens" / "Painel do Cliente" abaixo do header
-- Mensagens com eventos do sistema entre as bolhas (atribuicao, mudanca de prioridade, etc.)
-- Input area com tabs "Responder" / "Nota Privada" (nota privada com fundo amarelo)
-- Toolbar rica: B, I, link, quote, emoji, attach, code, list
-- Icones de acao: emoji, attach, audio, download, AI Assist
-- Botao "Enviar (Enter)" azul alinhado a direita
-- Hint text: "Shift + enter for new line. Start with '/' to select a Canned Response."
+```text
+WhatsAppFlowEditor.tsx (~600 linhas)
+├── FlowCanvas — área de canvas com zoom/pan
+│   ├── FlowNode — cada nó renderizado com posição absoluta
+│   │   ├── Configuração inline (mensagem, template, condição)
+│   │   └── Handles de conexão (entrada/saída)
+│   └── FlowEdges — SVG overlay para linhas de conexão
+├── FlowToolbar — barra lateral com tipos de nó para arrastar
+└── FlowProperties — painel de propriedades do nó selecionado
+```
 
-**4. Painel de contato expandido**
-- Tabs "Contato" / "Copilot"
-- Avatar grande + nome + icones de info/edit
-- Email com icone de copiar
-- Telefone com icone de copiar
-- Empresa e localizacao
-- 4 botoes de acao: conversa, editar, mesclar, excluir
-- Secoes acordeon com "+": Acoes da Conversa, Participantes, Macros, Atributos do Contato, Informacoes da Conversa, Conversas Anteriores
+Nós suportados (inspirados no Typebot do screenshot):
+- **Start**: ponto de entrada
+- **Message**: envia mensagem (template ou custom)
+- **Input**: faz pergunta e salva resposta em variável
+- **Condition**: ramifica baseado em variável/resposta
+- **Wait**: pausa com timeout
+- **AI Gen**: chama LLM para gerar resposta
+- **Transfer**: transfere para humano/agente
+- **Set Variable**: define variável para uso posterior
 
-### Dados (sem mudancas no banco)
-- Usa `whatsapp_conversations`, `whatsapp_message_log`, `whatsapp_templates`, `whatsapp_instances`
-- Realtime mantido
+## Detalhes técnicos
 
-### Paleta Chatwoot
-- Sidebar: `bg-white` com bordas sutis (light mode, como no screenshot)
-- Accent: `#1F93FF` (azul Chatwoot)
-- Active tab: underline azul
-- Resolve button: `bg-blue-500 text-white`
-- Private Note bg: `bg-amber-50`
-- Outbound bubble: `bg-blue-500 text-white` (ou `bg-emerald-100`)
-- Inbound bubble: `bg-white border`
-- System events: texto centralizado cinza
+### Dados de nó (JSON)
+```json
+{
+  "nodes": [
+    { "id": "1", "type": "start", "position": { "x": 50, "y": 100 }, "data": {} },
+    { "id": "2", "type": "message", "position": { "x": 300, "y": 100 }, "data": { "content": "Olá {Nome}!" } },
+    { "id": "3", "type": "condition", "position": { "x": 550, "y": 100 }, "data": { "variable": "Sport", "options": ["Ride", "Run", "Other"] } }
+  ],
+  "edges": [
+    { "from": "1", "to": "2" },
+    { "from": "2", "to": "3" },
+    { "from": "3", "to": "4", "label": "Ride" }
+  ]
+}
+```
+
+### Resumo de arquivos
+- `supabase/functions/whatsapp-evolution-webhook/index.ts` — melhoria de logs e tratamento
+- `supabase/functions/whatsapp-send/index.ts` — sem mudanças (já funciona)
+- `src/components/admin/WhatsAppConversations.tsx` — fix envio + estado vazio
+- `src/pages/admin/WhatsAppPage.tsx` — botão reconfigurar webhook + validação funis + aba Flows
+- `src/components/admin/WhatsAppFlowEditor.tsx` — novo editor visual
+- Migration: tabela `whatsapp_flows`
 
