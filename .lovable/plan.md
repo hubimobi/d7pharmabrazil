@@ -1,63 +1,48 @@
 
 
-## Ajustes Visuais e Funcionais no WhatsAppFlowEditor
+## Ajustes no WhatsAppFlowEditor
 
-### 1. Largura adaptativa dos blocos
-- Atualmente blocos têm largura fixa (`w-64` / 256px). Mudar para `min-w-[280px] max-w-[360px]` com `w-fit` para acomodar conteúdo.
-- Conteúdo longo (templates, prompts) usa `line-clamp-3` com `whitespace-pre-wrap`.
+### 1. Zoom com botão direito + scroll
+- Detectar `wheel` event no canvas com `event.buttons === 2` (botão direito segurado) → ajustar `zoom` state.
+- Prevenir context menu padrão (`onContextMenu={e => e.preventDefault()}`).
+- Range: 0.3x a 2x, step 0.1.
+- Zoom centrado na posição do mouse.
 
-### 2. Bloco Mensagem tipo Link — usar padrão existente
-Reutilizar exatamente o componente `CopyLinkButton` / dialog "Link Personalizado" (imagem 1) que já existe em `src/pages/admin/ProductsPage.tsx`:
-- Selecionar **Produto** (dropdown com produtos ativos via `useProducts`)
-- Selecionar **Prescritor** (cupom automático) — opcional
-- Selecionar **Versão do Checkout** (Padrão / v1 / v2 / v3)
-- Gera URL no formato: `{origin}/produto/{slug}?cupom={code}&ck={version}`
-- Salva em `data.link_config = { product_id, doctor_id, checkout_version }` e `data.link_url` resolvido
-- Remover campos manuais antigos de link customizado
+### 2. Largura adaptativa real para mensagens
+- Trocar `max-w-[360px]` por `max-w-[480px]` no card de mensagem.
+- Remover `line-clamp-3` do preview de mensagem texto.
+- Usar `whitespace-pre-wrap break-words` para texto fluir naturalmente.
+- Container `w-fit` permite expansão até o max.
 
-### 3. Condição "qualquer resposta" — esconder lista de palavras
-Quando `condition_type === "any_response"`:
-- Ocultar completamente o array `options` (palavras-chave por linha)
-- Mostrar apenas uma saída única "Qualquer resposta" + saída "Sem resposta (timeout)"
-- Quando `condition_type === "keywords"`, manter UI atual de múltiplas linhas
+### 3. Confirmação ao deletar bloco
+- Adicionar `AlertDialog` ao clicar no botão lixeira do nó.
+- Mensagem: "Tem certeza que deseja excluir este bloco? Esta ação não pode ser desfeita."
+- Botões: Cancelar / Excluir (destructive).
+- State: `deleteConfirmId: string | null`.
 
-### 4. Visual estilo ManyChat (imagem 2)
-Refinar cards dos nós:
-- **Header colorido** com ícone + tipo + nome da plataforma ("WhatsApp" em cinza pequeno acima do tipo)
-- **Body branco** com preview rico do conteúdo (bolhas de mensagem para `message`, botões para `choice`, etc.)
-- **Sombra sutil** `shadow-md` + borda fina `border-2` colorida pelo tipo
-- **Handles de saída** como círculos pretos pequenos (8px) na borda direita, com label "Next Step" / nome da opção
-- **Múltiplos handles** para `choice` e `condition` — um por opção, alinhados verticalmente com a opção correspondente
-- **Hover state** com ring colorido
-- Footer mostra contagem de saídas e botão "+" para conectar
+### 4. Bloco "Definir Variável" enriquecido
+Adicionar seletor de **fonte da variável** com tipos:
+- **Produto**: lista produtos ativos (`useProducts`)
+- **Tag**: lista tags de `customer_tags` + presets
+- **Representante**: lista de `representatives` ativos
+- **Status da compra**: enum (pago, pendente, cancelado, reembolsado, etc.)
+- **Estágio recuperação carrinho**: stages do `abandoned_carts` (novo, 1º contato, em negociação, proposta, perdido, convertido)
+- **Estágio recompra**: stages do `repurchase_funnel`
+- **Cupom**: lista de cupons ativos
+- **Perfil comportamental**: presets (Novo, Recorrente, VIP, Inativo, Em recuperação)
 
-### Arquivos modificados
-- `src/components/admin/WhatsAppFlowEditor.tsx`
-
-### Detalhes técnicos
+Estrutura de dados:
 ```typescript
-// Link config reaproveitado
-data.link_config = {
-  product_id: string;
-  doctor_id?: string;
-  checkout_version?: "default" | "1" | "2" | "3";
-}
-// URL resolvida em runtime via products + doctors loaded
-
-// Condition simplificado quando any_response
-{condition_type === "keywords" && (
-  <KeywordsEditor options={data.options} />
-)}
-
-// Card visual ManyChat-style
-<div className="bg-white rounded-xl shadow-md border-2 min-w-[280px] max-w-[360px] w-fit">
-  <div className={`${meta.bg} px-3 py-2 rounded-t-xl flex items-center gap-2`}>
-    <Icon /> <div><p className="text-[10px] text-muted">WhatsApp</p><p className="font-semibold text-sm">{meta.label}</p></div>
-  </div>
-  <div className="p-3 bg-white">{preview}</div>
-  <div className="border-t px-3 py-2 flex justify-between text-xs">
-    {outputs.map(o => <Handle label={o.label} />)}
-  </div>
-</div>
+data.variables: Array<{
+  name: string;                  // nome interno (ex: "produto_interesse")
+  source_type: "product" | "tag" | "representative" | "order_status" | "recovery_stage" | "repurchase_stage" | "coupon" | "behavior_profile" | "custom";
+  source_value: string;          // id ou valor selecionado
+  source_label: string;          // label legível para preview
+}>
 ```
+
+UI: lista de linhas, cada uma com Select (tipo) + Select (valor) + botão remover. Botão "+ Adicionar variável" no rodapé permitindo concatenar múltiplas.
+
+### Arquivo modificado
+- `src/components/admin/WhatsAppFlowEditor.tsx`
 
