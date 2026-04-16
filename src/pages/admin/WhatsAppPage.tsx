@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ConversationsTab from "@/components/admin/WhatsAppConversations";
+import WhatsAppFlowEditor from "@/components/admin/WhatsAppFlowEditor";
 import { Checkbox } from "@/components/ui/checkbox";
 
 // ==================== TYPES ====================
@@ -2269,6 +2270,7 @@ export default function WhatsAppPage() {
           <TabsTrigger value="templates" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Templates</TabsTrigger>
           <TabsTrigger value="funnels" className="gap-1.5"><GitBranch className="h-3.5 w-3.5" /> Funis</TabsTrigger>
           <TabsTrigger value="broadcast" className="gap-1.5"><Megaphone className="h-3.5 w-3.5" /> Transmissão</TabsTrigger>
+          <TabsTrigger value="flows" className="gap-1.5"><Zap className="h-3.5 w-3.5" /> Flows</TabsTrigger>
           <TabsTrigger value="contacts" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Contatos</TabsTrigger>
           <TabsTrigger value="queue" className="gap-1.5"><Clock className="h-3.5 w-3.5" /> Fila</TabsTrigger>
           <TabsTrigger value="sending-config" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" /> Envio</TabsTrigger>
@@ -2280,6 +2282,7 @@ export default function WhatsAppPage() {
         <TabsContent value="templates"><TemplatesTab /></TabsContent>
         <TabsContent value="funnels"><FunnelsTab /></TabsContent>
         <TabsContent value="broadcast"><BroadcastTab /></TabsContent>
+        <TabsContent value="flows"><WhatsAppFlowEditor /></TabsContent>
         <TabsContent value="contacts"><ContactsTab /></TabsContent>
         <TabsContent value="queue"><QueueTab /></TabsContent>
         <TabsContent value="sending-config"><SendingConfigTab /></TabsContent>
