@@ -175,7 +175,7 @@ function FlowList({ onEdit }: { onEdit: (flow: Flow | null) => void }) {
 }
 
 /* ───── Test Flow Simulator ───── */
-function FlowTestDialog({ open, onClose, nodes, edges }: { open: boolean; onClose: () => void; nodes: FlowNode[]; edges: FlowEdge[] }) {
+function FlowTestPanel({ onClose, nodes, edges }: { onClose: () => void; nodes: FlowNode[]; edges: FlowEdge[] }) {
   const [messages, setMessages] = useState<{ from: "bot" | "user"; text: string }[]>([]);
   const [variables, setVariables] = useState<Record<string, string>>({ Nome: "João", Telefone: "11999999999", Produto: "Produto Exemplo" });
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
