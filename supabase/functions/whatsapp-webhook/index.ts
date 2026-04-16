@@ -6,6 +6,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function ensureBrazilCountryCode(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10 || digits.length === 11) {
+    return "55" + digits;
+  }
+  return digits;
+}
+
 function parseSpintax(text: string): string {
   const regex = /\{([^{}]+)\}/;
   let result = text;
@@ -63,7 +71,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), { status: 400, headers: corsHeaders });
     }
 
-    const { evento, nome, telefone, produto, link, cidade, extra, funnel_id, force, instance_id: overrideInstanceId } = parsed.data;
+    const { evento, nome, telefone: rawTelefone, produto, link, cidade, extra, funnel_id, force, instance_id: overrideInstanceId } = parsed.data;
+    const telefone = ensureBrazilCountryCode(rawTelefone);
 
     let query = supabase
       .from("whatsapp_funnels")
