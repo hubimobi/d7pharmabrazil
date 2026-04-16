@@ -71,7 +71,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), { status: 400, headers: corsHeaders });
     }
 
-    const { evento, nome, telefone, produto, link, cidade, extra, funnel_id, force, instance_id: overrideInstanceId } = parsed.data;
+    const { evento, nome, telefone: rawTelefone, produto, link, cidade, extra, funnel_id, force, instance_id: overrideInstanceId } = parsed.data;
+    const telefone = ensureBrazilCountryCode(rawTelefone);
 
     let query = supabase
       .from("whatsapp_funnels")
