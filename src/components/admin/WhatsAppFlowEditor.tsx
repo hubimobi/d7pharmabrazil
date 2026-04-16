@@ -862,7 +862,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           return (
             <div className="space-y-1">
               {prod && <Badge variant="outline" className="text-[9px] h-4"><ShoppingBag className="h-2.5 w-2.5 mr-1" />{prod.name}</Badge>}
-              <p className="text-[10px] text-blue-600 break-all line-clamp-2">{url || "Configurar link..."}</p>
+              <p className="text-[11px] text-blue-600 break-all whitespace-pre-wrap">{url || "Configurar link..."}</p>
             </div>
           );
         }
