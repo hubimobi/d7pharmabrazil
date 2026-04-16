@@ -1281,7 +1281,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           })}
           {connecting && (
             <div className="mt-4 p-2 rounded-md bg-blue-50 border border-blue-200 text-[10px] text-blue-700">
-              🔗 Clique no destino para conectar{connecting.handle ? ` (${connecting.handle})` : ""}
+              🔗 Arraste até o destino ou solte no vazio para criar bloco
               <Button size="sm" variant="ghost" className="h-5 text-[10px] mt-1 w-full" onClick={() => setConnecting(null)}>Cancelar</Button>
             </div>
           )}
@@ -1289,7 +1289,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
 
         {/* Canvas */}
         <div ref={canvasRef} className="flex-1 relative overflow-hidden bg-slate-50 cursor-grab active:cursor-grabbing"
-          onMouseDown={handleCanvasMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+          onMouseDown={handleCanvasMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleCanvasMouseUp} onMouseLeave={handleCanvasMouseUp}>
           <div className="flow-canvas-bg absolute inset-0" style={{
             backgroundImage: "radial-gradient(circle, #CBD5E1 1px, transparent 1px)",
             backgroundSize: `${20 * zoom}px ${20 * zoom}px`,
@@ -1305,6 +1305,27 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
             </defs>
             <g className="pointer-events-auto">{renderEdges()}</g>
           </svg>
+
+          {/* Temporary drag-connect line (in screen coords, no transform) */}
+          {connecting && (() => {
+            const fromNode = nodes.find(n => n.id === connecting.nodeId);
+            if (!fromNode) return null;
+            const handles = getOutputHandles(fromNode);
+            let yOff = 30;
+            if (handles.length > 0 && connecting.handle) {
+              const hi = handles.findIndex(h => h.label === connecting.handle);
+              if (hi >= 0) yOff = 38 + hi * 18;
+            }
+            const sx = (fromNode.position.x + 240) * zoom + pan.x;
+            const sy = (fromNode.position.y + yOff) * zoom + pan.y;
+            return (
+              <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
+                <path d={`M ${sx} ${sy} L ${connecting.mouseX} ${connecting.mouseY}`}
+                  stroke="hsl(var(--primary))" strokeWidth="2" strokeDasharray="6 4" fill="none" />
+                <circle cx={connecting.mouseX} cy={connecting.mouseY} r="4" fill="hsl(var(--primary))" />
+              </svg>
+            );
+          })()}
 
           <div style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0" }} className="absolute">
             {nodes.map(node => {
@@ -1337,8 +1358,10 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                       <div className="px-3 pb-2 space-y-1">
                         {handles.map((h, i) => (
                           <div key={i} className="flex items-center gap-1.5 text-[10px]">
-                            <div className={`w-2.5 h-2.5 rounded-full border-2 cursor-pointer flex-shrink-0 transition-colors ${connecting?.nodeId === node.id && connecting?.handle === h.label ? "border-blue-500 bg-blue-200 animate-pulse" : "border-slate-300 bg-white hover:border-blue-400"}`}
-                              onClick={e => { e.stopPropagation(); handleOutputClick(node.id, h.label); }} />
+                            <div
+                              title="Arraste para conectar ou solte no vazio"
+                              className={`w-2.5 h-2.5 rounded-full border-2 cursor-crosshair flex-shrink-0 transition-colors ${connecting?.nodeId === node.id && connecting?.handle === h.label ? "border-blue-500 bg-blue-200 animate-pulse" : "border-slate-300 bg-white hover:border-blue-400"}`}
+                              onMouseDown={e => handleOutputMouseDown(e, node.id, h.label)} />
                             <span className="text-slate-500">{h.label}</span>
                           </div>
                         ))}
@@ -1347,25 +1370,75 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                   </div>
                   {/* Input handle */}
                   {!isStart && (
-                    <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-slate-300 bg-white hover:border-blue-500 cursor-pointer transition-colors"
-                      onClick={e => { e.stopPropagation(); handleInputClick(node.id); }} />
+                    <div data-input-node={node.id}
+                      className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-slate-300 bg-white hover:border-blue-500 hover:scale-125 cursor-pointer transition-all"
+                      onMouseDown={e => e.stopPropagation()} />
                   )}
                   {/* Single output handle */}
                   {!hasMultipleOutputs && node.type !== "end" && (
-                    <div className={`absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 bg-white hover:border-blue-500 cursor-pointer transition-colors ${connecting?.nodeId === node.id ? "border-blue-500 animate-pulse" : "border-slate-300"}`}
-                      onClick={e => { e.stopPropagation(); handleOutputClick(node.id); }} />
+                    <div
+                      title="Arraste para conectar ou solte no vazio para criar bloco"
+                      className={`absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 bg-white hover:border-blue-500 hover:scale-125 cursor-crosshair transition-all ${connecting?.nodeId === node.id ? "border-blue-500 animate-pulse" : "border-slate-300"}`}
+                      onMouseDown={e => handleOutputMouseDown(e, node.id)} />
                   )}
                 </div>
               );
             })}
           </div>
+
+          {/* Add Next Step Menu */}
+          {addNodeMenu && (
+            <div
+              className="absolute z-40 w-[260px] bg-popover border rounded-lg shadow-2xl overflow-hidden"
+              style={{ left: Math.min(addNodeMenu.x, (canvasRef.current?.clientWidth || 800) - 270), top: Math.min(addNodeMenu.y, (canvasRef.current?.clientHeight || 600) - 400) }}
+              onMouseDown={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
+                <p className="text-xs font-semibold">Próxima etapa</p>
+                <button onClick={() => setAddNodeMenu(null)} className="text-muted-foreground hover:text-foreground">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="max-h-[400px] overflow-y-auto p-2 space-y-2">
+                <div>
+                  <p className="text-[9px] font-semibold text-muted-foreground uppercase px-1 mb-1">Conteúdo</p>
+                  {(["message", "input", "choice"] as NodeType[]).map(t => {
+                    const m = NODE_TYPES.find(x => x.type === t)!;
+                    const I = m.icon;
+                    return (
+                      <button key={t} onClick={() => handleAddFromMenu(t)}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium hover:shadow-sm transition-all border ${m.bg}`}>
+                        <I className="h-3.5 w-3.5" style={{ color: m.color }} /> {m.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div>
+                  <p className="text-[9px] font-semibold text-muted-foreground uppercase px-1 mb-1">Lógica</p>
+                  {(["condition", "wait", "ai_gen", "transfer", "action", "set_variable", "end"] as NodeType[]).map(t => {
+                    const m = NODE_TYPES.find(x => x.type === t)!;
+                    const I = m.icon;
+                    return (
+                      <button key={t} onClick={() => handleAddFromMenu(t)}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium hover:shadow-sm transition-all border ${m.bg} mt-1`}>
+                        <I className="h-3.5 w-3.5" style={{ color: m.color }} /> {m.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Properties */}
         {renderPropertiesPanel()}
-      </div>
 
-      <FlowTestDialog open={showTest} onClose={() => setShowTest(false)} nodes={nodes} edges={edges} />
+        {/* Test Panel (lateral) */}
+        {testPanelOpen && (
+          <FlowTestPanel onClose={() => setTestPanelOpen(false)} nodes={nodes} edges={edges} />
+        )}
+      </div>
     </div>
   );
 }
