@@ -712,16 +712,17 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
       if (!fromNode || !toNode) return null;
 
       const handles = getOutputHandles(fromNode);
-      let y1Offset = 30;
+      // Header ~46, body ~36 → footer starts ~y=90. Each multi-handle row ~22px.
+      let y1Offset = handles.length > 0 ? 100 : 100;
       if (handles.length > 0 && edge.label) {
         const hIdx = handles.findIndex(h => h.label === edge.label);
-        if (hIdx >= 0) y1Offset = 38 + hIdx * 18;
+        if (hIdx >= 0) y1Offset = 100 + hIdx * 22;
       }
 
-      const x1 = fromNode.position.x + 240;
+      const x1 = fromNode.position.x + 260;
       const y1 = fromNode.position.y + y1Offset;
       const x2 = toNode.position.x;
-      const y2 = toNode.position.y + 30;
+      const y2 = toNode.position.y + 32;
       const midX = (x1 + x2) / 2;
 
       return (
