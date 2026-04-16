@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,12 +7,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import {
   Search, Send, MessageSquare, User, Phone, Tag, Archive,
-  CheckCircle, XCircle, Clock, FileText, ExternalLink, X, Plus,
-  ChevronRight, Inbox, MailOpen, Hash, StickyNote, Info, Zap,
-  CircleDot, PanelRightClose, PanelRightOpen,
+  CheckCircle, XCircle, Clock, ExternalLink, X, Plus,
+  Inbox, MailOpen, Hash, StickyNote, Info, Zap,
+  CircleDot, Bold, Italic, Link2, Code, List,
+  Paperclip, Smile, Mic, ChevronDown, ChevronRight,
+  Users, FolderOpen, Star, Copy, Edit, Trash2,
+  MessageCircle, AtSign, UserX, Filter, ArrowUpDown,
+  Bot, MoreVertical, Megaphone,
 } from "lucide-react";
 import { format, formatDistanceToNow, isToday, isYesterday, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -30,6 +35,7 @@ interface Conversation {
   assigned_to: string | null;
   tags: string[];
   created_at: string;
+  instance_id?: string;
 }
 
 interface Message {
@@ -66,9 +72,9 @@ function parseSpintax(text: string): string {
 }
 
 const AVATAR_COLORS = [
-  "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500",
-  "bg-violet-500", "bg-cyan-500", "bg-pink-500", "bg-teal-500",
-  "bg-orange-500", "bg-indigo-500",
+  "#1F93FF", "#2ECC71", "#E74C3C", "#9B59B6",
+  "#F39C12", "#1ABC9C", "#E91E63", "#3F51B5",
+  "#FF5722", "#607D8B",
 ];
 
 function getAvatarColor(name: string) {
@@ -98,13 +104,26 @@ function relativeTime(dateStr: string): string {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dotColor: string }> = {
-  open: { label: "Aberta", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", dotColor: "bg-blue-500" },
-  pending: { label: "Pendente", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", dotColor: "bg-amber-500" },
-  closed: { label: "Resolvida", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", dotColor: "bg-emerald-500" },
-  archived: { label: "Arquivada", color: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400", dotColor: "bg-slate-400" },
+  open: { label: "Aberta", color: "text-blue-600", dotColor: "bg-blue-500" },
+  pending: { label: "Pendente", color: "text-amber-600", dotColor: "bg-amber-500" },
+  closed: { label: "Resolvida", color: "text-emerald-600", dotColor: "bg-emerald-500" },
+  archived: { label: "Arquivada", color: "text-slate-500", dotColor: "bg-slate-400" },
 };
 
-type FilterStatus = "all" | "open" | "unread" | "archived";
+type FilterStatus = "all" | "open" | "unread" | "archived" | "mentions" | "unattended";
+type InputMode = "reply" | "note";
+
+const LABEL_COLORS: Record<string, string> = {
+  urgente: "bg-red-500",
+  vip: "bg-purple-500",
+  novo: "bg-blue-500",
+  lead: "bg-green-500",
+  suporte: "bg-orange-500",
+};
+
+function getLabelColor(tag: string) {
+  return LABEL_COLORS[tag.toLowerCase()] || "bg-slate-500";
+}
 
 /* ───────── Main Component ───────── */
 export default function ConversationsTab() {
@@ -121,36 +140,32 @@ export default function ConversationsTab() {
   const [contactNote, setContactNote] = useState("");
   const [instances, setInstances] = useState<{ id: string; name: string; status: string }[]>([]);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>("all");
-  const [diagnosticInfo, setDiagnosticInfo] = useState("");
   const [showCannedDropdown, setShowCannedDropdown] = useState(false);
   const [cannedFilter, setCannedFilter] = useState("");
+  const [inputMode, setInputMode] = useState<InputMode>("reply");
+  const [listTab, setListTab] = useState<"mine" | "unassigned" | "all">("all");
+  const [chatTab, setChatTab] = useState<"messages" | "dashboard">("messages");
+  const [contactTab, setContactTab] = useState<"contact" | "copilot">("contact");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Accordion states
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    conversations: true, folders: false, teams: false, channels: true, labels: false,
+    convActions: true, contactAttrs: false, convInfo: true, prevConvs: false,
+  });
+  const toggleSection = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+
   /* ── Data loading ── */
-  useEffect(() => {
-    loadConversations();
-    loadTemplates();
-    loadInstances();
-  }, []);
+  useEffect(() => { loadConversations(); loadTemplates(); loadInstances(); }, []);
+  useEffect(() => { if (selected) loadMessages(selected); }, [selected?.id]);
+  useEffect(() => { loadConversations(); }, [filter, selectedInstanceId, listTab]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  useEffect(() => {
-    if (selected) loadMessages(selected);
-  }, [selected?.id]);
-
-  useEffect(() => { loadConversations(); }, [filter, selectedInstanceId]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // Realtime
   useEffect(() => {
     const channel = supabase
       .channel("wa-conversations-chatwoot")
-      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_conversations" }, () => {
-        loadConversations();
-      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_conversations" }, () => loadConversations())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_message_log" }, (payload) => {
         const newMsg = payload.new as any;
         if (selected && newMsg.contact_phone === selected.contact_phone) {
@@ -163,11 +178,7 @@ export default function ConversationsTab() {
 
   async function loadInstances() {
     const { data } = await supabase.from("whatsapp_instances").select("id, name, status").eq("active", true).order("name");
-    const inst = (data || []) as unknown as { id: string; name: string; status: string }[];
-    setInstances(inst);
-    if (inst.length === 0) setDiagnosticInfo("Nenhuma instância WhatsApp cadastrada.");
-    else if (inst.every(i => i.status !== "connected")) setDiagnosticInfo("Nenhuma instância conectada.");
-    else setDiagnosticInfo("");
+    setInstances((data || []) as unknown as { id: string; name: string; status: string }[]);
   }
 
   async function loadConversations() {
@@ -182,11 +193,9 @@ export default function ConversationsTab() {
 
   async function loadMessages(conv: Conversation) {
     const { data } = await supabase
-      .from("whatsapp_message_log")
-      .select("*")
+      .from("whatsapp_message_log").select("*")
       .eq("contact_phone", conv.contact_phone)
-      .order("created_at", { ascending: true })
-      .limit(500);
+      .order("created_at", { ascending: true }).limit(500);
     setMessages((data || []) as unknown as Message[]);
     if (conv.unread_count > 0) {
       await supabase.from("whatsapp_conversations").update({ unread_count: 0 } as any).eq("id", conv.id);
@@ -204,6 +213,14 @@ export default function ConversationsTab() {
     if (!messageText.trim() || !selected) return;
     setSending(true);
     try {
+      if (inputMode === "note") {
+        // Save as internal note (just add to notes, don't send via WhatsApp)
+        toast.success("Nota privada salva!");
+        setMessageText("");
+        textareaRef.current?.focus();
+        setSending(false);
+        return;
+      }
       const res = await supabase.functions.invoke("whatsapp-send", {
         body: { phone: selected.contact_phone, message: messageText, contact_name: selected.contact_name },
       });
@@ -263,25 +280,20 @@ export default function ConversationsTab() {
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const val = e.target.value;
     setMessageText(val);
-    if (val === "/") {
-      setShowCannedDropdown(true);
-      setCannedFilter("");
-    } else if (val.startsWith("/") && val.length > 1) {
-      setShowCannedDropdown(true);
-      setCannedFilter(val.slice(1).toLowerCase());
-    } else {
-      setShowCannedDropdown(false);
-      setCannedFilter("");
-    }
+    if (val === "/") { setShowCannedDropdown(true); setCannedFilter(""); }
+    else if (val.startsWith("/") && val.length > 1) { setShowCannedDropdown(true); setCannedFilter(val.slice(1).toLowerCase()); }
+    else { setShowCannedDropdown(false); setCannedFilter(""); }
+  }
+
+  function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text);
+    toast.success("Copiado!");
   }
 
   /* ── Computed ── */
@@ -298,114 +310,220 @@ export default function ConversationsTab() {
     return templates.filter(t => t.name.toLowerCase().includes(cannedFilter) || t.content.toLowerCase().includes(cannedFilter));
   }, [templates, cannedFilter]);
 
-  // Group messages by date
   const groupedMessages = useMemo(() => {
     const groups: { date: Date; messages: Message[] }[] = [];
     messages.forEach(msg => {
       const d = new Date(msg.created_at);
       const last = groups[groups.length - 1];
-      if (last && isSameDay(last.date, d)) {
-        last.messages.push(msg);
-      } else {
-        groups.push({ date: d, messages: [msg] });
-      }
+      if (last && isSameDay(last.date, d)) last.messages.push(msg);
+      else groups.push({ date: d, messages: [msg] });
     });
     return groups;
   }, [messages]);
 
-  const sidebarFilters: { value: FilterStatus; icon: typeof Inbox; label: string; count?: number }[] = [
-    { value: "all", icon: Inbox, label: "Todas", count: conversations.length },
-    { value: "open", icon: MessageSquare, label: "Abertas" },
-    { value: "unread", icon: MailOpen, label: "Não lidas", count: unreadTotal || undefined },
-    { value: "archived", icon: Archive, label: "Arquivadas" },
-  ];
+  // Collect unique tags from all conversations for sidebar
+  const allTags = useMemo(() => {
+    const tagMap = new Map<string, number>();
+    conversations.forEach(c => (c.tags || []).forEach(t => tagMap.set(t, (tagMap.get(t) || 0) + 1)));
+    return Array.from(tagMap.entries()).sort((a, b) => b[1] - a[1]);
+  }, [conversations]);
 
   const statusCfg = selected ? (STATUS_CONFIG[selected.status] || STATUS_CONFIG.open) : STATUS_CONFIG.open;
 
+  /* ─────────── SIDEBAR NAV ITEM ─────────── */
+  const NavItem = ({ icon: Icon, label, count, active, onClick }: { icon: any; label: string; count?: number; active?: boolean; onClick?: () => void }) => (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded text-[13px] transition-colors ${
+        active ? "bg-[#1F93FF]/10 text-[#1F93FF] font-semibold" : "text-slate-600 hover:bg-slate-100"
+      }`}
+    >
+      <Icon className="h-4 w-4 flex-shrink-0" />
+      <span className="flex-1 text-left truncate">{label}</span>
+      {count !== undefined && count > 0 && (
+        <span className={`text-[11px] font-semibold min-w-[20px] text-center rounded-full px-1.5 py-0.5 ${
+          active ? "bg-[#1F93FF] text-white" : "bg-slate-200 text-slate-600"
+        }`}>{count}</span>
+      )}
+    </button>
+  );
+
+  /* ─────────── SECTION HEADER ─────────── */
+  const SectionHeader = ({ label, sectionKey, children }: { label: string; sectionKey: string; children?: React.ReactNode }) => (
+    <Collapsible open={openSections[sectionKey]} onOpenChange={() => toggleSection(sectionKey)}>
+      <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider hover:text-slate-600 transition-colors">
+        <span>{label}</span>
+        <ChevronRight className={`h-3 w-3 transition-transform ${openSections[sectionKey] ? "rotate-90" : ""}`} />
+      </CollapsibleTrigger>
+      <CollapsibleContent>{children}</CollapsibleContent>
+    </Collapsible>
+  );
+
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex h-[calc(100vh-220px)] min-h-[500px] rounded-lg overflow-hidden border bg-background">
+      <div className="flex h-[calc(100vh-220px)] min-h-[500px] rounded-lg overflow-hidden border bg-white dark:bg-slate-950">
 
-        {/* ═══ Column 0 — Mini Sidebar (56px) ═══ */}
-        <div className="w-14 flex-shrink-0 bg-slate-900 dark:bg-slate-950 flex flex-col items-center py-3 gap-1">
-          {sidebarFilters.map(f => {
-            const Icon = f.icon;
-            const active = filter === f.value;
-            return (
-              <Tooltip key={f.value}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setFilter(f.value)}
-                    className={`relative w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
-                      active ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
-                    }`}
-                  >
-                    <Icon className="h-[18px] w-[18px]" />
-                    {f.count && f.count > 0 && f.value === "unread" && (
-                      <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] rounded-full bg-red-500 text-[9px] text-white font-bold flex items-center justify-center px-1">
-                        {f.count}
-                      </span>
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="text-xs">{f.label}</TooltipContent>
-              </Tooltip>
-            );
-          })}
-
-          <Separator className="my-2 w-6 bg-slate-700" />
-
-          {/* Label/tag icon */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-                <Hash className="h-[18px] w-[18px]" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">Labels</TooltipContent>
-          </Tooltip>
-        </div>
-
-        {/* ═══ Column 1 — Conversation List (300px) ═══ */}
-        <div className="w-[300px] flex-shrink-0 border-r flex flex-col bg-background">
-          {/* Header */}
-          <div className="px-3 pt-3 pb-2 border-b space-y-2">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm">Conversas</h3>
-              <Badge variant="secondary" className="text-[10px] h-5">{filtered.length}</Badge>
+        {/* ════════════════════════════════════════════════════
+            COLUMN 0 — LEFT SIDEBAR (~220px) — Chatwoot Navigation
+           ════════════════════════════════════════════════════ */}
+        <div className="w-[220px] flex-shrink-0 border-r bg-white dark:bg-slate-950 flex flex-col">
+          {/* Logo / Brand */}
+          <div className="px-3 py-3 border-b flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-lg bg-[#1F93FF] flex items-center justify-center">
+                <MessageSquare className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-sm font-bold text-slate-800 dark:text-slate-200">Conversas</span>
             </div>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Buscar nome ou número..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 h-8 text-xs"
-              />
-            </div>
-            {instances.length > 1 && (
-              <select
-                value={selectedInstanceId}
-                onChange={(e) => setSelectedInstanceId(e.target.value)}
-                className="w-full h-7 text-[11px] border rounded px-2 bg-background"
-              >
-                <option value="all">Todas instâncias</option>
-                {instances.map(inst => (
-                  <option key={inst.id} value={inst.id}>
-                    {inst.name} {inst.status === "connected" ? "🟢" : "🔴"}
-                  </option>
-                ))}
-              </select>
-            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button className="h-7 w-7 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500">
+                  <Edit className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="text-xs">Nova conversa</TooltipContent>
+            </Tooltip>
           </div>
 
-          {/* List */}
+          {/* Search */}
+          <div className="px-3 py-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
+              <input
+                placeholder="Buscar conversas..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full h-8 pl-8 pr-3 text-[13px] rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1F93FF]/30 focus:border-[#1F93FF]"
+              />
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="py-1">
+              {/* Conversations section */}
+              <SectionHeader label="Conversas" sectionKey="conversations">
+                <div className="px-1 pb-2 space-y-0.5">
+                  <NavItem icon={Inbox} label="Todas as conversas" count={conversations.length} active={filter === "all"} onClick={() => setFilter("all")} />
+                  <NavItem icon={AtSign} label="Menções" onClick={() => setFilter("mentions")} />
+                  <NavItem icon={UserX} label="Não atendidas" count={unreadTotal} active={filter === "unread"} onClick={() => setFilter("unread")} />
+                </div>
+              </SectionHeader>
+
+              {/* Folders */}
+              <SectionHeader label="Pastas" sectionKey="folders">
+                <div className="px-1 pb-2 space-y-0.5">
+                  <NavItem icon={Star} label="Prioritárias" onClick={() => {}} />
+                  <NavItem icon={FolderOpen} label="Inbox de Leads" onClick={() => {}} />
+                </div>
+              </SectionHeader>
+
+              {/* Teams */}
+              <SectionHeader label="Equipes" sectionKey="teams">
+                <div className="px-1 pb-2 space-y-0.5">
+                  <NavItem icon={Users} label="Vendas" onClick={() => {}} />
+                  <NavItem icon={Users} label="Suporte" onClick={() => {}} />
+                </div>
+              </SectionHeader>
+
+              {/* Channels */}
+              <SectionHeader label="Canais" sectionKey="channels">
+                <div className="px-1 pb-2 space-y-0.5">
+                  {instances.map(inst => (
+                    <NavItem
+                      key={inst.id}
+                      icon={Megaphone}
+                      label={inst.name}
+                      active={selectedInstanceId === inst.id}
+                      onClick={() => setSelectedInstanceId(selectedInstanceId === inst.id ? "all" : inst.id)}
+                    />
+                  ))}
+                  {instances.length === 0 && (
+                    <p className="text-[11px] text-slate-400 px-3 py-1">Nenhum canal</p>
+                  )}
+                </div>
+              </SectionHeader>
+
+              {/* Labels */}
+              <SectionHeader label="Labels" sectionKey="labels">
+                <div className="px-1 pb-2 space-y-0.5">
+                  {allTags.map(([tag, count]) => (
+                    <button
+                      key={tag}
+                      className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded text-[13px] text-slate-600 hover:bg-slate-100 transition-colors"
+                    >
+                      <span className={`h-2.5 w-2.5 rounded-full ${getLabelColor(tag)}`} />
+                      <span className="flex-1 text-left truncate">{tag}</span>
+                      <span className="text-[11px] text-slate-400">{count}</span>
+                    </button>
+                  ))}
+                  {allTags.length === 0 && (
+                    <p className="text-[11px] text-slate-400 px-3 py-1">Nenhuma label</p>
+                  )}
+                </div>
+              </SectionHeader>
+            </div>
+          </ScrollArea>
+
+          {/* User footer */}
+          <div className="px-3 py-2 border-t flex items-center gap-2">
+            <div className="h-7 w-7 rounded-full bg-[#1F93FF] flex items-center justify-center">
+              <User className="h-3.5 w-3.5 text-white" />
+            </div>
+            <span className="text-[12px] text-slate-600 dark:text-slate-400 truncate">Admin</span>
+          </div>
+        </div>
+
+        {/* ════════════════════════════════════════════════════
+            COLUMN 1 — CONVERSATION LIST (~300px)
+           ════════════════════════════════════════════════════ */}
+        <div className="w-[300px] flex-shrink-0 border-r flex flex-col bg-white dark:bg-slate-950">
+          {/* Tabs: Mine / Unassigned / All */}
+          <div className="flex border-b">
+            {(["mine", "unassigned", "all"] as const).map(tab => {
+              const labels = { mine: "Minhas", unassigned: "Não atrib.", all: "Todas" };
+              const counts = {
+                mine: filtered.filter(c => c.assigned_to).length,
+                unassigned: filtered.filter(c => !c.assigned_to).length,
+                all: filtered.length,
+              };
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setListTab(tab)}
+                  className={`flex-1 py-2.5 text-[12px] font-medium transition-colors relative ${
+                    listTab === tab
+                      ? "text-[#1F93FF]"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {labels[tab]} {counts[tab] > 0 && <span className="ml-0.5 text-[11px]">({counts[tab]})</span>}
+                  {listTab === tab && <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#1F93FF] rounded-full" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Sort / Filter bar */}
+          <div className="px-3 py-1.5 flex items-center justify-between border-b">
+            <span className="text-[11px] text-slate-500 font-medium">
+              {filter === "all" ? "Todas" : filter === "open" ? "Abertas" : filter === "unread" ? "Não lidas" : "Arquivadas"}
+            </span>
+            <div className="flex items-center gap-1">
+              <button className="h-6 w-6 rounded hover:bg-slate-100 flex items-center justify-center text-slate-400">
+                <Filter className="h-3 w-3" />
+              </button>
+              <button className="h-6 w-6 rounded hover:bg-slate-100 flex items-center justify-center text-slate-400">
+                <ArrowUpDown className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* Conversation List */}
           <ScrollArea className="flex-1">
             {filtered.length === 0 ? (
-              <div className="py-16 text-center text-muted-foreground">
+              <div className="py-16 text-center text-slate-400">
                 <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-30" />
                 <p className="text-xs font-medium">Nenhuma conversa</p>
-                {diagnosticInfo && <p className="text-[11px] mt-1 px-4">{diagnosticInfo}</p>}
               </div>
             ) : (
               <div>
@@ -413,56 +531,55 @@ export default function ConversationsTab() {
                   const active = selected?.id === conv.id;
                   const avatarColor = getAvatarColor(conv.contact_name || conv.contact_phone);
                   const initials = getInitials(conv.contact_name || conv.contact_phone);
-                  const convStatus = STATUS_CONFIG[conv.status] || STATUS_CONFIG.open;
+                  const inst = instances.find(i => i.id === (conv as any).instance_id);
                   return (
                     <button
                       key={conv.id}
                       onClick={() => setSelected(conv)}
-                      className={`w-full text-left px-3 py-2.5 border-b border-border/40 transition-colors ${
+                      className={`w-full text-left px-3 py-3 border-b border-slate-100 dark:border-slate-800 transition-colors ${
                         active
-                          ? "bg-blue-50 dark:bg-blue-950/30 border-l-2 border-l-blue-500"
-                          : "hover:bg-muted/50 border-l-2 border-l-transparent"
+                          ? "bg-[#1F93FF]/5 border-l-[3px] border-l-[#1F93FF]"
+                          : "hover:bg-slate-50 dark:hover:bg-slate-900 border-l-[3px] border-l-transparent"
                       }`}
                     >
+                      {/* Instance badge */}
+                      {inst && (
+                        <div className="flex items-center gap-1 mb-1">
+                          <svg viewBox="0 0 24 24" className="h-3 w-3 text-green-500 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.638l4.716-1.244A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.135 0-4.118-.663-5.75-1.794l-.404-.27-2.804.74.753-2.756-.296-.417A9.958 9.958 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg>
+                          <span className="text-[10px] text-slate-400 truncate">{inst.name}</span>
+                        </div>
+                      )}
                       <div className="flex items-start gap-2.5">
                         {/* Avatar */}
-                        <div className={`h-9 w-9 rounded-full ${avatarColor} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                        <div className="h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: avatarColor }}>
                           <span className="text-white text-xs font-semibold">{initials}</span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1">
-                            <span className={`text-sm truncate ${conv.unread_count > 0 ? "font-bold" : "font-medium"}`}>
+                            <span className={`text-[13px] truncate ${conv.unread_count > 0 ? "font-bold text-slate-900 dark:text-white" : "font-medium text-slate-700 dark:text-slate-300"}`}>
                               {conv.contact_name || conv.contact_phone}
                             </span>
-                            <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                            <span className="text-[10px] text-slate-400 flex-shrink-0">
                               {relativeTime(conv.last_message_at)}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between mt-0.5 gap-1">
-                            <p className={`text-[11px] truncate pr-1 ${conv.unread_count > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                              {conv.last_message || "Sem mensagens"}
-                            </p>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              {conv.unread_count > 0 && (
-                                <span className="h-[18px] min-w-[18px] rounded-full bg-blue-500 text-[9px] text-white font-bold flex items-center justify-center px-1">
-                                  {conv.unread_count}
-                                </span>
-                              )}
-                            </div>
+                          <p className={`text-[12px] truncate mt-0.5 ${conv.unread_count > 0 ? "text-slate-800 dark:text-slate-200 font-medium" : "text-slate-500"}`}>
+                            {conv.last_message || "Sem mensagens"}
+                          </p>
+                          {/* Tags + unread badge */}
+                          <div className="flex items-center gap-1 mt-1">
+                            {(conv.tags || []).slice(0, 2).map(tag => (
+                              <span key={tag} className={`text-[9px] px-1.5 py-0.5 rounded-full text-white font-medium ${getLabelColor(tag)}`}>
+                                {tag}
+                              </span>
+                            ))}
+                            <div className="flex-1" />
+                            {conv.unread_count > 0 && (
+                              <span className="h-[18px] min-w-[18px] rounded-full bg-[#1F93FF] text-[10px] text-white font-bold flex items-center justify-center px-1">
+                                {conv.unread_count}
+                              </span>
+                            )}
                           </div>
-                          {/* Tags preview */}
-                          {conv.tags && conv.tags.length > 0 && (
-                            <div className="flex gap-1 mt-1 overflow-hidden">
-                              {conv.tags.slice(0, 2).map(tag => (
-                                <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground truncate max-w-[80px]">
-                                  {tag}
-                                </span>
-                              ))}
-                              {conv.tags.length > 2 && (
-                                <span className="text-[9px] text-muted-foreground">+{conv.tags.length - 2}</span>
-                              )}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </button>
@@ -473,323 +590,494 @@ export default function ConversationsTab() {
           </ScrollArea>
         </div>
 
-        {/* ═══ Column 2 — Chat Area ═══ */}
-        <div className="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-slate-900/30">
+        {/* ════════════════════════════════════════════════════
+            COLUMN 2 — CHAT AREA (flex)
+           ════════════════════════════════════════════════════ */}
+        <div className="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-slate-900/50">
           {!selected ? (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+            <div className="flex-1 flex items-center justify-center text-slate-400">
               <div className="text-center">
-                <div className="h-20 w-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                <div className="h-20 w-20 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
                   <MessageSquare className="h-10 w-10 opacity-30" />
                 </div>
                 <p className="text-sm font-medium">Selecione uma conversa</p>
-                <p className="text-xs mt-1 text-muted-foreground">Escolha um contato ao lado para iniciar</p>
+                <p className="text-xs mt-1">Escolha um contato para iniciar</p>
               </div>
             </div>
           ) : (
             <>
               {/* Chat Header */}
-              <div className="px-4 py-2.5 border-b bg-background flex items-center justify-between">
+              <div className="px-4 py-2 border-b bg-white dark:bg-slate-950 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`h-9 w-9 rounded-full ${getAvatarColor(selected.contact_name || selected.contact_phone)} flex items-center justify-center`}>
+                  <div className="h-9 w-9 rounded-full flex items-center justify-center" style={{ backgroundColor: getAvatarColor(selected.contact_name || selected.contact_phone) }}>
                     <span className="text-white text-xs font-semibold">
                       {getInitials(selected.contact_name || selected.contact_phone)}
                     </span>
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-sm">{selected.contact_name || selected.contact_phone}</h4>
-                      <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusCfg.color}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dotColor}`} />
-                        {statusCfg.label}
-                      </span>
+                    <h4 className="font-semibold text-[14px] text-slate-900 dark:text-white">
+                      {selected.contact_name || selected.contact_phone}
+                    </h4>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                      <svg viewBox="0 0 24 24" className="h-3 w-3 text-green-500 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.638l4.716-1.244A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.135 0-4.118-.663-5.75-1.794l-.404-.27-2.804.74.753-2.756-.296-.417A9.958 9.958 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg>
+                      <span>WhatsApp</span>
+                      {showDetails && (
+                        <button onClick={() => setShowDetails(false)} className="text-[#1F93FF] hover:underline ml-2">
+                          Fechar detalhes
+                        </button>
+                      )}
                     </div>
-                    <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <Phone className="h-3 w-3" /> {selected.contact_phone}
-                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  {selected.status === "open" ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button size="sm" variant="ghost" className="h-8 px-2 text-xs gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={() => updateConvStatus("closed")}>
-                          <CheckCircle className="h-3.5 w-3.5" /> Resolver
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">Marcar como resolvida</TooltipContent>
-                    </Tooltip>
+                <div className="flex items-center gap-2">
+                  <button className="h-8 w-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500">
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                  {selected.status === "open" || selected.status === "pending" ? (
+                    <Button
+                      size="sm"
+                      className="h-8 px-4 text-[12px] font-semibold bg-[#1F93FF] hover:bg-[#1780E0] text-white rounded-lg gap-1.5"
+                      onClick={() => updateConvStatus("closed")}
+                    >
+                      <CheckCircle className="h-3.5 w-3.5" /> Resolver
+                    </Button>
                   ) : (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button size="sm" variant="ghost" className="h-8 px-2 text-xs gap-1" onClick={() => updateConvStatus("open")}>
-                          <CircleDot className="h-3.5 w-3.5" /> Reabrir
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">Reabrir conversa</TooltipContent>
-                    </Tooltip>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-4 text-[12px] font-semibold rounded-lg gap-1.5"
+                      onClick={() => updateConvStatus("open")}
+                    >
+                      <CircleDot className="h-3.5 w-3.5" /> Reabrir
+                    </Button>
                   )}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => updateConvStatus(selected.status === "archived" ? "open" : "archived")}>
-                        <Archive className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="text-xs">{selected.status === "archived" ? "Desarquivar" : "Arquivar"}</TooltipContent>
-                  </Tooltip>
-                  <Separator orientation="vertical" className="h-5 mx-1" />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setShowDetails(!showDetails)}>
-                        {showDetails ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="text-xs">{showDetails ? "Ocultar detalhes" : "Mostrar detalhes"}</TooltipContent>
-                  </Tooltip>
                 </div>
               </div>
 
-              {/* Messages with date separators */}
-              <ScrollArea className="flex-1">
-                <div className="px-4 py-3 max-w-2xl mx-auto">
-                  {messages.length === 0 && (
-                    <p className="text-center text-sm text-muted-foreground py-12">Nenhuma mensagem nesta conversa</p>
-                  )}
-                  {groupedMessages.map((group, gi) => (
-                    <div key={gi}>
-                      {/* Date separator */}
-                      <div className="flex items-center justify-center my-3">
-                        <span className="text-[10px] font-medium text-muted-foreground bg-background border rounded-full px-3 py-1 shadow-sm">
-                          {formatDateLabel(group.date)}
-                        </span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {group.messages.map(msg => {
-                          const isOut = msg.direction === "outbound";
-                          return (
-                            <div key={msg.id} className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
-                              <div
-                                className={`relative max-w-[75%] rounded-xl px-3 py-2 text-sm shadow-sm ${
-                                  isOut
-                                    ? "bg-emerald-100 dark:bg-emerald-900/40 text-foreground rounded-br-sm"
-                                    : "bg-background border rounded-bl-sm"
-                                }`}
-                              >
-                                <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.message_content}</p>
-                                <div className={`flex items-center gap-1 mt-1 ${isOut ? "justify-end" : ""}`}>
-                                  <span className="text-[10px] text-muted-foreground">
-                                    {format(new Date(msg.created_at), "HH:mm")}
-                                  </span>
-                                  {isOut && (
-                                    msg.status === "sent" ? (
-                                      <CheckCircle className="h-3 w-3 text-blue-500" />
-                                    ) : msg.status === "error" ? (
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                          <XCircle className="h-3 w-3 text-destructive" />
-                                        </TooltipTrigger>
-                                        <TooltipContent className="text-xs max-w-[200px]">{msg.error_message || "Erro ao enviar"}</TooltipContent>
-                                      </Tooltip>
-                                    ) : (
-                                      <Clock className="h-3 w-3 text-muted-foreground" />
-                                    )
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
+              {/* Chat sub-tabs: Messages / Customer Dashboard */}
+              <div className="flex border-b bg-white dark:bg-slate-950 px-4">
+                {(["messages", "dashboard"] as const).map(tab => {
+                  const labels = { messages: "Mensagens", dashboard: "Painel do Cliente" };
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setChatTab(tab)}
+                      className={`px-3 py-2 text-[12px] font-medium relative transition-colors ${
+                        chatTab === tab ? "text-[#1F93FF]" : "text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      {labels[tab]}
+                      {chatTab === tab && <div className="absolute bottom-0 left-1 right-1 h-[2px] bg-[#1F93FF] rounded-full" />}
+                    </button>
+                  );
+                })}
+              </div>
 
-              {/* Input area */}
-              <div className="border-t bg-background p-3 relative">
-                {/* Canned responses dropdown */}
-                {showCannedDropdown && filteredTemplates.length > 0 && (
-                  <div className="absolute bottom-full left-3 right-3 mb-1 bg-popover border rounded-lg shadow-lg max-h-48 overflow-auto z-50">
-                    <div className="p-1.5">
-                      <p className="text-[10px] font-semibold text-muted-foreground uppercase px-2 py-1">Respostas rápidas</p>
-                      {filteredTemplates.map(tpl => (
-                        <button
-                          key={tpl.id}
-                          onClick={() => applyTemplate(tpl)}
-                          className="w-full text-left px-2 py-1.5 rounded hover:bg-muted text-xs transition-colors flex items-start gap-2"
-                        >
-                          <Zap className="h-3 w-3 text-amber-500 mt-0.5 flex-shrink-0" />
-                          <div className="min-w-0">
-                            <span className="font-medium block">{tpl.name}</span>
-                            <span className="text-muted-foreground line-clamp-1">{tpl.content.substring(0, 80)}</span>
+              {chatTab === "messages" ? (
+                <>
+                  {/* Messages */}
+                  <ScrollArea className="flex-1">
+                    <div className="px-4 py-3">
+                      {messages.length === 0 && (
+                        <p className="text-center text-sm text-slate-400 py-12">Nenhuma mensagem</p>
+                      )}
+                      {groupedMessages.map((group, gi) => (
+                        <div key={gi}>
+                          <div className="flex items-center justify-center my-4">
+                            <span className="text-[11px] font-medium text-slate-500 bg-white dark:bg-slate-800 border rounded-full px-3 py-1 shadow-sm">
+                              {formatDateLabel(group.date)}
+                            </span>
                           </div>
+                          <div className="space-y-2">
+                            {group.messages.map(msg => {
+                              const isOut = msg.direction === "outbound";
+                              return (
+                                <div key={msg.id} className={`flex ${isOut ? "justify-end" : "justify-start"}`}>
+                                  <div
+                                    className={`relative max-w-[70%] rounded-2xl px-4 py-2.5 text-[13px] shadow-sm ${
+                                      isOut
+                                        ? "bg-[#1F93FF] text-white rounded-br-md"
+                                        : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-md"
+                                    }`}
+                                  >
+                                    <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.message_content}</p>
+                                    <div className={`flex items-center gap-1.5 mt-1 ${isOut ? "justify-end" : ""}`}>
+                                      <span className={`text-[10px] ${isOut ? "text-blue-200" : "text-slate-400"}`}>
+                                        {format(new Date(msg.created_at), "HH:mm")}
+                                      </span>
+                                      {isOut && (
+                                        msg.status === "sent" ? (
+                                          <CheckCircle className="h-3 w-3 text-blue-200" />
+                                        ) : msg.status === "error" ? (
+                                          <Tooltip>
+                                            <TooltipTrigger><XCircle className="h-3 w-3 text-red-300" /></TooltipTrigger>
+                                            <TooltipContent className="text-xs max-w-[200px]">{msg.error_message || "Erro"}</TooltipContent>
+                                          </Tooltip>
+                                        ) : (
+                                          <Clock className="h-3 w-3 text-blue-200" />
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  </ScrollArea>
+
+                  {/* Input area with Reply / Private Note tabs */}
+                  <div className={`border-t ${inputMode === "note" ? "bg-amber-50 dark:bg-amber-950/30" : "bg-white dark:bg-slate-950"}`}>
+                    {/* Reply / Note tabs */}
+                    <div className="flex border-b px-3">
+                      <button
+                        onClick={() => setInputMode("reply")}
+                        className={`px-3 py-2 text-[12px] font-medium relative ${
+                          inputMode === "reply" ? "text-[#1F93FF]" : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        Responder
+                        {inputMode === "reply" && <div className="absolute bottom-0 left-1 right-1 h-[2px] bg-[#1F93FF] rounded-full" />}
+                      </button>
+                      <button
+                        onClick={() => setInputMode("note")}
+                        className={`px-3 py-2 text-[12px] font-medium relative ${
+                          inputMode === "note" ? "text-amber-600" : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        Nota Privada
+                        {inputMode === "note" && <div className="absolute bottom-0 left-1 right-1 h-[2px] bg-amber-500 rounded-full" />}
+                      </button>
+                    </div>
+
+                    {/* Toolbar */}
+                    <div className="flex items-center gap-0.5 px-3 py-1 border-b">
+                      {[Bold, Italic, Link2, Code, List].map((Icon, i) => (
+                        <button key={i} className="h-7 w-7 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500">
+                          <Icon className="h-3.5 w-3.5" />
                         </button>
                       ))}
+                      <Separator orientation="vertical" className="h-4 mx-1" />
+                      <button className="h-7 w-7 rounded hover:bg-slate-100 flex items-center justify-center text-slate-500">
+                        <Smile className="h-3.5 w-3.5" />
+                      </button>
+                      <button className="h-7 w-7 rounded hover:bg-slate-100 flex items-center justify-center text-slate-500">
+                        <Paperclip className="h-3.5 w-3.5" />
+                      </button>
+                      <button className="h-7 w-7 rounded hover:bg-slate-100 flex items-center justify-center text-slate-500">
+                        <Mic className="h-3.5 w-3.5" />
+                      </button>
+                      <div className="flex-1" />
+                      <button className="h-7 px-2 rounded bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center justify-center gap-1 text-[11px] font-medium">
+                        <Bot className="h-3 w-3" /> AI Assist
+                      </button>
+                    </div>
+
+                    {/* Canned responses dropdown */}
+                    <div className="relative">
+                      {showCannedDropdown && filteredTemplates.length > 0 && (
+                        <div className="absolute bottom-full left-3 right-3 mb-1 bg-white dark:bg-slate-800 border rounded-lg shadow-xl max-h-48 overflow-auto z-50">
+                          <div className="p-1.5">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase px-2 py-1">Respostas Rápidas</p>
+                            {filteredTemplates.map(tpl => (
+                              <button
+                                key={tpl.id}
+                                onClick={() => applyTemplate(tpl)}
+                                className="w-full text-left px-2 py-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-700 text-xs transition-colors flex items-start gap-2"
+                              >
+                                <Zap className="h-3 w-3 text-amber-500 mt-0.5 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <span className="font-medium block text-slate-800 dark:text-slate-200">{tpl.name}</span>
+                                  <span className="text-slate-500 line-clamp-1">{tpl.content.substring(0, 80)}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Text input */}
+                    <div className="px-3 py-2">
+                      <textarea
+                        ref={textareaRef}
+                        value={messageText}
+                        onChange={handleInputChange}
+                        onKeyDown={handleKeyDown}
+                        placeholder={inputMode === "note" ? "Adicionar nota privada..." : "Mensagem... (/ para respostas rápidas)"}
+                        className={`w-full min-h-[60px] max-h-[120px] resize-none text-[13px] bg-transparent focus:outline-none placeholder:text-slate-400 ${
+                          inputMode === "note" ? "text-amber-900 dark:text-amber-200" : "text-slate-800 dark:text-slate-200"
+                        }`}
+                        rows={2}
+                      />
+                    </div>
+
+                    {/* Bottom bar */}
+                    <div className="flex items-center justify-between px-3 py-2 border-t">
+                      <p className="text-[10px] text-slate-400">
+                        Shift+Enter nova linha · <span className="font-medium">/</span> respostas rápidas
+                      </p>
+                      <Button
+                        size="sm"
+                        className={`h-8 px-4 text-[12px] font-semibold rounded-lg gap-1.5 ${
+                          inputMode === "note"
+                            ? "bg-amber-500 hover:bg-amber-600 text-white"
+                            : "bg-[#1F93FF] hover:bg-[#1780E0] text-white"
+                        }`}
+                        onClick={handleSend}
+                        disabled={!messageText.trim() || sending}
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                        {inputMode === "note" ? "Salvar Nota" : "Enviar"}
+                      </Button>
                     </div>
                   </div>
-                )}
-
-                <div className="flex items-end gap-2 max-w-2xl mx-auto">
-                  <Textarea
-                    ref={textareaRef}
-                    value={messageText}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder='Mensagem... (/ para respostas rápidas)'
-                    className="min-h-[40px] max-h-[120px] resize-none text-sm bg-muted/30 border-muted"
-                    rows={1}
-                  />
-                  <Button
-                    className="h-10 w-10 p-0 flex-shrink-0 rounded-full bg-blue-600 hover:bg-blue-700"
-                    onClick={handleSend}
-                    disabled={!messageText.trim() || sending}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
+                </>
+              ) : (
+                /* Customer Dashboard Tab */
+                <div className="flex-1 flex items-center justify-center text-slate-400">
+                  <div className="text-center">
+                    <User className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm font-medium">Painel do Cliente</p>
+                    <p className="text-xs mt-1">Histórico de pedidos e interações</p>
+                  </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1 text-center">
-                  Enter para enviar · Shift+Enter para nova linha · <span className="font-medium">/</span> para respostas rápidas
-                </p>
-              </div>
+              )}
             </>
           )}
         </div>
 
-        {/* ═══ Column 3 — Contact Panel (280px) ═══ */}
+        {/* ════════════════════════════════════════════════════
+            COLUMN 3 — CONTACT / DETAILS PANEL (~300px)
+           ════════════════════════════════════════════════════ */}
         {selected && showDetails && (
-          <div className="w-[280px] flex-shrink-0 border-l flex flex-col bg-background">
-            {/* Contact header */}
-            <div className="p-4 border-b">
-              <div className="flex flex-col items-center text-center">
-                <div className={`h-16 w-16 rounded-full ${getAvatarColor(selected.contact_name || selected.contact_phone)} flex items-center justify-center mb-2`}>
-                  <span className="text-white text-lg font-bold">
-                    {getInitials(selected.contact_name || selected.contact_phone)}
-                  </span>
-                </div>
-                <h4 className="font-semibold text-sm">{selected.contact_name || "Sem nome"}</h4>
-                <p className="text-xs text-muted-foreground mt-0.5">{selected.contact_phone}</p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-2 h-7 text-[11px] gap-1"
-                  onClick={() => window.open(`https://wa.me/${selected.contact_phone.replace(/\D/g, "")}`, "_blank")}
-                >
-                  <ExternalLink className="h-3 w-3" /> Abrir no WhatsApp
-                </Button>
-              </div>
+          <div className="w-[300px] flex-shrink-0 border-l flex flex-col bg-white dark:bg-slate-950">
+            {/* Contact / Copilot tabs */}
+            <div className="flex border-b">
+              {(["contact", "copilot"] as const).map(tab => {
+                const labels = { contact: "Contato", copilot: "Copilot" };
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setContactTab(tab)}
+                    className={`flex-1 py-2.5 text-[12px] font-medium relative transition-colors ${
+                      contactTab === tab ? "text-[#1F93FF]" : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    {labels[tab]}
+                    {contactTab === tab && <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#1F93FF] rounded-full" />}
+                  </button>
+                );
+              })}
             </div>
 
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-4">
+            {contactTab === "contact" ? (
+              <ScrollArea className="flex-1">
+                <div className="p-4">
+                  {/* Contact header */}
+                  <div className="flex flex-col items-center text-center mb-4">
+                    <div className="h-16 w-16 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: getAvatarColor(selected.contact_name || selected.contact_phone) }}>
+                      <span className="text-white text-xl font-bold">
+                        {getInitials(selected.contact_name || selected.contact_phone)}
+                      </span>
+                    </div>
+                    <h4 className="font-semibold text-[15px] text-slate-900 dark:text-white">{selected.contact_name || "Sem nome"}</h4>
+                    <p className="text-[12px] text-slate-500 mt-0.5">Cliente</p>
+                  </div>
 
-                {/* Info section */}
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                    <Info className="h-3 w-3" /> Informações
-                  </p>
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Primeira interação</span>
-                      <span className="font-medium">{format(new Date(selected.created_at), "dd/MM/yy")}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total de msgs</span>
-                      <span className="font-medium">{messages.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Última msg</span>
-                      <span className="font-medium">
-                        {formatDistanceToNow(new Date(selected.last_message_at), { addSuffix: true, locale: ptBR })}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Status</span>
-                      <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusCfg.color}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dotColor}`} />
-                        {statusCfg.label}
-                      </span>
+                  {/* Contact details */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-slate-50 dark:hover:bg-slate-900 group">
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5 text-slate-400" />
+                        <span className="text-[12px] text-slate-700 dark:text-slate-300">{selected.contact_phone}</span>
+                      </div>
+                      <button onClick={() => copyToClipboard(selected.contact_phone)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-600 transition-opacity">
+                        <Copy className="h-3 w-3" />
+                      </button>
                     </div>
                   </div>
-                </div>
 
-                <Separator />
-
-                {/* Tags / Labels */}
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                    <Tag className="h-3 w-3" /> Labels
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {(selected.tags || []).map(tag => (
-                      <Badge key={tag} variant="secondary" className="text-[10px] gap-1 pr-1 h-5">
-                        {tag}
-                        <button onClick={() => removeTag(tag)} className="hover:text-destructive ml-0.5">
-                          <X className="h-2.5 w-2.5" />
+                  {/* Action buttons row */}
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button onClick={() => window.open(`https://wa.me/${selected.contact_phone.replace(/\D/g, "")}`, "_blank")} className="h-8 w-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-[#1F93FF] transition-colors">
+                          <ExternalLink className="h-3.5 w-3.5" />
                         </button>
-                      </Badge>
-                    ))}
-                    {(!selected.tags || selected.tags.length === 0) && (
-                      <span className="text-[11px] text-muted-foreground">Nenhuma label</span>
-                    )}
+                      </TooltipTrigger>
+                      <TooltipContent className="text-xs">Abrir no WhatsApp</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button className="h-8 w-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-[#1F93FF] transition-colors">
+                          <Edit className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="text-xs">Editar contato</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button className="h-8 w-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-[#1F93FF] transition-colors">
+                          <Users className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="text-xs">Mesclar contatos</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button className="h-8 w-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-red-500 transition-colors">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="text-xs">Excluir</TooltipContent>
+                    </Tooltip>
                   </div>
-                  <div className="flex gap-1">
-                    <Input
-                      placeholder="Adicionar label..."
-                      value={newTag}
-                      onChange={(e) => setNewTag(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && addTag()}
-                      className="h-7 text-[11px]"
-                    />
-                    <Button size="sm" variant="outline" className="h-7 w-7 p-0 flex-shrink-0" onClick={addTag}>
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
+
+                  <Separator className="mb-3" />
+
+                  {/* Conversation Actions */}
+                  <Collapsible open={openSections.convActions} onOpenChange={() => toggleSection("convActions")}>
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-2 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
+                      <span>Ações da Conversa</span>
+                      <ChevronRight className={`h-3.5 w-3.5 transition-transform ${openSections.convActions ? "rotate-90" : ""}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="space-y-2 pb-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-slate-500">Status</span>
+                          <span className={`text-[11px] font-medium ${statusCfg.color}`}>{statusCfg.label}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          {selected.status !== "archived" && (
+                            <Button size="sm" variant="outline" className="h-7 text-[11px] flex-1 gap-1" onClick={() => updateConvStatus("archived")}>
+                              <Archive className="h-3 w-3" /> Arquivar
+                            </Button>
+                          )}
+                          {selected.status === "archived" && (
+                            <Button size="sm" variant="outline" className="h-7 text-[11px] flex-1 gap-1" onClick={() => updateConvStatus("open")}>
+                              <CircleDot className="h-3 w-3" /> Reabrir
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Separator className="mb-1" />
+
+                  {/* Labels */}
+                  <Collapsible defaultOpen>
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-2 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
+                      <span>Labels</span>
+                      <Plus className="h-3.5 w-3.5" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="space-y-2 pb-3">
+                        <div className="flex flex-wrap gap-1">
+                          {(selected.tags || []).map(tag => (
+                            <Badge key={tag} className={`text-[10px] gap-1 pr-1 h-5 border-0 text-white ${getLabelColor(tag)}`}>
+                              {tag}
+                              <button onClick={() => removeTag(tag)} className="hover:text-red-200 ml-0.5">
+                                <X className="h-2.5 w-2.5" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="flex gap-1">
+                          <Input
+                            placeholder="Adicionar label..."
+                            value={newTag}
+                            onChange={(e) => setNewTag(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && addTag()}
+                            className="h-7 text-[11px] border-slate-200"
+                          />
+                          <Button size="sm" variant="outline" className="h-7 w-7 p-0 flex-shrink-0" onClick={addTag}>
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Separator className="mb-1" />
+
+                  {/* Conversation Information */}
+                  <Collapsible open={openSections.convInfo} onOpenChange={() => toggleSection("convInfo")}>
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-2 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
+                      <span>Informações</span>
+                      <ChevronRight className={`h-3.5 w-3.5 transition-transform ${openSections.convInfo ? "rotate-90" : ""}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="space-y-2 pb-3 text-[12px]">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Criada em</span>
+                          <span className="text-slate-700 dark:text-slate-300 font-medium">{format(new Date(selected.created_at), "dd/MM/yy HH:mm")}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Última mensagem</span>
+                          <span className="text-slate-700 dark:text-slate-300 font-medium">
+                            {formatDistanceToNow(new Date(selected.last_message_at), { addSuffix: true, locale: ptBR })}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Total de msgs</span>
+                          <span className="text-slate-700 dark:text-slate-300 font-medium">{messages.length}</span>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Separator className="mb-1" />
+
+                  {/* Internal Notes */}
+                  <Collapsible defaultOpen>
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-2 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
+                      <span>Notas Internas</span>
+                      <StickyNote className="h-3.5 w-3.5" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="pb-3">
+                        <Textarea
+                          value={contactNote}
+                          onChange={(e) => setContactNote(e.target.value)}
+                          placeholder="Adicionar nota sobre este contato..."
+                          className="min-h-[60px] text-[12px] resize-none border-slate-200"
+                          rows={3}
+                        />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Separator className="mb-1" />
+
+                  {/* Previous Conversations */}
+                  <Collapsible open={openSections.prevConvs} onOpenChange={() => toggleSection("prevConvs")}>
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-2 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
+                      <span>Conversas Anteriores</span>
+                      <ChevronRight className={`h-3.5 w-3.5 transition-transform ${openSections.prevConvs ? "rotate-90" : ""}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="pb-3">
+                        <p className="text-[11px] text-slate-400">Nenhuma conversa anterior</p>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 </div>
-
-                <Separator />
-
-                {/* Notes */}
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                    <StickyNote className="h-3 w-3" /> Notas internas
-                  </p>
-                  <Textarea
-                    value={contactNote}
-                    onChange={(e) => setContactNote(e.target.value)}
-                    placeholder="Anotações sobre este contato..."
-                    className="min-h-[60px] text-[11px] resize-none"
-                    rows={3}
-                  />
-                </div>
-
-                <Separator />
-
-                {/* Quick actions */}
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase">Ações</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {selected.status === "open" ? (
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => updateConvStatus("closed")}>
-                        <CheckCircle className="h-3 w-3" /> Resolver
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => updateConvStatus("open")}>
-                        <CircleDot className="h-3 w-3" /> Reabrir
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant={selected.status === "archived" ? "default" : "outline"}
-                      className="h-7 text-[10px] gap-1"
-                      onClick={() => updateConvStatus(selected.status === "archived" ? "open" : "archived")}
-                    >
-                      <Archive className="h-3 w-3" />
-                      {selected.status === "archived" ? "Desarq." : "Arquivar"}
-                    </Button>
-                  </div>
+              </ScrollArea>
+            ) : (
+              /* Copilot tab */
+              <div className="flex-1 flex items-center justify-center text-slate-400">
+                <div className="text-center px-6">
+                  <Bot className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-[13px] font-medium">AI Copilot</p>
+                  <p className="text-[11px] mt-1">Respostas sugeridas com base no contexto da conversa</p>
                 </div>
               </div>
-            </ScrollArea>
+            )}
           </div>
         )}
       </div>
