@@ -1,105 +1,138 @@
 
 
-# Correções WhatsApp + Nova Aba Flows (Typebot)
+# Melhorias Profundas no Editor de Fluxos WhatsApp
 
-## Problemas Identificados
+## Resumo
+Reescrever o `WhatsAppFlowEditor.tsx` com funcionalidades avancadas inspiradas no Typebot e ManyChat, incluindo novos tipos de blocos, configuracoes ricas de mensagem, teste visual estilo WhatsApp, e logica de condicoes/escolhas completa.
 
-### 1. Conversas não aparecem (0 registros)
-- **Causa raiz**: O webhook da Evolution API só recebe eventos `connection.update` com `state="connecting"`. Nenhum evento `messages.upsert` chega, então conversas e mensagens nunca são criadas.
-- **Solução**: O webhook está configurado corretamente no código (`configureWebhook` envia `MESSAGES_UPSERT`), mas as instâncias mostram `state="connecting"` repetidamente — estão em loop de reconexão. Precisamos:
-  1. Corrigir o `whatsapp-evolution-webhook` para também tratar `state="connecting"` sem ignorar, e logar melhor
-  2. Adicionar um botão "Reconfigurar Webhook" na UI para forçar recadastro do webhook
-  3. Adicionar na aba Conversas um indicador quando não há dados + botão de diagnóstico
+## Mudancas
 
-### 2. Envio de mensagens não funciona
-- **Causa raiz**: O `whatsapp-send` funciona em teoria, mas as instâncias podem não estar realmente conectadas (loop de "connecting"). Também, ao enviar pela UI de Conversas, o `contact_phone` pode não ter o código `55`.
-- **Solução**: Aplicar `ensureBrazilCountryCode` no frontend antes de enviar, e melhorar feedback de erro na UI
+### 1. Novos tipos de blocos (alem dos existentes)
 
-### 3. Funis com problemas
-- O `whatsapp-webhook` (trigger de funis) depende de receber eventos via webhook que não estão chegando
-- Steps sem `template_id` (config vazio) não produzem conteúdo
-- **Solução**: Validar steps ao salvar, alertar quando step não tem template
+- **Escolha (choice)**: Apresenta opcoes ao usuario (ex: "1 - Sim", "2 - Nao"). Cada opcao vira uma saida separada com handle proprio. Opcoes podem vincular uma tag ao lead.
+- **Acao (action)**: Pode executar: adicionar tag, ir para outro fluxo, acionar bloco especifico, remover tag, marcar como convertido.
 
-### 4. Nova aba Flows (inspirado Typebot)
-- Editor visual de fluxos com nós arrastáveis e conexões
-- Diferente dos funis lineares atuais: suporta ramificações, condições, loops
-- Nós: Start, Mensagem, Condição, Espera, Input (pergunta), AI Gen, Transferir, Fim
+### 2. Bloco Espera (wait) — aprimorado
 
-## Plano de Implementação
+- Unidade selecionavel: minutos, horas, dias
+- Opcao "ate data/hora especifica" (ex: segunda 9h)
+- Campo para escolher dia da semana + horario
 
-### Arquivo 1: `supabase/functions/whatsapp-evolution-webhook/index.ts`
-- Melhorar logs para debug (logar payload completo em `messages.upsert`)
-- Tratar variações de formato do Evolution API v2
-- Adicionar fallback para `connection.update` com `state="connecting"` (logar mas não atualizar)
+### 3. Bloco Condicao (condition) — aprimorado
 
-### Arquivo 2: `src/components/admin/WhatsAppConversations.tsx`
-- Adicionar `ensureBrazilCountryCode` ao enviar mensagem
-- Mostrar estado vazio informativo com diagnóstico quando 0 conversas
-- Melhorar tratamento de erro no envio
+- Tipo de condicao: "por opcao" (lista de palavras-chave por linha) ou "respondeu algo" (qualquer resposta)
+- No modo por opcao: se a resposta *contem* uma das palavras da linha, segue aquele caminho
+- Saida "Default/Nenhuma" para quando nenhuma condicao bate
 
-### Arquivo 3: `src/pages/admin/WhatsAppPage.tsx`
-- Na aba Instâncias: adicionar botão "Reconfigurar Webhook" que chama `whatsapp-instance` com `action: "set_webhook"`
-- Na aba Funis: validar que steps têm template/conteúdo antes de ativar
-- Adicionar nova aba **Flows**
+### 4. Bloco Mensagem — rico
 
-### Arquivo 4 (novo): `src/components/admin/WhatsAppFlowEditor.tsx`
-- Editor visual de fluxos estilo Typebot
-- Canvas com nós arrastáveis (usando posicionamento absoluto + SVG para conexões)
-- Tipos de nó: Start, Message, Condition, Wait, Input, AI Generate, Transfer, End
-- Cada nó tem configuração inline (template, delay, condição)
-- Conexões entre nós via drag de pontos de saída
-- Salva estrutura como JSON no banco
+- Escolher template existente (dropdown de `whatsapp_templates`)
+- Texto livre com variaveis ({Nome}, {Produto}, etc.)
+- Anexar arquivo (URL de arquivo/imagem)
+- Anexar link (com opcao de link personalizado de produto com variaveis de prescritor/checkout)
+- Enviar audio pre-salvo (URL)
+- Enviar video (URL)
+- Catalogo do WhatsApp (flag booleana)
 
-### Migration SQL
-- Criar tabela `whatsapp_flows` (id, name, nodes JSON, edges JSON, active, tenant_id, trigger_event, created_at)
-- RLS com tenant isolation
+### 5. Vincular/desvincular nos
 
-## Arquitetura do Flow Editor
+- Ao clicar no handle de saida, entrar em modo "conectando" com highlight visual
+- Ao clicar em edge existente, mostrar opcao de excluir (ja existe, manter)
+- Botao "Desvincular tudo" no painel de propriedades para remover todas as conexoes de um no
 
-```text
-WhatsAppFlowEditor.tsx (~600 linhas)
-├── FlowCanvas — área de canvas com zoom/pan
-│   ├── FlowNode — cada nó renderizado com posição absoluta
-│   │   ├── Configuração inline (mensagem, template, condição)
-│   │   └── Handles de conexão (entrada/saída)
-│   └── FlowEdges — SVG overlay para linhas de conexão
-├── FlowToolbar — barra lateral com tipos de nó para arrastar
-└── FlowProperties — painel de propriedades do nó selecionado
+### 6. Testar Fluxo
+
+- Botao "Testar" na toolbar do canvas
+- Abre dialog com mockup de WhatsApp (reutilizar visual do teste de funil existente)
+- Simula a execucao sequencial do fluxo, seguindo as edges
+- Mostra mensagens aparecendo na timeline do celular
+- Campos de variaveis para preencher (Nome, Telefone, etc.)
+
+### 7. Excluir no
+
+- Ja existe, manter funcional
+- Ao excluir, remover todas as edges conectadas (ja implementado)
+
+## Arquivo modificado
+
+- `src/components/admin/WhatsAppFlowEditor.tsx` — reescrita significativa (~1200 linhas)
+
+### Detalhes tecnicos
+
+**NODE_TYPES atualizado:**
+```
+start, message, condition, wait, input, ai_gen, transfer, set_variable, choice, action, end
 ```
 
-Nós suportados (inspirados no Typebot do screenshot):
-- **Start**: ponto de entrada
-- **Message**: envia mensagem (template ou custom)
-- **Input**: faz pergunta e salva resposta em variável
-- **Condition**: ramifica baseado em variável/resposta
-- **Wait**: pausa com timeout
-- **AI Gen**: chama LLM para gerar resposta
-- **Transfer**: transfere para humano/agente
-- **Set Variable**: define variável para uso posterior
-
-## Detalhes técnicos
-
-### Dados de nó (JSON)
+**Dados de bloco Escolha:**
 ```json
 {
-  "nodes": [
-    { "id": "1", "type": "start", "position": { "x": 50, "y": 100 }, "data": {} },
-    { "id": "2", "type": "message", "position": { "x": 300, "y": 100 }, "data": { "content": "Olá {Nome}!" } },
-    { "id": "3", "type": "condition", "position": { "x": 550, "y": 100 }, "data": { "variable": "Sport", "options": ["Ride", "Run", "Other"] } }
-  ],
-  "edges": [
-    { "from": "1", "to": "2" },
-    { "from": "2", "to": "3" },
-    { "from": "3", "to": "4", "label": "Ride" }
+  "type": "choice",
+  "data": {
+    "question": "O que deseja?",
+    "options": [
+      { "label": "Ver produtos", "tag": "interesse_produtos" },
+      { "label": "Falar com atendente", "tag": "" },
+      { "label": "Outro", "tag": "" }
+    ]
+  }
+}
+```
+
+**Dados de bloco Acao:**
+```json
+{
+  "type": "action",
+  "data": {
+    "action_type": "add_tag" | "remove_tag" | "go_to_flow" | "trigger_block",
+    "tag": "lead_quente",
+    "flow_id": "uuid",
+    "block_id": "node_id"
+  }
+}
+```
+
+**Dados de bloco Mensagem enriquecido:**
+```json
+{
+  "type": "message",
+  "data": {
+    "content_type": "text" | "template" | "file" | "audio" | "video" | "catalog" | "link",
+    "content": "texto...",
+    "template_id": "uuid",
+    "file_url": "",
+    "audio_url": "",
+    "video_url": "",
+    "link_url": "",
+    "link_type": "custom" | "product",
+    "product_link_config": { "product_id": "", "include_prescriber": true, "checkout_version": "3" },
+    "use_catalog": false
+  }
+}
+```
+
+**Wait aprimorado:**
+```json
+{
+  "delay_value": 5,
+  "delay_unit": "m" | "h" | "d",
+  "wait_type": "delay" | "specific_date",
+  "specific_day": "monday",
+  "specific_time": "09:00"
+}
+```
+
+**Condition aprimorado:**
+```json
+{
+  "condition_type": "keywords" | "any_response",
+  "options": [
+    { "label": "Interessado", "keywords": ["sim", "quero", "interesse"] },
+    { "label": "Nao quer", "keywords": ["nao", "cancelar"] }
   ]
 }
 ```
 
-### Resumo de arquivos
-- `supabase/functions/whatsapp-evolution-webhook/index.ts` — melhoria de logs e tratamento
-- `supabase/functions/whatsapp-send/index.ts` — sem mudanças (já funciona)
-- `src/components/admin/WhatsAppConversations.tsx` — fix envio + estado vazio
-- `src/pages/admin/WhatsAppPage.tsx` — botão reconfigurar webhook + validação funis + aba Flows
-- `src/components/admin/WhatsAppFlowEditor.tsx` — novo editor visual
-- Migration: tabela `whatsapp_flows`
+## Sem mudancas no banco
+A tabela `whatsapp_flows` ja armazena `nodes` e `edges` como JSONB, entao toda a logica nova cabe na estrutura existente.
 
