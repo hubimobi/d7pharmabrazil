@@ -851,7 +851,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           return (
             <div className="space-y-1">
               <Badge variant="outline" className="text-[9px] h-4"><FileText className="h-2.5 w-2.5 mr-1" />{tpl?.name || "Template"}</Badge>
-              {tpl?.content && <p className="text-[10px] text-slate-600 line-clamp-2 italic">{String(tpl.content).substring(0, 80)}{String(tpl.content).length > 80 ? "..." : ""}</p>}
+              {tpl?.content && <p className="text-[11px] text-slate-600 italic whitespace-pre-wrap break-words">{tpl.content}</p>}
             </div>
           );
         }
@@ -862,12 +862,12 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           return (
             <div className="space-y-1">
               {prod && <Badge variant="outline" className="text-[9px] h-4"><ShoppingBag className="h-2.5 w-2.5 mr-1" />{prod.name}</Badge>}
-              <p className="text-[10px] text-blue-600 break-all line-clamp-2">{url || "Configurar link..."}</p>
+              <p className="text-[11px] text-blue-600 break-all whitespace-pre-wrap">{url || "Configurar link..."}</p>
             </div>
           );
         }
         return (
-          <div className="flex items-start gap-1.5 max-w-[460px]">
+          <div className="flex items-start gap-1.5">
             <I className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />
             <p className="text-[11px] text-slate-600 whitespace-pre-wrap break-words">
               {ct === "text" ? (node.data.content || "Configurar...") : labels[ct] || ct}
@@ -1611,7 +1611,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                     left: node.position.x,
                     top: node.position.y,
                     minWidth: 260,
-                    maxWidth: node.type === "message" && (node.data.content_type || "text") === "text" ? 500 : 320,
+                    maxWidth: node.type === "message" ? 520 : 320,
                     width: "fit-content",
                   }}
                   onMouseDown={e => handleNodeMouseDown(e, node.id)}>
