@@ -1182,10 +1182,10 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                 {n.data.target === "human" && (
                   <div>
                     <Label className="text-xs">Atendente</Label>
-                    <Select value={n.data.target_user_id || ""} onValueChange={v => updateNodeData(n.id, { target_user_id: v })}>
+                    <Select value={n.data.target_user_id || "__any__"} onValueChange={v => updateNodeData(n.id, { target_user_id: v === "__any__" ? "" : v })}>
                       <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Qualquer disponível" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Qualquer disponível</SelectItem>
+                        <SelectItem value="__any__">Qualquer disponível</SelectItem>
                         {users.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name || "Sem nome"}</SelectItem>)}
                       </SelectContent>
                     </Select>
