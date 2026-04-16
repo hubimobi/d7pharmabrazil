@@ -867,9 +867,9 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           );
         }
         return (
-          <div className="flex items-center gap-1.5">
-            <I className="h-3 w-3 text-blue-400 flex-shrink-0" />
-            <p className="text-[11px] text-slate-600 line-clamp-2 whitespace-pre-wrap">
+          <div className="flex items-start gap-1.5 max-w-[460px]">
+            <I className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />
+            <p className="text-[11px] text-slate-600 whitespace-pre-wrap break-words">
               {ct === "text" ? (node.data.content || "Configurar...") : labels[ct] || ct}
             </p>
           </div>
