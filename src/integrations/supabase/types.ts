@@ -3435,6 +3435,88 @@ export type Database = {
           },
         ]
       }
+      whatsapp_number_validation: {
+        Row: {
+          exists_on_whatsapp: boolean
+          id: string
+          phone: string
+          tenant_id: string | null
+          validated_at: string
+        }
+        Insert: {
+          exists_on_whatsapp?: boolean
+          id?: string
+          phone: string
+          tenant_id?: string | null
+          validated_at?: string
+        }
+        Update: {
+          exists_on_whatsapp?: boolean
+          id?: string
+          phone?: string
+          tenant_id?: string | null
+          validated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_number_validation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_sending_config: {
+        Row: {
+          batch_interval_seconds: number
+          batch_interval_variance: number
+          created_at: string
+          daily_global_limit: number
+          id: string
+          messages_per_batch: number
+          tenant_id: string | null
+          updated_at: string
+          validate_numbers: boolean
+          warmup_daily_increase: number
+          warmup_mode: boolean
+        }
+        Insert: {
+          batch_interval_seconds?: number
+          batch_interval_variance?: number
+          created_at?: string
+          daily_global_limit?: number
+          id?: string
+          messages_per_batch?: number
+          tenant_id?: string | null
+          updated_at?: string
+          validate_numbers?: boolean
+          warmup_daily_increase?: number
+          warmup_mode?: boolean
+        }
+        Update: {
+          batch_interval_seconds?: number
+          batch_interval_variance?: number
+          created_at?: string
+          daily_global_limit?: number
+          id?: string
+          messages_per_batch?: number
+          tenant_id?: string | null
+          updated_at?: string
+          validate_numbers?: boolean
+          warmup_daily_increase?: number
+          warmup_mode?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_sending_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_templates: {
         Row: {
           active: boolean

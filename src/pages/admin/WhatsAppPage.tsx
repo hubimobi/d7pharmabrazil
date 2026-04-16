@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1324,6 +1325,172 @@ function FunnelsTab() {
   );
 }
 
+// ==================== SENDING CONFIG TAB ====================
+function SendingConfigTab() {
+  const [config, setConfig] = useState({
+    messages_per_batch: 10,
+    batch_interval_seconds: 30,
+    batch_interval_variance: 15,
+    daily_global_limit: 500,
+    validate_numbers: true,
+    warmup_mode: false,
+    warmup_daily_increase: 20,
+  });
+  const [configId, setConfigId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { loadConfig(); }, []);
+
+  async function loadConfig() {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: tu } = await supabase.from("tenant_users").select("tenant_id").eq("user_id", user.id).limit(1).maybeSingle();
+      if (tu?.tenant_id) {
+        const { data } = await supabase.from("whatsapp_sending_config").select("*").eq("tenant_id", tu.tenant_id).maybeSingle();
+        if (data) {
+          setConfigId(data.id);
+          setConfig({
+            messages_per_batch: data.messages_per_batch,
+            batch_interval_seconds: data.batch_interval_seconds,
+            batch_interval_variance: data.batch_interval_variance,
+            daily_global_limit: data.daily_global_limit,
+            validate_numbers: data.validate_numbers,
+            warmup_mode: data.warmup_mode,
+            warmup_daily_increase: data.warmup_daily_increase,
+          });
+        }
+      }
+    }
+    setLoading(false);
+  }
+
+  async function saveConfig() {
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("Não autenticado"); setSaving(false); return; }
+    const { data: tu } = await supabase.from("tenant_users").select("tenant_id").eq("user_id", user.id).limit(1).maybeSingle();
+    const tenantId = tu?.tenant_id;
+    if (!tenantId) { toast.error("Tenant não encontrado"); setSaving(false); return; }
+
+    if (configId) {
+      await supabase.from("whatsapp_sending_config").update({ ...config }).eq("id", configId);
+    } else {
+      const { data } = await supabase.from("whatsapp_sending_config").insert({ ...config, tenant_id: tenantId }).select("id").single();
+      if (data) setConfigId(data.id);
+    }
+    toast.success("Configurações de envio salvas");
+    setSaving(false);
+  }
+
+  // Speed indicator
+  const msgsPerMinute = config.batch_interval_seconds > 0 ? (60 / config.batch_interval_seconds) : 60;
+  const speedColor = msgsPerMinute <= 1 ? "text-green-600" : msgsPerMinute <= 2 ? "text-amber-600" : "text-red-600";
+  const speedLabel = msgsPerMinute <= 1 ? "🟢 Seguro" : msgsPerMinute <= 2 ? "🟡 Moderado" : "🔴 Agressivo";
+
+  if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold flex items-center gap-2"><Settings2 className="h-5 w-5" /> Configurações de Envio</h3>
+        <p className="text-xs text-muted-foreground">Configure a velocidade e limites para evitar bloqueios do Meta</p>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Velocidade de Envio</CardTitle></CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <div className="flex justify-between mb-2">
+                <Label className="text-sm">Mensagens por lote</Label>
+                <Badge variant="outline">{config.messages_per_batch}</Badge>
+              </div>
+              <Slider value={[config.messages_per_batch]} onValueChange={([v]) => setConfig(c => ({ ...c, messages_per_batch: v }))} min={5} max={50} step={5} />
+              <p className="text-xs text-muted-foreground mt-1">Quantas mensagens processar por execução da fila</p>
+            </div>
+
+            <div>
+              <div className="flex justify-between mb-2">
+                <Label className="text-sm">Intervalo entre envios (segundos)</Label>
+                <Badge variant="outline">{config.batch_interval_seconds}s</Badge>
+              </div>
+              <Slider value={[config.batch_interval_seconds]} onValueChange={([v]) => setConfig(c => ({ ...c, batch_interval_seconds: v }))} min={10} max={120} step={5} />
+            </div>
+
+            <div>
+              <div className="flex justify-between mb-2">
+                <Label className="text-sm">Variação aleatória (±segundos)</Label>
+                <Badge variant="outline">±{config.batch_interval_variance}s</Badge>
+              </div>
+              <Slider value={[config.batch_interval_variance]} onValueChange={([v]) => setConfig(c => ({ ...c, batch_interval_variance: v }))} min={0} max={60} step={5} />
+              <p className="text-xs text-muted-foreground mt-1">Simula comportamento humano para evitar detecção</p>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div>
+                <p className="text-sm font-medium">Velocidade estimada</p>
+                <p className="text-xs text-muted-foreground">~{msgsPerMinute.toFixed(1)} msg/min</p>
+              </div>
+              <Badge className={`${speedColor} border`} variant="outline">{speedLabel}</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Limites e Segurança</CardTitle></CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <div className="flex justify-between mb-2">
+                <Label className="text-sm">Limite diário global</Label>
+                <Badge variant="outline">{config.daily_global_limit}</Badge>
+              </div>
+              <Slider value={[config.daily_global_limit]} onValueChange={([v]) => setConfig(c => ({ ...c, daily_global_limit: v }))} min={50} max={2000} step={50} />
+              <p className="text-xs text-muted-foreground mt-1">Total de mensagens/dia somando todas as instâncias</p>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Validar números antes de enviar</Label>
+                <p className="text-xs text-muted-foreground">Verifica se o número existe no WhatsApp</p>
+              </div>
+              <Switch checked={config.validate_numbers} onCheckedChange={(v) => setConfig(c => ({ ...c, validate_numbers: v }))} />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">Modo Aquecimento</Label>
+                <p className="text-xs text-muted-foreground">Aumenta limite diário progressivamente</p>
+              </div>
+              <Switch checked={config.warmup_mode} onCheckedChange={(v) => setConfig(c => ({ ...c, warmup_mode: v }))} />
+            </div>
+
+            {config.warmup_mode && (
+              <div>
+                <div className="flex justify-between mb-2">
+                  <Label className="text-sm">Incremento diário</Label>
+                  <Badge variant="outline">+{config.warmup_daily_increase}/dia</Badge>
+                </div>
+                <Slider value={[config.warmup_daily_increase]} onValueChange={([v]) => setConfig(c => ({ ...c, warmup_daily_increase: v }))} min={5} max={100} step={5} />
+                <p className="text-xs text-muted-foreground mt-1">Quantas mensagens a mais por dia no aquecimento</p>
+              </div>
+            )}
+
+            <Button onClick={saveConfig} disabled={saving} className="w-full">
+              {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Salvando...</> : "Salvar Configurações"}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 // ==================== BROADCAST TAB ====================
 function BroadcastTab() {
   const [funnels, setFunnels] = useState<WhatsAppFunnel[]>([]);
@@ -1337,6 +1504,7 @@ function BroadcastTab() {
   const [states, setStates] = useState<string[]>([]);
   const [estimatedCount, setEstimatedCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [broadcastInterval, setBroadcastInterval] = useState(30000); // default 30s
 
   useEffect(() => { loadData(); }, []);
   useEffect(() => { estimateAudience(); }, [filterType, filterValue]);
@@ -1364,6 +1532,12 @@ function BroadcastTab() {
       if (addr?.state) stateSet.add(addr.state);
     });
     setStates(Array.from(stateSet).sort());
+
+    // Load sending config for broadcast stagger
+    const { data: sc } = await supabase.from("whatsapp_sending_config").select("batch_interval_seconds").limit(1).maybeSingle();
+    if (sc?.batch_interval_seconds) {
+      setBroadcastInterval(sc.batch_interval_seconds * 1000);
+    }
   }
 
   async function estimateAudience() {
@@ -1488,7 +1662,7 @@ function BroadcastTab() {
         step_id: firstStep.id,
         template_id: firstStep.template_id || null,
         status: "pending",
-        scheduled_at: new Date(Date.now() + idx * 5000).toISOString(), // stagger by 5s
+        scheduled_at: new Date(Date.now() + idx * broadcastInterval).toISOString(),
         tenant_id: tenantId,
       }));
 
@@ -2097,6 +2271,7 @@ export default function WhatsAppPage() {
           <TabsTrigger value="broadcast" className="gap-1.5"><Megaphone className="h-3.5 w-3.5" /> Transmissão</TabsTrigger>
           <TabsTrigger value="contacts" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Contatos</TabsTrigger>
           <TabsTrigger value="queue" className="gap-1.5"><Clock className="h-3.5 w-3.5" /> Fila</TabsTrigger>
+          <TabsTrigger value="sending-config" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" /> Envio</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard"><DashboardTab /></TabsContent>
@@ -2107,6 +2282,7 @@ export default function WhatsAppPage() {
         <TabsContent value="broadcast"><BroadcastTab /></TabsContent>
         <TabsContent value="contacts"><ContactsTab /></TabsContent>
         <TabsContent value="queue"><QueueTab /></TabsContent>
+        <TabsContent value="sending-config"><SendingConfigTab /></TabsContent>
       </Tabs>
     </div>
   );
