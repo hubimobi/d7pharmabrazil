@@ -271,6 +271,12 @@ export default function PrescriberSignupPage() {
                       <Input disabled placeholder="Carregando representantes..." />
                     ) : reps.length === 0 ? (
                       <p className="text-sm text-destructive">Nenhum representante disponível. Contate o suporte.</p>
+                    ) : repCode && selectedRepId ? (
+                      <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="font-medium">{reps.find((r) => r.id === selectedRepId)?.name}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">Indicação confirmada</span>
+                      </div>
                     ) : (
                       <Select value={selectedRepId} onValueChange={setSelectedRepId}>
                         <SelectTrigger><SelectValue placeholder="Selecione um representante" /></SelectTrigger>
