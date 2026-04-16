@@ -229,11 +229,11 @@ export default function PrescriberSignupPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Registro Profissional</Label>
-                      <Input value={form.crm} onChange={(e) => setForm({ ...form, crm: e.target.value })} placeholder="CRM, CRN, CREFITO..." />
+                      <Label>Registro Profissional ou RG</Label>
+                      <Input value={form.crm} onChange={(e) => setForm({ ...form, crm: e.target.value })} placeholder="CRM, CRN, CREFITO, RG..." />
                     </div>
                     <div className="space-y-2">
-                      <Label>Especialidade</Label>
+                      <Label>Especialidade ou Profissão</Label>
                       <Input value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })} />
                     </div>
                   </div>
