@@ -89,6 +89,53 @@ const DAYS = [
   { value: "sunday", label: "Domingo" },
 ];
 
+const VAR_SOURCES: { value: string; label: string }[] = [
+  { value: "custom", label: "Texto / Variável" },
+  { value: "product", label: "Produto" },
+  { value: "tag", label: "Tag" },
+  { value: "representative", label: "Representante" },
+  { value: "order_status", label: "Status da Compra" },
+  { value: "recovery_stage", label: "Estágio Recuperação" },
+  { value: "repurchase_stage", label: "Estágio Recompra" },
+  { value: "coupon", label: "Cupom" },
+  { value: "behavior_profile", label: "Perfil Comportamental" },
+];
+
+const ORDER_STATUSES = [
+  { value: "pending", label: "Pendente" },
+  { value: "paid", label: "Pago" },
+  { value: "shipped", label: "Enviado" },
+  { value: "delivered", label: "Entregue" },
+  { value: "cancelled", label: "Cancelado" },
+  { value: "refunded", label: "Reembolsado" },
+];
+
+const RECOVERY_STAGES = [
+  { value: "novo", label: "Novo" },
+  { value: "primeiro_contato", label: "1º Contato" },
+  { value: "em_negociacao", label: "Em Negociação" },
+  { value: "proposta", label: "Proposta" },
+  { value: "perdido", label: "Perdido" },
+  { value: "convertido", label: "Convertido" },
+];
+
+const REPURCHASE_STAGES = [
+  { value: "ativo", label: "Ativo" },
+  { value: "aviso_30", label: "Aviso 30 dias" },
+  { value: "aviso_15", label: "Aviso 15 dias" },
+  { value: "aviso_5", label: "Aviso 5 dias" },
+  { value: "feedback", label: "Feedback" },
+  { value: "recomprou", label: "Recomprou" },
+];
+
+const BEHAVIOR_PROFILES = [
+  { value: "novo", label: "Novo" },
+  { value: "recorrente", label: "Recorrente" },
+  { value: "vip", label: "VIP" },
+  { value: "inativo", label: "Inativo" },
+  { value: "em_recuperacao", label: "Em Recuperação" },
+];
+
 /* ───── Flow List ───── */
 function FlowList({ onEdit }: { onEdit: (flow: Flow | null) => void }) {
   const [flows, setFlows] = useState<Flow[]>([]);
