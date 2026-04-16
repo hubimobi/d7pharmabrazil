@@ -753,10 +753,21 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
             </div>
           );
         }
+        if (ct === "link") {
+          const cfg = node.data.link_config;
+          const url = cfg?.product_id ? resolveLinkUrl(cfg) : node.data.link_url;
+          const prod = cfg?.product_id ? productsList.find(p => p.id === cfg.product_id) : null;
+          return (
+            <div className="space-y-1">
+              {prod && <Badge variant="outline" className="text-[9px] h-4"><ShoppingBag className="h-2.5 w-2.5 mr-1" />{prod.name}</Badge>}
+              <p className="text-[10px] text-blue-600 break-all line-clamp-2">{url || "Configurar link..."}</p>
+            </div>
+          );
+        }
         return (
           <div className="flex items-center gap-1.5">
             <I className="h-3 w-3 text-blue-400 flex-shrink-0" />
-            <p className="text-[11px] text-slate-600 line-clamp-1">
+            <p className="text-[11px] text-slate-600 line-clamp-2 whitespace-pre-wrap">
               {ct === "text" ? (node.data.content || "Configurar...") : labels[ct] || ct}
             </p>
           </div>
@@ -767,7 +778,14 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-[9px] h-4">{o.label}</Badge>)}</div>;
       }
       case "condition": {
-        if (node.data.condition_type === "any_response") return <p className="text-[11px] text-slate-600">Qualquer resposta</p>;
+        if (node.data.condition_type === "any_response") {
+          return (
+            <div className="flex gap-1 flex-wrap">
+              <Badge variant="outline" className="text-[9px] h-4">Qualquer resposta</Badge>
+              <Badge variant="outline" className="text-[9px] h-4 border-dashed">Sem resposta</Badge>
+            </div>
+          );
+        }
         const opts = (node.data.options || []) as { label: string }[];
         return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-[9px] h-4">{o.label}</Badge>)}<Badge variant="outline" className="text-[9px] h-4 border-dashed">Default</Badge></div>;
       }
