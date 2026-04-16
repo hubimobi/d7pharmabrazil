@@ -586,7 +586,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
       case "input": return { question: "", variable_name: "resposta" };
       case "ai_gen": return { prompt: "", model: llmConfig?.default_model || "google/gemini-3-flash-preview", agent_id: "" };
       case "transfer": return { target: "human", target_user_id: "", target_agent_id: "" };
-      case "set_variable": return { variable: "", value: "" };
+      case "set_variable": return { variable: "", variables: [] };
       case "choice": return { question: "Escolha uma opção:", options: [{ label: "Opção 1", tag: "" }, { label: "Opção 2", tag: "" }] };
       case "action": return { action_type: "add_tag", tag: "" };
       default: return {};
