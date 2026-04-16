@@ -1602,7 +1602,13 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
               return (
                 <div key={node.id}
                   className={`absolute select-none transition-all`}
-                  style={{ left: node.position.x, top: node.position.y, width: 260 }}
+                  style={{
+                    left: node.position.x,
+                    top: node.position.y,
+                    minWidth: 260,
+                    maxWidth: node.type === "message" && (node.data.content_type || "text") === "text" ? 500 : 320,
+                    width: "fit-content",
+                  }}
                   onMouseDown={e => handleNodeMouseDown(e, node.id)}>
                   <div
                     className={`rounded-xl bg-white shadow-md overflow-hidden transition-all ${isSelected ? "ring-2 ring-offset-1 shadow-lg" : "hover:shadow-md"}`}
