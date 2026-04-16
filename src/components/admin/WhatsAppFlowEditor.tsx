@@ -473,7 +473,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [showTest, setShowTest] = useState(false);
+  
   const [templates, setTemplates] = useState<any[]>([]);
   const [allFlows, setAllFlows] = useState<{ id: string; name: string }[]>([]);
   const [agents, setAgents] = useState<{ id: string; name: string; model: string }[]>([]);
