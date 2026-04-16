@@ -667,6 +667,15 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         const icons: Record<string, any> = { text: MessageSquare, template: FileText, file: Image, audio: Mic, video: Video, catalog: ShoppingBag, link: Link2 };
         const labels: Record<string, string> = { text: "Texto", template: "Template", file: "Arquivo", audio: "Áudio", video: "Vídeo", catalog: "Catálogo", link: "Link" };
         const I = icons[ct] || MessageSquare;
+        if (ct === "template" && node.data.template_id) {
+          const tpl = templates.find(t => t.id === node.data.template_id);
+          return (
+            <div className="space-y-1">
+              <Badge variant="outline" className="text-[9px] h-4"><FileText className="h-2.5 w-2.5 mr-1" />{tpl?.name || "Template"}</Badge>
+              {tpl?.content && <p className="text-[10px] text-slate-600 line-clamp-2 italic">{String(tpl.content).substring(0, 80)}{String(tpl.content).length > 80 ? "..." : ""}</p>}
+            </div>
+          );
+        }
         return (
           <div className="flex items-center gap-1.5">
             <I className="h-3 w-3 text-blue-400 flex-shrink-0" />
