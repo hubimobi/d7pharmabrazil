@@ -1611,7 +1611,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                     left: node.position.x,
                     top: node.position.y,
                     minWidth: 260,
-                    maxWidth: node.type === "message" && (node.data.content_type || "text") === "text" ? 500 : 320,
+                    maxWidth: node.type === "message" ? 520 : 320,
                     width: "fit-content",
                   }}
                   onMouseDown={e => handleNodeMouseDown(e, node.id)}>
