@@ -916,7 +916,12 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         }
         return <p className="text-[11px] text-slate-600">→ {node.data.target === "human" ? "Atendente" : node.data.target === "ai_agent" ? "Agente IA" : "Fila"}</p>;
       }
-      case "set_variable": return <p className="text-[11px] text-slate-600">{node.data.variable || "var"} = {node.data.value || "..."}</p>;
+      case "set_variable": {
+        const vars = (node.data.variables || []) as Array<{ source_label: string }>;
+        if (vars.length === 0) return <p className="text-[11px] text-slate-600">{node.data.variable || "var"} = {node.data.value || "..."}</p>;
+        const concat = vars.map(v => v.source_label || "?").join(" + ");
+        return <p className="text-[11px] text-slate-600 break-words"><span className="font-medium">{node.data.variable || "var"}</span> = {concat}</p>;
+      }
       case "start": return <p className="text-[11px] text-slate-500">Ponto de entrada</p>;
       case "end": return <p className="text-[11px] text-slate-500">Encerra fluxo</p>;
       default: return null;
