@@ -673,6 +673,12 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
 
   function getOutputHandles(node: FlowNode): { label: string; index: number }[] {
     if (node.type === "condition") {
+      if (node.data.condition_type === "any_response") {
+        return [
+          { label: "Qualquer resposta", index: 0 },
+          { label: "Sem resposta", index: 1 },
+        ];
+      }
       const opts = (node.data.options || []) as { label: string }[];
       const handles = opts.map((o, i) => ({ label: o.label, index: i }));
       handles.push({ label: "Default", index: opts.length });
@@ -682,6 +688,21 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
       return ((node.data.options || []) as { label: string }[]).map((o, i) => ({ label: o.label, index: i }));
     }
     return [];
+  }
+
+  function resolveLinkUrl(cfg: any): string {
+    if (!cfg?.product_id) return "";
+    const prod = productsList.find(p => p.id === cfg.product_id);
+    if (!prod) return "";
+    const base = typeof window !== "undefined" ? window.location.origin : "";
+    const params = new URLSearchParams();
+    if (cfg.doctor_id) {
+      const d = doctorsCoupons.find(x => x.doctor_id === cfg.doctor_id);
+      if (d) params.set("cupom", d.coupon_code);
+    }
+    if (cfg.checkout_version && cfg.checkout_version !== "default") params.set("ck", cfg.checkout_version);
+    const qs = params.toString();
+    return `${base}/produto/${prod.slug}${qs ? `?${qs}` : ""}`;
   }
 
   function renderEdges() {
