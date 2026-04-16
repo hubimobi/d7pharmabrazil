@@ -892,51 +892,62 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                   </div>
                 )}
                 {n.data.content_type === "link" && (
-                  <>
+                  <div className="space-y-2">
                     <div>
-                      <Label className="text-xs">Tipo de link</Label>
-                      <Select value={n.data.link_type || "custom"} onValueChange={v => updateNodeData(n.id, { link_type: v })}>
-                        <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                      <Label className="text-xs">Produto</Label>
+                      <Select
+                        value={n.data.link_config?.product_id || ""}
+                        onValueChange={v => {
+                          const cfg = { ...(n.data.link_config || {}), product_id: v };
+                          updateNodeData(n.id, { link_config: cfg, link_url: resolveLinkUrl(cfg) });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Selecionar produto..." /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="custom">Link personalizado</SelectItem>
-                          <SelectItem value="product">Link de produto (com prescritor)</SelectItem>
+                          {productsList.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
-                    {n.data.link_type === "product" ? (
-                      <div className="space-y-2">
-                        <div>
-                          <Label className="text-xs">ID do Produto</Label>
-                          <Input value={n.data.product_link_config?.product_id || ""} className="h-8 text-xs mt-1"
-                            onChange={e => updateNodeData(n.id, { product_link_config: { ...n.data.product_link_config, product_id: e.target.value } })}
-                            placeholder="UUID do produto" />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox checked={n.data.product_link_config?.include_prescriber || false}
-                            onCheckedChange={v => updateNodeData(n.id, { product_link_config: { ...n.data.product_link_config, include_prescriber: v } })} />
-                          <Label className="text-xs">Incluir prescritor</Label>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Versão checkout</Label>
-                          <Select value={n.data.product_link_config?.checkout_version || "3"}
-                            onValueChange={v => updateNodeData(n.id, { product_link_config: { ...n.data.product_link_config, checkout_version: v } })}>
-                            <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1">V1</SelectItem>
-                              <SelectItem value="2">V2</SelectItem>
-                              <SelectItem value="3">V3</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <Label className="text-xs">URL</Label>
-                        <Input value={n.data.link_url || ""} onChange={e => updateNodeData(n.id, { link_url: e.target.value })}
-                          placeholder="https://..." className="h-8 text-xs mt-1" />
+                    <div>
+                      <Label className="text-xs">Prescritor (opcional — aplica cupom)</Label>
+                      <Select
+                        value={n.data.link_config?.doctor_id || "__none__"}
+                        onValueChange={v => {
+                          const cfg = { ...(n.data.link_config || {}), doctor_id: v === "__none__" ? "" : v };
+                          updateNodeData(n.id, { link_config: cfg, link_url: resolveLinkUrl(cfg) });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Nenhum</SelectItem>
+                          {doctorsCoupons.map(d => <SelectItem key={d.doctor_id} value={d.doctor_id}>{d.doctor_name} ({d.coupon_code})</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Versão do Checkout</Label>
+                      <Select
+                        value={n.data.link_config?.checkout_version || "default"}
+                        onValueChange={v => {
+                          const cfg = { ...(n.data.link_config || {}), checkout_version: v };
+                          updateNodeData(n.id, { link_config: cfg, link_url: resolveLinkUrl(cfg) });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Padrão</SelectItem>
+                          <SelectItem value="1">V1</SelectItem>
+                          <SelectItem value="2">V2</SelectItem>
+                          <SelectItem value="3">V3</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {n.data.link_url && (
+                      <div className="p-2 rounded border bg-slate-50 text-[10px] break-all text-blue-700">
+                        🔗 {n.data.link_url}
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
                 {n.data.content_type === "catalog" && (
                   <p className="text-xs text-muted-foreground">Enviará o catálogo de produtos do WhatsApp Business.</p>
