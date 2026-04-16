@@ -1369,12 +1369,12 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
             const fromNode = nodes.find(n => n.id === connecting.nodeId);
             if (!fromNode) return null;
             const handles = getOutputHandles(fromNode);
-            let yOff = 30;
+            let yOff = 100;
             if (handles.length > 0 && connecting.handle) {
               const hi = handles.findIndex(h => h.label === connecting.handle);
-              if (hi >= 0) yOff = 38 + hi * 18;
+              if (hi >= 0) yOff = 100 + hi * 22;
             }
-            const sx = (fromNode.position.x + 240) * zoom + pan.x;
+            const sx = (fromNode.position.x + 260) * zoom + pan.x;
             const sy = (fromNode.position.y + yOff) * zoom + pan.y;
             return (
               <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
