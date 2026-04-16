@@ -1367,14 +1367,118 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
             {n.type === "set_variable" && (
               <>
                 <div>
-                  <Label className="text-xs">Variável</Label>
+                  <Label className="text-xs">Variável principal (opcional)</Label>
                   <Input value={n.data.variable || ""} onChange={e => updateNodeData(n.id, { variable: e.target.value })}
-                    placeholder="minha_var" className="h-8 text-xs mt-1" />
+                    placeholder="ex: produto_interesse" className="h-8 text-xs mt-1" />
+                  <p className="text-[10px] text-muted-foreground mt-1">Resultado final = concatenação dos valores abaixo.</p>
                 </div>
-                <div>
-                  <Label className="text-xs">Valor</Label>
-                  <Input value={n.data.value || ""} onChange={e => updateNodeData(n.id, { value: e.target.value })}
-                    placeholder="valor ou {outra_var}" className="h-8 text-xs mt-1" />
+
+                <div className="space-y-2">
+                  <Label className="text-xs">Fontes (concatenam)</Label>
+                  {((n.data.variables || []) as Array<{ name: string; source_type: string; source_value: string; source_label: string }>).map((v, i) => {
+                    const updateVar = (patch: any) => {
+                      const arr = [...(n.data.variables || [])];
+                      arr[i] = { ...arr[i], ...patch };
+                      updateNodeData(n.id, { variables: arr });
+                    };
+                    const removeVar = () => {
+                      const arr = [...(n.data.variables || [])];
+                      arr.splice(i, 1);
+                      updateNodeData(n.id, { variables: arr });
+                    };
+                    return (
+                      <div key={i} className="p-2 rounded border bg-slate-50 space-y-1.5">
+                        <div className="flex gap-1 items-center">
+                          <Select value={v.source_type || "custom"} onValueChange={val => updateVar({ source_type: val, source_value: "", source_label: "" })}>
+                            <SelectTrigger className="h-7 text-xs flex-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {VAR_SOURCES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <button onClick={removeVar} className="text-red-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
+                        </div>
+                        {v.source_type === "custom" && (
+                          <Input value={v.source_value || ""} onChange={e => updateVar({ source_value: e.target.value, source_label: e.target.value })}
+                            placeholder='texto ou {variavel}' className="h-7 text-xs" />
+                        )}
+                        {v.source_type === "product" && (
+                          <Select value={v.source_value || ""} onValueChange={val => {
+                            const p = productsList.find(x => x.id === val);
+                            updateVar({ source_value: val, source_label: p?.name || "" });
+                          }}>
+                            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecionar produto..." /></SelectTrigger>
+                            <SelectContent>{productsList.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                        )}
+                        {v.source_type === "tag" && (
+                          <Select value={v.source_value || ""} onValueChange={val => updateVar({ source_value: val, source_label: val })}>
+                            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecionar tag..." /></SelectTrigger>
+                            <SelectContent>
+                              {customerTags.length === 0 && <SelectItem value="__nenhuma__" disabled>Nenhuma tag cadastrada</SelectItem>}
+                              {customerTags.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {v.source_type === "representative" && (
+                          <Select value={v.source_value || ""} onValueChange={val => {
+                            const r = representatives.find(x => x.id === val);
+                            updateVar({ source_value: val, source_label: r?.name || "" });
+                          }}>
+                            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                            <SelectContent>{representatives.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                        )}
+                        {v.source_type === "order_status" && (
+                          <Select value={v.source_value || ""} onValueChange={val => {
+                            const o = ORDER_STATUSES.find(x => x.value === val);
+                            updateVar({ source_value: val, source_label: o?.label || val });
+                          }}>
+                            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecionar status..." /></SelectTrigger>
+                            <SelectContent>{ORDER_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                          </Select>
+                        )}
+                        {v.source_type === "recovery_stage" && (
+                          <Select value={v.source_value || ""} onValueChange={val => {
+                            const o = RECOVERY_STAGES.find(x => x.value === val);
+                            updateVar({ source_value: val, source_label: o?.label || val });
+                          }}>
+                            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecionar estágio..." /></SelectTrigger>
+                            <SelectContent>{RECOVERY_STAGES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                          </Select>
+                        )}
+                        {v.source_type === "repurchase_stage" && (
+                          <Select value={v.source_value || ""} onValueChange={val => {
+                            const o = REPURCHASE_STAGES.find(x => x.value === val);
+                            updateVar({ source_value: val, source_label: o?.label || val });
+                          }}>
+                            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecionar estágio..." /></SelectTrigger>
+                            <SelectContent>{REPURCHASE_STAGES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                          </Select>
+                        )}
+                        {v.source_type === "coupon" && (
+                          <Select value={v.source_value || ""} onValueChange={val => updateVar({ source_value: val, source_label: val })}>
+                            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecionar cupom..." /></SelectTrigger>
+                            <SelectContent>
+                              {couponsList.length === 0 && <SelectItem value="__none__" disabled>Nenhum cupom ativo</SelectItem>}
+                              {couponsList.map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {v.source_type === "behavior_profile" && (
+                          <Select value={v.source_value || ""} onValueChange={val => {
+                            const o = BEHAVIOR_PROFILES.find(x => x.value === val);
+                            updateVar({ source_value: val, source_label: o?.label || val });
+                          }}>
+                            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecionar perfil..." /></SelectTrigger>
+                            <SelectContent>{BEHAVIOR_PROFILES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={() => {
+                    updateNodeData(n.id, { variables: [...(n.data.variables || []), { name: "", source_type: "custom", source_value: "", source_label: "" }] });
+                  }}><Plus className="h-3 w-3 mr-1" /> Adicionar Variável</Button>
                 </div>
               </>
             )}
@@ -1384,7 +1488,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
               <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => disconnectAll(n.id)}>
                 <Unlink className="h-3 w-3 mr-1" /> Desvincular Tudo
               </Button>
-              <Button variant="destructive" size="sm" className="w-full text-xs" onClick={() => deleteNode(n.id)}>
+              <Button variant="destructive" size="sm" className="w-full text-xs" onClick={() => setDeleteConfirmId(n.id)}>
                 <Trash2 className="h-3 w-3 mr-1" /> Excluir Bloco
               </Button>
             </div>
