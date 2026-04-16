@@ -675,8 +675,21 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         const labels: Record<string, string> = { add_tag: "➕ Tag", remove_tag: "➖ Tag", go_to_flow: "↗️ Ir p/ fluxo", trigger_block: "⚡ Acionar bloco", mark_converted: "✅ Convertido" };
         return <p className="text-[11px] text-slate-600">{labels[node.data.action_type] || "Ação"}: {node.data.tag || node.data.flow_id?.substring(0, 8) || node.data.block_id || ""}</p>;
       }
-      case "ai_gen": return <p className="text-[11px] text-slate-600 line-clamp-1">🤖 {node.data.prompt || "Prompt..."}</p>;
-      case "transfer": return <p className="text-[11px] text-slate-600">→ {node.data.target}</p>;
+      case "ai_gen": {
+        const agentName = node.data.agent_id ? agents.find(a => a.id === node.data.agent_id)?.name : null;
+        return <p className="text-[11px] text-slate-600 line-clamp-1">🤖 {agentName ? `[${agentName}] ` : ""}{node.data.prompt || "Prompt..."}</p>;
+      }
+      case "transfer": {
+        if (node.data.target === "human" && node.data.target_user_id) {
+          const userName = users.find(u => u.id === node.data.target_user_id)?.full_name;
+          return <p className="text-[11px] text-slate-600">👤 {userName || node.data.target_user_id.substring(0, 8)}</p>;
+        }
+        if (node.data.target === "ai_agent" && node.data.target_agent_id) {
+          const agName = agents.find(a => a.id === node.data.target_agent_id)?.name;
+          return <p className="text-[11px] text-slate-600">🤖 {agName || "Agente"}</p>;
+        }
+        return <p className="text-[11px] text-slate-600">→ {node.data.target === "human" ? "Atendente" : node.data.target === "ai_agent" ? "Agente IA" : "Fila"}</p>;
+      }
       case "set_variable": return <p className="text-[11px] text-slate-600">{node.data.variable || "var"} = {node.data.value || "..."}</p>;
       case "start": return <p className="text-[11px] text-slate-500">Ponto de entrada</p>;
       case "end": return <p className="text-[11px] text-slate-500">Encerra fluxo</p>;
