@@ -3039,6 +3039,56 @@ export type Database = {
           },
         ]
       }
+      whatsapp_flows: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          edges: Json
+          id: string
+          name: string
+          nodes: Json
+          tenant_id: string | null
+          trigger_event: string
+          trigger_value: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          edges?: Json
+          id?: string
+          name: string
+          nodes?: Json
+          tenant_id?: string | null
+          trigger_event?: string
+          trigger_value?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          edges?: Json
+          id?: string
+          name?: string
+          nodes?: Json
+          tenant_id?: string | null
+          trigger_event?: string
+          trigger_value?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_flows_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_funnel_steps: {
         Row: {
           active: boolean

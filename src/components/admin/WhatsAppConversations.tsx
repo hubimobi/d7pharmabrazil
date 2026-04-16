@@ -59,6 +59,13 @@ interface Template {
 }
 
 /* ───────── Helpers ───────── */
+function ensureBrazilCountryCode(phone: string): string {
+  let clean = phone.replace(/\D/g, "");
+  if (clean.startsWith("0")) clean = clean.substring(1);
+  if (!clean.startsWith("55") && clean.length <= 11) clean = "55" + clean;
+  return clean;
+}
+
 function parseSpintax(text: string): string {
   const regex = /\{([^{}]+)\}/;
   let result = text;
@@ -221,8 +228,9 @@ export default function ConversationsTab() {
         setSending(false);
         return;
       }
+      const phoneToSend = ensureBrazilCountryCode(selected.contact_phone);
       const res = await supabase.functions.invoke("whatsapp-send", {
-        body: { phone: selected.contact_phone, message: messageText, contact_name: selected.contact_name },
+        body: { phone: phoneToSend, message: messageText, contact_name: selected.contact_name },
       });
       if (res.error) throw new Error(res.error.message);
       if (res.data?.error) throw new Error(typeof res.data.error === "string" ? res.data.error : JSON.stringify(res.data.error));
