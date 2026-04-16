@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
     }
 
     // Send via Evolution API
-    const formattedPhone = phone.replace(/\D/g, "");
+    const formattedPhone = ensureBrazilCountryCode(phone);
     const evoRes = await fetch(`${instance.api_url}/message/sendText/${instance.instance_name}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: instance.api_key },
