@@ -10,6 +10,7 @@ import { CheckCircle, UserPlus, Clock, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useTenant } from "@/hooks/useTenant";
 
 const STATES = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA",
@@ -51,6 +52,7 @@ type Step = "form" | "pending" | "create-user" | "done";
 export default function PrescriberSignupPage() {
   const [searchParams] = useSearchParams();
   const repCode = searchParams.get("rep");
+  const { tenantId } = useTenant();
 
   const [step, setStep] = useState<Step>("form");
   const [saving, setSaving] = useState(false);
@@ -138,6 +140,7 @@ export default function PrescriberSignupPage() {
           city: form.city || null,
           representative_id: representativeId,
           rep_code: repCode || null,
+          tenant_id: tenantId,
         },
       });
 
@@ -171,7 +174,7 @@ export default function PrescriberSignupPage() {
     setCreatingUser(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-prescriber-signup", {
-        body: { email: userEmail, password: userPassword },
+        body: { email: userEmail, password: userPassword, tenant_id: tenantId },
       });
 
       if (error) throw error;
