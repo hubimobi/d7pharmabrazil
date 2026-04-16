@@ -576,12 +576,14 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.target === canvasRef.current || (e.target as HTMLElement).classList.contains("flow-canvas-bg")) {
+      // If menu open, close it on canvas click
+      if (addNodeMenu) { setAddNodeMenu(null); return; }
+      if (connecting) { setConnecting(null); return; }
       setPanning(true);
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
       setSelectedNode(null);
-      if (connecting) setConnecting(null);
     }
-  }, [pan, connecting]);
+  }, [pan, connecting, addNodeMenu]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (dragging) {
@@ -593,29 +595,75 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     if (panning) {
       setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
     }
-  }, [dragging, dragStart, panning, panStart, zoom]);
-
-  const handleMouseUp = useCallback(() => { setDragging(null); setPanning(false); }, []);
-
-  function handleOutputClick(nodeId: string, handleLabel?: string) {
     if (connecting) {
-      if (connecting.nodeId !== nodeId) {
-        addEdge(connecting.nodeId, nodeId, connecting.handle);
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        setConnecting(c => c ? { ...c, mouseX: e.clientX - rect.left, mouseY: e.clientY - rect.top } : c);
+      }
+    }
+  }, [dragging, dragStart, panning, panStart, zoom, connecting]);
+
+  const handleCanvasMouseUp = useCallback((e: React.MouseEvent) => {
+    setDragging(null);
+    setPanning(false);
+    if (connecting) {
+      // Check if released over an input handle
+      const target = e.target as HTMLElement;
+      const inputEl = target.closest("[data-input-node]") as HTMLElement | null;
+      if (inputEl) {
+        const targetId = inputEl.getAttribute("data-input-node");
+        if (targetId && targetId !== connecting.nodeId) {
+          addEdge(connecting.nodeId, targetId, connecting.handle);
+        }
+        setConnecting(null);
+        return;
+      }
+      // Released on canvas background → open add menu
+      if (target === canvasRef.current || target.classList.contains("flow-canvas-bg")) {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (rect) {
+          setAddNodeMenu({ sourceId: connecting.nodeId, sourceHandle: connecting.handle, x: e.clientX - rect.left, y: e.clientY - rect.top });
+        }
       }
       setConnecting(null);
-    } else {
-      setConnecting({ nodeId, handle: handleLabel });
     }
+  }, [connecting]);
+
+  function handleOutputMouseDown(e: React.MouseEvent, nodeId: string, handleLabel?: string) {
+    e.stopPropagation();
+    if (e.button !== 0) return;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    setConnecting({
+      nodeId, handle: handleLabel,
+      mouseX: rect ? e.clientX - rect.left : 0,
+      mouseY: rect ? e.clientY - rect.top : 0,
+    });
   }
 
-  function handleInputClick(nodeId: string) {
-    if (connecting) {
-      if (connecting.nodeId !== nodeId) {
-        addEdge(connecting.nodeId, nodeId, connecting.handle);
-      }
-      setConnecting(null);
-    }
+  function handleAddFromMenu(type: NodeType) {
+    if (!addNodeMenu) return;
+    // Position in canvas coords
+    const x = (addNodeMenu.x - pan.x) / zoom;
+    const y = (addNodeMenu.y - pan.y) / zoom - 30;
+    const newNode: FlowNode = {
+      id: genId(), type,
+      position: { x: Math.round(x), y: Math.round(y) },
+      data: getDefaultData(type),
+    };
+    setNodes(prev => [...prev, newNode]);
+    addEdge(addNodeMenu.sourceId, newNode.id, addNodeMenu.sourceHandle);
+    setSelectedNode(newNode.id);
+    setAddNodeMenu(null);
   }
+
+  // ESC to cancel
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") { setConnecting(null); setAddNodeMenu(null); }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   function getOutputHandles(node: FlowNode): { label: string; index: number }[] {
     if (node.type === "condition") {
