@@ -1721,6 +1721,83 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
               </>
             )}
 
+            {/* ── Branch (Sim/Não) ── */}
+            {n.type === "branch" && (
+              <>
+                <div>
+                  <Label className="text-xs">Variável</Label>
+                  <Input value={n.data.variable_name || ""} onChange={e => updateNodeData(n.id, { variable_name: e.target.value })}
+                    placeholder="ex: resposta" className="h-8 text-xs mt-1" />
+                </div>
+                <div>
+                  <Label className="text-xs">Operador</Label>
+                  <Select value={n.data.operator || "exists"} onValueChange={v => updateNodeData(n.id, { operator: v })}>
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="exists">Existe (não vazio)</SelectItem>
+                      <SelectItem value="equals">Igual a</SelectItem>
+                      <SelectItem value="contains">Contém</SelectItem>
+                      <SelectItem value="is_true">É verdadeiro (sim/yes/1)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {(n.data.operator === "equals" || n.data.operator === "contains") && (
+                  <div>
+                    <Label className="text-xs">Valor de comparação</Label>
+                    <Input value={n.data.compare_value || ""} onChange={e => updateNodeData(n.id, { compare_value: e.target.value })}
+                      className="h-8 text-xs mt-1" />
+                  </div>
+                )}
+                <div className="flex gap-2 text-[10px]">
+                  <Badge className="bg-green-100 text-green-700 border-green-300"><Check className="h-3 w-3 mr-1" /> Saída Sim</Badge>
+                  <Badge className="bg-red-100 text-red-700 border-red-300"><XCircle className="h-3 w-3 mr-1" /> Saída Não</Badge>
+                </div>
+              </>
+            )}
+
+            {/* ── Start Flow ── */}
+            {n.type === "start_flow" && (
+              <>
+                <div>
+                  <Label className="text-xs">Fluxo a iniciar</Label>
+                  <Select value={n.data.target_flow_id || ""} onValueChange={v => updateNodeData(n.id, { target_flow_id: v })}>
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Selecionar fluxo..." /></SelectTrigger>
+                    <SelectContent>
+                      {allFlows.filter(f => f.id !== flow?.id).map(f => (
+                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="p-2 rounded border bg-amber-50 text-[10px] text-amber-800 flex items-start gap-1.5">
+                  <AlertTriangle className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                  <span>Encerra <strong>imediatamente</strong> o fluxo atual: cancela todas as mensagens pendentes para este contato e inicia o novo fluxo.</span>
+                </div>
+              </>
+            )}
+
+            {/* ── Split (round-robin) ── */}
+            {n.type === "split" && (
+              <>
+                <div>
+                  <Label className="text-xs">Quantidade de caminhos</Label>
+                  <Select
+                    value={String(n.data.split_count || 2)}
+                    onValueChange={v => updateNodeData(n.id, { split_count: Number(v) })}
+                  >
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2">2 (A / B)</SelectItem>
+                      <SelectItem value="3">3 (A / B / C)</SelectItem>
+                      <SelectItem value="4">4 (A / B / C / D)</SelectItem>
+                      <SelectItem value="5">5 (A / B / C / D / E)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground mt-1">Cada execução vai para o próximo caminho de forma intercalada (round-robin).</p>
+                </div>
+              </>
+            )}
+
             {/* ── Actions ── */}
             <div className="pt-3 border-t space-y-2">
               <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => disconnectAll(n.id)}>
@@ -1874,7 +1951,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                       <div className="flex-1 min-w-0">
                         <p className="text-[9px] uppercase tracking-wider text-slate-500 leading-none mb-0.5">WhatsApp</p>
                         <p className="text-xs font-semibold leading-tight truncate" style={{ color: meta.color }}>
-                          {isStart ? "Início" : meta.label}
+                          {isStart ? "Início" : (node.label || meta.label)}
                         </p>
                       </div>
                       <GripVertical className="h-3 w-3 text-slate-400 cursor-grab flex-shrink-0" />
