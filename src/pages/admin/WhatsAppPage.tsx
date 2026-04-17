@@ -1637,6 +1637,7 @@ const FILTER_OPTIONS = [
 ] as const;
 
 function BroadcastTab() {
+  const { tenantId } = useTenant();
   const [mode, setMode] = useState<BroadcastMode>("funnel");
   const [funnels, setFunnels] = useState<WhatsAppFunnel[]>([]);
   const [flows, setFlows] = useState<Array<{ id: string; name: string; description: string }>>([]);
@@ -1768,12 +1769,7 @@ function BroadcastTab() {
         return;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      let tenantId: string | null = null;
-      if (user) {
-        const { data: tu } = await supabase.from("tenant_users").select("tenant_id").eq("user_id", user.id).limit(1).maybeSingle();
-        tenantId = tu?.tenant_id || null;
-      }
+      // Tenant resolvido via useTenant() (suporta super_admin e troca de tenant)
 
       let messageContent = "";
       let stepId: string | null = null;
