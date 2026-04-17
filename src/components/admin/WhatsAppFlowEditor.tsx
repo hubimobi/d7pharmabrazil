@@ -1889,6 +1889,15 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         )}
       </div>
 
+      {/* Unsaved changes confirmation */}
+      <UnsavedChangesDialog
+        open={exitDialog}
+        onStay={() => setExitDialog(false)}
+        onLeave={() => { setExitDialog(false); setDirty(false); onBack(); }}
+        onSaveAndLeave={async () => { setExitDialog(false); await save(); }}
+        hasSave
+      />
+
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
         <AlertDialogContent>
