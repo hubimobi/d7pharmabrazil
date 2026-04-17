@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1478,44 +1479,38 @@ function SendingConfigTab() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { loadConfig(); }, []);
+  const { tenantId } = useTenant();
+
+  useEffect(() => { if (tenantId) loadConfig(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [tenantId]);
 
   async function loadConfig() {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: tu } = await supabase.from("tenant_users").select("tenant_id").eq("user_id", user.id).limit(1).maybeSingle();
-      if (tu?.tenant_id) {
-        const { data } = await supabase.from("whatsapp_sending_config").select("*").eq("tenant_id", tu.tenant_id).maybeSingle();
-        if (data) {
-          setConfigId(data.id);
-          setConfig({
-            messages_per_batch: data.messages_per_batch,
-            batch_interval_seconds: data.batch_interval_seconds,
-            batch_interval_variance: data.batch_interval_variance,
-            daily_global_limit: data.daily_global_limit,
-            validate_numbers: data.validate_numbers,
-            warmup_mode: data.warmup_mode,
-            warmup_daily_increase: data.warmup_daily_increase,
-          });
-        }
-      }
+    const { data } = await supabase.from("whatsapp_sending_config").select("*").eq("tenant_id", tenantId).maybeSingle();
+    if (data) {
+      setConfigId(data.id);
+      setConfig({
+        messages_per_batch: data.messages_per_batch,
+        batch_interval_seconds: data.batch_interval_seconds,
+        batch_interval_variance: data.batch_interval_variance,
+        daily_global_limit: data.daily_global_limit,
+        validate_numbers: data.validate_numbers,
+        warmup_mode: data.warmup_mode,
+        warmup_daily_increase: data.warmup_daily_increase,
+      });
     }
     setLoading(false);
   }
 
   async function saveConfig() {
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { toast.error("Não autenticado"); setSaving(false); return; }
-    const { data: tu } = await supabase.from("tenant_users").select("tenant_id").eq("user_id", user.id).limit(1).maybeSingle();
-    const tenantId = tu?.tenant_id;
-    if (!tenantId) { toast.error("Tenant não encontrado"); setSaving(false); return; }
+    if (!tenantId) { toast.error("Tenant não resolvido"); setSaving(false); return; }
 
     if (configId) {
-      await supabase.from("whatsapp_sending_config").update({ ...config }).eq("id", configId);
+      const { error } = await supabase.from("whatsapp_sending_config").update({ ...config }).eq("id", configId);
+      if (error) { toast.error("Erro ao salvar: " + error.message); setSaving(false); return; }
     } else {
-      const { data } = await supabase.from("whatsapp_sending_config").insert({ ...config, tenant_id: tenantId }).select("id").single();
+      const { data, error } = await supabase.from("whatsapp_sending_config").insert({ ...config, tenant_id: tenantId }).select("id").single();
+      if (error) { toast.error("Erro ao salvar: " + error.message); setSaving(false); return; }
       if (data) setConfigId(data.id);
     }
     toast.success("Configurações de envio salvas");
@@ -1642,6 +1637,7 @@ const FILTER_OPTIONS = [
 ] as const;
 
 function BroadcastTab() {
+  const { tenantId } = useTenant();
   const [mode, setMode] = useState<BroadcastMode>("funnel");
   const [funnels, setFunnels] = useState<WhatsAppFunnel[]>([]);
   const [flows, setFlows] = useState<Array<{ id: string; name: string; description: string }>>([]);
@@ -1773,12 +1769,7 @@ function BroadcastTab() {
         return;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      let tenantId: string | null = null;
-      if (user) {
-        const { data: tu } = await supabase.from("tenant_users").select("tenant_id").eq("user_id", user.id).limit(1).maybeSingle();
-        tenantId = tu?.tenant_id || null;
-      }
+      // Tenant resolvido via useTenant() (suporta super_admin e troca de tenant)
 
       let messageContent = "";
       let stepId: string | null = null;
