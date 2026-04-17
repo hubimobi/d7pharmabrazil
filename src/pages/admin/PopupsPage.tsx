@@ -14,9 +14,12 @@ import type { StoreSettings } from "@/hooks/useStoreSettings";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { SalesPopupSettings } from "@/components/admin/SalesPopupSettings";
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
+import { useTenant } from "@/hooks/useTenant";
+import { tenantPath } from "@/lib/tenantStorage";
 
 export default function PopupsPage() {
   const queryClient = useQueryClient();
+  const { tenantId } = useTenant();
   const { data: storeSettings } = useStoreSettings();
 
   const { data: settings, isLoading: loadingSettings } = useQuery({
@@ -88,7 +91,7 @@ export default function PopupsPage() {
     setUploading(true);
     try {
       const ext = file.name.split(".").pop() || "png";
-      const filePath = `popup-banner.${ext}`;
+      const filePath = tenantPath(tenantId, `popup-banner.${ext}`);
       await supabase.storage.from("store-assets").remove([filePath]);
       const { error } = await supabase.storage.from("store-assets").upload(filePath, file, { upsert: true });
       if (error) throw error;
@@ -105,7 +108,7 @@ export default function PopupsPage() {
   // Crop complete
   const handleCropComplete = useCallback(async (blob: Blob) => {
     try {
-      const filePath = `popup-banner-cropped.png`;
+      const filePath = tenantPath(tenantId, `popup-banner-cropped.png`);
       await supabase.storage.from("store-assets").remove([filePath]);
       const { error } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
       if (error) throw error;
@@ -132,7 +135,7 @@ export default function PopupsPage() {
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       const blob = new Blob([bytes], { type: "image/png" });
 
-      const filePath = `popup-banner-nobg.png`;
+      const filePath = tenantPath(tenantId, `popup-banner-nobg.png`);
       await supabase.storage.from("store-assets").remove([filePath]);
       const { error: uploadError } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
       if (uploadError) throw uploadError;

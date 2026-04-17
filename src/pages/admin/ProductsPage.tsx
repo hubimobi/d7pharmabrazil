@@ -23,6 +23,7 @@ import { CropImageDialog } from "@/components/admin/CropImageDialog";
 import { useToast } from "@/hooks/use-toast";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import CreatableSelect from "@/components/admin/CreatableSelect";
+import { tenantPath } from "@/lib/tenantStorage";
 
 interface ProdForm {
   name: string; slug: string; short_description: string; description: string;
@@ -157,7 +158,7 @@ export default function ProductsPage() {
 
       if (imageFile) {
         const ext = imageFile.name.split(".").pop();
-        const path = `${Date.now()}.${ext}`;
+        const path = tenantPath(tenantId, `products/${Date.now()}.${ext}`);
         const { error: upErr } = await supabase.storage.from("product-images").upload(path, imageFile);
         if (upErr) throw upErr;
         const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
@@ -168,7 +169,7 @@ export default function ProductsPage() {
       const uploadedExtras: string[] = [...existingExtras];
       for (const file of extraFiles) {
         const ext = file.name.split(".").pop();
-        const path = `extras/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const path = tenantPath(tenantId, `products/extras/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`);
         const { error: upErr } = await supabase.storage.from("product-images").upload(path, file);
         if (upErr) throw upErr;
         const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
@@ -219,7 +220,7 @@ export default function ProductsPage() {
           let authorUrl = t.author_image_url || null;
           if (t.author_image_file) {
             const ext = t.author_image_file.name.split(".").pop();
-            const path = `testimonials/author-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+            const path = tenantPath(tenantId, `testimonials/author-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`);
             await supabase.storage.from("images").upload(path, t.author_image_file, { upsert: true });
             const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
             authorUrl = urlData.publicUrl;
@@ -228,7 +229,7 @@ export default function ProductsPage() {
           if (t.product_image_files && t.product_image_files.length > 0) {
             const uploaded = await Promise.all(t.product_image_files.map(async (f) => {
               const ext = f.name.split(".").pop();
-              const path = `testimonials/product-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+              const path = tenantPath(tenantId, `testimonials/product-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`);
               await supabase.storage.from("images").upload(path, f, { upsert: true });
               const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
               return urlData.publicUrl;

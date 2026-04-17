@@ -4,6 +4,8 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useTenant } from "@/hooks/useTenant";
+import { tenantPath } from "@/lib/tenantStorage";
 import {
   Bold, Italic, Underline, Strikethrough,
   Heading1, Heading2, Heading3,
@@ -18,6 +20,7 @@ interface RichTextEditorProps {
 }
 
 export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+  const { tenantId } = useTenant();
   const editorRef = useRef<HTMLDivElement>(null);
   const mode = useRef<"visual" | "html">("visual");
   const internalValue = useRef(value);
@@ -93,7 +96,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
 
   const insertImage = useCallback(async (file: File) => {
     const ext = file.name.split(".").pop() || "png";
-    const path = `pages/${Date.now()}.${ext}`;
+    const path = tenantPath(tenantId, `pages/${Date.now()}.${ext}`);
     const { error } = await supabase.storage.from("images").upload(path, file, { upsert: true });
     if (error) {
       toast.error("Erro ao enviar imagem");
@@ -101,7 +104,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     }
     const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
     exec("insertHTML", `<img src="${urlData.publicUrl}" alt="imagem" style="max-width:100%;height:auto;margin:12px 0;border-radius:8px" />`);
-  }, [exec]);
+  }, [exec, tenantId]);
 
   const handleImageUpload = useCallback(() => {
     fileInputRef.current?.click();

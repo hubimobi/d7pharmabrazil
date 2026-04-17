@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Package, Upload, X, Search, Link2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { tenantPath } from "@/lib/tenantStorage";
 
 interface ComboForm {
   name: string;
@@ -82,7 +83,7 @@ export default function CombosPage() {
       let image_url: string | undefined;
       if (imageFile) {
         const ext = imageFile.name.split(".").pop();
-        const path = `combos/${Date.now()}.${ext}`;
+        const path = tenantPath(tenantId, `combos/${Date.now()}.${ext}`);
         const { error: upErr } = await supabase.storage.from("product-images").upload(path, imageFile);
         if (upErr) throw upErr;
         const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);

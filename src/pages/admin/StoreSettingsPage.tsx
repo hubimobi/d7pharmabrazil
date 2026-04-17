@@ -14,6 +14,8 @@ import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload,
 import type { StoreSettings } from "@/hooks/useStoreSettings";
 import { useProducts } from "@/hooks/useProducts";
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
+import { useTenant } from "@/hooks/useTenant";
+import { tenantPath } from "@/lib/tenantStorage";
 
 async function resizeImage(blob: Blob, width: number, height: number): Promise<Blob> {
   const img = new window.Image();
