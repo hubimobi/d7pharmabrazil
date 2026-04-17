@@ -27,6 +27,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import ConversationsTab from "@/components/admin/WhatsAppConversations";
 import WhatsAppFlowEditor from "@/components/admin/WhatsAppFlowEditor";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MessageComposer } from "@/components/admin/MessageComposer";
 
 // ==================== TYPES ====================
 interface WhatsAppInstance {
@@ -659,35 +660,13 @@ function TemplatesTab() {
               </div>
               <div>
                 <Label>Mensagem (Spintax)</Label>
-                <Textarea ref={templateTextareaRef} value={form.content}
-                  onChange={(e) => { setForm({ ...form, content: e.target.value }); generatePreview(e.target.value); cursorPosRef.current = e.target.selectionStart; }}
-                  onSelect={(e) => { cursorPosRef.current = (e.target as HTMLTextAreaElement).selectionStart; }}
-                  onBlur={(e) => { cursorPosRef.current = e.target.selectionStart; }}
+                <MessageComposer
+                  value={form.content}
+                  onChange={(v) => { setForm({ ...form, content: v }); generatePreview(v); }}
                   placeholder={`{Oi|Olá|E aí} {Nome}, {tudo bem|como vai}?\n\nVi que você deixou {Produto} no carrinho...\n{Link}`}
-                  className="min-h-[180px] font-mono text-xs" />
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {["{Nome}", "{Produto}", "{Link}", "{Cidade}", "{Nome_da_Empresa}", "{Atendente}"].map((v) => (
-                  <Badge key={v} variant="secondary" className="cursor-pointer text-[10px]"
-                    onClick={() => insertAtCursor(v)}>
-                    {v}
-                  </Badge>
-                ))}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Badge variant="outline" className="cursor-pointer text-[10px]">😀 Emoji</Badge>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[280px] p-2" align="start">
-                    <div className="grid grid-cols-8 gap-1 max-h-[200px] overflow-y-auto">
-                      {["😀","😂","😍","🥰","😎","🤩","🙏","👍","👋","🎉","🔥","💪","❤️","💙","💚","💛","🧡","💜","✅","⭐","🏆","💰","🛒","📦","🚚","💳","🎁","📱","💊","🩺","💉","🧪","🌿","🍃","✨","🌟","⚡","🔔","📢","💬","📧","📞","🕐","🗓️","📊","📈","👨‍⚕️","👩‍⚕️"].map((emoji) => (
-                        <button key={emoji} type="button" className="text-lg hover:bg-muted rounded p-1 transition-colors"
-                          onClick={() => insertAtCursor(emoji)}>
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                  rows={8}
+                  className="min-h-[180px] font-mono text-xs"
+                />
               </div>
             </div>
             <div>

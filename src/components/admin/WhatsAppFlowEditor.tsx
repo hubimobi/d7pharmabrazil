@@ -25,6 +25,7 @@ import {
   FileText, Mic, Video, Image, ShoppingBag, Send,
   Calendar, Tag, ArrowRightLeft,
 } from "lucide-react";
+import { MessageComposer } from "@/components/admin/MessageComposer";
 
 /* ───── Types ───── */
 type NodeType = "start" | "message" | "condition" | "wait" | "input" | "ai_gen" | "transfer" | "set_variable" | "choice" | "action" | "end";
@@ -869,7 +870,10 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         return (
           <div className="flex items-start gap-1.5">
             <I className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />
-            <p className="text-[11px] text-slate-600 whitespace-pre-wrap break-words">
+            <p
+              className="text-[11px] text-slate-600 whitespace-pre-wrap break-words"
+              style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', system-ui, sans-serif" }}
+            >
               {ct === "text" ? (node.data.content || "Configurar...") : labels[ct] || ct}
             </p>
           </div>
@@ -963,8 +967,16 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                 {n.data.content_type === "text" && (
                   <div>
                     <Label className="text-xs">Mensagem</Label>
-                    <Textarea value={n.data.content || ""} onChange={e => updateNodeData(n.id, { content: e.target.value })}
-                      placeholder="Use {Nome}, {Produto}..." rows={4} className="text-xs mt-1" />
+                    <div className="mt-1">
+                      <MessageComposer
+                        value={n.data.content || ""}
+                        onChange={(v) => updateNodeData(n.id, { content: v })}
+                        placeholder="Use {Nome}, {Produto}... ou {opção1|opção2} para spintax"
+                        rows={5}
+                        className="text-xs"
+                        compact
+                      />
+                    </div>
                   </div>
                 )}
                 {n.data.content_type === "template" && (
