@@ -1838,7 +1838,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)]">
+    <div data-flow-editor-root className="flex flex-col h-[calc(100vh-200px)]">
       {/* Toolbar */}
       <div className="flex items-center gap-2 p-3 border-b bg-card">
         <Button variant="ghost" size="sm" onClick={handleBack}><ArrowLeft className="h-4 w-4 mr-1" /> Voltar</Button>
