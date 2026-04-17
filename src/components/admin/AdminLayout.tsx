@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAdminTheme, type AdminTheme } from "@/hooks/useAdminTheme";
+import TrialBadge from "./TrialBadge";
+import TrialExpiredOverlay from "./TrialExpiredOverlay";
 
 interface AdminNotification {
   id: string;
