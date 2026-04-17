@@ -1291,6 +1291,60 @@ export type Database = {
           },
         ]
       }
+      plan_definitions: {
+        Row: {
+          active: boolean
+          allowed_modules: Json
+          created_at: string
+          display_name: string
+          id: string
+          max_ai_messages_per_month: number | null
+          max_custom_domains: number | null
+          max_orders_per_month: number | null
+          max_products: number | null
+          max_users: number | null
+          max_whatsapp_contacts: number | null
+          plan_key: string
+          price_brl: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          allowed_modules?: Json
+          created_at?: string
+          display_name: string
+          id?: string
+          max_ai_messages_per_month?: number | null
+          max_custom_domains?: number | null
+          max_orders_per_month?: number | null
+          max_products?: number | null
+          max_users?: number | null
+          max_whatsapp_contacts?: number | null
+          plan_key: string
+          price_brl?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          allowed_modules?: Json
+          created_at?: string
+          display_name?: string
+          id?: string
+          max_ai_messages_per_month?: number | null
+          max_custom_domains?: number | null
+          max_orders_per_month?: number | null
+          max_products?: number | null
+          max_users?: number | null
+          max_whatsapp_contacts?: number | null
+          plan_key?: string
+          price_brl?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       popup_leads: {
         Row: {
           city: string | null
