@@ -611,7 +611,32 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   const [llmConfig, setLlmConfig] = useState<{ provider: string; default_model: string } | null>(null);
   const [aiTestResult, setAiTestResult] = useState<string | null>(null);
   const [aiTesting, setAiTesting] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [exitDialog, setExitDialog] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
+
+  // Mark dirty on any meaningful change (skip first render)
+  useEffect(() => {
+    if (!initialized.current) { initialized.current = true; return; }
+    setDirty(true);
+  }, [name, description, triggerEvent, triggerValue, nodes, edges]);
+
+  // Warn on browser close
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+  function handleBack() {
+    if (dirty) { setExitDialog(true); return; }
+    onBack();
+  }
 
   const selectedNodeObj = nodes.find(n => n.id === selectedNode);
 
