@@ -318,6 +318,183 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // Handle wait_until_date — postpone until target date/time
+      if (parsedContent?.step_type === "wait_until_date") {
+        const cfg = parsedContent.config || {};
+        const dateStr = cfg.wait_date; // YYYY-MM-DD
+        const timeStr = cfg.wait_time || "00:00"; // HH:MM
+        if (dateStr) {
+          const target = new Date(`${dateStr}T${timeStr}:00`);
+          if (target.getTime() > Date.now()) {
+            await supabase.from("whatsapp_message_queue").update({
+              scheduled_at: target.toISOString(),
+            }).eq("id", msg.id);
+            postponed++;
+            continue;
+          }
+        }
+        // date passed → mark sent and continue
+        await supabase.from("whatsapp_message_queue").update({
+          status: "sent", sent_at: new Date().toISOString(),
+          message_content: `Wait until ${dateStr} ${timeStr} (passed)`,
+        }).eq("id", msg.id);
+        processed++;
+        continue;
+      }
+
+      // Handle question response saving (save_to_field)
+      if (parsedContent?.step_type === "question_save") {
+        const cfg = parsedContent.config || {};
+        const field = cfg.save_to_field as string | undefined;
+        const value = cfg.captured_value as string | undefined;
+        if (field && value) {
+          try {
+            const phone = msg.contact_phone;
+            if (field === "tag") {
+              await supabase.from("customer_tags").upsert({
+                customer_email: phone,
+                tag: value,
+                tenant_id: msg.tenant_id || null,
+              }, { onConflict: "customer_email,tag" });
+            } else if (field === "custom_key") {
+              const key = cfg.custom_key || "custom";
+              const { data: existing } = await supabase
+                .from("popup_leads").select("id, tags").eq("phone", phone).maybeSingle();
+              const newTag = `${key}:${value}`;
+              const tags = Array.isArray(existing?.tags) ? [...existing.tags, newTag] : [newTag];
+              if (existing) {
+                await supabase.from("popup_leads").update({ tags }).eq("id", existing.id);
+              } else {
+                await supabase.from("popup_leads").insert({
+                  email: `${phone}@whatsapp.local`, phone, tags, tenant_id: msg.tenant_id || null,
+                });
+              }
+            } else {
+              const update: any = { [field]: value };
+              const { data: existing } = await supabase
+                .from("popup_leads").select("id").eq("phone", phone).maybeSingle();
+              if (existing) {
+                await supabase.from("popup_leads").update(update).eq("id", existing.id);
+              } else {
+                await supabase.from("popup_leads").insert({
+                  email: `${phone}@whatsapp.local`, phone, ...update, tenant_id: msg.tenant_id || null,
+                });
+              }
+            }
+          } catch (e) {
+            console.error("question_save error:", e);
+          }
+        }
+        await supabase.from("whatsapp_message_queue").update({
+          status: "sent", sent_at: new Date().toISOString(),
+          message_content: `Saved ${field}=${value}`,
+        }).eq("id", msg.id);
+        processed++;
+        continue;
+      }
+
+      // Handle branch (variable Sim/Não)
+      if (parsedContent?.step_type === "branch") {
+        const cfg = parsedContent.config || {};
+        const varName = cfg.variable_name as string | undefined;
+        const operator = (cfg.operator || "exists") as string;
+        const compareValue = (cfg.compare_value || "").toString();
+        const vars = (msg.variables || {}) as Record<string, string>;
+        const v = varName ? (vars[varName] ?? "") : "";
+        let result = false;
+        switch (operator) {
+          case "exists": result = v !== "" && v !== null && v !== undefined; break;
+          case "equals": result = v.toString() === compareValue; break;
+          case "contains": result = v.toString().toLowerCase().includes(compareValue.toLowerCase()); break;
+          case "is_true": result = ["true", "1", "yes", "sim"].includes(v.toString().toLowerCase()); break;
+        }
+        await supabase.from("whatsapp_message_queue").update({
+          status: "sent", sent_at: new Date().toISOString(),
+          message_content: `Branch ${varName} ${operator} → ${result ? "TRUE" : "FALSE"}`,
+        }).eq("id", msg.id);
+        processed++;
+        continue;
+      }
+
+      // Handle start_flow — cancel current flow's pending msgs and start a new one
+      if (parsedContent?.step_type === "start_flow") {
+        const cfg = parsedContent.config || {};
+        const targetFlowId = cfg.target_flow_id as string | undefined;
+        if (targetFlowId && targetFlowId !== msg.funnel_id) {
+          // 1. Cancel all pending msgs for this contact in current flow
+          await supabase
+            .from("whatsapp_message_queue")
+            .update({ status: "cancelled", error_message: "Substituído por start_flow" })
+            .eq("contact_phone", msg.contact_phone)
+            .eq("funnel_id", msg.funnel_id)
+            .eq("status", "pending");
+
+          // 2. Enqueue first step of target flow
+          const { data: targetFlow } = await supabase
+            .from("whatsapp_funnels")
+            .select("*, whatsapp_funnel_steps(*, whatsapp_templates(*))")
+            .eq("id", targetFlowId)
+            .maybeSingle();
+          if (targetFlow) {
+            const steps = (targetFlow.whatsapp_funnel_steps || [])
+              .filter((s: any) => s.active)
+              .sort((a: any, b: any) => a.step_order - b.step_order);
+            if (steps.length > 0) {
+              const first = steps[0];
+              await supabase.from("whatsapp_message_queue").insert({
+                contact_phone: msg.contact_phone,
+                contact_name: msg.contact_name,
+                funnel_id: targetFlow.id,
+                step_id: first.id,
+                template_id: first.whatsapp_templates?.id || null,
+                instance_id: msg.instance_id,
+                message_content: first.whatsapp_templates?.content || (first.config?.content || ""),
+                variables: msg.variables,
+                status: "pending",
+                scheduled_at: new Date().toISOString(),
+                priority: 5,
+                tenant_id: msg.tenant_id,
+              });
+            }
+          }
+        }
+        await supabase.from("whatsapp_message_queue").update({
+          status: "sent", sent_at: new Date().toISOString(),
+          message_content: `Start flow → ${targetFlowId}`,
+        }).eq("id", msg.id);
+        processed++;
+        continue;
+      }
+
+      // Handle split — round-robin distribution
+      if (parsedContent?.step_type === "split") {
+        const cfg = parsedContent.config || {};
+        const splitCount = Math.max(2, Math.min(5, Number(cfg.split_count || 2)));
+        const flowId = msg.funnel_id;
+        const nodeId = msg.step_id;
+        let nextIdx = 0;
+        if (flowId && nodeId) {
+          const { data: state } = await supabase
+            .from("whatsapp_flow_split_state")
+            .select("last_index")
+            .eq("flow_id", flowId)
+            .eq("node_id", nodeId)
+            .maybeSingle();
+          const last = state?.last_index ?? -1;
+          nextIdx = (last + 1) % splitCount;
+          await supabase.from("whatsapp_flow_split_state").upsert({
+            flow_id: flowId, node_id: nodeId, last_index: nextIdx,
+            tenant_id: msg.tenant_id, updated_at: new Date().toISOString(),
+          }, { onConflict: "flow_id,node_id" });
+        }
+        await supabase.from("whatsapp_message_queue").update({
+          status: "sent", sent_at: new Date().toISOString(),
+          message_content: `Split → branch ${String.fromCharCode(65 + nextIdx)}`,
+        }).eq("id", msg.id);
+        processed++;
+        continue;
+      }
+
       // Smart delay based on config
       const delay = computeDelay(config);
       await new Promise(r => setTimeout(r, delay));
