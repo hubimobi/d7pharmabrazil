@@ -1,9 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  DEFAULT_TENANT_ID,
+  saveTenantCredentials,
+} from "../_shared/tenant-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+function isUuid(v: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,6 +22,19 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
+
+    // `state` may carry "<tenant_uuid>|<redirect_url>" or just one of them.
+    let tenantId = DEFAULT_TENANT_ID;
+    let redirectUrl = "/admin/integracoes";
+    if (state) {
+      const [first, ...rest] = state.split("|");
+      if (isUuid(first)) {
+        tenantId = first;
+        if (rest.length) redirectUrl = rest.join("|");
+      } else {
+        redirectUrl = state;
+      }
+    }
 
     if (!code) {
       return new Response("Missing authorization code", { status: 400 });
