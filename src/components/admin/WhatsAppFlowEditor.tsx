@@ -24,9 +24,14 @@ import {
   Variable, HelpCircle, Edit, Copy, Link2, Unlink,
   ZoomIn, ZoomOut, Maximize2, ListChecks, Zap,
   FileText, Mic, Video, Image as ImageIcon, ShoppingBag, Send,
-  Calendar, Tag, ArrowRightLeft, AlertTriangle, CheckCircle2,
+  Calendar as CalendarIcon, Tag, ArrowRightLeft, AlertTriangle, CheckCircle2,
   Hourglass, MoveRight, PenTool, Sparkles, Settings2,
+  Shuffle, Rocket, Check, XCircle,
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { MessageComposer } from "@/components/admin/MessageComposer";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import UnsavedChangesDialog from "@/components/admin/UnsavedChangesDialog";
