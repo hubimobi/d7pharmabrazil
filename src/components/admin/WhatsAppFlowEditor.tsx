@@ -916,7 +916,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     switch (node.type) {
       case "message": {
         const ct = node.data.content_type || "text";
-        const icons: Record<string, any> = { text: MessageSquare, template: FileText, file: Image, audio: Mic, video: Video, catalog: ShoppingBag, link: Link2 };
+        const icons: Record<string, any> = { text: MessageSquare, template: FileText, file: ImageIcon, audio: Mic, video: Video, catalog: ShoppingBag, link: Link2 };
         const labels: Record<string, string> = { text: "Texto", template: "Template", file: "Arquivo", audio: "Áudio", video: "Vídeo", catalog: "Catálogo", link: "Link" };
         const I = icons[ct] || MessageSquare;
         if (ct === "template" && node.data.template_id) {
