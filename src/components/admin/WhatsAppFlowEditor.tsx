@@ -16,16 +16,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
 import {
   Plus, Save, Trash2, Play, ArrowLeft, GripVertical,
   MessageSquare, GitBranch, Clock, Bot, UserCheck, Flag,
   Variable, HelpCircle, Edit, Copy, Link2, Unlink,
   ZoomIn, ZoomOut, Maximize2, ListChecks, Zap,
-  FileText, Mic, Video, Image, ShoppingBag, Send,
-  Calendar, Tag, ArrowRightLeft,
+  FileText, Mic, Video, Image as ImageIcon, ShoppingBag, Send,
+  Calendar, Tag, ArrowRightLeft, AlertTriangle, CheckCircle2,
+  Hourglass, MoveRight, PenTool, Sparkles, Settings2,
 } from "lucide-react";
 import { MessageComposer } from "@/components/admin/MessageComposer";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import UnsavedChangesDialog from "@/components/admin/UnsavedChangesDialog";
 
 /* ───── Types ───── */
 type NodeType = "start" | "message" | "condition" | "wait" | "input" | "ai_gen" | "transfer" | "set_variable" | "choice" | "action" | "end";
@@ -227,8 +231,20 @@ function FlowList({ onEdit }: { onEdit: (flow: Flow | null) => void }) {
 }
 
 /* ───── Test Flow Simulator ───── */
+type SimMessage = {
+  from: "bot" | "user" | "system";
+  text: string;
+  icon?: any;
+  time?: string;
+};
+
+function nowHM() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 function FlowTestPanel({ onClose, nodes, edges }: { onClose: () => void; nodes: FlowNode[]; edges: FlowEdge[] }) {
-  const [messages, setMessages] = useState<{ from: "bot" | "user"; text: string }[]>([]);
+  const [messages, setMessages] = useState<SimMessage[]>([]);
   const [variables, setVariables] = useState<Record<string, string>>({ Nome: "João", Telefone: "11999999999", Produto: "Produto Exemplo" });
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
   const [waitingInput, setWaitingInput] = useState(false);
@@ -256,25 +272,26 @@ function FlowTestPanel({ onClose, nodes, edges }: { onClose: () => void; nodes: 
     if (startNode) {
       const next = getNext(startNode.id);
       if (next) processNode(next, []);
-      else { setMessages([{ from: "bot", text: "⚠️ Nenhum nó conectado ao início" }]); setRunning(false); }
+      else { setMessages([{ from: "system", text: "Nenhum nó conectado ao início", icon: AlertTriangle }]); setRunning(false); }
     }
   }
 
-  function processNode(node: FlowNode, msgSoFar: { from: "bot" | "user"; text: string }[]) {
-    const addMsg = (m: { from: "bot" | "user"; text: string }) => {
-      msgSoFar = [...msgSoFar, m];
+  function processNode(node: FlowNode, msgSoFar: SimMessage[]) {
+    const addMsg = (m: SimMessage) => {
+      const stamped = { time: nowHM(), ...m };
+      msgSoFar = [...msgSoFar, stamped];
       setMessages([...msgSoFar]);
     };
 
     switch (node.type) {
       case "message": {
         const ct = node.data.content_type || "text";
-        if (ct === "template") addMsg({ from: "bot", text: `📋 [Template: ${node.data.template_id || "?"}]` });
-        else if (ct === "file") addMsg({ from: "bot", text: `📎 [Arquivo: ${node.data.file_url || "?"}]` });
-        else if (ct === "audio") addMsg({ from: "bot", text: `🎤 [Áudio: ${node.data.audio_url || "?"}]` });
-        else if (ct === "video") addMsg({ from: "bot", text: `🎬 [Vídeo: ${node.data.video_url || "?"}]` });
-        else if (ct === "catalog") addMsg({ from: "bot", text: `🛒 [Catálogo WhatsApp]` });
-        else if (ct === "link") addMsg({ from: "bot", text: `🔗 ${node.data.link_url || "Link"}` });
+        if (ct === "template") addMsg({ from: "bot", text: `Template: ${node.data.template_id || "?"}`, icon: FileText });
+        else if (ct === "file") addMsg({ from: "bot", text: `Arquivo: ${node.data.file_url || "?"}`, icon: ImageIcon });
+        else if (ct === "audio") addMsg({ from: "bot", text: `Áudio: ${node.data.audio_url || "?"}`, icon: Mic });
+        else if (ct === "video") addMsg({ from: "bot", text: `Vídeo: ${node.data.video_url || "?"}`, icon: Video });
+        else if (ct === "catalog") addMsg({ from: "bot", text: `Catálogo WhatsApp`, icon: ShoppingBag });
+        else if (ct === "link") addMsg({ from: "bot", text: node.data.link_url || "Link", icon: Link2 });
         else addMsg({ from: "bot", text: replaceVars(node.data.content || "(vazio)") });
         const next = getNext(node.id);
         if (next) setTimeout(() => processNode(next, msgSoFar), 600);
@@ -291,12 +308,12 @@ function FlowTestPanel({ onClose, nodes, edges }: { onClose: () => void; nodes: 
       }
       case "condition": {
         if (node.data.condition_type === "any_response") {
-          addMsg({ from: "bot", text: "⏳ Aguardando qualquer resposta..." });
+          addMsg({ from: "system", text: "Aguardando qualquer resposta...", icon: Hourglass });
           setCurrentNodeId(node.id);
           setWaitingInput(true);
         } else {
           const kws = (node.data.options || []) as { label: string; keywords: string[] }[];
-          addMsg({ from: "bot", text: `🔀 Condição: ${kws.map(k => k.label).join(" | ")}` });
+          addMsg({ from: "system", text: `Condição: ${kws.map(k => k.label).join(" | ")}`, icon: GitBranch });
           setCurrentNodeId(node.id);
           setWaitingInput(true);
         }
@@ -305,9 +322,9 @@ function FlowTestPanel({ onClose, nodes, edges }: { onClose: () => void; nodes: 
       case "wait": {
         const u = node.data.delay_unit === "h" ? "hora(s)" : node.data.delay_unit === "d" ? "dia(s)" : "min";
         if (node.data.wait_type === "specific_date") {
-          addMsg({ from: "bot", text: `⏰ Aguardando até ${node.data.specific_day || "?"} às ${node.data.specific_time || "?"}` });
+          addMsg({ from: "system", text: `Aguardando até ${node.data.specific_day || "?"} às ${node.data.specific_time || "?"}`, icon: Clock });
         } else {
-          addMsg({ from: "bot", text: `⏱ Esperando ${node.data.delay_value || 0} ${u}...` });
+          addMsg({ from: "system", text: `Esperando ${node.data.delay_value || 0} ${u}...`, icon: Clock });
         }
         const next = getNext(node.id);
         if (next) setTimeout(() => processNode(next, msgSoFar), 800);
@@ -322,38 +339,38 @@ function FlowTestPanel({ onClose, nodes, edges }: { onClose: () => void; nodes: 
       }
       case "action": {
         const at = node.data.action_type || "";
-        if (at === "add_tag") addMsg({ from: "bot", text: `🏷️ Tag adicionada: ${node.data.tag || "?"}` });
-        else if (at === "remove_tag") addMsg({ from: "bot", text: `🏷️ Tag removida: ${node.data.tag || "?"}` });
-        else if (at === "go_to_flow") addMsg({ from: "bot", text: `↗️ Ir para fluxo: ${node.data.flow_id || "?"}` });
-        else if (at === "trigger_block") addMsg({ from: "bot", text: `⚡ Acionar bloco: ${node.data.block_id || "?"}` });
-        else addMsg({ from: "bot", text: `⚡ Ação: ${at}` });
+        if (at === "add_tag") addMsg({ from: "system", text: `Tag adicionada: ${node.data.tag || "?"}`, icon: Tag });
+        else if (at === "remove_tag") addMsg({ from: "system", text: `Tag removida: ${node.data.tag || "?"}`, icon: Tag });
+        else if (at === "go_to_flow") addMsg({ from: "system", text: `Ir para fluxo: ${node.data.flow_id || "?"}`, icon: MoveRight });
+        else if (at === "trigger_block") addMsg({ from: "system", text: `Acionar bloco: ${node.data.block_id || "?"}`, icon: Zap });
+        else addMsg({ from: "system", text: `Ação: ${at}`, icon: Zap });
         const next = getNext(node.id);
         if (next) setTimeout(() => processNode(next, msgSoFar), 400);
         else setRunning(false);
         break;
       }
       case "ai_gen": {
-        addMsg({ from: "bot", text: `🤖 [IA geraria resposta: "${(node.data.prompt || "").substring(0, 60)}..."]` });
+        addMsg({ from: "system", text: `IA geraria resposta: "${(node.data.prompt || "").substring(0, 60)}..."`, icon: Bot });
         const next = getNext(node.id);
         if (next) setTimeout(() => processNode(next, msgSoFar), 600);
         else setRunning(false);
         break;
       }
       case "transfer": {
-        addMsg({ from: "bot", text: `👤 Transferindo para: ${node.data.target}` });
+        addMsg({ from: "system", text: `Transferindo para: ${node.data.target}`, icon: UserCheck });
         setRunning(false);
         break;
       }
       case "set_variable": {
         variables[node.data.variable || "var"] = replaceVars(node.data.value || "");
-        addMsg({ from: "bot", text: `📝 ${node.data.variable} = ${variables[node.data.variable || "var"]}` });
+        addMsg({ from: "system", text: `${node.data.variable} = ${variables[node.data.variable || "var"]}`, icon: PenTool });
         const next = getNext(node.id);
         if (next) setTimeout(() => processNode(next, msgSoFar), 300);
         else setRunning(false);
         break;
       }
       case "end": {
-        addMsg({ from: "bot", text: "🏁 Fluxo encerrado" });
+        addMsg({ from: "system", text: "Fluxo encerrado", icon: Flag });
         setRunning(false);
         break;
       }
@@ -369,7 +386,7 @@ function FlowTestPanel({ onClose, nodes, edges }: { onClose: () => void; nodes: 
     if (!userInput.trim() || !currentNodeId) return;
     const node = nodes.find(n => n.id === currentNodeId);
     if (!node) return;
-    const newMsgs = [...messages, { from: "user" as const, text: userInput }];
+    const newMsgs: SimMessage[] = [...messages, { from: "user", text: userInput, time: nowHM() }];
     setMessages(newMsgs);
     setWaitingInput(false);
 
@@ -383,13 +400,13 @@ function FlowTestPanel({ onClose, nodes, edges }: { onClose: () => void; nodes: 
       const idx = parseInt(userInput) - 1;
       const chosen = opts[idx];
       if (chosen) {
-        if (chosen.tag) newMsgs.push({ from: "bot", text: `🏷️ Tag: ${chosen.tag}` });
+        if (chosen.tag) newMsgs.push({ from: "system", text: `Tag: ${chosen.tag}`, icon: Tag, time: nowHM() });
         setMessages([...newMsgs]);
         const next = getNext(node.id, chosen.label);
         if (next) setTimeout(() => processNode(next, newMsgs), 400);
         else { const fallback = getNext(node.id); if (fallback) setTimeout(() => processNode(fallback, newMsgs), 400); else setRunning(false); }
       } else {
-        newMsgs.push({ from: "bot", text: "⚠️ Opção inválida" });
+        newMsgs.push({ from: "system", text: "Opção inválida", icon: AlertTriangle, time: nowHM() });
         setMessages([...newMsgs]);
         setWaitingInput(true);
       }
@@ -413,7 +430,7 @@ function FlowTestPanel({ onClose, nodes, edges }: { onClose: () => void; nodes: 
             if (next) setTimeout(() => processNode(next, newMsgs), 400);
             else setRunning(false);
           } else {
-            newMsgs.push({ from: "bot", text: "⚠️ Nenhuma condição correspondeu" });
+            newMsgs.push({ from: "system", text: "Nenhuma condição correspondeu", icon: AlertTriangle, time: nowHM() });
             setMessages([...newMsgs]);
             setRunning(false);
           }
@@ -426,77 +443,132 @@ function FlowTestPanel({ onClose, nodes, edges }: { onClose: () => void; nodes: 
   useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
 
   return (
-    <div className="w-[380px] flex-shrink-0 border-l bg-slate-900 flex flex-col">
-      {/* Phone-style header with controls */}
-      <div className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700">
-        <p className="text-xs font-semibold text-white">Testar Fluxo</p>
+    <div className="w-[400px] flex-shrink-0 border-l bg-background flex flex-col font-sans">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b">
+        <div className="flex items-center gap-2">
+          <Play className="h-4 w-4 text-primary" />
+          <p className="text-sm font-semibold">Testar Fluxo</p>
+        </div>
         <div className="flex items-center gap-1">
-          <Button size="icon" variant="ghost" className="h-6 w-6 text-white hover:bg-slate-700"
+          <Button size="icon" variant="ghost" className="h-7 w-7"
+            title="Reiniciar"
             onClick={() => { setMessages([]); setRunning(false); setWaitingInput(false); setUserInput(""); }}>
             <RotateCcw className="h-3.5 w-3.5" />
           </Button>
-          <Button size="icon" variant="ghost" className="h-6 w-6 text-white hover:bg-slate-700" onClick={onClose}>
+          <Button size="icon" variant="ghost" className="h-7 w-7" title="Fechar" onClick={onClose}>
             <X className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
 
-      {/* Phone mockup */}
-      <div className="flex-1 p-3 overflow-hidden flex items-center justify-center">
-        <div className="w-full max-w-[320px] h-full bg-black rounded-[2rem] p-2 shadow-2xl flex flex-col">
-          <div className="flex-1 bg-white rounded-[1.5rem] overflow-hidden flex flex-col">
-            {/* WhatsApp header */}
-            <div className="bg-[#075E54] text-white px-3 py-2 flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold">T</div>
-              <div className="flex-1">
-                <p className="font-semibold text-xs">Teste de Fluxo</p>
-                <p className="text-[9px] opacity-80">Simulador</p>
+      {/* Variables (collapsible) */}
+      <div className="border-b">
+        <Accordion type="single" collapsible defaultValue="vars">
+          <AccordionItem value="vars" className="border-0">
+            <AccordionTrigger className="px-3 py-2 text-xs font-medium hover:no-underline">
+              <div className="flex items-center gap-1.5">
+                <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+                Variáveis de teste
               </div>
-            </div>
-
-            {/* Variables */}
-            <div className="bg-amber-50 border-b px-2 py-1">
-              <div className="flex flex-wrap gap-1">
+            </AccordionTrigger>
+            <AccordionContent className="pb-2 px-3">
+              <div className="grid grid-cols-2 gap-1.5">
                 {Object.entries(variables).map(([k, v]) => (
-                  <Input key={k} className="h-5 text-[9px] w-auto inline-flex max-w-[120px] px-1" value={`${k}=${v}`}
-                    onChange={e => { const [key, ...rest] = e.target.value.split("="); setVariables(prev => ({ ...prev, [key]: rest.join("=") })); }}
-                  />
+                  <div key={k} className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground w-16 truncate">{k}</span>
+                    <Input
+                      className="h-6 text-xs flex-1"
+                      value={v}
+                      onChange={e => setVariables(prev => ({ ...prev, [k]: e.target.value }))}
+                    />
+                  </div>
                 ))}
               </div>
-            </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
 
-            {/* Chat */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-2 space-y-1.5" style={{ backgroundColor: "#ECE5DD" }}>
-              {messages.length === 0 && !running && (
-                <p className="text-center text-[10px] text-slate-500 mt-4">Clique em Iniciar para começar</p>
-              )}
-              {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[85%] px-2 py-1 rounded-lg text-[11px] ${m.from === "user" ? "bg-[#DCF8C6] text-slate-800" : "bg-white text-slate-800 shadow-sm"}`}>
-                    {m.text}
+      {/* Phone mockup */}
+      <div className="flex-1 p-3 overflow-hidden flex flex-col">
+        <div className="flex-1 rounded-2xl shadow-sm border overflow-hidden flex flex-col">
+          {/* WhatsApp header */}
+          <div className="bg-[#075E54] text-white px-3 py-2.5 flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+              <Bot className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm leading-tight truncate">Teste de Fluxo</p>
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <p className="text-xs opacity-90">online</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Chat */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2"
+            style={{ backgroundColor: "#E5DDD5", backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><circle cx='20' cy='20' r='1' fill='%23000' opacity='0.04'/></svg>\")" }}>
+            {messages.length === 0 && !running && (
+              <div className="flex justify-center mt-4">
+                <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-md shadow-sm">
+                  <p className="text-xs text-slate-600">Clique em Iniciar para testar</p>
+                </div>
+              </div>
+            )}
+            {messages.map((m, i) => {
+              if (m.from === "system") {
+                const Ico = m.icon;
+                return (
+                  <div key={i} className="flex justify-center my-1">
+                    <div className="bg-white/85 backdrop-blur-sm px-2.5 py-1 rounded-md shadow-sm flex items-center gap-1.5 max-w-[85%]">
+                      {Ico && <Ico className="h-3 w-3 text-slate-500 flex-shrink-0" />}
+                      <span className="text-xs text-slate-600">{m.text}</span>
+                    </div>
+                  </div>
+                );
+              }
+              const isUser = m.from === "user";
+              const Ico = m.icon;
+              return (
+                <div key={i} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                  <div className={`relative max-w-[80%] px-2.5 py-1.5 rounded-lg shadow-sm ${
+                    isUser
+                      ? "bg-[#DCF8C6] text-slate-800 rounded-tr-none"
+                      : "bg-white text-slate-800 rounded-tl-none"
+                  }`}
+                    style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', system-ui, sans-serif" }}>
+                    <div className="flex items-start gap-1.5">
+                      {Ico && <Ico className="h-3.5 w-3.5 text-slate-500 mt-0.5 flex-shrink-0" />}
+                      <p className="text-xs whitespace-pre-wrap break-words flex-1">{m.text}</p>
+                    </div>
+                    {m.time && (
+                      <span className="block text-[10px] text-slate-500 text-right mt-0.5 leading-none">{m.time}</span>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
+          </div>
 
-            {/* Input */}
-            <div className="border-t bg-[#F0F0F0] p-1.5 flex gap-1">
-              {!running ? (
-                <Button onClick={startTest} size="sm" className="w-full bg-[#075E54] hover:bg-[#064E46] text-xs h-7">
-                  <Play className="h-3 w-3 mr-1" /> Iniciar
+          {/* Input */}
+          <div className="border-t bg-[#F0F0F0] p-2 flex gap-1.5 items-center">
+            {!running ? (
+              <Button onClick={startTest} size="sm" className="w-full bg-[#075E54] hover:bg-[#064E46] text-white text-xs h-9">
+                <Play className="h-3.5 w-3.5 mr-1.5" /> Iniciar Conversa
+              </Button>
+            ) : waitingInput ? (
+              <>
+                <Input value={userInput} onChange={e => setUserInput(e.target.value)} placeholder="Digite uma mensagem"
+                  className="flex-1 h-9 text-xs rounded-full bg-white border-0 px-3" onKeyDown={e => e.key === "Enter" && handleUserSend()} />
+                <Button size="icon" className="h-9 w-9 rounded-full bg-[#075E54] hover:bg-[#064E46] text-white flex-shrink-0" onClick={handleUserSend}>
+                  <Send className="h-4 w-4" />
                 </Button>
-              ) : waitingInput ? (
-                <>
-                  <Input value={userInput} onChange={e => setUserInput(e.target.value)} placeholder="Resposta..."
-                    className="flex-1 h-7 text-[11px]" onKeyDown={e => e.key === "Enter" && handleUserSend()} />
-                  <Button size="icon" className="h-7 w-7 bg-[#075E54]" onClick={handleUserSend}>
-                    <Send className="h-3 w-3" />
-                  </Button>
-                </>
-              ) : (
-                <p className="text-[10px] text-muted-foreground text-center w-full py-1">Processando...</p>
-              )}
-            </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center w-full py-1">Processando...</p>
+            )}
           </div>
         </div>
       </div>
@@ -539,7 +611,32 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
   const [llmConfig, setLlmConfig] = useState<{ provider: string; default_model: string } | null>(null);
   const [aiTestResult, setAiTestResult] = useState<string | null>(null);
   const [aiTesting, setAiTesting] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [exitDialog, setExitDialog] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
+
+  // Mark dirty on any meaningful change (skip first render)
+  useEffect(() => {
+    if (!initialized.current) { initialized.current = true; return; }
+    setDirty(true);
+  }, [name, description, triggerEvent, triggerValue, nodes, edges]);
+
+  // Warn on browser close
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+  function handleBack() {
+    if (dirty) { setExitDialog(true); return; }
+    onBack();
+  }
 
   const selectedNodeObj = nodes.find(n => n.id === selectedNode);
 
@@ -633,6 +730,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         if (error) throw error;
       }
       toast.success("Fluxo salvo!");
+      setDirty(false);
       onBack();
     } catch (e: any) { toast.error(e.message); }
     setSaving(false);
@@ -844,15 +942,15 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     switch (node.type) {
       case "message": {
         const ct = node.data.content_type || "text";
-        const icons: Record<string, any> = { text: MessageSquare, template: FileText, file: Image, audio: Mic, video: Video, catalog: ShoppingBag, link: Link2 };
+        const icons: Record<string, any> = { text: MessageSquare, template: FileText, file: ImageIcon, audio: Mic, video: Video, catalog: ShoppingBag, link: Link2 };
         const labels: Record<string, string> = { text: "Texto", template: "Template", file: "Arquivo", audio: "Áudio", video: "Vídeo", catalog: "Catálogo", link: "Link" };
         const I = icons[ct] || MessageSquare;
         if (ct === "template" && node.data.template_id) {
           const tpl = templates.find(t => t.id === node.data.template_id);
           return (
             <div className="space-y-1">
-              <Badge variant="outline" className="text-[9px] h-4"><FileText className="h-2.5 w-2.5 mr-1" />{tpl?.name || "Template"}</Badge>
-              {tpl?.content && <p className="text-[11px] text-slate-600 italic whitespace-pre-wrap break-words">{tpl.content}</p>}
+              <Badge variant="outline" className="text-xs h-5"><FileText className="h-3 w-3 mr-1" />{tpl?.name || "Template"}</Badge>
+              {tpl?.content && <p className="text-xs text-slate-600 italic whitespace-pre-wrap break-words">{tpl.content}</p>}
             </div>
           );
         }
@@ -862,18 +960,15 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           const prod = cfg?.product_id ? productsList.find(p => p.id === cfg.product_id) : null;
           return (
             <div className="space-y-1">
-              {prod && <Badge variant="outline" className="text-[9px] h-4"><ShoppingBag className="h-2.5 w-2.5 mr-1" />{prod.name}</Badge>}
-              <p className="text-[11px] text-blue-600 break-all whitespace-pre-wrap">{url || "Configurar link..."}</p>
+              {prod && <Badge variant="outline" className="text-xs h-5"><ShoppingBag className="h-3 w-3 mr-1" />{prod.name}</Badge>}
+              <p className="text-xs text-blue-600 break-all whitespace-pre-wrap">{url || "Configurar link..."}</p>
             </div>
           );
         }
         return (
           <div className="flex items-start gap-1.5">
-            <I className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />
-            <p
-              className="text-[11px] text-slate-600 whitespace-pre-wrap break-words"
-              style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', system-ui, sans-serif" }}
-            >
+            <I className="h-3.5 w-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-slate-600 whitespace-pre-wrap break-words">
               {ct === "text" ? (node.data.content || "Configurar...") : labels[ct] || ct}
             </p>
           </div>
@@ -881,53 +976,55 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
       }
       case "choice": {
         const opts = (node.data.options || []) as { label: string }[];
-        return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-[9px] h-4">{o.label}</Badge>)}</div>;
+        return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-xs h-5">{o.label}</Badge>)}</div>;
       }
       case "condition": {
         if (node.data.condition_type === "any_response") {
           return (
             <div className="flex gap-1 flex-wrap">
-              <Badge variant="outline" className="text-[9px] h-4">Qualquer resposta</Badge>
-              <Badge variant="outline" className="text-[9px] h-4 border-dashed">Sem resposta</Badge>
+              <Badge variant="outline" className="text-xs h-5">Qualquer resposta</Badge>
+              <Badge variant="outline" className="text-xs h-5 border-dashed">Sem resposta</Badge>
             </div>
           );
         }
         const opts = (node.data.options || []) as { label: string }[];
-        return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-[9px] h-4">{o.label}</Badge>)}<Badge variant="outline" className="text-[9px] h-4 border-dashed">Default</Badge></div>;
+        return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-xs h-5">{o.label}</Badge>)}<Badge variant="outline" className="text-xs h-5 border-dashed">Default</Badge></div>;
       }
       case "wait": {
-        if (node.data.wait_type === "specific_date") return <p className="text-[11px] text-slate-600">📅 {DAYS.find(d => d.value === node.data.specific_day)?.label || "?"} {node.data.specific_time || ""}</p>;
+        if (node.data.wait_type === "specific_date") return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Calendar className="h-3 w-3" />{DAYS.find(d => d.value === node.data.specific_day)?.label || "?"} {node.data.specific_time || ""}</p>;
         const units: Record<string, string> = { m: "min", h: "h", d: "dias" };
-        return <p className="text-[11px] text-slate-600">⏱ {node.data.delay_value || 0} {units[node.data.delay_unit] || "min"}</p>;
+        return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Clock className="h-3 w-3" />{node.data.delay_value || 0} {units[node.data.delay_unit] || "min"}</p>;
       }
-      case "input": return <p className="text-[11px] text-slate-600 line-clamp-1">{node.data.question || "Pergunta..."}</p>;
+      case "input": return <p className="text-xs text-slate-600 line-clamp-1">{node.data.question || "Pergunta..."}</p>;
       case "action": {
-        const labels: Record<string, string> = { add_tag: "➕ Tag", remove_tag: "➖ Tag", go_to_flow: "↗️ Ir p/ fluxo", trigger_block: "⚡ Acionar bloco", mark_converted: "✅ Convertido" };
-        return <p className="text-[11px] text-slate-600">{labels[node.data.action_type] || "Ação"}: {node.data.tag || node.data.flow_id?.substring(0, 8) || node.data.block_id || ""}</p>;
+        const actionIcons: Record<string, any> = { add_tag: Tag, remove_tag: Tag, go_to_flow: MoveRight, trigger_block: Zap, mark_converted: CheckCircle2 };
+        const labels: Record<string, string> = { add_tag: "Add Tag", remove_tag: "Remover Tag", go_to_flow: "Ir p/ fluxo", trigger_block: "Acionar bloco", mark_converted: "Convertido" };
+        const AI = actionIcons[node.data.action_type] || Zap;
+        return <p className="text-xs text-slate-600 flex items-center gap-1.5"><AI className="h-3 w-3" />{labels[node.data.action_type] || "Ação"}: {node.data.tag || node.data.flow_id?.substring(0, 8) || node.data.block_id || ""}</p>;
       }
       case "ai_gen": {
         const agentName = node.data.agent_id ? agents.find(a => a.id === node.data.agent_id)?.name : null;
-        return <p className="text-[11px] text-slate-600 line-clamp-1">🤖 {agentName ? `[${agentName}] ` : ""}{node.data.prompt || "Prompt..."}</p>;
+        return <p className="text-xs text-slate-600 line-clamp-1 flex items-center gap-1.5"><Bot className="h-3 w-3 flex-shrink-0" />{agentName ? `[${agentName}] ` : ""}{node.data.prompt || "Prompt..."}</p>;
       }
       case "transfer": {
         if (node.data.target === "human" && node.data.target_user_id) {
           const userName = users.find(u => u.id === node.data.target_user_id)?.full_name;
-          return <p className="text-[11px] text-slate-600">👤 {userName || node.data.target_user_id.substring(0, 8)}</p>;
+          return <p className="text-xs text-slate-600 flex items-center gap-1.5"><UserCheck className="h-3 w-3" />{userName || node.data.target_user_id.substring(0, 8)}</p>;
         }
         if (node.data.target === "ai_agent" && node.data.target_agent_id) {
           const agName = agents.find(a => a.id === node.data.target_agent_id)?.name;
-          return <p className="text-[11px] text-slate-600">🤖 {agName || "Agente"}</p>;
+          return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Bot className="h-3 w-3" />{agName || "Agente"}</p>;
         }
-        return <p className="text-[11px] text-slate-600">→ {node.data.target === "human" ? "Atendente" : node.data.target === "ai_agent" ? "Agente IA" : "Fila"}</p>;
+        return <p className="text-xs text-slate-600 flex items-center gap-1.5"><MoveRight className="h-3 w-3" />{node.data.target === "human" ? "Atendente" : node.data.target === "ai_agent" ? "Agente IA" : "Fila"}</p>;
       }
       case "set_variable": {
         const vars = (node.data.variables || []) as Array<{ source_label: string }>;
-        if (vars.length === 0) return <p className="text-[11px] text-slate-600">{node.data.variable || "var"} = {node.data.value || "..."}</p>;
+        if (vars.length === 0) return <p className="text-xs text-slate-600">{node.data.variable || "var"} = {node.data.value || "..."}</p>;
         const concat = vars.map(v => v.source_label || "?").join(" + ");
-        return <p className="text-[11px] text-slate-600 break-words"><span className="font-medium">{node.data.variable || "var"}</span> = {concat}</p>;
+        return <p className="text-xs text-slate-600 break-words"><span className="font-medium">{node.data.variable || "var"}</span> = {concat}</p>;
       }
-      case "start": return <p className="text-[11px] text-slate-500">Ponto de entrada</p>;
-      case "end": return <p className="text-[11px] text-slate-500">Encerra fluxo</p>;
+      case "start": return <p className="text-xs text-slate-500">Ponto de entrada</p>;
+      case "end": return <p className="text-xs text-slate-500">Encerra fluxo</p>;
       default: return null;
     }
   }
@@ -954,13 +1051,13 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                   <Select value={n.data.content_type || "text"} onValueChange={v => updateNodeData(n.id, { content_type: v })}>
                     <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="text">💬 Texto</SelectItem>
-                      <SelectItem value="template">📋 Template</SelectItem>
-                      <SelectItem value="file">📎 Arquivo/Imagem</SelectItem>
-                      <SelectItem value="audio">🎤 Áudio</SelectItem>
-                      <SelectItem value="video">🎬 Vídeo</SelectItem>
-                      <SelectItem value="link">🔗 Link</SelectItem>
-                      <SelectItem value="catalog">🛒 Catálogo</SelectItem>
+                      <SelectItem value="text"><span className="flex items-center gap-2"><MessageSquare className="h-3.5 w-3.5" /> Texto</span></SelectItem>
+                      <SelectItem value="template"><span className="flex items-center gap-2"><FileText className="h-3.5 w-3.5" /> Template</span></SelectItem>
+                      <SelectItem value="file"><span className="flex items-center gap-2"><ImageIcon className="h-3.5 w-3.5" /> Arquivo/Imagem</span></SelectItem>
+                      <SelectItem value="audio"><span className="flex items-center gap-2"><Mic className="h-3.5 w-3.5" /> Áudio</span></SelectItem>
+                      <SelectItem value="video"><span className="flex items-center gap-2"><Video className="h-3.5 w-3.5" /> Vídeo</span></SelectItem>
+                      <SelectItem value="link"><span className="flex items-center gap-2"><Link2 className="h-3.5 w-3.5" /> Link</span></SelectItem>
+                      <SelectItem value="catalog"><span className="flex items-center gap-2"><ShoppingBag className="h-3.5 w-3.5" /> Catálogo</span></SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1062,8 +1159,9 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                       </Select>
                     </div>
                     {n.data.link_url && (
-                      <div className="p-2 rounded border bg-slate-50 text-[10px] break-all text-blue-700">
-                        🔗 {n.data.link_url}
+                      <div className="p-2 rounded border bg-slate-50 text-xs break-all text-blue-700 flex items-start gap-1.5">
+                        <Link2 className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                        <span>{n.data.link_url}</span>
                       </div>
                     )}
                   </div>
@@ -1519,7 +1617,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     <div className="flex flex-col h-[calc(100vh-200px)]">
       {/* Toolbar */}
       <div className="flex items-center gap-2 p-3 border-b bg-card">
-        <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> Voltar</Button>
+        <Button variant="ghost" size="sm" onClick={handleBack}><ArrowLeft className="h-4 w-4 mr-1" /> Voltar</Button>
         <div className="flex-1 flex items-center gap-2">
           <Input value={name} onChange={e => setName(e.target.value)} className="max-w-[250px] h-8 text-sm font-semibold" />
           <Select value={triggerEvent} onValueChange={setTriggerEvent}>
@@ -1560,9 +1658,12 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
             );
           })}
           {connecting && (
-            <div className="mt-4 p-2 rounded-md bg-blue-50 border border-blue-200 text-[10px] text-blue-700">
-              🔗 Arraste até o destino ou solte no vazio para criar bloco
-              <Button size="sm" variant="ghost" className="h-5 text-[10px] mt-1 w-full" onClick={() => setConnecting(null)}>Cancelar</Button>
+            <div className="mt-4 p-2 rounded-md bg-blue-50 border border-blue-200 text-xs text-blue-700">
+              <div className="flex items-start gap-1.5">
+                <Link2 className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                <span>Arraste até o destino ou solte no vazio para criar bloco</span>
+              </div>
+              <Button size="sm" variant="ghost" className="h-6 text-xs mt-1 w-full" onClick={() => setConnecting(null)}>Cancelar</Button>
             </div>
           )}
         </div>
@@ -1787,6 +1888,15 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           <FlowTestPanel onClose={() => setTestPanelOpen(false)} nodes={nodes} edges={edges} />
         )}
       </div>
+
+      {/* Unsaved changes confirmation */}
+      <UnsavedChangesDialog
+        open={exitDialog}
+        onStay={() => setExitDialog(false)}
+        onLeave={() => { setExitDialog(false); setDirty(false); onBack(); }}
+        onSaveAndLeave={async () => { setExitDialog(false); await save(); }}
+        hasSave
+      />
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
