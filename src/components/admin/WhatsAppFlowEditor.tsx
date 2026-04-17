@@ -701,12 +701,15 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
       case "message": return { content_type: "text", content: "" };
       case "condition": return { condition_type: "keywords", options: [{ label: "Sim", keywords: ["sim", "quero"] }, { label: "Não", keywords: ["não", "nao"] }] };
       case "wait": return { wait_type: "delay", delay_value: 5, delay_unit: "m" };
-      case "input": return { question: "", variable_name: "resposta" };
+      case "input": return { question: "", variable_name: "resposta", save_to_field: "", custom_field_key: "" };
       case "ai_gen": return { prompt: "", model: llmConfig?.default_model || "google/gemini-3-flash-preview", agent_id: "" };
       case "transfer": return { target: "human", target_user_id: "", target_agent_id: "" };
       case "set_variable": return { variable: "", variables: [] };
       case "choice": return { question: "Escolha uma opção:", options: [{ label: "Opção 1", tag: "" }, { label: "Opção 2", tag: "" }] };
       case "action": return { action_type: "add_tag", tag: "" };
+      case "branch": return { variable_name: "", operator: "exists", compare_value: "" };
+      case "start_flow": return { target_flow_id: "" };
+      case "split": return { split_count: 2 };
       default: return {};
     }
   }
