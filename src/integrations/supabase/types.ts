@@ -3388,10 +3388,13 @@ export type Database = {
       }
       whatsapp_message_queue: {
         Row: {
+          broadcast_id: string | null
+          broadcast_name: string | null
           contact_name: string
           contact_phone: string
           created_at: string
           error_message: string | null
+          flow_id: string | null
           funnel_id: string | null
           id: string
           instance_id: string | null
@@ -3408,10 +3411,13 @@ export type Database = {
           variables: Json
         }
         Insert: {
+          broadcast_id?: string | null
+          broadcast_name?: string | null
           contact_name?: string
           contact_phone: string
           created_at?: string
           error_message?: string | null
+          flow_id?: string | null
           funnel_id?: string | null
           id?: string
           instance_id?: string | null
@@ -3428,10 +3434,13 @@ export type Database = {
           variables?: Json
         }
         Update: {
+          broadcast_id?: string | null
+          broadcast_name?: string | null
           contact_name?: string
           contact_phone?: string
           created_at?: string
           error_message?: string | null
+          flow_id?: string | null
           funnel_id?: string | null
           id?: string
           instance_id?: string | null
@@ -3448,6 +3457,13 @@ export type Database = {
           variables?: Json
         }
         Relationships: [
+          {
+            foreignKeyName: "whatsapp_message_queue_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_flows"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "whatsapp_message_queue_funnel_id_fkey"
             columns: ["funnel_id"]
