@@ -113,6 +113,7 @@ const adminSections: MenuSection[] = [
       { title: "Configurações", url: "/admin/configuracoes", icon: Store },
       { title: "Design", url: "/admin/design", icon: Palette },
       { title: "Integrações", url: "/admin/integracoes", icon: Plug },
+      { title: "Domínios", url: "/admin/dominios", icon: Globe },
     ],
   },
 ];
