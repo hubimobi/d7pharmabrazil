@@ -941,9 +941,10 @@ function TikTokShopCard() {
   };
 
   const handleDisconnect = async () => {
-    const { error } = await (supabase.from("tiktok_tokens" as any) as any)
+    const { error } = await (supabase.from("tenant_integrations" as any) as any)
       .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000");
+      .eq("tenant_id", tenantId)
+      .eq("provider", "tiktok_shop");
     if (error) {
       toast.error("Erro ao desconectar.");
     } else {
