@@ -653,6 +653,30 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
+  // Intercept any navigation while dirty: tabs (Radix [role="tab"]), sidebar links, etc.
+  useEffect(() => {
+    if (!dirty) return;
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Allow clicks inside the flow editor itself
+      if (target.closest("[data-flow-editor-root]")) return;
+      // Intercept tab triggers (Radix tabs have role="tab")
+      const tab = target.closest('[role="tab"]');
+      const anchor = target.closest("a[href]");
+      if (!tab && !anchor) return;
+      // Allow links inside the editor (nada do editor tem link externo, mas defense-in-depth)
+      if (anchor) {
+        const href = anchor.getAttribute("href");
+        if (!href || href.startsWith("#")) return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      setExitDialog(true);
+    };
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [dirty]);
+
   function handleBack() {
     if (dirty) { setExitDialog(true); return; }
     onBack();
