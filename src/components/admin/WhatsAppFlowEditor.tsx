@@ -1617,7 +1617,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     <div className="flex flex-col h-[calc(100vh-200px)]">
       {/* Toolbar */}
       <div className="flex items-center gap-2 p-3 border-b bg-card">
-        <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> Voltar</Button>
+        <Button variant="ghost" size="sm" onClick={handleBack}><ArrowLeft className="h-4 w-4 mr-1" /> Voltar</Button>
         <div className="flex-1 flex items-center gap-2">
           <Input value={name} onChange={e => setName(e.target.value)} className="max-w-[250px] h-8 text-sm font-semibold" />
           <Select value={triggerEvent} onValueChange={setTriggerEvent}>
