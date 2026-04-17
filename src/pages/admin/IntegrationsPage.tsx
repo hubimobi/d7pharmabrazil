@@ -200,7 +200,15 @@ export default function IntegrationsPage() {
                 />
                 <Button
                   disabled={!blingInviteUrl}
-                  onClick={() => window.open(blingInviteUrl, "_blank")}
+                  onClick={() => {
+                    try {
+                      const url = new URL(blingInviteUrl);
+                      url.searchParams.set("state", tenantId);
+                      window.open(url.toString(), "_blank");
+                    } catch {
+                      toast.error("URL do Bling inválida.");
+                    }
+                  }}
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Autorizar no Bling
