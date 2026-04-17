@@ -1,40 +1,59 @@
 
-## Ajustes no Flow Editor
+## Plano: Padronizar ícones, unificar Broadcast (Funil + Flow) e melhorar fila
 
-### 1. Confirmar saída sem salvar
-- Adicionar `useUnsavedChangesGuard` no `FlowCanvas`.
-- Marcar `dirty=true` em qualquer alteração de `name`, `description`, `triggerEvent`, `triggerValue`, `nodes`, `edges`.
-- Interceptar o botão **Voltar** e o `beforeunload`: se sujo, abrir `UnsavedChangesDialog` com 3 ações: **Sair sem salvar / Cancelar / Salvar e sair**.
+### 1. Substituir todos os emojis por ícones Lucide
+**Onde tem emoji em selects/labels** (busca ampla no admin):
+- `WhatsAppPage.tsx` → BroadcastTab: filtros de audiência (📋 Todos, 🏷️ Por Tag, 👤 Por Representante, 👨‍⚕️ Por Prescritor, 📦 Por Produto, 📍 Por Estado/Cidade)
+- ContactsTab, FunnelsTab, TemplatesTab, SendingConfigTab, QueueTab — qualquer emoji em `SelectItem`, badges, headers
+- `WhatsAppFlowEditor.tsx` — varredura final (qualquer emoji restante em legendas, badges de status, indicadores de delay)
+- Outros admin selects que ainda usem emoji (RepurchasePage, abandoned carts, etc.) — fazer pass de busca e trocar.
 
-### 2. Trocar emojis por ícones lucide (padrão do sistema)
-**No select "Tipo de conteúdo" (linhas 957-963)** — substituir emojis (💬 📋 📎 🎤 🎬 🔗 🛒) por ícones lucide já importados (`MessageSquare`, `FileText`, `Image`, `Mic`, `Video`, `Link2`, `ShoppingBag`) renderizados dentro de cada `SelectItem` com `flex items-center gap-2`.
+**Padrão a aplicar:**
+```tsx
+<SelectItem value="tag">
+  <span className="flex items-center gap-2">
+    <Tag className="h-4 w-4 text-muted-foreground" /> Por Tag
+  </span>
+</SelectItem>
+```
+Mapeamento:
+- Todos os contatos → `Users`
+- Por Tag → `Tag`
+- Por Representante → `Briefcase`
+- Por Prescritor → `Stethoscope`
+- Por Produto → `Package`
+- Por Estado/Cidade → `MapPin`
 
-**No simulador (FlowTestPanel, linhas 270-356)** — trocar prefixos emoji (📋, 📎, 🎤, 🎬, 🛒, 🔗, ⏰, ⏱, 🤖, 👤, 🏷️, ↗️, ⚡, 🏁, ⚠️, 🔀, ⏳, 📝) por componentes JSX com ícone lucide + texto, mudando `messages` para suportar `icon?: LucideIcon`.
+### 2. Broadcast: suportar Funil OU Flow
+Hoje BroadcastTab só lista `whatsapp_funnels`. Adicionar:
+- **Toggle no topo**: `[Funil clássico] [Flow visual]` (Tabs/SegmentedControl)
+- Quando "Flow": carrega `whatsapp_flows` (active=true) no select.
+- No disparo:
+  - Funil → mantém lógica atual (insere no `whatsapp_message_queue` por step).
+  - Flow → chama edge function existente que dispara flow para um contato (ou cria nova `whatsapp-broadcast-flow` que itera contatos e enfileira start do flow). Verificar se já existe execução de flow por contato; se sim, reaproveitar.
+- Preview de contagem de contatos continua igual.
 
-### 3. Corrigir "Melhorar copy" (erro 500)
-A edge function `improve-message-copy` usa `@supabase/supabase-js@2.45.0` que **não tem `auth.getClaims`** → daí o erro `userClient.auth.getClaims is not a function`.
-- Atualizar import para `@supabase/supabase-js@2.58.0` (versão usada nas outras functions com `getClaims`).
-- Ajustar para o padrão correto: `await anonClient.auth.getClaims(token)` passando o token extraído (igual a `restore-backup`, `clone-tenant`).
+### 3. Redesenhar Fila de Transmissão (estilo ManyChat/BotFlow)
+**Problema atual**: lista plana de itens individuais, difícil de entender o que está rolando.
 
-### 4. Padronizar fontes
-- Remover `text-[9px]`, `text-[10px]`, `text-[11px]` ad-hoc nos componentes do canvas/simulador → trocar por `text-xs` (12px) padrão do sistema.
-- Remover `font-family` inline `Apple Color Emoji…` dos previews de nó (ícones serão lucide). Manter apenas no `MessageComposer` (textarea) e na bolha de mensagem do simulador (onde o usuário ainda pode digitar emoji).
-- Garantir que tudo herda `font-sans` do tema (Inter/Space Grotesk).
-
-### 5. Melhorar visual do "Testar Fluxo"
-Reformular `FlowTestPanel`:
-- Largura 400px com fundo `bg-background` (não slate-900).
-- Header limpo com título + ações (Reiniciar, Fechar) usando `Button variant="ghost" size="icon"` padrão.
-- Mockup de telefone mais clean: bordas arredondadas suaves, sombra sutil, fundo WhatsApp `#E5DDD5` mantido.
-- Header WhatsApp com avatar circular + nome + status "online" em verde.
-- Bolhas de mensagem com:
-  - Cauda (tail) nos cantos
-  - Timestamp sutil em cada bolha
-  - Ícones lucide inline (ao invés de emoji) para tipos especiais (Template/Arquivo/Áudio/etc).
-- Painel de variáveis colapsável no topo (accordion) — não polui chat.
-- Input de resposta estilo WhatsApp com botão circular verde.
-- Mensagens de sistema (ex: "Esperando 5min...") em pílulas centralizadas estilo "system message" do WhatsApp (fundo branco translúcido, centralizadas).
+**Novo design (QueueTab):**
+- **Header com KPIs em cards**: Pendentes / Enviando agora / Enviadas hoje / Falhas / Próximo envio em (countdown)
+- **Agrupamento por Campanha/Funil**: cada broadcast disparado vira um "card de campanha" expansível mostrando:
+  - Nome do funil/flow + horário disparo
+  - Barra de progresso (X/Y enviadas, %)
+  - Status chips: Enviadas (verde), Pendentes (amarelo), Falhas (vermelho)
+  - Velocidade estimada (msgs/min) + ETA conclusão
+  - Ações: Pausar campanha / Cancelar restantes / Reenviar falhas
+- **Lista detalhada** colapsável dentro de cada card: contato, telefone, status, horário agendado, instância usada, último erro
+- **Live update**: subscribe via Supabase realtime no `whatsapp_message_queue` para refletir progresso sem reload
+- **Filtros no topo**: por status (pendente/enviado/erro), por instância, busca por telefone/nome
+- Visual: cards com `Card` shadcn, `Progress` bar, `Badge` para status, ícones Lucide (`Send`, `Clock`, `CheckCheck`, `AlertCircle`, `Pause`, `Play`)
 
 ### Arquivos modificados
-- `src/components/admin/WhatsAppFlowEditor.tsx`
-- `supabase/functions/improve-message-copy/index.ts`
+- `src/pages/admin/WhatsAppPage.tsx` (BroadcastTab + QueueTab + ContactsTab + outros emojis)
+- `src/components/admin/WhatsAppFlowEditor.tsx` (varredura final emojis)
+- Possível nova edge function `whatsapp-broadcast-flow` se flows ainda não tiverem entrypoint de broadcast (verificar antes)
+
+### Investigação antes de codar
+- Verificar se há tabela/coluna que agrupe itens da fila por "broadcast batch" (ex: `broadcast_id`); se não existir, adicionar coluna `broadcast_id uuid` em `whatsapp_message_queue` + migration, e gerar um id ao disparar broadcast.
+- Verificar como flows são executados por contato hoje (entrada do flow runner) para reaproveitar no broadcast.
