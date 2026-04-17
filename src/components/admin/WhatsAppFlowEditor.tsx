@@ -37,13 +37,14 @@ import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import UnsavedChangesDialog from "@/components/admin/UnsavedChangesDialog";
 
 /* ───── Types ───── */
-type NodeType = "start" | "message" | "condition" | "wait" | "input" | "ai_gen" | "transfer" | "set_variable" | "choice" | "action" | "end";
+type NodeType = "start" | "message" | "condition" | "wait" | "input" | "ai_gen" | "transfer" | "set_variable" | "choice" | "action" | "end" | "branch" | "start_flow" | "split";
 
 interface FlowNode {
   id: string;
   type: NodeType;
   position: { x: number; y: number };
   data: Record<string, any>;
+  label?: string;
 }
 
 interface FlowEdge {
@@ -72,13 +73,27 @@ const NODE_TYPES: { type: NodeType; label: string; icon: any; color: string; bg:
   { type: "message", label: "Mensagem", icon: MessageSquare, color: "#3B82F6", bg: "bg-blue-50 border-blue-300" },
   { type: "choice", label: "Escolha", icon: ListChecks, color: "#0EA5E9", bg: "bg-sky-50 border-sky-300" },
   { type: "condition", label: "Condição", icon: GitBranch, color: "#F59E0B", bg: "bg-amber-50 border-amber-300" },
+  { type: "branch", label: "Sim / Não", icon: GitBranch, color: "#22C55E", bg: "bg-green-50 border-green-300" },
   { type: "wait", label: "Esperar", icon: Clock, color: "#8B5CF6", bg: "bg-purple-50 border-purple-300" },
   { type: "input", label: "Pergunta", icon: HelpCircle, color: "#10B981", bg: "bg-emerald-50 border-emerald-300" },
   { type: "action", label: "Ação", icon: Zap, color: "#F97316", bg: "bg-orange-50 border-orange-300" },
   { type: "ai_gen", label: "IA Gerar", icon: Bot, color: "#EC4899", bg: "bg-pink-50 border-pink-300" },
   { type: "transfer", label: "Transferir", icon: UserCheck, color: "#06B6D4", bg: "bg-cyan-50 border-cyan-300" },
   { type: "set_variable", label: "Variável", icon: Variable, color: "#6366F1", bg: "bg-indigo-50 border-indigo-300" },
+  { type: "split", label: "Split A/B", icon: Shuffle, color: "#A855F7", bg: "bg-violet-50 border-violet-300" },
+  { type: "start_flow", label: "Iniciar Fluxo", icon: Rocket, color: "#0891B2", bg: "bg-teal-50 border-teal-300" },
   { type: "end", label: "Fim", icon: Flag, color: "#EF4444", bg: "bg-red-50 border-red-300" },
+];
+
+const SAVE_TO_FIELDS: { value: string; label: string }[] = [
+  { value: "", label: "Não salvar" },
+  { value: "name", label: "Nome do cliente" },
+  { value: "email", label: "E-mail" },
+  { value: "phone", label: "Telefone" },
+  { value: "city", label: "Cidade" },
+  { value: "state", label: "Estado" },
+  { value: "tag", label: "Adicionar como Tag" },
+  { value: "custom", label: "Campo customizado (chave:valor)" },
 ];
 
 function genId() {
