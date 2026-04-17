@@ -2302,6 +2302,10 @@ export type Database = {
           section_promo_banners_visible: boolean
           section_testimonials_visible: boolean
           section_trust_badges_visible: boolean
+          seo_default_description: string | null
+          seo_default_og_image: string | null
+          seo_default_title: string | null
+          seo_keywords: string | null
           store_name: string
           tenant_id: string | null
           tiktok: string | null
@@ -2446,6 +2450,10 @@ export type Database = {
           section_promo_banners_visible?: boolean
           section_testimonials_visible?: boolean
           section_trust_badges_visible?: boolean
+          seo_default_description?: string | null
+          seo_default_og_image?: string | null
+          seo_default_title?: string | null
+          seo_keywords?: string | null
           store_name?: string
           tenant_id?: string | null
           tiktok?: string | null
@@ -2590,6 +2598,10 @@ export type Database = {
           section_promo_banners_visible?: boolean
           section_testimonials_visible?: boolean
           section_trust_badges_visible?: boolean
+          seo_default_description?: string | null
+          seo_default_og_image?: string | null
+          seo_default_title?: string | null
+          seo_keywords?: string | null
           store_name?: string
           tenant_id?: string | null
           tiktok?: string | null
