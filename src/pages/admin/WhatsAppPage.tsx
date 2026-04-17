@@ -534,36 +534,26 @@ function InstancesTab() {
 // ==================== TEMPLATES TAB ====================
 function TemplatesTab() {
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+  const [folders, setFolders] = useState<TemplateFolder[]>([]);
   const [showEditor, setShowEditor] = useState(false);
   const [editing, setEditing] = useState<WhatsAppTemplate | null>(null);
-  const [form, setForm] = useState({ name: "", category: "geral", content: "" });
+  const [form, setForm] = useState({ name: "", category: "geral", content: "", folder_id: "none" as string });
   const [preview, setPreview] = useState("");
-  const templateTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const cursorPosRef = useRef<number | null>(null);
+  const [showFolderDialog, setShowFolderDialog] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<TemplateFolder | null>(null);
+  const [folderForm, setFolderForm] = useState({ name: "", color: "#10b981" });
+  const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
+  const [moveDialog, setMoveDialog] = useState<WhatsAppTemplate | null>(null);
 
-  function insertAtCursor(text: string) {
-    const textarea = templateTextareaRef.current;
-    const pos = cursorPosRef.current ?? form.content.length;
-    const before = form.content.substring(0, pos);
-    const after = form.content.substring(pos);
-    const newContent = before + text + after;
-    setForm({ ...form, content: newContent });
-    generatePreview(newContent);
-    setTimeout(() => {
-      if (textarea) {
-        const newPos = pos + text.length;
-        textarea.focus();
-        textarea.setSelectionRange(newPos, newPos);
-        cursorPosRef.current = newPos;
-      }
-    }, 0);
-  }
+  useEffect(() => { loadAll(); }, []);
 
-  useEffect(() => { loadTemplates(); }, []);
-
-  async function loadTemplates() {
-    const { data } = await supabase.from("whatsapp_templates").select("*").order("created_at", { ascending: false });
-    setTemplates((data || []) as unknown as WhatsAppTemplate[]);
+  async function loadAll() {
+    const [{ data: t }, { data: f }] = await Promise.all([
+      supabase.from("whatsapp_templates").select("*").order("created_at", { ascending: false }),
+      supabase.from("whatsapp_template_folders").select("*").order("sort_order").order("name"),
+    ]);
+    setTemplates((t || []) as unknown as WhatsAppTemplate[]);
+    setFolders((f || []) as unknown as TemplateFolder[]);
   }
 
   function generatePreview(content: string) {
@@ -574,14 +564,14 @@ function TemplatesTab() {
     setPreview(parseSpintax(text));
   }
 
-  function openEditor(tpl?: WhatsAppTemplate) {
+  function openEditor(tpl?: WhatsAppTemplate, folderIdHint?: string | null) {
     if (tpl) {
       setEditing(tpl);
-      setForm({ name: tpl.name, category: tpl.category, content: tpl.content });
+      setForm({ name: tpl.name, category: tpl.category, content: tpl.content, folder_id: tpl.folder_id || "none" });
       generatePreview(tpl.content);
     } else {
       setEditing(null);
-      setForm({ name: "", category: "geral", content: "" });
+      setForm({ name: "", category: "geral", content: "", folder_id: folderIdHint || "none" });
       setPreview("");
     }
     setShowEditor(true);
@@ -589,7 +579,12 @@ function TemplatesTab() {
 
   async function saveTemplate() {
     if (!form.name || !form.content) { toast.error("Preencha nome e conteúdo"); return; }
-    const payload = { name: form.name, category: form.category, content: form.content };
+    const payload: any = {
+      name: form.name,
+      category: form.category,
+      content: form.content,
+      folder_id: form.folder_id === "none" ? null : form.folder_id,
+    };
     if (editing) {
       await supabase.from("whatsapp_templates").update(payload).eq("id", editing.id);
     } else {
@@ -597,14 +592,56 @@ function TemplatesTab() {
     }
     toast.success("Template salvo!");
     setShowEditor(false);
-    loadTemplates();
+    loadAll();
   }
 
   async function deleteTemplate(id: string) {
     if (!confirm("Excluir template?")) return;
     await supabase.from("whatsapp_templates").delete().eq("id", id);
     toast.success("Template excluído");
-    loadTemplates();
+    loadAll();
+  }
+
+  async function moveTemplate(tpl: WhatsAppTemplate, folderId: string | null) {
+    await supabase.from("whatsapp_templates").update({ folder_id: folderId } as any).eq("id", tpl.id);
+    toast.success(folderId ? "Movido para pasta" : "Movido para Avulsas");
+    setMoveDialog(null);
+    loadAll();
+  }
+
+  function openFolderDialog(folder?: TemplateFolder) {
+    if (folder) {
+      setEditingFolder(folder);
+      setFolderForm({ name: folder.name, color: folder.color });
+    } else {
+      setEditingFolder(null);
+      setFolderForm({ name: "", color: "#10b981" });
+    }
+    setShowFolderDialog(true);
+  }
+
+  async function saveFolder() {
+    if (!folderForm.name.trim()) { toast.error("Informe o nome da pasta"); return; }
+    if (editingFolder) {
+      await supabase.from("whatsapp_template_folders").update(folderForm).eq("id", editingFolder.id);
+    } else {
+      await supabase.from("whatsapp_template_folders").insert({ ...folderForm, sort_order: folders.length });
+    }
+    toast.success("Pasta salva!");
+    setShowFolderDialog(false);
+    loadAll();
+  }
+
+  async function deleteFolder(folder: TemplateFolder) {
+    const count = templates.filter((t) => t.folder_id === folder.id).length;
+    if (!confirm(`Excluir pasta "${folder.name}"?${count > 0 ? `\n${count} template(s) virarão Avulsos.` : ""}`)) return;
+    await supabase.from("whatsapp_template_folders").delete().eq("id", folder.id);
+    toast.success("Pasta excluída");
+    loadAll();
+  }
+
+  function toggleFolder(id: string) {
+    setCollapsedFolders((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
   const categories: Record<string, string> = {
@@ -612,39 +649,93 @@ function TemplatesTab() {
     upsell: "Upsell", novidades: "Novidades", feedback: "Feedback",
   };
 
+  const orphanTemplates = templates.filter((t) => !t.folder_id);
+
+  function renderTemplateCard(tpl: WhatsAppTemplate) {
+    return (
+      <Card key={tpl.id}>
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-medium">{tpl.name}</span>
+                <Badge variant="outline" className="text-[10px]">{categories[tpl.category] || tpl.category}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground line-clamp-2" style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', system-ui, sans-serif" }}>{tpl.content}</p>
+            </div>
+            <div className="flex gap-1 ml-2">
+              <Button size="icon" variant="ghost" className="h-8 w-8" title="Mover para pasta" onClick={() => setMoveDialog(tpl)}><FolderInput className="h-3.5 w-3.5" /></Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditor(tpl)}><Edit className="h-3.5 w-3.5" /></Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteTemplate(tpl.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Templates de Mensagem</h3>
-        <Button onClick={() => openEditor()} size="sm"><Plus className="h-4 w-4 mr-1" /> Novo Template</Button>
+        <div className="flex gap-2">
+          <Button onClick={() => openFolderDialog()} size="sm" variant="outline"><FolderPlus className="h-4 w-4 mr-1" /> Nova Pasta</Button>
+          <Button onClick={() => openEditor()} size="sm"><Plus className="h-4 w-4 mr-1" /> Novo Template</Button>
+        </div>
       </div>
 
-      {templates.length === 0 ? (
+      {templates.length === 0 && folders.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
           <FileText className="h-12 w-12 mx-auto mb-3 opacity-40" />
-          <p>Nenhum template criado</p>
+          <p>Nenhum template ou pasta criada</p>
         </CardContent></Card>
       ) : (
-        <div className="grid gap-3">
-          {templates.map((tpl) => (
-            <Card key={tpl.id}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium">{tpl.name}</span>
-                      <Badge variant="outline" className="text-[10px]">{categories[tpl.category] || tpl.category}</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{tpl.content}</p>
-                  </div>
-                  <div className="flex gap-1 ml-2">
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditor(tpl)}><Edit className="h-3.5 w-3.5" /></Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteTemplate(tpl.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+        <div className="space-y-4">
+          {folders.map((folder) => {
+            const folderTemplates = templates.filter((t) => t.folder_id === folder.id);
+            const collapsed = collapsedFolders[folder.id];
+            return (
+              <div key={folder.id} className="border rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 bg-muted/40">
+                  <button
+                    type="button"
+                    onClick={() => toggleFolder(folder.id)}
+                    className="flex items-center gap-2 flex-1 text-left hover:opacity-80 transition-opacity"
+                  >
+                    {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    {collapsed ? <Folder className="h-4 w-4" style={{ color: folder.color }} /> : <FolderOpen className="h-4 w-4" style={{ color: folder.color }} />}
+                    <span className="font-medium text-sm">{folder.name}</span>
+                    <Badge variant="secondary" className="text-[10px]">{folderTemplates.length}</Badge>
+                  </button>
+                  <div className="flex gap-1">
+                    <Button size="icon" variant="ghost" className="h-7 w-7" title="Adicionar template" onClick={() => openEditor(undefined, folder.id)}><Plus className="h-3.5 w-3.5" /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openFolderDialog(folder)}><Edit className="h-3.5 w-3.5" /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteFolder(folder)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                {!collapsed && (
+                  <div className="p-3 grid gap-2">
+                    {folderTemplates.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-3">Pasta vazia</p>
+                    ) : folderTemplates.map(renderTemplateCard)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {orphanTemplates.length > 0 && (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2 bg-muted/40">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-sm">Avulsas</span>
+                <Badge variant="secondary" className="text-[10px]">{orphanTemplates.length}</Badge>
+              </div>
+              <div className="p-3 grid gap-2">
+                {orphanTemplates.map(renderTemplateCard)}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -654,6 +745,16 @@ function TemplatesTab() {
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-4">
               <div><Label>Nome</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Recuperação - Lembrete 1" /></div>
+              <div>
+                <Label>Pasta</Label>
+                <Select value={form.folder_id} onValueChange={(v) => setForm({ ...form, folder_id: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Avulsa (sem pasta)</SelectItem>
+                    {folders.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Label>Categoria</Label>
                 <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
@@ -683,7 +784,7 @@ function TemplatesTab() {
               </Label>
               <div className="bg-[#e5ddd5] rounded-lg p-4 min-h-[250px]">
                 <div className="bg-white rounded-lg p-3 shadow-sm max-w-[280px] ml-auto">
-                  <p className="text-sm whitespace-pre-wrap">{preview || "Digite uma mensagem para ver o preview..."}</p>
+                  <p className="text-sm whitespace-pre-wrap" style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', system-ui, sans-serif" }}>{preview || "Digite uma mensagem para ver o preview..."}</p>
                   <p className="text-[10px] text-muted-foreground text-right mt-1">10:30 ✓✓</p>
                 </div>
               </div>
@@ -693,6 +794,54 @@ function TemplatesTab() {
             <Button variant="outline" onClick={() => setShowEditor(false)}>Cancelar</Button>
             <Button onClick={saveTemplate}>Salvar Template</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showFolderDialog} onOpenChange={setShowFolderDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>{editingFolder ? "Editar Pasta" : "Nova Pasta"}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nome da pasta</Label>
+              <Input value={folderForm.name} onChange={(e) => setFolderForm({ ...folderForm, name: e.target.value })} placeholder="Ex: Recuperação de Carrinho" />
+            </div>
+            <div>
+              <Label>Cor</Label>
+              <div className="flex gap-2 items-center">
+                <Input type="color" value={folderForm.color} onChange={(e) => setFolderForm({ ...folderForm, color: e.target.value })} className="w-16 h-10 p-1" />
+                <Input value={folderForm.color} onChange={(e) => setFolderForm({ ...folderForm, color: e.target.value })} className="flex-1" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFolderDialog(false)}>Cancelar</Button>
+            <Button onClick={saveFolder}>Salvar Pasta</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!moveDialog} onOpenChange={(o) => !o && setMoveDialog(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Mover template</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => moveDialog && moveTemplate(moveDialog, null)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded border hover:bg-muted/50 text-left"
+            >
+              <FileText className="h-4 w-4" /> Avulsas (sem pasta)
+            </button>
+            {folders.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => moveDialog && moveTemplate(moveDialog, f.id)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded border hover:bg-muted/50 text-left"
+              >
+                <Folder className="h-4 w-4" style={{ color: f.color }} /> {f.name}
+              </button>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
