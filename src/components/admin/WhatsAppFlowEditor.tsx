@@ -1025,13 +1025,13 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                   <Select value={n.data.content_type || "text"} onValueChange={v => updateNodeData(n.id, { content_type: v })}>
                     <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="text">💬 Texto</SelectItem>
-                      <SelectItem value="template">📋 Template</SelectItem>
-                      <SelectItem value="file">📎 Arquivo/Imagem</SelectItem>
-                      <SelectItem value="audio">🎤 Áudio</SelectItem>
-                      <SelectItem value="video">🎬 Vídeo</SelectItem>
-                      <SelectItem value="link">🔗 Link</SelectItem>
-                      <SelectItem value="catalog">🛒 Catálogo</SelectItem>
+                      <SelectItem value="text"><span className="flex items-center gap-2"><MessageSquare className="h-3.5 w-3.5" /> Texto</span></SelectItem>
+                      <SelectItem value="template"><span className="flex items-center gap-2"><FileText className="h-3.5 w-3.5" /> Template</span></SelectItem>
+                      <SelectItem value="file"><span className="flex items-center gap-2"><ImageIcon className="h-3.5 w-3.5" /> Arquivo/Imagem</span></SelectItem>
+                      <SelectItem value="audio"><span className="flex items-center gap-2"><Mic className="h-3.5 w-3.5" /> Áudio</span></SelectItem>
+                      <SelectItem value="video"><span className="flex items-center gap-2"><Video className="h-3.5 w-3.5" /> Vídeo</span></SelectItem>
+                      <SelectItem value="link"><span className="flex items-center gap-2"><Link2 className="h-3.5 w-3.5" /> Link</span></SelectItem>
+                      <SelectItem value="catalog"><span className="flex items-center gap-2"><ShoppingBag className="h-3.5 w-3.5" /> Catálogo</span></SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
