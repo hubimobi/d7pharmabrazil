@@ -26,6 +26,7 @@ export default function IntegrationsPage() {
   const [showReconnect, setShowReconnect] = useState(false);
   const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
   const qc = useQueryClient();
+  const { tenantId } = useTenant();
 
   // Integration enabled states (persisted in localStorage for simplicity)
   const [integrations, setIntegrations] = useState<IntegrationState>(() => {
@@ -46,35 +47,39 @@ export default function IntegrationsPage() {
   };
 
   const { data: blingStatus, refetch, isLoading } = useQuery({
-    queryKey: ["bling-status"],
+    queryKey: ["bling-status", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bling_tokens")
-        .select("id, expires_at, updated_at")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      const { data, error } = await (supabase.from("tenant_integrations" as any) as any)
+        .select("id, credentials, active, updated_at")
+        .eq("tenant_id", tenantId)
+        .eq("provider", "bling")
+        .maybeSingle();
 
       if (error) {
         console.error("Erro ao buscar status do Bling:", error);
         return { connected: false };
       }
-      if (!data || data.length === 0) return { connected: false };
+      if (!data || !data.active) return { connected: false };
 
-      const token = data[0];
-      const expired = new Date(token.expires_at) < new Date();
+      const expiresAt = data.credentials?.expires_at as string | undefined;
+      if (!expiresAt) return { connected: false };
+      const expired = new Date(expiresAt) < new Date();
       return {
         connected: true,
         expired,
-        expiresAt: token.expires_at,
-        updatedAt: token.updated_at,
-        tokenId: token.id,
+        expiresAt,
+        updatedAt: data.updated_at,
+        tokenId: data.id,
       };
     },
+    enabled: !!tenantId,
   });
 
   const handleRefresh = async () => {
     try {
-      const { error, data } = await supabase.functions.invoke("bling-refresh-token");
+      const { error, data } = await supabase.functions.invoke("bling-refresh-token", {
+        headers: { "x-tenant-id": tenantId },
+      });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       await refetch();
@@ -87,7 +92,10 @@ export default function IntegrationsPage() {
 
   const handleDisconnectBling = async () => {
     if (!blingStatus?.connected) return;
-    const { error } = await supabase.from("bling_tokens").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    const { error } = await (supabase.from("tenant_integrations" as any) as any)
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("provider", "bling");
     if (error) {
       toast.error("Erro ao desconectar Bling.");
     } else {
