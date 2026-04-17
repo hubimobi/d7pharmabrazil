@@ -1,10 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  DEFAULT_TENANT_ID,
+  saveTenantCredentials,
+} from "../_shared/tenant-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+function isUuid(v: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,6 +22,10 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get("code");
+    // OAuth `state` carries the tenant_id so the callback writes to the
+    // correct tenant. Falls back to the default tenant for backward-compat.
+    const stateRaw = url.searchParams.get("state") ?? "";
+    const tenantId = isUuid(stateRaw) ? stateRaw : DEFAULT_TENANT_ID;
 
     if (!code) {
       return new Response("Código de autorização não encontrado. Volte ao painel admin e tente novamente.", {
