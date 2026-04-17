@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdminTheme } from "@/hooks/useAdminTheme";
+import TrialExpiredOverlay from "./TrialExpiredOverlay";
+import TrialBadge from "./TrialBadge";
 import {
   Popover,
   PopoverContent,
