@@ -2776,6 +2776,47 @@ export type Database = {
           },
         ]
       }
+      tenant_integrations: {
+        Row: {
+          active: boolean
+          created_at: string
+          credentials: Json
+          id: string
+          last_used_at: string | null
+          provider: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          credentials?: Json
+          id?: string
+          last_used_at?: string | null
+          provider: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          credentials?: Json
+          id?: string
+          last_used_at?: string | null
+          provider?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_integrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_users: {
         Row: {
           created_at: string | null
