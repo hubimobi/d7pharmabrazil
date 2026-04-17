@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug, Power, PowerOff, AlertTriangle, MessageSquare, Phone, ShoppingBag, Copy, Check, Upload, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { useTenant } from "@/hooks/useTenant";
 
 interface IntegrationState {
   asaas: boolean;
@@ -25,6 +26,7 @@ export default function IntegrationsPage() {
   const [showReconnect, setShowReconnect] = useState(false);
   const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
   const qc = useQueryClient();
+  const { tenantId } = useTenant();
 
   // Integration enabled states (persisted in localStorage for simplicity)
   const [integrations, setIntegrations] = useState<IntegrationState>(() => {
@@ -45,35 +47,39 @@ export default function IntegrationsPage() {
   };
 
   const { data: blingStatus, refetch, isLoading } = useQuery({
-    queryKey: ["bling-status"],
+    queryKey: ["bling-status", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bling_tokens")
-        .select("id, expires_at, updated_at")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      const { data, error } = await (supabase.from("tenant_integrations" as any) as any)
+        .select("id, credentials, active, updated_at")
+        .eq("tenant_id", tenantId)
+        .eq("provider", "bling")
+        .maybeSingle();
 
       if (error) {
         console.error("Erro ao buscar status do Bling:", error);
         return { connected: false };
       }
-      if (!data || data.length === 0) return { connected: false };
+      if (!data || !data.active) return { connected: false };
 
-      const token = data[0];
-      const expired = new Date(token.expires_at) < new Date();
+      const expiresAt = data.credentials?.expires_at as string | undefined;
+      if (!expiresAt) return { connected: false };
+      const expired = new Date(expiresAt) < new Date();
       return {
         connected: true,
         expired,
-        expiresAt: token.expires_at,
-        updatedAt: token.updated_at,
-        tokenId: token.id,
+        expiresAt,
+        updatedAt: data.updated_at,
+        tokenId: data.id,
       };
     },
+    enabled: !!tenantId,
   });
 
   const handleRefresh = async () => {
     try {
-      const { error, data } = await supabase.functions.invoke("bling-refresh-token");
+      const { error, data } = await supabase.functions.invoke("bling-refresh-token", {
+        headers: { "x-tenant-id": tenantId },
+      });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       await refetch();
@@ -86,7 +92,10 @@ export default function IntegrationsPage() {
 
   const handleDisconnectBling = async () => {
     if (!blingStatus?.connected) return;
-    const { error } = await supabase.from("bling_tokens").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    const { error } = await (supabase.from("tenant_integrations" as any) as any)
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("provider", "bling");
     if (error) {
       toast.error("Erro ao desconectar Bling.");
     } else {
@@ -191,7 +200,15 @@ export default function IntegrationsPage() {
                 />
                 <Button
                   disabled={!blingInviteUrl}
-                  onClick={() => window.open(blingInviteUrl, "_blank")}
+                  onClick={() => {
+                    try {
+                      const url = new URL(blingInviteUrl);
+                      url.searchParams.set("state", tenantId);
+                      window.open(url.toString(), "_blank");
+                    } catch {
+                      toast.error("URL do Bling inválida.");
+                    }
+                  }}
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Autorizar no Bling
@@ -849,37 +866,43 @@ function MetaFeedCard() {
 function TikTokShopCard() {
   const [syncing, setSyncing] = useState<string | null>(null);
   const qc = useQueryClient();
+  const { tenantId } = useTenant();
 
   const callbackUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/tiktok-shop-callback`;
 
   const { data: tiktokStatus, isLoading, refetch } = useQuery({
-    queryKey: ["tiktok-status"],
+    queryKey: ["tiktok-status", tenantId],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("tiktok_tokens" as any) as any)
-        .select("id, shop_id, shop_name, expires_at, updated_at")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      const { data, error } = await (supabase.from("tenant_integrations" as any) as any)
+        .select("id, credentials, active, updated_at")
+        .eq("tenant_id", tenantId)
+        .eq("provider", "tiktok_shop")
+        .maybeSingle();
 
-      if (error || !data || data.length === 0) return { connected: false };
+      if (error || !data || !data.active) return { connected: false };
 
-      const token = data[0];
-      const expired = new Date(token.expires_at) < new Date();
+      const c = data.credentials || {};
+      const expiresAt = c.expires_at as string | undefined;
+      if (!expiresAt) return { connected: false };
+      const expired = new Date(expiresAt) < new Date();
       return {
         connected: true,
         expired,
-        shopId: token.shop_id,
-        shopName: token.shop_name,
-        expiresAt: token.expires_at,
-        updatedAt: token.updated_at,
+        shopId: c.shop_id,
+        shopName: c.shop_name,
+        expiresAt,
+        updatedAt: data.updated_at,
       };
     },
+    enabled: !!tenantId,
   });
 
   const handleConnect = () => {
     // TikTok Shop OAuth URL - user needs to replace with their app's auth URL
     const appKey = prompt("Informe o App Key do TikTok Shop:");
     if (!appKey) return;
-    const authUrl = `https://services.tiktokshop.com/open/authorize?service_id=${appKey}`;
+    const state = encodeURIComponent(tenantId);
+    const authUrl = `https://services.tiktokshop.com/open/authorize?service_id=${appKey}&state=${state}`;
     window.open(authUrl, "_blank");
   };
 
@@ -888,6 +911,7 @@ function TikTokShopCard() {
     try {
       const { data, error } = await supabase.functions.invoke("tiktok-shop-sync-products", {
         body: { action: "export" },
+        headers: { "x-tenant-id": tenantId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -905,7 +929,9 @@ function TikTokShopCard() {
   const handleSyncOrders = async () => {
     setSyncing("orders");
     try {
-      const { data, error } = await supabase.functions.invoke("tiktok-shop-sync-orders");
+      const { data, error } = await supabase.functions.invoke("tiktok-shop-sync-orders", {
+        headers: { "x-tenant-id": tenantId },
+      });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success(`${data?.imported || 0} pedido(s) importado(s) de ${data?.total_found || 0} encontrado(s)`);
@@ -918,9 +944,10 @@ function TikTokShopCard() {
   };
 
   const handleDisconnect = async () => {
-    const { error } = await (supabase.from("tiktok_tokens" as any) as any)
+    const { error } = await (supabase.from("tenant_integrations" as any) as any)
       .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000");
+      .eq("tenant_id", tenantId)
+      .eq("provider", "tiktok_shop");
     if (error) {
       toast.error("Erro ao desconectar.");
     } else {
