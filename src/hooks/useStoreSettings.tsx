@@ -111,6 +111,10 @@ export interface StoreSettings {
   goal_upsell: number;
   goal_ltv: number;
   goal_profit_margin: number;
+  seo_default_title: string;
+  seo_default_description: string;
+  seo_default_og_image: string;
+  seo_keywords: string;
 }
 
 export function useStoreSettings() {

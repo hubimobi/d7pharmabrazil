@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
 
 interface SEOHeadProps {
   title: string;
@@ -10,8 +11,11 @@ interface SEOHeadProps {
 }
 
 export default function SEOHead({ title, description, canonical, image, keywords, url }: SEOHeadProps) {
+  const { data: settings } = useStoreSettings();
+
   useEffect(() => {
-    const fullTitle = `${title} | D7 Pharma Brazil`;
+    const storeName = settings?.store_name || "Loja";
+    const fullTitle = `${title} | ${storeName}`;
     document.title = fullTitle;
 
     const setMeta = (name: string, content: string) => {
@@ -25,27 +29,34 @@ export default function SEOHead({ title, description, canonical, image, keywords
       el.setAttribute("content", content);
     };
 
-    if (description) {
-      setMeta("description", description);
-      setMeta("og:description", description);
-      setMeta("twitter:description", description);
+    const finalDescription = description || (settings as any)?.seo_default_description;
+    if (finalDescription) {
+      setMeta("description", finalDescription);
+      setMeta("og:description", finalDescription);
+      setMeta("twitter:description", finalDescription);
     }
     setMeta("og:title", fullTitle);
     setMeta("og:type", "website");
+    setMeta("og:site_name", storeName);
     setMeta("twitter:card", "summary_large_image");
     setMeta("twitter:title", fullTitle);
 
-    if (image) {
-      setMeta("og:image", image);
-      setMeta("twitter:image", image);
+    const finalImage =
+      image ||
+      (settings as any)?.seo_default_og_image ||
+      settings?.logo_url;
+    if (finalImage) {
+      setMeta("og:image", finalImage);
+      setMeta("twitter:image", finalImage);
     }
 
     if (url) {
       setMeta("og:url", url);
     }
 
-    if (keywords) {
-      setMeta("keywords", keywords);
+    const finalKeywords = keywords || (settings as any)?.seo_keywords;
+    if (finalKeywords) {
+      setMeta("keywords", finalKeywords);
     }
 
     const canonicalUrl = canonical || url;
@@ -58,7 +69,7 @@ export default function SEOHead({ title, description, canonical, image, keywords
       }
       link.setAttribute("href", canonicalUrl);
     }
-  }, [title, description, canonical, image, keywords, url]);
+  }, [title, description, canonical, image, keywords, url, settings]);
 
   return null;
 }
