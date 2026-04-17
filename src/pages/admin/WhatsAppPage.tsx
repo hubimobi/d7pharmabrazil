@@ -20,8 +20,9 @@ import {
   Plus, RefreshCw, QrCode, Wifi, WifiOff, Trash2, Edit, Play, Pause,
   Send, Clock, AlertTriangle, CheckCircle, XCircle, Eye, Search,
   Zap, Settings2, Shuffle, Upload, Phone, Mail, UserPlus, Download, Inbox,
-  ArrowRightLeft, Flag, Paperclip, Volume2, Link2, ChevronDown, GripVertical,
-  Bot, UserCheck, ArrowRight, ArrowUp, ArrowDown, Megaphone, Filter, Loader2
+  ArrowRightLeft, Flag, Paperclip, Volume2, Link2, ChevronDown, ChevronRight, GripVertical,
+  Bot, UserCheck, ArrowRight, ArrowUp, ArrowDown, Megaphone, Filter, Loader2,
+  Folder, FolderPlus, FolderOpen, FolderInput
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ConversationsTab from "@/components/admin/WhatsAppConversations";
