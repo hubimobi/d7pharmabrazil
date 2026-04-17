@@ -1422,8 +1422,8 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                 <div>
                   <Label className="text-xs">Salvar também no cadastro do lead</Label>
                   <Select
-                    value={n.data.save_to_field || ""}
-                    onValueChange={v => updateNodeData(n.id, { save_to_field: v })}
+                    value={n.data.save_to_field || "__none__"}
+                    onValueChange={v => updateNodeData(n.id, { save_to_field: v === "__none__" ? "" : v })}
                   >
                     <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Não salvar" /></SelectTrigger>
                     <SelectContent>
