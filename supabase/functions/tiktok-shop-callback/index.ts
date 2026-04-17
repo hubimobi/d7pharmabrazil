@@ -1,9 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  DEFAULT_TENANT_ID,
+  saveTenantCredentials,
+} from "../_shared/tenant-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+function isUuid(v: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,6 +22,19 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
+
+    // `state` may carry "<tenant_uuid>|<redirect_url>" or just one of them.
+    let tenantId = DEFAULT_TENANT_ID;
+    let redirectUrl = "/admin/integracoes";
+    if (state) {
+      const [first, ...rest] = state.split("|");
+      if (isUuid(first)) {
+        tenantId = first;
+        if (rest.length) redirectUrl = rest.join("|");
+      } else {
+        redirectUrl = state;
+      }
+    }
 
     if (!code) {
       return new Response("Missing authorization code", { status: 400 });
@@ -77,10 +98,25 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Delete old tokens and insert new one
-    await supabase.from("tiktok_tokens").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    // ── Per-tenant storage (new) ──
+    const { error: saveError } = await saveTenantCredentials(
+      supabase,
+      tenantId,
+      "tiktok_shop",
+      {
+        access_token,
+        refresh_token,
+        expires_at: expiresAt,
+        shop_id: shopId,
+        shop_name: shopName,
+      },
+      true,
+    );
+    if (saveError) throw saveError;
 
-    const { error: insertError } = await supabase.from("tiktok_tokens").insert({
+    // ── Backward-compat: legacy global table (will be removed) ──
+    await supabase.from("tiktok_tokens").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await supabase.from("tiktok_tokens").insert({
       access_token,
       refresh_token,
       shop_id: shopId,
@@ -88,10 +124,7 @@ Deno.serve(async (req) => {
       expires_at: expiresAt,
     });
 
-    if (insertError) throw insertError;
-
     // Redirect back to admin
-    const redirectUrl = state || "/admin/integracoes";
     return new Response(null, {
       status: 302,
       headers: {

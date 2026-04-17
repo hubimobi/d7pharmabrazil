@@ -1,10 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  DEFAULT_TENANT_ID,
+  saveTenantCredentials,
+} from "../_shared/tenant-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+function isUuid(v: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,6 +22,10 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get("code");
+    // OAuth `state` carries the tenant_id so the callback writes to the
+    // correct tenant. Falls back to the default tenant for backward-compat.
+    const stateRaw = url.searchParams.get("state") ?? "";
+    const tenantId = isUuid(stateRaw) ? stateRaw : DEFAULT_TENANT_ID;
 
     if (!code) {
       return new Response("Código de autorização não encontrado. Volte ao painel admin e tente novamente.", {
@@ -70,22 +82,35 @@ serve(async (req) => {
 
     const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
-    // Delete old tokens and insert new one
-    await supabase.from("bling_tokens").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    // ── Per-tenant storage (new) ──
+    const { error: saveError } = await saveTenantCredentials(
+      supabase,
+      tenantId,
+      "bling",
+      {
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        expires_at: expiresAt,
+      },
+      true,
+    );
 
-    const { error: insertError } = await supabase.from("bling_tokens").insert({
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token,
-      expires_at: expiresAt,
-    });
-
-    if (insertError) {
-      console.error("Insert error:", insertError);
+    if (saveError) {
+      console.error("tenant_integrations save error:", saveError);
       return new Response("Erro ao salvar token.", {
         status: 500,
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
     }
+
+    // ── Backward-compat: also write to legacy global table ──
+    // (Will be removed once all consumers read from tenant_integrations.)
+    await supabase.from("bling_tokens").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await supabase.from("bling_tokens").insert({
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      expires_at: expiresAt,
+    });
 
     // Redirect back to admin integrations page
     const siteUrl = "https://d7pharmabrazil.lovable.app/admin/integracoes";
