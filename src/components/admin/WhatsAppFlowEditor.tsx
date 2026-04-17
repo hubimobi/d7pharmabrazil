@@ -1267,11 +1267,20 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                       }} className="text-red-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
                     </div>
                   ))}
-                  <Button size="sm" variant="outline" className="h-6 text-[10px] mt-2 w-full" onClick={() => {
-                    updateNodeData(n.id, { options: [...(n.data.options || []), { label: `Opção ${(n.data.options?.length || 0) + 1}`, tag: "" }] });
-                  }}><Plus className="h-3 w-3 mr-1" /> Adicionar Opção</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 text-[10px] mt-2 w-full"
+                    disabled={(n.data.options?.length || 0) >= 4}
+                    onClick={() => {
+                      if ((n.data.options?.length || 0) >= 4) return;
+                      updateNodeData(n.id, { options: [...(n.data.options || []), { label: `Opção ${(n.data.options?.length || 0) + 1}`, tag: "" }] });
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> Adicionar Opção {(n.data.options?.length || 0) >= 4 && "(máx 4)"}
+                  </Button>
                 </div>
-                <p className="text-[10px] text-muted-foreground">Cada opção gera uma saída separada. Conecte cada uma ao próximo bloco.</p>
+                <p className="text-[10px] text-muted-foreground">Cada opção gera uma saída separada. Máximo de 4 escolhas.</p>
               </>
             )}
 
@@ -1338,16 +1347,40 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                 {n.data.wait_type === "specific_date" ? (
                   <>
                     <div>
-                      <Label className="text-xs">Dia da semana</Label>
-                      <Select value={n.data.specific_day || "monday"} onValueChange={v => updateNodeData(n.id, { specific_day: v })}>
-                        <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
-                        <SelectContent>{DAYS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
-                      </Select>
+                      <Label className="text-xs">Data específica</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full mt-1 h-8 text-xs justify-start font-normal",
+                              !n.data.wait_date && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                            {n.data.wait_date ? format(new Date(n.data.wait_date), "dd/MM/yyyy") : "Escolher data"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={n.data.wait_date ? new Date(n.data.wait_date) : undefined}
+                            onSelect={(d) => updateNodeData(n.id, { wait_date: d ? d.toISOString().split("T")[0] : "" })}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <p className="text-[10px] text-muted-foreground mt-1">O fluxo só continua a partir desse dia.</p>
                     </div>
                     <div>
                       <Label className="text-xs">Horário</Label>
-                      <Input type="time" value={n.data.specific_time || "09:00"}
-                        onChange={e => updateNodeData(n.id, { specific_time: e.target.value })} className="h-8 text-xs mt-1" />
+                      <Input
+                        type="time"
+                        value={n.data.wait_time || "09:00"}
+                        onChange={e => updateNodeData(n.id, { wait_time: e.target.value })}
+                        className="h-8 text-xs mt-1"
+                      />
                     </div>
                   </>
                 ) : (
@@ -1386,6 +1419,32 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                   <Input value={n.data.variable_name || ""} onChange={e => updateNodeData(n.id, { variable_name: e.target.value })}
                     placeholder="nome" className="h-8 text-xs mt-1" />
                 </div>
+                <div>
+                  <Label className="text-xs">Salvar também no cadastro do lead</Label>
+                  <Select
+                    value={n.data.save_to_field || ""}
+                    onValueChange={v => updateNodeData(n.id, { save_to_field: v })}
+                  >
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Não salvar" /></SelectTrigger>
+                    <SelectContent>
+                      {SAVE_TO_FIELDS.map(f => (
+                        <SelectItem key={f.value || "none"} value={f.value || "__none__"}>{f.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {n.data.save_to_field === "custom" && (
+                  <div>
+                    <Label className="text-xs">Chave do campo customizado</Label>
+                    <Input
+                      value={n.data.custom_field_key || ""}
+                      onChange={e => updateNodeData(n.id, { custom_field_key: e.target.value })}
+                      placeholder="ex: profissao"
+                      className="h-8 text-xs mt-1"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">Salvo nas tags como <code>chave:valor</code>.</p>
+                  </div>
+                )}
               </>
             )}
 
