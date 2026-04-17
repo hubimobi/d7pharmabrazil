@@ -1094,6 +1094,19 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         </div>
         <ScrollArea className="h-[calc(100%-50px)]">
           <div className="p-3 space-y-3">
+            {/* ── Nome customizado do bloco ── */}
+            <div>
+              <Label className="text-xs">Nome do bloco (opcional)</Label>
+              <Input
+                value={n.label || ""}
+                onChange={e => setNodes(prev => prev.map(x => x.id === n.id ? { ...x, label: e.target.value } : x))}
+                placeholder={`Ex: ${meta.label} - boas-vindas`}
+                className="h-8 text-xs mt-1"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">ID: <code className="bg-muted px-1 rounded">{n.id}</code></p>
+            </div>
+            <div className="border-t -mx-3" />
+
             {/* ── Message ── */}
             {n.type === "message" && (
               <>
