@@ -1632,9 +1632,12 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
             );
           })}
           {connecting && (
-            <div className="mt-4 p-2 rounded-md bg-blue-50 border border-blue-200 text-[10px] text-blue-700">
-              🔗 Arraste até o destino ou solte no vazio para criar bloco
-              <Button size="sm" variant="ghost" className="h-5 text-[10px] mt-1 w-full" onClick={() => setConnecting(null)}>Cancelar</Button>
+            <div className="mt-4 p-2 rounded-md bg-blue-50 border border-blue-200 text-xs text-blue-700">
+              <div className="flex items-start gap-1.5">
+                <Link2 className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                <span>Arraste até o destino ou solte no vazio para criar bloco</span>
+              </div>
+              <Button size="sm" variant="ghost" className="h-6 text-xs mt-1 w-full" onClick={() => setConnecting(null)}>Cancelar</Button>
             </div>
           )}
         </div>
