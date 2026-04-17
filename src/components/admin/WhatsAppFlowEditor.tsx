@@ -16,16 +16,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
 import {
   Plus, Save, Trash2, Play, ArrowLeft, GripVertical,
   MessageSquare, GitBranch, Clock, Bot, UserCheck, Flag,
   Variable, HelpCircle, Edit, Copy, Link2, Unlink,
   ZoomIn, ZoomOut, Maximize2, ListChecks, Zap,
-  FileText, Mic, Video, Image, ShoppingBag, Send,
-  Calendar, Tag, ArrowRightLeft,
+  FileText, Mic, Video, Image as ImageIcon, ShoppingBag, Send,
+  Calendar, Tag, ArrowRightLeft, AlertTriangle, CheckCircle2,
+  Hourglass, MoveRight, PenTool, Sparkles, Settings2,
 } from "lucide-react";
 import { MessageComposer } from "@/components/admin/MessageComposer";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import UnsavedChangesDialog from "@/components/admin/UnsavedChangesDialog";
 
 /* ───── Types ───── */
 type NodeType = "start" | "message" | "condition" | "wait" | "input" | "ai_gen" | "transfer" | "set_variable" | "choice" | "action" | "end";
