@@ -106,6 +106,30 @@ export default function CreateStorePage() {
     /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.owner_email) &&
     form.owner_password.length >= 8;
 
+  if (provisioning) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center p-4">
+        <SEOHead title="Criando sua loja..." description="" />
+        <Card className="w-full max-w-md shadow-xl">
+          <CardContent className="pt-10 pb-10 text-center space-y-6">
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold mb-2">{provisionMsg}</h2>
+              <p className="text-sm text-muted-foreground">Isso leva alguns segundos. Não feche esta janela.</p>
+            </div>
+            <div className="space-y-2 text-left text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground"><Check className="w-4 h-4 text-primary" /> Conta criada</div>
+              <div className="flex items-center gap-2 text-muted-foreground"><Check className="w-4 h-4 text-primary" /> Loja registrada</div>
+              <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Configurando produtos e templates</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center p-4">
       <SEOHead title="Crie sua loja" description="Crie sua loja online em minutos. Trial grátis de 14 dias." />
