@@ -590,6 +590,7 @@ export type Database = {
           expires_at: string
           id: string
           refresh_token: string
+          tenant_id: string
           updated_at: string
         }
         Insert: {
@@ -598,6 +599,7 @@ export type Database = {
           expires_at: string
           id?: string
           refresh_token: string
+          tenant_id?: string
           updated_at?: string
         }
         Update: {
@@ -606,9 +608,18 @@ export type Database = {
           expires_at?: string
           id?: string
           refresh_token?: string
+          tenant_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bling_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       campaign_config: {
         Row: {
@@ -2944,6 +2955,7 @@ export type Database = {
           refresh_token: string
           shop_id: string | null
           shop_name: string | null
+          tenant_id: string
           updated_at: string
         }
         Insert: {
@@ -2954,6 +2966,7 @@ export type Database = {
           refresh_token: string
           shop_id?: string | null
           shop_name?: string | null
+          tenant_id?: string
           updated_at?: string
         }
         Update: {
@@ -2964,9 +2977,18 @@ export type Database = {
           refresh_token?: string
           shop_id?: string | null
           shop_name?: string | null
+          tenant_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
