@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug, Power, PowerOff, AlertTriangle, MessageSquare, Phone, ShoppingBag, Copy, Check, Upload, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { useTenant } from "@/hooks/useTenant";
 
 interface IntegrationState {
   asaas: boolean;
