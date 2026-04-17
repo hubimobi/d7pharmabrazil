@@ -1,73 +1,71 @@
 
-## Diagnóstico: O que falta para virar um SaaS multi-domínio vendável
 
-O sistema **já tem a base multi-tenant** (RLS, `resolve-tenant`, clonagem, superboss). O que falta são camadas de **operação comercial, onboarding self-service, billing e isolamento total** para vender como SaaS.
+Fase 2 = #5 (isolamento de credenciais) + #6 (storage isolado) + #8 (branding dinâmico). Vou propor implementação fatiada começando pelo mais crítico: **#5**, porque é o único que causa **vazamento de dados entre lojas** (bug grave hoje).
 
----
+## Plano — Fase 2, Etapa 1: Isolamento de credenciais por tenant (#5)
 
-### 🔴 Crítico (sem isso não vende)
+### Problema atual
+Tokens de Bling, TikTok Shop, Asaas, Evolution API, GHL e Cloudflare estão **globais** — toda loja compartilha as mesmas credenciais. Quando a Loja B conectar o Bling dela, vai sobrescrever o token da Loja A (`bling_tokens` não tem `tenant_id`).
 
-**1. Onboarding self-service**
-- Hoje: criar loja exige Superboss manual via `/superboss/clonar`.
-- Falta: página pública `/criar-loja` → cadastro do dono → escolha de plano → criação automática (signup + tenant + clone do template + admin user + `tenant_users role=admin`) via edge function `signup-tenant`.
+### O que vou fazer
 
-**2. Billing / Cobrança recorrente**
-- Hoje: campo `plan` em `tenants` é texto solto, sem cobrança.
-- Falta: integração Stripe/Asaas Subscriptions, tabela `tenant_subscriptions` (status, plano, próximo vencimento, trial_ends_at), webhook que **suspende automaticamente** tenant inadimplente (`tenants.status='suspended'` → `resolve-tenant` já bloqueia), página `/admin/assinatura` para o lojista ver fatura/cancelar/trocar plano.
-
-**3. Conexão de domínio próprio self-service**
-- Hoje: `tenant_domains` existe e `resolve-tenant` resolve por hostname, mas adicionar domínio é manual (insert direto no DB).
-- Falta: UI em `/admin/dominios` onde o lojista digita `lojadele.com.br`, o sistema mostra os DNS records (A 185.158.133.1 + TXT verificação), faz polling de verificação, e provisiona SSL via Cloudflare for SaaS API (Custom Hostnames). Edge function `verify-custom-domain` + cron de renovação.
-
-**4. Limites por plano (enforcement)**
-- Hoje: `allowed_modules` jsonb existe mas não é checado em quase nenhum lugar.
-- Falta: hook `usePlanLimits()` que lê plano + uso (qtd produtos, pedidos/mês, contatos WhatsApp, mensagens IA) e bloqueia ações quando estoura. Banner "Upgrade pra plano X". Tabela `plan_definitions` com limites declarativos.
-
----
-
-### 🟡 Importante (pra escalar/profissionalizar)
-
-**5. Isolamento de credenciais por tenant**
-- Hoje (memória `global-api-tokens-constraint`): tokens Bling e TikTok Shop são **globais cross-tenant** — bug grave em SaaS. Asaas, Evolution API, GHL também precisam ser por tenant.
-- Falta: tabela `tenant_integrations(tenant_id, provider, credentials jsonb encrypted, active)` substituindo secrets globais. Edge functions devem ler do tenant, não de `Deno.env`.
-
-**6. Storage isolado por tenant**
-- Hoje: buckets `product-images`, `store-assets`, `images` são compartilhados (paths livres).
-- Falta: convenção `tenant_id/...` em todos os uploads + RLS de storage por path prefix. Auditar todos os `supabase.storage.from(...).upload(...)`.
-
-**7. E-mails transacionais por tenant**
-- Hoje: e-mails de auth do Supabase são globais (um remetente único).
-- Falta: cada loja com seu Resend/SMTP próprio + templates personalizáveis (logo, cores, remetente). Tabela `tenant_email_config`.
-
-**8. Branding completo por tenant**
-- Hoje: `store_settings` cobre cores, logo, fonte. `index.html` tem favicon/título estáticos.
-- Falta: edge function `seo-meta` ou SSR mínimo que injete `<title>`, `<meta>`, favicon e Open Graph dinâmicos por hostname (hoje todos os tenants compartilham o mesmo `<title>`/favicon do `index.html`).
-
-**9. Painel Superboss com métricas SaaS**
-- Hoje: `SuperbossLojas` lista tenants e suspende.
-- Falta: MRR, churn, tenants ativos vs trial, uso por tenant, top consumidores de IA/WhatsApp, login-as-tenant ("impersonar" pra suporte).
-
----
-
-### 🟢 Nice to have (diferencial competitivo)
-
-**10. Plano Trial automático** — `trial_ends_at`, banner countdown, downgrade automático.
-**11. Marketplace de templates** — múltiplos `is_template=true` (farmácia, suplementos, cosméticos), lojista escolhe no signup.
-**12. Whitelabel total** — esconder marca "D7Pharma/Lovable" do admin quando `tenant.whitelabel=true`.
-**13. Logs de auditoria por tenant** — quem fez o quê, exportável.
-**14. API pública por tenant** — chave de API tenant-scoped pra integrações externas dos lojistas.
-**15. Limites de Edge Functions** — rate limit por tenant pra IA/WhatsApp não estourar custo.
-
----
-
-### Roadmap sugerido (ordem)
-
+**1. Nova tabela `tenant_integrations`** (substitui secrets globais)
 ```text
-Fase 1 (MVP vendável):  1 + 2 + 3 + 4
-Fase 2 (escala segura): 5 + 6 + 8
-Fase 3 (profissional):  7 + 9 + 10
-Fase 4 (diferencial):   11–15
+tenant_integrations
+├── id uuid pk
+├── tenant_id uuid (FK tenants, NOT NULL)
+├── provider text   ('bling' | 'tiktok_shop' | 'asaas' | 'evolution' | 'ghl' | 'cloudflare')
+├── credentials jsonb   (access_token, refresh_token, expires_at, api_key, etc.)
+├── active boolean
+├── last_used_at timestamptz
+├── UNIQUE(tenant_id, provider)
 ```
+- RLS: admin do tenant lê/escreve só do próprio tenant; super_admin vê tudo.
+- Trigger `ensure_tenant_id` já existe → reutiliza.
 
-### Pergunta antes de avançar
-Quer que eu detalhe + implemente alguma fase específica? Sugiro começar pela **Fase 1** (especialmente #4 — limites por plano — porque sem isso o #2 billing não tem o que cobrar diferenciado).
+**2. Migrar dados existentes** (sem perder integração atual)
+- Copia `bling_tokens` → `tenant_integrations(provider='bling', tenant_id=DEFAULT)`.
+- Copia `tiktok_tokens` → idem.
+- Copia campos relevantes de `store_settings` (Evolution, Cloudflare, Asaas) → idem por tenant.
+- Mantém tabelas antigas por enquanto (backward-compat); deprecar depois.
+
+**3. Helper compartilhado nas Edge Functions**
+Criar `supabase/functions/_shared/tenant-credentials.ts` com:
+- `resolveTenantId(req)` — extrai do JWT (`tenant_users`) ou body.
+- `getTenantCredentials(supabase, tenantId, provider)` — lê/refresca token.
+- `saveTenantCredentials(supabase, tenantId, provider, creds)`.
+
+**4. Atualizar Edge Functions críticas** para ler do tenant em vez de globais:
+- `bling-callback`, `bling-refresh-token`, `bling-list-products`, `bling-export-product`, `bling-sync-order`
+- `tiktok-shop-callback`, `tiktok-shop-sync-products`, `tiktok-shop-sync-orders`
+- `asaas-webhook` e `create-payment` → ler `ASAAS_API_KEY` do tenant
+- `whatsapp-instance`, `whatsapp-send`, `whatsapp-process-queue` → Evolution por tenant
+- `ghl-sync` → API key + location por tenant
+- `cloudflare-purge` → token+zone por tenant
+
+**5. Frontend: UI de gerenciamento**
+- Atualizar `IntegrationsPage.tsx` para CRUD em `tenant_integrations` em vez de mostrar secrets globais.
+- Bling: botão "Conectar" gera state com tenant_id → callback grava no tenant.
+- TikTok: idem.
+- Asaas/Evolution/GHL/Cloudflare: campos de input por tenant (substituir uso de `store_settings`).
+
+**6. Fallback seguro**
+Se um tenant não tiver credencial própria, **NÃO** cair para a global (evita vazamento). Mostrar "Integração não configurada" e bloquear ação.
+
+### Arquivos
+- **Migration nova**: tabela `tenant_integrations` + RLS + seed da migração de dados.
+- **Novo**: `supabase/functions/_shared/tenant-credentials.ts`
+- **Editar**: ~14 Edge Functions listadas acima
+- **Editar**: `src/pages/admin/IntegrationsPage.tsx` (refatorar cards de Bling/TikTok/Asaas/Evolution/GHL/Cloudflare)
+
+### Escopo desta etapa
+**Apenas #5.** Storage (#6) e branding (#8) ficam pra etapas seguintes — cada uma é grande e independente. Faz sentido shipar #5 sozinho, validar, depois seguir.
+
+### Tamanho
+Etapa grande (~14 funções + migration + UI). Posso fatiar ainda mais se preferir:
+- **5a**: tabela + helper + Bling+TikTok (os mais críticos, hoje quebrados)
+- **5b**: Asaas + Evolution + GHL + Cloudflare
+- **5c**: UI completa em `IntegrationsPage`
+
+Recomendo começar por **5a** (resolve o bug mais grave: ERPs cross-tenant). Confirma se quer 5a só ou Fase 5 completa de uma vez.
+
