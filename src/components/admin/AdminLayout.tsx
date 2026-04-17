@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAdminTheme, type AdminTheme } from "@/hooks/useAdminTheme";
+import TrialBadge from "./TrialBadge";
+import TrialExpiredOverlay from "./TrialExpiredOverlay";
 
 interface AdminNotification {
   id: string;
@@ -204,8 +206,9 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             </div>
 
             <div className="flex items-center gap-1">
+              <TrialBadge />
               {/* Greeting */}
-              <span className="hidden xl:block text-sm text-muted-foreground mr-3">
+              <span className="hidden xl:block text-sm text-muted-foreground mx-3">
                 {greeting}, <span className="font-medium text-foreground">{userName}</span>
               </span>
 
@@ -364,6 +367,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+      <TrialExpiredOverlay />
     </SidebarProvider>
   );
 }
