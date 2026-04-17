@@ -39,6 +39,10 @@ interface WhatsAppInstance {
 interface WhatsAppTemplate {
   id: string; name: string; category: string; content: string;
   variables: any; active: boolean; created_at: string;
+  folder_id?: string | null;
+}
+interface TemplateFolder {
+  id: string; name: string; color: string; sort_order: number;
 }
 interface WhatsAppFunnel {
   id: string; name: string; type: string; trigger_event: string;
