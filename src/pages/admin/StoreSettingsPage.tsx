@@ -530,6 +530,83 @@ export default function StoreSettingsPage() {
           </div>
         </div>
 
+        {/* SEO & Branding padrão */}
+        <div className="bg-card rounded-lg border p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Megaphone className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">SEO & Branding</h2>
+          </div>
+          <p className="text-sm text-muted-foreground -mt-2">
+            Define como sua loja aparece no Google, WhatsApp e redes sociais. Usado como padrão em páginas sem SEO específico.
+          </p>
+
+          <div>
+            <Label>Título padrão (SEO)</Label>
+            <Input
+              value={(form as any).seo_default_title || ""}
+              onChange={(e) => update("seo_default_title" as any, e.target.value)}
+              placeholder="Suplementos de Alta Performance"
+              maxLength={60}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Aparece após o nome da loja na aba do navegador. Máx 60 caracteres.
+            </p>
+          </div>
+
+          <div>
+            <Label>Descrição padrão (SEO)</Label>
+            <Textarea
+              value={(form as any).seo_default_description || ""}
+              onChange={(e) => update("seo_default_description" as any, e.target.value)}
+              placeholder="Descrição que aparece no Google e ao compartilhar links."
+              rows={2}
+              maxLength={160}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Máx 160 caracteres. Usada em todas as páginas que não definem descrição própria.
+            </p>
+          </div>
+
+          <div>
+            <Label>Palavras-chave (SEO)</Label>
+            <Input
+              value={(form as any).seo_keywords || ""}
+              onChange={(e) => update("seo_keywords" as any, e.target.value)}
+              placeholder="suplementos, vitaminas, saúde"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Separadas por vírgula.</p>
+          </div>
+
+          <div>
+            <Label>Imagem de compartilhamento (Open Graph)</Label>
+            <Input
+              value={(form as any).seo_default_og_image || ""}
+              onChange={(e) => update("seo_default_og_image" as any, e.target.value)}
+              placeholder="https://..."
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Imagem exibida ao compartilhar links no WhatsApp/Facebook (recomendado 1200×630). Se vazio, usa o logotipo.
+            </p>
+            {(form as any).seo_default_og_image && (
+              <img
+                src={(form as any).seo_default_og_image}
+                alt="Preview Open Graph"
+                className="mt-2 max-h-40 rounded border object-cover"
+              />
+            )}
+          </div>
+
+          <div className="border rounded-md p-4 bg-muted/30">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Preview no Google</p>
+            <p className="text-[#1a0dab] text-base leading-tight truncate">
+              {form.store_name || "Loja"} | {(form as any).seo_default_title || "Título padrão"}
+            </p>
+            <p className="text-[#006621] text-xs truncate">{window.location.origin}</p>
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              {(form as any).seo_default_description || "Descrição padrão da sua loja aparecerá aqui."}
+            </p>
+          </div>
+        </div>
 
         <Button type="submit" size="lg" disabled={mutation.isPending} className="gap-2">
           {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
