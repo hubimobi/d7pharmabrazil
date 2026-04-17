@@ -929,7 +929,9 @@ function TikTokShopCard() {
   const handleSyncOrders = async () => {
     setSyncing("orders");
     try {
-      const { data, error } = await supabase.functions.invoke("tiktok-shop-sync-orders");
+      const { data, error } = await supabase.functions.invoke("tiktok-shop-sync-orders", {
+        headers: { "x-tenant-id": tenantId },
+      });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success(`${data?.imported || 0} pedido(s) importado(s) de ${data?.total_found || 0} encontrado(s)`);
