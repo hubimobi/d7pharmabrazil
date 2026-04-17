@@ -2397,81 +2397,365 @@ function ContactsTab() {
 }
 
 // ==================== QUEUE TAB ====================
-function QueueTab() {
-  const [queue, setQueue] = useState<QueueItem[]>([]);
+interface QueueRow {
+  id: string;
+  contact_phone: string;
+  contact_name: string;
+  message_content: string;
+  status: string;
+  scheduled_at: string;
+  sent_at: string | null;
+  retry_count: number;
+  error_message: string | null;
+  broadcast_id: string | null;
+  broadcast_name: string | null;
+  funnel_id: string | null;
+  flow_id: string | null;
+  instance_id: string | null;
+}
 
-  useEffect(() => { loadQueue(); }, []);
+interface CampaignGroup {
+  key: string;
+  id: string | null;
+  name: string;
+  type: "funnel" | "flow" | "single";
+  total: number;
+  sent: number;
+  pending: number;
+  failed: number;
+  cancelled: number;
+  firstScheduled: string;
+  lastSent: string | null;
+  items: QueueRow[];
+}
 
-  async function loadQueue() {
-    const { data } = await supabase.from("whatsapp_message_queue").select("*").in("status", ["pending", "failed"]).order("scheduled_at").limit(100);
-    setQueue((data || []) as unknown as QueueItem[]);
-  }
+function StatusKPI({ icon: Icon, label, value, tone }: { icon: any; label: string; value: number | string; tone: string }) {
+  return (
+    <Card>
+      <CardContent className="p-4 flex items-center gap-3">
+        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${tone}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-2xl font-bold leading-none">{value}</p>
+          <p className="text-xs text-muted-foreground mt-1">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
-  async function cancelMessage(id: string) {
-    await supabase.from("whatsapp_message_queue").update({ status: "cancelled" }).eq("id", id);
-    loadQueue();
-  }
+function CampaignCard({
+  group, onCancelGroup, onRetryFailed, onCancelOne, onRetryOne,
+}: {
+  group: CampaignGroup;
+  onCancelGroup: (g: CampaignGroup) => void;
+  onRetryFailed: (g: CampaignGroup) => void;
+  onCancelOne: (id: string) => void;
+  onRetryOne: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const total = group.total;
+  const progress = total > 0 ? Math.round((group.sent / total) * 100) : 0;
+  const TypeIcon = group.type === "flow" ? Zap : group.type === "funnel" ? GitBranch : Send;
 
-  async function retryMessage(id: string) {
-    await supabase.from("whatsapp_message_queue").update({ status: "pending", retry_count: 0, scheduled_at: new Date().toISOString() }).eq("id", id);
-    loadQueue();
-  }
-
-  async function processQueue() {
-    try {
-      const res = await supabase.functions.invoke("whatsapp-process-queue");
-      const d = res.data || {};
-      if (d.diagnostic) {
-        toast.info(d.diagnostic);
-      } else {
-        toast.success(`Processado: ${d.processed || 0} mensagens`);
-      }
-      if (d.postponed > 0) {
-        toast.warning(`${d.postponed} mensagem(ns) adiada(s): ${d.connected_instances === 0 ? "nenhuma instância conectada" : "limite diário atingido"}`);
-      }
-      loadQueue();
-    } catch (e: any) { toast.error(e.message); }
+  let etaMinutes: number | null = null;
+  if (group.pending > 0 && group.sent >= 2 && group.lastSent && group.firstScheduled) {
+    const elapsed = (new Date(group.lastSent).getTime() - new Date(group.firstScheduled).getTime()) / 60000;
+    const rate = group.sent / Math.max(elapsed, 1);
+    if (rate > 0) etaMinutes = Math.ceil(group.pending / rate);
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Fila de Envio ({queue.length})</h3>
-        <Button onClick={processQueue} size="sm"><Zap className="h-4 w-4 mr-1" /> Processar Fila</Button>
+    <Card className="overflow-hidden">
+      <CardContent className="p-0">
+        <div className="p-4 flex items-start gap-3">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <TypeIcon className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="font-semibold text-sm truncate">{group.name}</h4>
+              <Badge variant="outline" className="text-xs">
+                {group.type === "flow" ? "Flow" : group.type === "funnel" ? "Funil" : "Avulso"}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Iniciado em {new Date(group.firstScheduled).toLocaleString("pt-BR")}
+              {etaMinutes !== null && <> · ETA: ~{etaMinutes} min</>}
+            </p>
+
+            <div className="mt-3 space-y-2">
+              <Progress value={progress} className="h-2" />
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{group.sent} de {total} enviadas ({progress}%)</span>
+                <div className="flex items-center gap-1.5">
+                  {group.sent > 0 && <Badge className="bg-green-500/15 text-green-700 border-green-200 hover:bg-green-500/20 gap-1"><CheckCheck className="h-3 w-3" /> {group.sent}</Badge>}
+                  {group.pending > 0 && <Badge className="bg-amber-500/15 text-amber-700 border-amber-200 hover:bg-amber-500/20 gap-1"><Clock className="h-3 w-3" /> {group.pending}</Badge>}
+                  {group.failed > 0 && <Badge className="bg-red-500/15 text-red-700 border-red-200 hover:bg-red-500/20 gap-1"><AlertCircle className="h-3 w-3" /> {group.failed}</Badge>}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 shrink-0">
+            {group.failed > 0 && (
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onRetryFailed(group)}>
+                <RefreshCw className="h-3 w-3 mr-1" /> Reenviar falhas
+              </Button>
+            )}
+            {group.pending > 0 && (
+              <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => onCancelGroup(group)}>
+                <XCircle className="h-3 w-3 mr-1" /> Cancelar restantes
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <Collapsible open={open} onOpenChange={setOpen}>
+          <CollapsibleTrigger asChild>
+            <button className="w-full px-4 py-2 border-t flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:bg-muted/50 transition-colors">
+              {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              {open ? "Ocultar" : "Ver"} detalhes ({total} {total === 1 ? "envio" : "envios"})
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="border-t bg-muted/20 max-h-80 overflow-y-auto">
+              {group.items.map((item) => {
+                const statusMeta = item.status === "sent"
+                  ? { icon: CheckCheck, color: "text-green-600", label: "Enviada" }
+                  : item.status === "failed"
+                    ? { icon: AlertCircle, color: "text-red-600", label: `Falhou (${item.retry_count}x)` }
+                    : item.status === "cancelled"
+                      ? { icon: XCircle, color: "text-muted-foreground", label: "Cancelada" }
+                      : item.status === "processing"
+                        ? { icon: Send, color: "text-blue-600", label: "Enviando" }
+                        : { icon: Clock, color: "text-amber-600", label: "Pendente" };
+                const StatusIcon = statusMeta.icon;
+                return (
+                  <div key={item.id} className="px-4 py-2.5 flex items-center gap-3 border-b last:border-b-0 text-xs">
+                    <StatusIcon className={`h-4 w-4 shrink-0 ${statusMeta.color}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate">{item.contact_name || item.contact_phone}</span>
+                        <span className="text-muted-foreground">{item.contact_phone}</span>
+                      </div>
+                      <p className="text-muted-foreground truncate mt-0.5">
+                        {statusMeta.label} · {item.sent_at ? `enviada ${new Date(item.sent_at).toLocaleString("pt-BR")}` : `agendada ${new Date(item.scheduled_at).toLocaleString("pt-BR")}`}
+                      </p>
+                      {item.error_message && (
+                        <p className="text-destructive truncate mt-0.5">{item.error_message}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      {item.status === "failed" && (
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => onRetryOne(item.id)}>
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {(item.status === "pending" || item.status === "failed") && (
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => onCancelOne(item.id)}>
+                          <XCircle className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </CardContent>
+    </Card>
+  );
+}
+
+function QueueTab() {
+  const [items, setItems] = useState<QueueRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("active");
+  const [search, setSearch] = useState("");
+  const [sentToday, setSentToday] = useState(0);
+
+  useEffect(() => {
+    loadQueue();
+    const channel = supabase
+      .channel("queue-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_message_queue" }, () => {
+        loadQueue();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function loadQueue() {
+    const { data } = await supabase
+      .from("whatsapp_message_queue")
+      .select("*")
+      .order("scheduled_at", { ascending: false })
+      .limit(500);
+    setItems((data || []) as any);
+
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+    const { count } = await supabase
+      .from("whatsapp_message_queue")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "sent")
+      .gte("sent_at", startOfDay.toISOString());
+    setSentToday(count || 0);
+  }
+
+  async function processQueue() {
+    setLoading(true);
+    try {
+      const res = await supabase.functions.invoke("whatsapp-process-queue");
+      const d = res.data || {};
+      if (d.diagnostic) toast.info(d.diagnostic);
+      else toast.success(`Processado: ${d.processed || 0} mensagens`);
+      if (d.postponed > 0) {
+        toast.warning(`${d.postponed} adiada(s): ${d.connected_instances === 0 ? "nenhuma instância conectada" : "limite diário atingido"}`);
+      }
+      loadQueue();
+    } catch (e: any) { toast.error(e.message); }
+    setLoading(false);
+  }
+
+  async function cancelOne(id: string) {
+    await supabase.from("whatsapp_message_queue").update({ status: "cancelled" }).eq("id", id);
+    loadQueue();
+  }
+  async function retryOne(id: string) {
+    await supabase.from("whatsapp_message_queue").update({ status: "pending", retry_count: 0, scheduled_at: new Date().toISOString() }).eq("id", id);
+    loadQueue();
+  }
+  async function cancelGroup(g: CampaignGroup) {
+    if (!confirm(`Cancelar ${g.pending} mensagens pendentes da campanha "${g.name}"?`)) return;
+    const ids = g.items.filter(i => i.status === "pending").map(i => i.id);
+    if (ids.length === 0) return;
+    await supabase.from("whatsapp_message_queue").update({ status: "cancelled" }).in("id", ids);
+    toast.success(`${ids.length} mensagens canceladas`);
+    loadQueue();
+  }
+  async function retryFailed(g: CampaignGroup) {
+    const ids = g.items.filter(i => i.status === "failed").map(i => i.id);
+    if (ids.length === 0) return;
+    await supabase.from("whatsapp_message_queue").update({ status: "pending", retry_count: 0, scheduled_at: new Date().toISOString() }).in("id", ids);
+    toast.success(`${ids.length} mensagens reenviadas`);
+    loadQueue();
+  }
+
+  const filtered = items.filter(i => {
+    if (statusFilter === "active" && !["pending", "processing", "failed"].includes(i.status)) return false;
+    if (statusFilter !== "all" && statusFilter !== "active" && i.status !== statusFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!(`${i.contact_name} ${i.contact_phone} ${i.broadcast_name || ""}`.toLowerCase().includes(q))) return false;
+    }
+    return true;
+  });
+
+  const groupsMap = new Map<string, CampaignGroup>();
+  for (const item of filtered) {
+    const key = item.broadcast_id || `single:${item.id}`;
+    let g = groupsMap.get(key);
+    if (!g) {
+      const type: CampaignGroup["type"] = item.flow_id ? "flow" : item.funnel_id ? "funnel" : "single";
+      g = {
+        key, id: item.broadcast_id,
+        name: item.broadcast_name || (item.flow_id ? "Flow direto" : item.funnel_id ? "Funil direto" : "Envio avulso"),
+        type,
+        total: 0, sent: 0, pending: 0, failed: 0, cancelled: 0,
+        firstScheduled: item.scheduled_at, lastSent: null, items: [],
+      };
+      groupsMap.set(key, g);
+    }
+    g.items.push(item);
+    g.total += 1;
+    if (item.status === "sent") g.sent += 1;
+    else if (item.status === "pending" || item.status === "processing") g.pending += 1;
+    else if (item.status === "failed") g.failed += 1;
+    else if (item.status === "cancelled") g.cancelled += 1;
+    if (item.scheduled_at < g.firstScheduled) g.firstScheduled = item.scheduled_at;
+    if (item.sent_at && (!g.lastSent || item.sent_at > g.lastSent)) g.lastSent = item.sent_at;
+  }
+  const groups = Array.from(groupsMap.values()).sort((a, b) => (b.firstScheduled.localeCompare(a.firstScheduled)));
+
+  const kpiPending = items.filter(i => i.status === "pending").length;
+  const kpiProcessing = items.filter(i => i.status === "processing").length;
+  const kpiFailed = items.filter(i => i.status === "failed").length;
+  const nextItem = items.filter(i => i.status === "pending").sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))[0];
+  const nextLabel = nextItem ? new Date(nextItem.scheduled_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—";
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2"><Send className="h-5 w-5" /> Fila de Transmissão</h3>
+          <p className="text-xs text-muted-foreground">Acompanhe campanhas em tempo real</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={loadQueue} size="sm" variant="outline">
+            <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
+          </Button>
+          <Button onClick={processQueue} size="sm" disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Zap className="h-4 w-4 mr-1" />}
+            Processar agora
+          </Button>
+        </div>
       </div>
 
-      {queue.length === 0 ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">
-          <Clock className="h-12 w-12 mx-auto mb-3 opacity-40" />
-          <p>Fila vazia</p>
-        </CardContent></Card>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <StatusKPI icon={Hourglass} label="Pendentes" value={kpiPending} tone="bg-amber-500/15 text-amber-600" />
+        <StatusKPI icon={Send} label="Enviando" value={kpiProcessing} tone="bg-blue-500/15 text-blue-600" />
+        <StatusKPI icon={CheckCheck} label="Enviadas hoje" value={sentToday} tone="bg-green-500/15 text-green-600" />
+        <StatusKPI icon={AlertCircle} label="Falhas" value={kpiFailed} tone="bg-red-500/15 text-red-600" />
+        <StatusKPI icon={Clock} label="Próximo envio" value={nextLabel} tone="bg-primary/15 text-primary" />
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active"><span className="flex items-center gap-2"><Filter className="h-4 w-4 text-muted-foreground" /> Ativas (pend./falha)</span></SelectItem>
+            <SelectItem value="all"><span className="flex items-center gap-2"><Inbox className="h-4 w-4 text-muted-foreground" /> Todas</span></SelectItem>
+            <SelectItem value="pending"><span className="flex items-center gap-2"><Clock className="h-4 w-4 text-amber-600" /> Pendentes</span></SelectItem>
+            <SelectItem value="sent"><span className="flex items-center gap-2"><CheckCheck className="h-4 w-4 text-green-600" /> Enviadas</span></SelectItem>
+            <SelectItem value="failed"><span className="flex items-center gap-2"><AlertCircle className="h-4 w-4 text-red-600" /> Falhas</span></SelectItem>
+            <SelectItem value="cancelled"><span className="flex items-center gap-2"><XCircle className="h-4 w-4 text-muted-foreground" /> Canceladas</span></SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por contato, telefone ou campanha…"
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      {groups.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <Send className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">Nenhuma transmissão encontrada com esses filtros</p>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-2">
-          {queue.map((item) => (
-            <Card key={item.id}>
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className={`${item.status === "failed" ? "text-red-500" : "text-amber-500"}`}>
-                  {item.status === "failed" ? <XCircle className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{item.contact_name || item.contact_phone}</span>
-                    <Badge variant={item.status === "failed" ? "destructive" : "secondary"} className="text-[10px]">
-                      {item.status === "failed" ? `Falhou (${item.retry_count}x)` : "Pendente"}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground line-clamp-1">{item.message_content}</p>
-                  <p className="text-[10px] text-muted-foreground">Agendado: {new Date(item.scheduled_at).toLocaleString("pt-BR")}</p>
-                  {item.error_message && <p className="text-[10px] text-destructive line-clamp-1">{item.error_message}</p>}
-                </div>
-                <div className="flex gap-1">
-                  {item.status === "failed" && (
-                    <Button size="sm" variant="outline" onClick={() => retryMessage(item.id)}><RefreshCw className="h-3.5 w-3.5" /></Button>
-                  )}
-                  <Button size="sm" variant="ghost" className="text-destructive" onClick={() => cancelMessage(item.id)}><XCircle className="h-3.5 w-3.5" /></Button>
-                </div>
-              </CardContent>
-            </Card>
+        <div className="space-y-3">
+          {groups.map(g => (
+            <CampaignCard
+              key={g.key}
+              group={g}
+              onCancelGroup={cancelGroup}
+              onRetryFailed={retryFailed}
+              onCancelOne={cancelOne}
+              onRetryOne={retryOne}
+            />
           ))}
         </div>
       )}
