@@ -911,6 +911,7 @@ function TikTokShopCard() {
     try {
       const { data, error } = await supabase.functions.invoke("tiktok-shop-sync-products", {
         body: { action: "export" },
+        headers: { "x-tenant-id": tenantId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
