@@ -894,7 +894,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     };
   }, []);
 
-  function getOutputHandles(node: FlowNode): { label: string; index: number }[] {
+  function getOutputHandles(node: FlowNode): { label: string; index: number; color?: string }[] {
     if (node.type === "condition") {
       if (node.data.condition_type === "any_response") {
         return [
@@ -909,6 +909,18 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     }
     if (node.type === "choice") {
       return ((node.data.options || []) as { label: string }[]).map((o, i) => ({ label: o.label, index: i }));
+    }
+    if (node.type === "branch") {
+      return [
+        { label: "Sim", index: 0, color: "#22C55E" },
+        { label: "Não", index: 1, color: "#EF4444" },
+      ];
+    }
+    if (node.type === "split") {
+      const count = Math.max(2, Math.min(5, Number(node.data.split_count) || 2));
+      const letters = ["A", "B", "C", "D", "E"];
+      const colors = ["#A855F7", "#EC4899", "#F59E0B", "#10B981", "#3B82F6"];
+      return Array.from({ length: count }, (_, i) => ({ label: letters[i], index: i, color: colors[i] }));
     }
     return [];
   }
