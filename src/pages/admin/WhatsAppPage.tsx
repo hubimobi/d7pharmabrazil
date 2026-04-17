@@ -27,6 +27,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import ConversationsTab from "@/components/admin/WhatsAppConversations";
 import WhatsAppFlowEditor from "@/components/admin/WhatsAppFlowEditor";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MessageComposer } from "@/components/admin/MessageComposer";
 
 // ==================== TYPES ====================
 interface WhatsAppInstance {
