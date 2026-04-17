@@ -1628,9 +1628,23 @@ function SendingConfigTab() {
 }
 
 // ==================== BROADCAST TAB ====================
+type BroadcastMode = "funnel" | "flow";
+
+const FILTER_OPTIONS = [
+  { value: "all", label: "Todos os contatos", icon: Users },
+  { value: "tag", label: "Por Tag", icon: Tag },
+  { value: "representative", label: "Por Representante", icon: Briefcase },
+  { value: "prescriber", label: "Por Prescritor", icon: Stethoscope },
+  { value: "product", label: "Por Produto (comprou)", icon: Package },
+  { value: "state", label: "Por Estado/Cidade", icon: MapPin },
+] as const;
+
 function BroadcastTab() {
+  const [mode, setMode] = useState<BroadcastMode>("funnel");
   const [funnels, setFunnels] = useState<WhatsAppFunnel[]>([]);
+  const [flows, setFlows] = useState<Array<{ id: string; name: string; description: string }>>([]);
   const [selectedFunnel, setSelectedFunnel] = useState<string>("");
+  const [selectedFlow, setSelectedFlow] = useState<string>("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterValue, setFilterValue] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -1641,26 +1655,28 @@ function BroadcastTab() {
   const [estimatedCount, setEstimatedCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [broadcastInterval, setBroadcastInterval] = useState(30000); // default 30s
+  const [campaignName, setCampaignName] = useState("");
 
   useEffect(() => { loadData(); }, []);
   useEffect(() => { estimateAudience(); }, [filterType, filterValue]);
 
   async function loadData() {
-    const [{ data: f }, { data: rp }, { data: d }, { data: p }, { data: t }] = await Promise.all([
+    const [{ data: f }, { data: fl }, { data: rp }, { data: d }, { data: p }, { data: t }] = await Promise.all([
       supabase.from("whatsapp_funnels").select("*").eq("active", true).order("name"),
+      supabase.from("whatsapp_flows").select("id, name, description").eq("active", true).order("name"),
       supabase.from("representatives").select("id, name").eq("active", true),
       supabase.from("doctors").select("id, name").eq("active", true),
       supabase.from("products").select("id, name").eq("active", true),
       supabase.from("customer_tags").select("tag"),
     ]);
     setFunnels((f || []) as unknown as WhatsAppFunnel[]);
+    setFlows((fl || []) as any);
     setReps(rp || []);
     setDoctors(d || []);
     setProducts(p || []);
     const uniqueTags = [...new Set((t || []).map((x: any) => x.tag))];
     setTags(uniqueTags);
 
-    // Get unique states from orders
     const { data: orders } = await supabase.from("orders").select("shipping_address").not("shipping_address", "is", null).limit(500);
     const stateSet = new Set<string>();
     (orders || []).forEach((o: any) => {
@@ -1669,7 +1685,6 @@ function BroadcastTab() {
     });
     setStates(Array.from(stateSet).sort());
 
-    // Load sending config for broadcast stagger
     const { data: sc } = await supabase.from("whatsapp_sending_config").select("batch_interval_seconds").limit(1).maybeSingle();
     if (sc?.batch_interval_seconds) {
       setBroadcastInterval(sc.batch_interval_seconds * 1000);
@@ -1691,7 +1706,6 @@ function BroadcastTab() {
         setEstimatedCount(count || 0);
       } else setEstimatedCount(0);
     } else if (filterType === "product" && filterValue) {
-      // Estimate by orders containing product
       const { count } = await supabase.from("orders").select("*", { count: "exact", head: true }).contains("items", JSON.stringify([{ id: filterValue }]));
       setEstimatedCount(count || 0);
     } else if (filterType === "state" && filterValue) {
@@ -1702,86 +1716,61 @@ function BroadcastTab() {
     }
   }
 
-  async function startBroadcast() {
-    if (!selectedFunnel) { toast.error("Selecione um funil"); return; }
-    if (estimatedCount === 0) { toast.error("Nenhum contato encontrado com os filtros selecionados"); return; }
-    if (!confirm(`Confirma disparar o funil para ~${estimatedCount || "?"} contatos?`)) return;
-    setLoading(true);
-    try {
-      // 1. Get funnel steps to build messages
-      const { data: steps } = await supabase
-        .from("whatsapp_funnel_steps")
-        .select("*")
-        .eq("funnel_id", selectedFunnel)
-        .eq("active", true)
-        .order("step_order");
-
-      if (!steps || steps.length === 0) {
-        toast.error("Funil sem etapas ativas");
-        setLoading(false);
-        return;
-      }
-
-      // 2. Gather contacts based on filter
-      let contactPhones: { phone: string; name: string }[] = [];
-
-      if (filterType === "all") {
-        const { data: allContacts } = await supabase.from("whatsapp_contacts").select("phone, name");
-        contactPhones = (allContacts || []).map(c => ({ phone: c.phone, name: c.name || c.phone }));
-      } else if (filterType === "tag" && filterValue) {
-        const { data: tagged } = await supabase.from("customer_tags").select("customer_email").eq("tag", filterValue);
-        // customer_email might be a phone in some cases; also cross-reference with orders
-        const emails = (tagged || []).map(t => t.customer_email);
-        if (emails.length > 0) {
-          const { data: orders } = await supabase.from("orders").select("customer_phone, customer_name, customer_email").in("customer_email", emails).not("customer_phone", "is", null);
-          const phoneMap = new Map<string, string>();
-          (orders || []).forEach(o => {
-            if (o.customer_phone) phoneMap.set(o.customer_phone, o.customer_name);
-          });
-          contactPhones = Array.from(phoneMap.entries()).map(([phone, name]) => ({ phone, name }));
-        }
-      } else if (filterType === "representative" && filterValue) {
-        const { data: docs } = await supabase.from("doctors").select("id").eq("representative_id", filterValue);
-        const docIds = (docs || []).map(d => d.id);
-        if (docIds.length > 0) {
-          const { data: orders } = await supabase.from("orders").select("customer_phone, customer_name").in("doctor_id", docIds).not("customer_phone", "is", null);
-          const phoneMap = new Map<string, string>();
-          (orders || []).forEach(o => {
-            if (o.customer_phone) phoneMap.set(o.customer_phone, o.customer_name);
-          });
-          contactPhones = Array.from(phoneMap.entries()).map(([phone, name]) => ({ phone, name }));
-        }
-      } else if (filterType === "state" && filterValue) {
-        const { data: orders } = await supabase.from("orders").select("customer_phone, customer_name, shipping_address").not("customer_phone", "is", null).limit(1000);
+  async function gatherContacts(): Promise<{ phone: string; name: string }[]> {
+    let contactPhones: { phone: string; name: string }[] = [];
+    if (filterType === "all") {
+      const { data: allContacts } = await supabase.from("whatsapp_contacts").select("phone, name");
+      contactPhones = (allContacts || []).map(c => ({ phone: c.phone, name: c.name || c.phone }));
+    } else if (filterType === "tag" && filterValue) {
+      const { data: tagged } = await supabase.from("customer_tags").select("customer_email").eq("tag", filterValue);
+      const emails = (tagged || []).map(t => t.customer_email);
+      if (emails.length > 0) {
+        const { data: orders } = await supabase.from("orders").select("customer_phone, customer_name, customer_email").in("customer_email", emails).not("customer_phone", "is", null);
         const phoneMap = new Map<string, string>();
-        (orders || []).forEach((o: any) => {
-          if (o.customer_phone && o.shipping_address?.state === filterValue) {
-            phoneMap.set(o.customer_phone, o.customer_name);
-          }
-        });
+        (orders || []).forEach(o => { if (o.customer_phone) phoneMap.set(o.customer_phone, o.customer_name); });
         contactPhones = Array.from(phoneMap.entries()).map(([phone, name]) => ({ phone, name }));
       }
+    } else if (filterType === "representative" && filterValue) {
+      const { data: docs } = await supabase.from("doctors").select("id").eq("representative_id", filterValue);
+      const docIds = (docs || []).map(d => d.id);
+      if (docIds.length > 0) {
+        const { data: orders } = await supabase.from("orders").select("customer_phone, customer_name").in("doctor_id", docIds).not("customer_phone", "is", null);
+        const phoneMap = new Map<string, string>();
+        (orders || []).forEach(o => { if (o.customer_phone) phoneMap.set(o.customer_phone, o.customer_name); });
+        contactPhones = Array.from(phoneMap.entries()).map(([phone, name]) => ({ phone, name }));
+      }
+    } else if (filterType === "state" && filterValue) {
+      const { data: orders } = await supabase.from("orders").select("customer_phone, customer_name, shipping_address").not("customer_phone", "is", null).limit(1000);
+      const phoneMap = new Map<string, string>();
+      (orders || []).forEach((o: any) => {
+        if (o.customer_phone && o.shipping_address?.state === filterValue) phoneMap.set(o.customer_phone, o.customer_name);
+      });
+      contactPhones = Array.from(phoneMap.entries()).map(([phone, name]) => ({ phone, name }));
+    }
+    return contactPhones;
+  }
 
+  async function startBroadcast() {
+    const isFlow = mode === "flow";
+    const targetId = isFlow ? selectedFlow : selectedFunnel;
+    if (!targetId) { toast.error(`Selecione um ${isFlow ? "flow" : "funil"}`); return; }
+    if (estimatedCount === 0) { toast.error("Nenhum contato encontrado com os filtros selecionados"); return; }
+    if (!confirm(`Confirma disparar para ~${estimatedCount || "?"} contatos?`)) return;
+    setLoading(true);
+    try {
+      const broadcastId = crypto.randomUUID();
+      const targetName = isFlow
+        ? flows.find(f => f.id === targetId)?.name || "Flow"
+        : funnels.find(f => f.id === targetId)?.name || "Funil";
+      const broadcastName = campaignName.trim() || `${isFlow ? "Flow" : "Funil"}: ${targetName}`;
+
+      const contactPhones = await gatherContacts();
       if (contactPhones.length === 0) {
-        toast.error("Nenhum contato com telefone encontrado para o filtro selecionado");
+        toast.error("Nenhum contato com telefone encontrado");
         setLoading(false);
         return;
       }
 
-      // 3. Enqueue first step of funnel for each contact
-      const firstStep = steps[0];
-      let messageContent = "";
-      
-      if (firstStep.step_type === "message_template" && firstStep.template_id) {
-        const { data: tpl } = await supabase.from("whatsapp_templates").select("content").eq("id", firstStep.template_id).single();
-        messageContent = tpl?.content || "";
-      } else if (firstStep.step_type === "message_custom" && (firstStep.config as any)?.custom_message) {
-        messageContent = (firstStep.config as any).custom_message;
-      } else {
-        messageContent = firstStep.label || "Mensagem do funil";
-      }
-
-      // Get current tenant
       const { data: { user } } = await supabase.auth.getUser();
       let tenantId: string | null = null;
       if (user) {
@@ -1789,40 +1778,80 @@ function BroadcastTab() {
         tenantId = tu?.tenant_id || null;
       }
 
-      // Batch insert into queue
+      let messageContent = "";
+      let stepId: string | null = null;
+      let templateId: string | null = null;
+      let firstStepFunnelId: string | null = null;
+      let flowIdField: string | null = null;
+
+      if (!isFlow) {
+        const { data: steps } = await supabase
+          .from("whatsapp_funnel_steps")
+          .select("*")
+          .eq("funnel_id", targetId)
+          .eq("active", true)
+          .order("step_order");
+        if (!steps || steps.length === 0) {
+          toast.error("Funil sem etapas ativas");
+          setLoading(false);
+          return;
+        }
+        const firstStep = steps[0];
+        if (firstStep.step_type === "message_template" && firstStep.template_id) {
+          const { data: tpl } = await supabase.from("whatsapp_templates").select("content").eq("id", firstStep.template_id).single();
+          messageContent = tpl?.content || "";
+        } else if (firstStep.step_type === "message_custom" && (firstStep.config as any)?.custom_message) {
+          messageContent = (firstStep.config as any).custom_message;
+        } else {
+          messageContent = firstStep.label || "Mensagem do funil";
+        }
+        stepId = firstStep.id;
+        templateId = firstStep.template_id || null;
+        firstStepFunnelId = targetId;
+      } else {
+        // Flow: enfileira um evento de start; whatsapp-process-queue / runner cuida do disparo
+        const flow = flows.find(f => f.id === targetId);
+        messageContent = `[FLOW] ${flow?.name || ""}`;
+        flowIdField = targetId;
+      }
+
       const queueItems = contactPhones.map((c, idx) => ({
         contact_phone: c.phone.replace(/\D/g, ""),
         contact_name: c.name,
         message_content: messageContent,
-        funnel_id: selectedFunnel,
-        step_id: firstStep.id,
-        template_id: firstStep.template_id || null,
+        funnel_id: firstStepFunnelId,
+        flow_id: flowIdField,
+        step_id: stepId,
+        template_id: templateId,
         status: "pending",
         scheduled_at: new Date(Date.now() + idx * broadcastInterval).toISOString(),
+        broadcast_id: broadcastId,
+        broadcast_name: broadcastName,
         tenant_id: tenantId,
       }));
 
-      // Insert in batches of 50
       let enqueued = 0;
       for (let i = 0; i < queueItems.length; i += 50) {
         const batch = queueItems.slice(i, i + 50);
-        const { error } = await supabase.from("whatsapp_message_queue").insert(batch);
+        const { error } = await supabase.from("whatsapp_message_queue").insert(batch as any);
         if (!error) enqueued += batch.length;
       }
-
-      toast.success(`Transmissão criada: ${enqueued} mensagens enfileiradas de ${contactPhones.length} contatos`);
+      toast.success(`Campanha "${broadcastName}" criada: ${enqueued} mensagens enfileiradas`);
+      setCampaignName("");
     } catch (e: any) {
       toast.error(`Erro ao criar transmissão: ${e.message}`);
     }
     setLoading(false);
   }
 
+  const FilterIcon = FILTER_OPTIONS.find(o => o.value === filterType)?.icon || Users;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2"><Megaphone className="h-5 w-5" /> Transmissão em Massa</h3>
-          <p className="text-xs text-muted-foreground">Selecione um funil e dispare para uma lista de contatos filtrada</p>
+          <p className="text-xs text-muted-foreground">Dispare um Funil clássico ou um Flow visual para uma audiência filtrada</p>
         </div>
       </div>
 
@@ -1831,28 +1860,82 @@ function BroadcastTab() {
         <Card>
           <CardContent className="p-6 space-y-5">
             <div>
-              <Label className="font-semibold">1. Selecione o Funil</Label>
-              <Select value={selectedFunnel} onValueChange={setSelectedFunnel}>
-                <SelectTrigger className="mt-2"><SelectValue placeholder="Escolha um funil ativo..." /></SelectTrigger>
-                <SelectContent>
-                  {funnels.map(f => <SelectItem key={f.id} value={f.id}>{f.name} ({f.type})</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label className="font-semibold mb-2 block">1. Tipo de automação</Label>
+              <Tabs value={mode} onValueChange={(v) => setMode(v as BroadcastMode)}>
+                <TabsList className="grid grid-cols-2 w-full">
+                  <TabsTrigger value="funnel" className="gap-2"><GitBranch className="h-4 w-4" /> Funil clássico</TabsTrigger>
+                  <TabsTrigger value="flow" className="gap-2"><Zap className="h-4 w-4" /> Flow visual</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            <div>
+              <Label className="font-semibold">2. Selecione {mode === "flow" ? "o Flow" : "o Funil"}</Label>
+              {mode === "funnel" ? (
+                <Select value={selectedFunnel} onValueChange={setSelectedFunnel}>
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="Escolha um funil ativo..." /></SelectTrigger>
+                  <SelectContent>
+                    {funnels.map(f => (
+                      <SelectItem key={f.id} value={f.id}>
+                        <span className="flex items-center gap-2">
+                          <GitBranch className="h-4 w-4 text-muted-foreground" /> {f.name} <span className="text-muted-foreground">({f.type})</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                    {funnels.length === 0 && <div className="px-2 py-3 text-xs text-muted-foreground">Nenhum funil ativo</div>}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Select value={selectedFlow} onValueChange={setSelectedFlow}>
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="Escolha um flow ativo..." /></SelectTrigger>
+                  <SelectContent>
+                    {flows.map(f => (
+                      <SelectItem key={f.id} value={f.id}>
+                        <span className="flex items-center gap-2">
+                          <Zap className="h-4 w-4 text-muted-foreground" /> {f.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                    {flows.length === 0 && <div className="px-2 py-3 text-xs text-muted-foreground">Nenhum flow ativo</div>}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            <div>
+              <Label className="font-semibold">3. Nome da campanha (opcional)</Label>
+              <Input
+                value={campaignName}
+                onChange={e => setCampaignName(e.target.value)}
+                placeholder="Ex: Black Friday — Clientes SP"
+                className="mt-2"
+              />
             </div>
 
             <Separator />
 
             <div>
-              <Label className="font-semibold">2. Filtrar Audiência</Label>
+              <Label className="font-semibold">4. Filtrar Audiência</Label>
               <Select value={filterType} onValueChange={(v) => { setFilterType(v); setFilterValue(""); }}>
-                <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-2">
+                  <SelectValue>
+                    <span className="flex items-center gap-2">
+                      <FilterIcon className="h-4 w-4 text-muted-foreground" />
+                      {FILTER_OPTIONS.find(o => o.value === filterType)?.label}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">📋 Todos os contatos</SelectItem>
-                  <SelectItem value="tag">🏷️ Por Tag</SelectItem>
-                  <SelectItem value="representative">👤 Por Representante</SelectItem>
-                  <SelectItem value="prescriber">👨‍⚕️ Por Prescritor</SelectItem>
-                  <SelectItem value="product">📦 Por Produto (comprou)</SelectItem>
-                  <SelectItem value="state">📍 Por Estado/Cidade</SelectItem>
+                  {FILTER_OPTIONS.map(opt => {
+                    const Icon = opt.icon;
+                    return (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <span className="flex items-center gap-2">
+                          <Icon className="h-4 w-4 text-muted-foreground" /> {opt.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
 
@@ -1862,35 +1945,29 @@ function BroadcastTab() {
                   <SelectContent>{tags.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                 </Select>
               )}
-
               {filterType === "representative" && (
                 <Select value={filterValue} onValueChange={setFilterValue}>
                   <SelectTrigger className="mt-2"><SelectValue placeholder="Selecione o representante..." /></SelectTrigger>
                   <SelectContent>{representatives.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
                 </Select>
               )}
-
               {filterType === "prescriber" && (
                 <Select value={filterValue} onValueChange={setFilterValue}>
                   <SelectTrigger className="mt-2"><SelectValue placeholder="Selecione o prescritor..." /></SelectTrigger>
                   <SelectContent>{doctors.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                 </Select>
               )}
-
               {filterType === "product" && (
                 <Select value={filterValue} onValueChange={setFilterValue}>
                   <SelectTrigger className="mt-2"><SelectValue placeholder="Selecione o produto..." /></SelectTrigger>
                   <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                 </Select>
               )}
-
               {filterType === "state" && (
-                <div className="mt-2">
-                  <Select value={filterValue} onValueChange={setFilterValue}>
-                    <SelectTrigger><SelectValue placeholder="Selecione o estado..." /></SelectTrigger>
-                    <SelectContent>{states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
+                <Select value={filterValue} onValueChange={setFilterValue}>
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="Selecione o estado..." /></SelectTrigger>
+                  <SelectContent>{states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
               )}
             </div>
           </CardContent>
@@ -1900,7 +1977,7 @@ function BroadcastTab() {
         <Card>
           <CardContent className="p-6 space-y-5">
             <div>
-              <Label className="font-semibold">3. Resumo da Transmissão</Label>
+              <Label className="font-semibold">Resumo da Transmissão</Label>
               <div className="mt-4 space-y-3">
                 <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4">
                   <div className="flex items-center gap-3">
@@ -1911,24 +1988,38 @@ function BroadcastTab() {
                     </div>
                   </div>
                   <Badge variant={estimatedCount && estimatedCount > 0 ? "default" : "secondary"}>
-                    {filterType === "all" ? "Todos" : filterType === "tag" ? `Tag: ${filterValue}` : filterType === "representative" ? "Representante" : filterType === "prescriber" ? "Prescritor" : filterType === "product" ? "Produto" : filterType === "state" ? `Estado: ${filterValue}` : "—"}
+                    <FilterIcon className="h-3 w-3 mr-1" />
+                    {FILTER_OPTIONS.find(o => o.value === filterType)?.label}
                   </Badge>
                 </div>
 
-                {selectedFunnel && (
+                {(mode === "funnel" ? selectedFunnel : selectedFlow) && (
                   <div className="rounded-lg border p-3">
-                    <p className="text-sm font-medium">Funil selecionado:</p>
-                    <p className="text-xs text-muted-foreground mt-1">{funnels.find(f => f.id === selectedFunnel)?.name || "—"}</p>
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      {mode === "flow" ? <Zap className="h-4 w-4" /> : <GitBranch className="h-4 w-4" />}
+                      {mode === "flow" ? "Flow selecionado:" : "Funil selecionado:"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {mode === "flow"
+                        ? flows.find(f => f.id === selectedFlow)?.name
+                        : funnels.find(f => f.id === selectedFunnel)?.name || "—"}
+                    </p>
                   </div>
                 )}
 
-                <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
-                  <p className="text-xs text-amber-700">⚠️ O disparo em massa enfileira todos os contatos filtrados no funil selecionado. As mensagens serão enviadas respeitando o limite diário de cada instância.</p>
+                <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 flex gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700">O disparo enfileira todos os contatos respeitando o limite diário de cada instância e o intervalo configurado ({Math.round(broadcastInterval/1000)}s entre envios).</p>
                 </div>
               </div>
             </div>
 
-            <Button onClick={startBroadcast} disabled={loading || !selectedFunnel || estimatedCount === 0} className="w-full" size="lg">
+            <Button
+              onClick={startBroadcast}
+              disabled={loading || (mode === "funnel" ? !selectedFunnel : !selectedFlow) || estimatedCount === 0}
+              className="w-full"
+              size="lg"
+            >
               <Megaphone className="h-4 w-4 mr-2" />
               {loading ? "Iniciando..." : `Disparar Transmissão${estimatedCount ? ` (${estimatedCount})` : ""}`}
             </Button>
