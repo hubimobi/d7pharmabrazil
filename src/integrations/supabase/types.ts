@@ -2678,8 +2678,12 @@ export type Database = {
           domain: string
           id: string
           is_primary: boolean | null
+          last_check_at: string | null
+          last_error: string | null
           ssl_enabled: boolean | null
           tenant_id: string
+          verification_status: string
+          verification_token: string | null
           verified_at: string | null
         }
         Insert: {
@@ -2687,8 +2691,12 @@ export type Database = {
           domain: string
           id?: string
           is_primary?: boolean | null
+          last_check_at?: string | null
+          last_error?: string | null
           ssl_enabled?: boolean | null
           tenant_id: string
+          verification_status?: string
+          verification_token?: string | null
           verified_at?: string | null
         }
         Update: {
@@ -2696,8 +2704,12 @@ export type Database = {
           domain?: string
           id?: string
           is_primary?: boolean | null
+          last_check_at?: string | null
+          last_error?: string | null
           ssl_enabled?: boolean | null
           tenant_id?: string
+          verification_status?: string
+          verification_token?: string | null
           verified_at?: string | null
         }
         Relationships: [
