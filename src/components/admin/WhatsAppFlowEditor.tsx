@@ -231,7 +231,350 @@ function FlowList({ onEdit }: { onEdit: (flow: Flow | null) => void }) {
 }
 
 /* ───── Test Flow Simulator ───── */
+type SimMessage = {
+  from: "bot" | "user" | "system";
+  text: string;
+  icon?: any;
+  time?: string;
+};
+
+function nowHM() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 function FlowTestPanel({ onClose, nodes, edges }: { onClose: () => void; nodes: FlowNode[]; edges: FlowEdge[] }) {
+  const [messages, setMessages] = useState<SimMessage[]>([]);
+  const [variables, setVariables] = useState<Record<string, string>>({ Nome: "João", Telefone: "11999999999", Produto: "Produto Exemplo" });
+  const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
+  const [waitingInput, setWaitingInput] = useState(false);
+  const [userInput, setUserInput] = useState("");
+  const [running, setRunning] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  function replaceVars(text: string) {
+    return text.replace(/\{(\w+)\}/g, (_, k) => variables[k] || `{${k}}`);
+  }
+
+  function getNext(nodeId: string, label?: string): FlowNode | null {
+    const edge = label
+      ? edges.find(e => e.from === nodeId && e.label === label)
+      : edges.find(e => e.from === nodeId);
+    if (!edge) return null;
+    return nodes.find(n => n.id === edge.to) || null;
+  }
+
+  function startTest() {
+    setMessages([]);
+    setRunning(true);
+    setWaitingInput(false);
+    const startNode = nodes.find(n => n.type === "start");
+    if (startNode) {
+      const next = getNext(startNode.id);
+      if (next) processNode(next, []);
+      else { setMessages([{ from: "system", text: "Nenhum nó conectado ao início", icon: AlertTriangle }]); setRunning(false); }
+    }
+  }
+
+  function processNode(node: FlowNode, msgSoFar: SimMessage[]) {
+    const addMsg = (m: SimMessage) => {
+      const stamped = { time: nowHM(), ...m };
+      msgSoFar = [...msgSoFar, stamped];
+      setMessages([...msgSoFar]);
+    };
+
+    switch (node.type) {
+      case "message": {
+        const ct = node.data.content_type || "text";
+        if (ct === "template") addMsg({ from: "bot", text: `Template: ${node.data.template_id || "?"}`, icon: FileText });
+        else if (ct === "file") addMsg({ from: "bot", text: `Arquivo: ${node.data.file_url || "?"}`, icon: ImageIcon });
+        else if (ct === "audio") addMsg({ from: "bot", text: `Áudio: ${node.data.audio_url || "?"}`, icon: Mic });
+        else if (ct === "video") addMsg({ from: "bot", text: `Vídeo: ${node.data.video_url || "?"}`, icon: Video });
+        else if (ct === "catalog") addMsg({ from: "bot", text: `Catálogo WhatsApp`, icon: ShoppingBag });
+        else if (ct === "link") addMsg({ from: "bot", text: node.data.link_url || "Link", icon: Link2 });
+        else addMsg({ from: "bot", text: replaceVars(node.data.content || "(vazio)") });
+        const next = getNext(node.id);
+        if (next) setTimeout(() => processNode(next, msgSoFar), 600);
+        else setRunning(false);
+        break;
+      }
+      case "choice": {
+        addMsg({ from: "bot", text: replaceVars(node.data.question || "Escolha uma opção:") });
+        const opts = (node.data.options || []) as { label: string; tag?: string }[];
+        opts.forEach((o, i) => addMsg({ from: "bot", text: `${i + 1}. ${o.label}` }));
+        setCurrentNodeId(node.id);
+        setWaitingInput(true);
+        break;
+      }
+      case "condition": {
+        if (node.data.condition_type === "any_response") {
+          addMsg({ from: "system", text: "Aguardando qualquer resposta...", icon: Hourglass });
+          setCurrentNodeId(node.id);
+          setWaitingInput(true);
+        } else {
+          const kws = (node.data.options || []) as { label: string; keywords: string[] }[];
+          addMsg({ from: "system", text: `Condição: ${kws.map(k => k.label).join(" | ")}`, icon: GitBranch });
+          setCurrentNodeId(node.id);
+          setWaitingInput(true);
+        }
+        break;
+      }
+      case "wait": {
+        const u = node.data.delay_unit === "h" ? "hora(s)" : node.data.delay_unit === "d" ? "dia(s)" : "min";
+        if (node.data.wait_type === "specific_date") {
+          addMsg({ from: "system", text: `Aguardando até ${node.data.specific_day || "?"} às ${node.data.specific_time || "?"}`, icon: Clock });
+        } else {
+          addMsg({ from: "system", text: `Esperando ${node.data.delay_value || 0} ${u}...`, icon: Clock });
+        }
+        const next = getNext(node.id);
+        if (next) setTimeout(() => processNode(next, msgSoFar), 800);
+        else setRunning(false);
+        break;
+      }
+      case "input": {
+        addMsg({ from: "bot", text: replaceVars(node.data.question || "?") });
+        setCurrentNodeId(node.id);
+        setWaitingInput(true);
+        break;
+      }
+      case "action": {
+        const at = node.data.action_type || "";
+        if (at === "add_tag") addMsg({ from: "system", text: `Tag adicionada: ${node.data.tag || "?"}`, icon: Tag });
+        else if (at === "remove_tag") addMsg({ from: "system", text: `Tag removida: ${node.data.tag || "?"}`, icon: Tag });
+        else if (at === "go_to_flow") addMsg({ from: "system", text: `Ir para fluxo: ${node.data.flow_id || "?"}`, icon: MoveRight });
+        else if (at === "trigger_block") addMsg({ from: "system", text: `Acionar bloco: ${node.data.block_id || "?"}`, icon: Zap });
+        else addMsg({ from: "system", text: `Ação: ${at}`, icon: Zap });
+        const next = getNext(node.id);
+        if (next) setTimeout(() => processNode(next, msgSoFar), 400);
+        else setRunning(false);
+        break;
+      }
+      case "ai_gen": {
+        addMsg({ from: "system", text: `IA geraria resposta: "${(node.data.prompt || "").substring(0, 60)}..."`, icon: Bot });
+        const next = getNext(node.id);
+        if (next) setTimeout(() => processNode(next, msgSoFar), 600);
+        else setRunning(false);
+        break;
+      }
+      case "transfer": {
+        addMsg({ from: "system", text: `Transferindo para: ${node.data.target}`, icon: UserCheck });
+        setRunning(false);
+        break;
+      }
+      case "set_variable": {
+        variables[node.data.variable || "var"] = replaceVars(node.data.value || "");
+        addMsg({ from: "system", text: `${node.data.variable} = ${variables[node.data.variable || "var"]}`, icon: PenTool });
+        const next = getNext(node.id);
+        if (next) setTimeout(() => processNode(next, msgSoFar), 300);
+        else setRunning(false);
+        break;
+      }
+      case "end": {
+        addMsg({ from: "system", text: "Fluxo encerrado", icon: Flag });
+        setRunning(false);
+        break;
+      }
+      default: {
+        const next = getNext(node.id);
+        if (next) processNode(next, msgSoFar);
+        else setRunning(false);
+      }
+    }
+  }
+
+  function handleUserSend() {
+    if (!userInput.trim() || !currentNodeId) return;
+    const node = nodes.find(n => n.id === currentNodeId);
+    if (!node) return;
+    const newMsgs: SimMessage[] = [...messages, { from: "user", text: userInput, time: nowHM() }];
+    setMessages(newMsgs);
+    setWaitingInput(false);
+
+    if (node.type === "input") {
+      variables[node.data.variable_name || "resposta"] = userInput;
+      const next = getNext(node.id);
+      if (next) setTimeout(() => processNode(next, newMsgs), 400);
+      else setRunning(false);
+    } else if (node.type === "choice") {
+      const opts = (node.data.options || []) as { label: string; tag?: string }[];
+      const idx = parseInt(userInput) - 1;
+      const chosen = opts[idx];
+      if (chosen) {
+        if (chosen.tag) newMsgs.push({ from: "system", text: `Tag: ${chosen.tag}`, icon: Tag, time: nowHM() });
+        setMessages([...newMsgs]);
+        const next = getNext(node.id, chosen.label);
+        if (next) setTimeout(() => processNode(next, newMsgs), 400);
+        else { const fallback = getNext(node.id); if (fallback) setTimeout(() => processNode(fallback, newMsgs), 400); else setRunning(false); }
+      } else {
+        newMsgs.push({ from: "system", text: "Opção inválida", icon: AlertTriangle, time: nowHM() });
+        setMessages([...newMsgs]);
+        setWaitingInput(true);
+      }
+    } else if (node.type === "condition") {
+      if (node.data.condition_type === "any_response") {
+        const next = getNext(node.id);
+        if (next) setTimeout(() => processNode(next, newMsgs), 400);
+        else setRunning(false);
+      } else {
+        const kws = (node.data.options || []) as { label: string; keywords: string[] }[];
+        const lower = userInput.toLowerCase();
+        const matched = kws.find(k => (k.keywords || []).some(w => lower.includes(w.toLowerCase())));
+        if (matched) {
+          const next = getNext(node.id, matched.label);
+          if (next) setTimeout(() => processNode(next, newMsgs), 400);
+          else setRunning(false);
+        } else {
+          const defaultEdge = edges.find(e => e.from === node.id && (e.label === "Default" || !e.label));
+          if (defaultEdge) {
+            const next = nodes.find(n => n.id === defaultEdge.to);
+            if (next) setTimeout(() => processNode(next, newMsgs), 400);
+            else setRunning(false);
+          } else {
+            newMsgs.push({ from: "system", text: "Nenhuma condição correspondeu", icon: AlertTriangle, time: nowHM() });
+            setMessages([...newMsgs]);
+            setRunning(false);
+          }
+        }
+      }
+    }
+    setUserInput("");
+  }
+
+  useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
+
+  return (
+    <div className="w-[400px] flex-shrink-0 border-l bg-background flex flex-col font-sans">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b">
+        <div className="flex items-center gap-2">
+          <Play className="h-4 w-4 text-primary" />
+          <p className="text-sm font-semibold">Testar Fluxo</p>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button size="icon" variant="ghost" className="h-7 w-7"
+            title="Reiniciar"
+            onClick={() => { setMessages([]); setRunning(false); setWaitingInput(false); setUserInput(""); }}>
+            <RotateCcw className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-7 w-7" title="Fechar" onClick={onClose}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Variables (collapsible) */}
+      <div className="border-b">
+        <Accordion type="single" collapsible defaultValue="vars">
+          <AccordionItem value="vars" className="border-0">
+            <AccordionTrigger className="px-3 py-2 text-xs font-medium hover:no-underline">
+              <div className="flex items-center gap-1.5">
+                <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+                Variáveis de teste
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-2 px-3">
+              <div className="grid grid-cols-2 gap-1.5">
+                {Object.entries(variables).map(([k, v]) => (
+                  <div key={k} className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground w-16 truncate">{k}</span>
+                    <Input
+                      className="h-6 text-xs flex-1"
+                      value={v}
+                      onChange={e => setVariables(prev => ({ ...prev, [k]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+
+      {/* Phone mockup */}
+      <div className="flex-1 p-3 overflow-hidden flex flex-col">
+        <div className="flex-1 rounded-2xl shadow-sm border overflow-hidden flex flex-col">
+          {/* WhatsApp header */}
+          <div className="bg-[#075E54] text-white px-3 py-2.5 flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+              <Bot className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm leading-tight truncate">Teste de Fluxo</p>
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <p className="text-xs opacity-90">online</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Chat */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2"
+            style={{ backgroundColor: "#E5DDD5", backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><circle cx='20' cy='20' r='1' fill='%23000' opacity='0.04'/></svg>\")" }}>
+            {messages.length === 0 && !running && (
+              <div className="flex justify-center mt-4">
+                <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-md shadow-sm">
+                  <p className="text-xs text-slate-600">Clique em Iniciar para testar</p>
+                </div>
+              </div>
+            )}
+            {messages.map((m, i) => {
+              if (m.from === "system") {
+                const Ico = m.icon;
+                return (
+                  <div key={i} className="flex justify-center my-1">
+                    <div className="bg-white/85 backdrop-blur-sm px-2.5 py-1 rounded-md shadow-sm flex items-center gap-1.5 max-w-[85%]">
+                      {Ico && <Ico className="h-3 w-3 text-slate-500 flex-shrink-0" />}
+                      <span className="text-xs text-slate-600">{m.text}</span>
+                    </div>
+                  </div>
+                );
+              }
+              const isUser = m.from === "user";
+              const Ico = m.icon;
+              return (
+                <div key={i} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                  <div className={`relative max-w-[80%] px-2.5 py-1.5 rounded-lg shadow-sm ${
+                    isUser
+                      ? "bg-[#DCF8C6] text-slate-800 rounded-tr-none"
+                      : "bg-white text-slate-800 rounded-tl-none"
+                  }`}
+                    style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', system-ui, sans-serif" }}>
+                    <div className="flex items-start gap-1.5">
+                      {Ico && <Ico className="h-3.5 w-3.5 text-slate-500 mt-0.5 flex-shrink-0" />}
+                      <p className="text-xs whitespace-pre-wrap break-words flex-1">{m.text}</p>
+                    </div>
+                    {m.time && (
+                      <span className="block text-[10px] text-slate-500 text-right mt-0.5 leading-none">{m.time}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Input */}
+          <div className="border-t bg-[#F0F0F0] p-2 flex gap-1.5 items-center">
+            {!running ? (
+              <Button onClick={startTest} size="sm" className="w-full bg-[#075E54] hover:bg-[#064E46] text-white text-xs h-9">
+                <Play className="h-3.5 w-3.5 mr-1.5" /> Iniciar Conversa
+              </Button>
+            ) : waitingInput ? (
+              <>
+                <Input value={userInput} onChange={e => setUserInput(e.target.value)} placeholder="Digite uma mensagem"
+                  className="flex-1 h-9 text-xs rounded-full bg-white border-0 px-3" onKeyDown={e => e.key === "Enter" && handleUserSend()} />
+                <Button size="icon" className="h-9 w-9 rounded-full bg-[#075E54] hover:bg-[#064E46] text-white flex-shrink-0" onClick={handleUserSend}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center w-full py-1">Processando...</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
   const [messages, setMessages] = useState<{ from: "bot" | "user"; text: string }[]>([]);
   const [variables, setVariables] = useState<Record<string, string>>({ Nome: "João", Telefone: "11999999999", Produto: "Produto Exemplo" });
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
