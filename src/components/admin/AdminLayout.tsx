@@ -367,6 +367,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+      <TrialExpiredOverlay />
     </SidebarProvider>
   );
 }
