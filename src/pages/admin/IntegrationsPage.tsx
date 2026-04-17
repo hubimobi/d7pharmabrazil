@@ -866,37 +866,43 @@ function MetaFeedCard() {
 function TikTokShopCard() {
   const [syncing, setSyncing] = useState<string | null>(null);
   const qc = useQueryClient();
+  const { tenantId } = useTenant();
 
   const callbackUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/tiktok-shop-callback`;
 
   const { data: tiktokStatus, isLoading, refetch } = useQuery({
-    queryKey: ["tiktok-status"],
+    queryKey: ["tiktok-status", tenantId],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("tiktok_tokens" as any) as any)
-        .select("id, shop_id, shop_name, expires_at, updated_at")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      const { data, error } = await (supabase.from("tenant_integrations" as any) as any)
+        .select("id, credentials, active, updated_at")
+        .eq("tenant_id", tenantId)
+        .eq("provider", "tiktok_shop")
+        .maybeSingle();
 
-      if (error || !data || data.length === 0) return { connected: false };
+      if (error || !data || !data.active) return { connected: false };
 
-      const token = data[0];
-      const expired = new Date(token.expires_at) < new Date();
+      const c = data.credentials || {};
+      const expiresAt = c.expires_at as string | undefined;
+      if (!expiresAt) return { connected: false };
+      const expired = new Date(expiresAt) < new Date();
       return {
         connected: true,
         expired,
-        shopId: token.shop_id,
-        shopName: token.shop_name,
-        expiresAt: token.expires_at,
-        updatedAt: token.updated_at,
+        shopId: c.shop_id,
+        shopName: c.shop_name,
+        expiresAt,
+        updatedAt: data.updated_at,
       };
     },
+    enabled: !!tenantId,
   });
 
   const handleConnect = () => {
     // TikTok Shop OAuth URL - user needs to replace with their app's auth URL
     const appKey = prompt("Informe o App Key do TikTok Shop:");
     if (!appKey) return;
-    const authUrl = `https://services.tiktokshop.com/open/authorize?service_id=${appKey}`;
+    const state = encodeURIComponent(tenantId);
+    const authUrl = `https://services.tiktokshop.com/open/authorize?service_id=${appKey}&state=${state}`;
     window.open(authUrl, "_blank");
   };
 
