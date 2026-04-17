@@ -590,6 +590,7 @@ export type Database = {
           expires_at: string
           id: string
           refresh_token: string
+          tenant_id: string
           updated_at: string
         }
         Insert: {
@@ -598,6 +599,7 @@ export type Database = {
           expires_at: string
           id?: string
           refresh_token: string
+          tenant_id?: string
           updated_at?: string
         }
         Update: {
@@ -606,9 +608,18 @@ export type Database = {
           expires_at?: string
           id?: string
           refresh_token?: string
+          tenant_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bling_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       campaign_config: {
         Row: {
@@ -2944,6 +2955,7 @@ export type Database = {
           refresh_token: string
           shop_id: string | null
           shop_name: string | null
+          tenant_id: string
           updated_at: string
         }
         Insert: {
@@ -2954,6 +2966,7 @@ export type Database = {
           refresh_token: string
           shop_id?: string | null
           shop_name?: string | null
+          tenant_id?: string
           updated_at?: string
         }
         Update: {
@@ -2964,9 +2977,18 @@ export type Database = {
           refresh_token?: string
           shop_id?: string | null
           shop_name?: string | null
+          tenant_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -3245,6 +3267,7 @@ export type Database = {
           step_order: number
           step_type: string
           template_id: string | null
+          tenant_id: string
         }
         Insert: {
           active?: boolean
@@ -3258,6 +3281,7 @@ export type Database = {
           step_order?: number
           step_type?: string
           template_id?: string | null
+          tenant_id?: string
         }
         Update: {
           active?: boolean
@@ -3271,6 +3295,7 @@ export type Database = {
           step_order?: number
           step_type?: string
           template_id?: string | null
+          tenant_id?: string
         }
         Relationships: [
           {
@@ -3294,6 +3319,13 @@ export type Database = {
             referencedRelation: "whatsapp_templates"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "whatsapp_funnel_steps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       whatsapp_funnels: {
@@ -3302,6 +3334,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          tenant_id: string
           trigger_event: string
           type: string
           updated_at: string
@@ -3311,6 +3344,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          tenant_id?: string
           trigger_event?: string
           type?: string
           updated_at?: string
@@ -3320,11 +3354,20 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          tenant_id?: string
           trigger_event?: string
           type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_funnels_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_instance_users: {
         Row: {
@@ -3733,7 +3776,7 @@ export type Database = {
           id: string
           name: string
           sort_order: number
-          tenant_id: string | null
+          tenant_id: string
           updated_at: string
         }
         Insert: {
@@ -3742,7 +3785,7 @@ export type Database = {
           id?: string
           name: string
           sort_order?: number
-          tenant_id?: string | null
+          tenant_id?: string
           updated_at?: string
         }
         Update: {
@@ -3751,7 +3794,7 @@ export type Database = {
           id?: string
           name?: string
           sort_order?: number
-          tenant_id?: string | null
+          tenant_id?: string
           updated_at?: string
         }
         Relationships: [
@@ -3773,6 +3816,7 @@ export type Database = {
           folder_id: string | null
           id: string
           name: string
+          tenant_id: string
           updated_at: string
           variables: Json
         }
@@ -3784,6 +3828,7 @@ export type Database = {
           folder_id?: string | null
           id?: string
           name: string
+          tenant_id?: string
           updated_at?: string
           variables?: Json
         }
@@ -3795,6 +3840,7 @@ export type Database = {
           folder_id?: string | null
           id?: string
           name?: string
+          tenant_id?: string
           updated_at?: string
           variables?: Json
         }
@@ -3804,6 +3850,13 @@ export type Database = {
             columns: ["folder_id"]
             isOneToOne: false
             referencedRelation: "whatsapp_template_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
