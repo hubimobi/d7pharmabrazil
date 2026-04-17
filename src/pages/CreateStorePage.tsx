@@ -23,6 +23,8 @@ export default function CreateStorePage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [provisioning, setProvisioning] = useState(false);
+  const [provisionMsg, setProvisionMsg] = useState("Criando sua loja...");
   const [form, setForm] = useState({
     store_name: "",
     store_slug: "",
@@ -42,6 +44,30 @@ export default function CreateStorePage() {
     setErrors((e) => ({ ...e, [k]: "" }));
   };
 
+  const pollCloneStatus = async (tenantId: string) => {
+    const stages = [
+      { ms: 0, msg: "Criando sua loja..." },
+      { ms: 4000, msg: "Copiando produtos e configurações..." },
+      { ms: 9000, msg: "Preparando seu painel..." },
+      { ms: 15000, msg: "Quase lá..." },
+    ];
+    const startedAt = Date.now();
+    for (let i = 0; i < 30; i++) {
+      const elapsed = Date.now() - startedAt;
+      const stage = [...stages].reverse().find((s) => elapsed >= s.ms);
+      if (stage) setProvisionMsg(stage.msg);
+      const { data } = await supabase
+        .from("tenants")
+        .select("cloning_status")
+        .eq("id", tenantId)
+        .maybeSingle();
+      const status = (data as { cloning_status?: string } | null)?.cloning_status;
+      if (status === "completed" || status === "failed" || status == null) return status ?? "completed";
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    return "timeout";
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     setErrors({});
@@ -57,19 +83,19 @@ export default function CreateStorePage() {
         else toast.error(data.error);
         return;
       }
-      // Auto-login
-      const { error: loginErr } = await supabase.auth.signInWithPassword({
-        email: form.owner_email, password: form.owner_password,
-      });
-      if (loginErr) {
-        toast.success("Loja criada! Faça login para continuar.");
-        navigate("/login");
-      } else {
-        toast.success("Loja criada com sucesso!");
-        navigate("/admin");
-      }
+      // Show provisioning screen and poll
+      setProvisioning(true);
+      const tenantId = data?.tenant_id as string | undefined;
+      const [, ] = await Promise.all([
+        // Auto-login in parallel with polling
+        supabase.auth.signInWithPassword({ email: form.owner_email, password: form.owner_password }),
+        tenantId ? pollCloneStatus(tenantId) : Promise.resolve(),
+      ]);
+      toast.success("Loja criada com sucesso!");
+      navigate("/admin");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro inesperado");
+      setProvisioning(false);
     } finally {
       setLoading(false);
     }
@@ -79,6 +105,30 @@ export default function CreateStorePage() {
   const canNext2 = form.owner_name.trim().length >= 2 &&
     /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.owner_email) &&
     form.owner_password.length >= 8;
+
+  if (provisioning) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center p-4">
+        <SEOHead title="Criando sua loja..." description="" />
+        <Card className="w-full max-w-md shadow-xl">
+          <CardContent className="pt-10 pb-10 text-center space-y-6">
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold mb-2">{provisionMsg}</h2>
+              <p className="text-sm text-muted-foreground">Isso leva alguns segundos. Não feche esta janela.</p>
+            </div>
+            <div className="space-y-2 text-left text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground"><Check className="w-4 h-4 text-primary" /> Conta criada</div>
+              <div className="flex items-center gap-2 text-muted-foreground"><Check className="w-4 h-4 text-primary" /> Loja registrada</div>
+              <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Configurando produtos e templates</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center p-4">
