@@ -3567,12 +3567,51 @@ export type Database = {
           },
         ]
       }
+      whatsapp_template_folders: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_template_folders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_templates: {
         Row: {
           active: boolean
           category: string
           content: string
           created_at: string
+          folder_id: string | null
           id: string
           name: string
           updated_at: string
@@ -3583,6 +3622,7 @@ export type Database = {
           category?: string
           content?: string
           created_at?: string
+          folder_id?: string | null
           id?: string
           name: string
           updated_at?: string
@@ -3593,12 +3633,21 @@ export type Database = {
           category?: string
           content?: string
           created_at?: string
+          folder_id?: string | null
           id?: string
           name?: string
           updated_at?: string
           variables?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_templates_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_template_folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
