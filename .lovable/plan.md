@@ -1,44 +1,32 @@
 
-## Fix: Emojis e marcadores em templates/mensagens do Flow
+## Adicionar IA ao MessageComposer: Ortografia + Melhorar Copy
 
-### Problemas identificados
+### Onde
+`src/components/admin/MessageComposer.tsx` — adicionar 2 botões na toolbar (ao lado de Emoji/Variável/Spintax):
 
-1. **Emojis não funcionam no template de mensagem**: Provavelmente o editor/textarea de templates não tem picker de emoji, ou os emojis salvos não renderizam no preview do nó (encoding/CSS).
+1. **"Corrigir"** (ícone `SpellCheck`) — corrige ortografia/gramática mantendo emojis, variáveis `{...}` e spintax intactos. Substitui o texto direto.
+2. **"Melhorar"** (ícone `Sparkles`) — abre dialog com a ferramenta de copy avançada.
 
-2. **Editor de mensagem no Flow não tem os marcadores** ({produto}, {nome}, etc.) e nem picker de emoji que existe no editor de templates.
+### Backend
+Nova edge function `improve-message-copy`:
+- Input: `{ text, mode: "spell" | "improve", context? }`
+- Usa Lovable AI (`google/gemini-3-flash-preview`)
+- System prompt preserva `{variáveis}`, `{spin|tax}` e emojis
+- Modo `spell`: só corrige erros, mantém estilo
+- Modo `improve`: reescreve para conversão (WhatsApp tone)
+- Retorna `{ improved_text }`
+- Auth admin + log em `ai_token_usage`
 
-### Investigação necessária
+### Dialog "Melhorar Copy"
+Novo componente inline no `MessageComposer` (não reaproveita `ProfileCopyGenerator` inteiro pra evitar acoplamento — é overkill p/ msg curta de WhatsApp). Dialog com:
+- Texto original (readonly)
+- Selects: Tom (amigável/urgente/profissional/empolgado), Objetivo (vender/agendar/recuperar/avisar), Tamanho (curto/médio/longo)
+- Botão "Gerar variações" → chama `improve-message-copy` com `mode: "improve"` + contexto, retorna 3 variações
+- Cada variação tem botão "Usar esta" (substitui o texto do composer e fecha dialog)
 
-Antes de planejar mudanças concretas, preciso ver:
-- Como o editor de templates atual (`TemplatesTab` em `WhatsAppPage.tsx`) implementa o picker de emoji e a inserção de variáveis ({Nome}, {produto}, etc.)
-- Como o `WhatsAppFlowEditor` renderiza o painel de propriedades do nó tipo `message` (subtipo `text`)
-- Se há algum `font-family` no preview que não suporta emoji
+### Arquivos
+- `src/components/admin/MessageComposer.tsx` (toolbar + dialog)
+- `supabase/functions/improve-message-copy/index.ts` (nova)
+- `supabase/config.toml` (registrar função se necessário)
 
-### Plano de correção
-
-**1. Extrair componente reutilizável `MessageComposer`**
-Criar `src/components/admin/MessageComposer.tsx` com:
-- Textarea para conteúdo
-- Toolbar superior com:
-  - **Picker de emoji** (usar `emoji-picker-react` ou lista curada de emojis comuns WhatsApp em popover)
-  - **Dropdown "Inserir variável"** com os marcadores padrão:
-    - `{Nome}`, `{Primeiro_Nome}`, `{telefone}`, `{email}`
-    - `{produto}`, `{preco}`, `{link}`, `{cidade}`
-    - `{cupom}`, `{desconto}`
-    - `{Nome_da_Empresa}`, `{Atendente}`
-  - **Spintax helper**: botão que insere `{opção1|opção2|opção3}` no cursor
-- Inserção respeita posição do cursor (`selectionStart`)
-- Preview renderizado abaixo com emoji e variáveis destacadas
-
-**2. Usar o componente em dois lugares**
-- `src/pages/admin/WhatsAppPage.tsx` → `TemplatesTab` (substitui textarea atual)
-- `src/components/admin/WhatsAppFlowEditor.tsx` → painel de propriedades do nó `message` subtipo `text` (substitui textarea simples)
-
-**3. Garantir renderização de emoji no preview do nó**
-- Adicionar `font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', system-ui, sans-serif` ao preview da bolha de mensagem no canvas.
-- Garantir UTF-8 (já está via Vite por padrão, mas verificar se algum `substring` quebra surrogate pairs de emoji).
-
-### Arquivos modificados
-- `src/components/admin/MessageComposer.tsx` (novo)
-- `src/components/admin/WhatsAppFlowEditor.tsx`
-- `src/pages/admin/WhatsAppPage.tsx`
+Funciona automaticamente em ambos os locais que já usam o composer (Templates + FlowEditor).
