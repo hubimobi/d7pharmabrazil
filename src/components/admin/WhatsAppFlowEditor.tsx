@@ -1061,6 +1061,19 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         const concat = vars.map(v => v.source_label || "?").join(" + ");
         return <p className="text-xs text-slate-600 break-words"><span className="font-medium">{node.data.variable || "var"}</span> = {concat}</p>;
       }
+      case "branch": {
+        const op = node.data.operator || "exists";
+        const opLabel: Record<string, string> = { exists: "existe", equals: "=", contains: "contém", is_true: "é verdadeiro" };
+        return <p className="text-xs text-slate-600 flex items-center gap-1.5"><GitBranch className="h-3 w-3" />{node.data.variable_name || "var"} {opLabel[op]} {node.data.compare_value || ""}</p>;
+      }
+      case "start_flow": {
+        const tgt = allFlows.find(f => f.id === node.data.target_flow_id);
+        return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Rocket className="h-3 w-3" />{tgt?.name || "Selecionar fluxo..."}</p>;
+      }
+      case "split": {
+        const c = Number(node.data.split_count) || 2;
+        return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Shuffle className="h-3 w-3" />Alternar entre {c} caminhos</p>;
+      }
       case "start": return <p className="text-xs text-slate-500">Ponto de entrada</p>;
       case "end": return <p className="text-xs text-slate-500">Encerra fluxo</p>;
       default: return null;
