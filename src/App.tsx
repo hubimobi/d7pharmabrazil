@@ -33,6 +33,7 @@ const TrackOrderPage = lazy(() => import("./pages/TrackOrderPage"));
 const CustomerFeedbackPage = lazy(() => import("./pages/CustomerFeedbackPage"));
 const PrescritorPage = lazy(() => import("./pages/PrescritorPage"));
 const PrescriberSignupPage = lazy(() => import("./pages/PrescriberSignupPage"));
+const CreateStorePage = lazy(() => import("./pages/CreateStorePage"));
 const StaticPage = lazy(() => import("./pages/StaticPage"));
 const LinkRedirectPage = lazy(() => import("./pages/LinkRedirectPage"));
 
@@ -153,6 +154,7 @@ const App = () => (
                 <Route path="/feedback" element={<CustomerFeedbackPage />} />
                 <Route path="/prescritor" element={<PrescritorPage />} />
                 <Route path="/cadastrar" element={<PrescriberSignupPage />} />
+                <Route path="/criar-loja" element={<CreateStorePage />} />
                 <Route path="/politica-de-privacidade" element={<StaticPage />} />
                 <Route path="/termos-de-uso" element={<StaticPage />} />
                 <Route path="/trocas-e-devolucoes" element={<StaticPage />} />
