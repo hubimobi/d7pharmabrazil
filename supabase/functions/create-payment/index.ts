@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.0";
+import { getAsaasApiKey } from "../_shared/asaas-key.ts";
+import { resolveTenantId } from "../_shared/tenant-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,12 +17,13 @@ serve(async (req) => {
   }
 
   try {
-    const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY");
-    if (!ASAAS_API_KEY) {
-      throw new Error("ASAAS_API_KEY is not configured");
-    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.json();
+    const tenantId = await resolveTenantId(req, body);
+    const ASAAS_API_KEY = await getAsaasApiKey(supabaseAdmin, tenantId);
     const {
       customer_name,
       customer_email,
@@ -148,11 +151,7 @@ serve(async (req) => {
       }
     }
 
-    // 4. Save order to database
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-
+    // 4. Save order to database (supabaseAdmin already created above)
     // Resolve doctor_id: use provided value, or fallback to coupon's linked doctor
     let resolvedDoctorId = doctor_id || null;
     if (!resolvedDoctorId && coupon_code) {
@@ -178,6 +177,7 @@ serve(async (req) => {
       shipping_address: shipping_address || {},
       asaas_payment_id: paymentData.id,
       coupon_code: coupon_code || null,
+      tenant_id: tenantId,
     }).select("id").single();
 
     if (orderError) {

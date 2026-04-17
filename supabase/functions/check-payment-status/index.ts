@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAsaasApiKey } from "../_shared/asaas-key.ts";
+import { DEFAULT_TENANT_ID } from "../_shared/tenant-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,14 +25,21 @@ serve(async (req) => {
       });
     }
 
-    const asaasKey = Deno.env.get("ASAAS_API_KEY");
-    if (!asaasKey) {
-      throw new Error("ASAAS_API_KEY not configured");
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Resolve tenant from the order if available
+    let tenantId = DEFAULT_TENANT_ID;
+    if (order_id) {
+      const { data: ord } = await supabase
+        .from("orders")
+        .select("tenant_id")
+        .eq("id", order_id)
+        .maybeSingle();
+      if (ord?.tenant_id) tenantId = ord.tenant_id;
+    }
+    const asaasKey = await getAsaasApiKey(supabase, tenantId);
 
     // Query Asaas for payment status
     const res = await fetch(`${ASAAS_API}/payments/${payment_id}`, {

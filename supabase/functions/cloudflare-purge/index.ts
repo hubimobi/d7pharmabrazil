@@ -3,6 +3,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { getTenantCredentials, DEFAULT_TENANT_ID } from "../_shared/tenant-credentials.ts";
+
+interface CloudflareCreds { api_token: string; zone_id: string; }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -44,12 +47,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    const cfToken = Deno.env.get("CLOUDFLARE_API_TOKEN");
-    const cfZoneId = Deno.env.get("CLOUDFLARE_ZONE_ID");
+    // Resolve tenant + credentials
+    const { data: tenantUser } = await serviceClient
+      .from("tenant_users")
+      .select("tenant_id")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+    const tenantId = tenantUser?.tenant_id || DEFAULT_TENANT_ID;
+
+    const tenantCreds = await getTenantCredentials<CloudflareCreds>(serviceClient, tenantId, "cloudflare");
+    let cfToken = tenantCreds?.api_token || "";
+    let cfZoneId = tenantCreds?.zone_id || "";
+    if ((!cfToken || !cfZoneId) && tenantId === DEFAULT_TENANT_ID) {
+      cfToken = cfToken || Deno.env.get("CLOUDFLARE_API_TOKEN") || "";
+      cfZoneId = cfZoneId || Deno.env.get("CLOUDFLARE_ZONE_ID") || "";
+    }
 
     if (!cfToken || !cfZoneId) {
       return new Response(
-        JSON.stringify({ error: "Credenciais do Cloudflare não configuradas" }),
+        JSON.stringify({ error: "Cloudflare não configurado para este tenant" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

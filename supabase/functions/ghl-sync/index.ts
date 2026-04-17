@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.0";
+import { getTenantCredentials, resolveTenantId, DEFAULT_TENANT_ID } from "../_shared/tenant-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,6 +8,21 @@ const corsHeaders = {
 };
 
 const GHL_API = "https://services.leadconnectorhq.com";
+
+interface GHLCreds { api_key: string; location_id: string; }
+
+async function getGhlCreds(supabase: any, tenantId: string): Promise<{ apiKey: string; locationId: string }> {
+  const tenantCreds = await getTenantCredentials<GHLCreds>(supabase, tenantId, "ghl");
+  if (tenantCreds?.api_key && tenantCreds?.location_id) {
+    return { apiKey: tenantCreds.api_key, locationId: tenantCreds.location_id };
+  }
+  if (tenantId === DEFAULT_TENANT_ID) {
+    const apiKey = Deno.env.get("GHL_API_KEY");
+    const locationId = Deno.env.get("GHL_LOCATION_ID");
+    if (apiKey && locationId) return { apiKey, locationId };
+  }
+  throw new Error("GHL não configurado para este tenant");
+}
 
 interface GHLSyncPayload {
   action: "contact_and_opportunity" | "add_tags" | "webhook_test";
@@ -179,16 +195,6 @@ serve(async (req) => {
     const isGhlAdmin = (roles || []).some((r: any) => ["admin","super_admin","administrador","suporte","gestor","financeiro"].includes(r.role));
     if (!isGhlAdmin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const apiKey = Deno.env.get("GHL_API_KEY");
-    const locationId = Deno.env.get("GHL_LOCATION_ID");
-
-    if (!apiKey || !locationId) {
-      return new Response(
-        JSON.stringify({ error: "GHL_API_KEY ou GHL_LOCATION_ID não configurados" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const payload: GHLSyncPayload = await req.json();
 
     if (!payload.customer_email || !payload.customer_name) {
@@ -198,10 +204,11 @@ serve(async (req) => {
       );
     }
 
-    // Supabase client for logging
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // Supabase admin client for logging + tenant lookup
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
+    const tenantId = await resolveTenantId(req, payload as any);
+    const { apiKey, locationId } = await getGhlCreds(supabaseAdmin, tenantId);
 
     // Build tags
     const tags: string[] = [...(payload.tags || [])];
