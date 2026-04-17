@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
 import Preloader from "./components/Preloader";
 import DesignTokenApplier from "./components/DesignTokenApplier";
+import DynamicBranding from "./components/DynamicBranding";
 import TrackingScripts from "./components/TrackingScripts";
 import { useUTMCapture } from "./hooks/useUTMCapture";
 
@@ -130,6 +131,7 @@ const App = () => (
           <BrowserRouter>
             <ScrollToTop />
             <DesignTokenApplier />
+            <DynamicBranding />
             <TrackingScripts />
             <UTMCaptureInit />
             <Suspense fallback={null}>
