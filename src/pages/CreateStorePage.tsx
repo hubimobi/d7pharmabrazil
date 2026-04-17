@@ -23,6 +23,8 @@ export default function CreateStorePage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [provisioning, setProvisioning] = useState(false);
+  const [provisionMsg, setProvisionMsg] = useState("Criando sua loja...");
   const [form, setForm] = useState({
     store_name: "",
     store_slug: "",
