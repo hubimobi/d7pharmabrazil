@@ -82,22 +82,35 @@ serve(async (req) => {
 
     const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
-    // Delete old tokens and insert new one
-    await supabase.from("bling_tokens").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    // ── Per-tenant storage (new) ──
+    const { error: saveError } = await saveTenantCredentials(
+      supabase,
+      tenantId,
+      "bling",
+      {
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        expires_at: expiresAt,
+      },
+      true,
+    );
 
-    const { error: insertError } = await supabase.from("bling_tokens").insert({
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token,
-      expires_at: expiresAt,
-    });
-
-    if (insertError) {
-      console.error("Insert error:", insertError);
+    if (saveError) {
+      console.error("tenant_integrations save error:", saveError);
       return new Response("Erro ao salvar token.", {
         status: 500,
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
     }
+
+    // ── Backward-compat: also write to legacy global table ──
+    // (Will be removed once all consumers read from tenant_integrations.)
+    await supabase.from("bling_tokens").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await supabase.from("bling_tokens").insert({
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      expires_at: expiresAt,
+    });
 
     // Redirect back to admin integrations page
     const siteUrl = "https://d7pharmabrazil.lovable.app/admin/integracoes";
