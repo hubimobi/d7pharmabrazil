@@ -68,6 +68,10 @@ serve(async (req) => {
       });
     }
 
+    // Webhook is provider→server: tenant is identified by the order's asaas_payment_id.
+    // Each tenant configures their own webhook URL pointing to this same function;
+    // the order lookup below scopes the update correctly via asaas_payment_id uniqueness.
+
     // Handle payment confirmed/received → mark as paid
     if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
       const { data, error } = await supabaseAdmin

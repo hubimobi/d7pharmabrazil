@@ -1,54 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getTikTokCreds } from "../_shared/tiktok-token.ts";
+import { resolveTenantId } from "../_shared/tenant-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-async function getValidToken(supabase: any, appKey: string, appSecret: string) {
-  const { data: tokens } = await supabase
-    .from("tiktok_tokens")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  if (!tokens || tokens.length === 0) {
-    throw new Error("TikTok Shop não conectado. Autorize primeiro.");
-  }
-
-  const token = tokens[0];
-  const now = new Date();
-  const expiresAt = new Date(token.expires_at);
-
-  // Refresh if expires within 24h
-  if (expiresAt.getTime() - now.getTime() < 24 * 60 * 60 * 1000) {
-    const res = await fetch("https://auth.tiktok-shops.com/api/v2/token/refresh", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        app_key: appKey,
-        app_secret: appSecret,
-        refresh_token: token.refresh_token,
-        grant_type: "refresh_token",
-      }),
-    });
-    const data = await res.json();
-    if (data.code === 0 && data.data?.access_token) {
-      const newExpiry = new Date(Date.now() + data.data.access_token_expire_in * 1000).toISOString();
-      await supabase
-        .from("tiktok_tokens")
-        .update({
-          access_token: data.data.access_token,
-          refresh_token: data.data.refresh_token,
-          expires_at: newExpiry,
-        })
-        .eq("id", token.id);
-      return data.data.access_token;
-    }
-  }
-
-  return token.access_token;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -70,25 +27,10 @@ Deno.serve(async (req) => {
     const isAdmin = (roles || []).some((r: any) => ["admin","super_admin","administrador","suporte","gestor","financeiro"].includes(r.role));
     if (!isAdmin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const appKey = Deno.env.get("TIKTOK_APP_KEY");
-    const appSecret = Deno.env.get("TIKTOK_APP_SECRET");
-    if (!appKey || !appSecret) throw new Error("TikTok credentials not configured");
-
     const body = await req.json().catch(() => ({}));
-    const action = body.action || "export"; // "export" sends products to TikTok
-
-    const accessToken = await getValidToken(supabase, appKey, appSecret);
-
-    // Get shop_id
-    const { data: tokenData } = await supabase
-      .from("tiktok_tokens")
-      .select("shop_id")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-
-    const shopId = tokenData?.shop_id;
-    if (!shopId) throw new Error("Shop ID não encontrado. Reconecte o TikTok Shop.");
+    const tenantId = await resolveTenantId(req, body);
+    const action = body.action || "export";
+    const { access_token: accessToken, shop_id: shopId, app_key: appKey } = await getTikTokCreds(supabase, tenantId);
 
     if (action === "export") {
       // Export local products to TikTok Shop

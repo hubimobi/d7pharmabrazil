@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getBlingAccessToken } from "../_shared/bling-token.ts";
+import { DEFAULT_TENANT_ID } from "../_shared/tenant-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,59 +9,6 @@ const corsHeaders = {
 };
 
 const BLING_API = "https://www.bling.com.br/Api/v3";
-
-async function getValidToken(supabase: any): Promise<string> {
-  const { data: tokens } = await supabase
-    .from("bling_tokens")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
-
-  if (!tokens) throw new Error("Bling não conectado. Conecte pelo painel de integrações.");
-
-  const now = new Date();
-  const expiresAt = new Date(tokens.expires_at);
-
-  if (expiresAt > now) {
-    return tokens.access_token;
-  }
-
-  const clientId = Deno.env.get("BLING_CLIENT_ID")!;
-  const clientSecret = Deno.env.get("BLING_CLIENT_SECRET")!;
-  const credentials = btoa(`${clientId}:${clientSecret}`);
-
-  const res = await fetch(`${BLING_API}/oauth/token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${credentials}`,
-    },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: tokens.refresh_token,
-    }),
-  });
-
-  const data = await res.json();
-  if (!res.ok || !data.access_token) {
-    throw new Error("Falha ao renovar token do Bling. Reconecte pelo painel.");
-  }
-
-  const newExpiresAt = new Date(Date.now() + data.expires_in * 1000).toISOString();
-
-  await supabase
-    .from("bling_tokens")
-    .update({
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-      expires_at: newExpiresAt,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", tokens.id);
-
-  return data.access_token;
-}
 
 async function findOrCreateContact(
   accessToken: string,
@@ -155,7 +104,9 @@ serve(async (req) => {
       );
     }
 
-    const accessToken = await getValidToken(supabase);
+    // Use the order's tenant for credential lookup (server-to-server safe)
+    const tenantId = order.tenant_id || DEFAULT_TENANT_ID;
+    const accessToken = await getBlingAccessToken(supabase, tenantId);
     const orderRef = order.id.slice(0, 8);
 
     // Check if order already exists in Bling — use full observation text for precision
