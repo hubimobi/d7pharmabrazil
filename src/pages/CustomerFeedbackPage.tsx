@@ -104,7 +104,7 @@ export default function CustomerFeedbackPage() {
 
   const uploadImage = async (file: File, prefix: string) => {
     const ext = file.name.split(".").pop();
-    const path = `testimonials/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const path = `${tenantId}/testimonials/${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error } = await supabase.storage.from("images").upload(path, file, { upsert: true });
     if (error) throw error;
     const { data } = supabase.storage.from("images").getPublicUrl(path);

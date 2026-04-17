@@ -14,6 +14,8 @@ import { Store, Save, Loader2, Image, Instagram, Truck, Bell, Megaphone, Upload,
 import type { StoreSettings } from "@/hooks/useStoreSettings";
 import { useProducts } from "@/hooks/useProducts";
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
+import { useTenant } from "@/hooks/useTenant";
+import { tenantPath } from "@/lib/tenantStorage";
 
 async function resizeImage(blob: Blob, width: number, height: number): Promise<Blob> {
   const img = new window.Image();
@@ -52,6 +54,7 @@ const benefitIconOptions = [
 
 export default function StoreSettingsPage() {
   const queryClient = useQueryClient();
+  const { tenantId } = useTenant();
   const { data: allProducts } = useProducts();
   const { data: coupons } = useQuery({
     queryKey: ["coupons-list"],
@@ -94,7 +97,7 @@ export default function StoreSettingsPage() {
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       const blob = new Blob([bytes], { type: "image/png" });
-      const filePath = `${type.replace("_", "-")}-nobg.png`;
+      const filePath = tenantPath(tenantId, `${type.replace("_", "-")}-nobg.png`);
       await supabase.storage.from("store-assets").remove([filePath]);
       const { error: uploadError } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
       if (uploadError) throw uploadError;
@@ -111,7 +114,7 @@ export default function StoreSettingsPage() {
   const handleUploadDirect = useCallback(async (file: File, type: "logo" | "horizontal_logo" | "favicon") => {
     const setUploading = type === "logo" ? setUploadingLogo : type === "horizontal_logo" ? setUploadingHorizontalLogo : setUploadingFavicon;
     const field = type === "logo" ? "logo_url" : type === "horizontal_logo" ? "horizontal_logo_url" : "favicon_url";
-    const filePath = `${type.replace("_", "-")}.png`;
+    const filePath = tenantPath(tenantId, `${type.replace("_", "-")}.png`);
 
     setUploading(true);
     try {
@@ -130,7 +133,7 @@ export default function StoreSettingsPage() {
     } finally {
       setUploading(false);
     }
-  }, [updateField]);
+  }, [updateField, tenantId]);
 
   const handleHorizontalLogoFile = useCallback((file: File) => {
     const url = URL.createObjectURL(file);
@@ -191,7 +194,7 @@ export default function StoreSettingsPage() {
     const setUploading = type === "logo" ? setUploadingLogo : type === "horizontal_logo" ? setUploadingHorizontalLogo : setUploadingFavicon;
     const field = type === "logo" ? "logo_url" : type === "horizontal_logo" ? "horizontal_logo_url" : "favicon_url";
     const ext = file.name.split(".").pop() || "png";
-    const filePath = `${type.replace("_", "-")}.${ext}`;
+    const filePath = tenantPath(tenantId, `${type.replace("_", "-")}.${ext}`);
 
     setUploading(true);
     try {

@@ -17,6 +17,7 @@ import { Image, Type, Link2, Save, Loader2, Eye, Video, Plus, Trash2, Palette, G
 import { CropImageDialog } from "@/components/admin/CropImageDialog";
 import { useProducts } from "@/hooks/useProducts";
 import { Package } from "lucide-react";
+import { tenantPath } from "@/lib/tenantStorage";
 
 
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
@@ -134,7 +135,7 @@ function PromoBannersAdmin() {
   const handleImageUpload = async (file: File, bannerId: string) => {
     try {
       const ext = file.name.split(".").pop() || "png";
-      const filePath = `promo-banner-${bannerId}.${ext}`;
+      const filePath = tenantPath(tenantId, `promo-banner-${bannerId}.${ext}`);
       await supabase.storage.from("store-assets").remove([filePath]);
       const { error } = await supabase.storage.from("store-assets").upload(filePath, file, { upsert: true });
       if (error) throw error;
@@ -148,7 +149,7 @@ function PromoBannersAdmin() {
 
   const handlePromoCropComplete = useCallback(async (blob: Blob, bannerId: string) => {
     try {
-      const filePath = `promo-banner-${bannerId}-cropped.png`;
+      const filePath = tenantPath(tenantId, `promo-banner-${bannerId}-cropped.png`);
       await supabase.storage.from("store-assets").remove([filePath]);
       const { error } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
       if (error) throw error;
@@ -174,7 +175,7 @@ function PromoBannersAdmin() {
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       const blob = new Blob([bytes], { type: "image/png" });
 
-      const filePath = `promo-banner-${bannerId}-nobg.png`;
+      const filePath = tenantPath(tenantId, `promo-banner-${bannerId}-nobg.png`);
       await supabase.storage.from("store-assets").remove([filePath]);
       const { error: uploadError } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
       if (uploadError) throw uploadError;
@@ -349,7 +350,7 @@ export default function BannerPage() {
 
   const handleCropComplete = useCallback(async (blob: Blob, bannerId: string) => {
     try {
-      const filePath = `banner-side-${bannerId}-cropped.png`;
+      const filePath = tenantPath(tenantId, `banner-side-${bannerId}-cropped.png`);
       await supabase.storage.from("store-assets").remove([filePath]);
       const { error } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
       if (error) throw error;
@@ -375,7 +376,7 @@ export default function BannerPage() {
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       const blob = new Blob([bytes], { type: "image/png" });
 
-      const filePath = `banner-side-${bannerId}-nobg.png`;
+      const filePath = tenantPath(tenantId, `banner-side-${bannerId}-nobg.png`);
       await supabase.storage.from("store-assets").remove([filePath]);
       const { error: uploadError } = await supabase.storage.from("store-assets").upload(filePath, blob, { upsert: true, contentType: "image/png" });
       if (uploadError) throw uploadError;
@@ -519,7 +520,7 @@ export default function BannerPage() {
     setUploadingSideImage(bannerId);
     try {
       const ext = file.name.split(".").pop() || "png";
-      const filePath = `banner-side-${bannerId}.${ext}`;
+      const filePath = tenantPath(tenantId, `banner-side-${bannerId}.${ext}`);
       await supabase.storage.from("store-assets").remove([filePath]);
       const { error } = await supabase.storage.from("store-assets").upload(filePath, file, { upsert: true });
       if (error) throw error;
