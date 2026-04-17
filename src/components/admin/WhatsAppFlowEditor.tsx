@@ -24,21 +24,27 @@ import {
   Variable, HelpCircle, Edit, Copy, Link2, Unlink,
   ZoomIn, ZoomOut, Maximize2, ListChecks, Zap,
   FileText, Mic, Video, Image as ImageIcon, ShoppingBag, Send,
-  Calendar, Tag, ArrowRightLeft, AlertTriangle, CheckCircle2,
+  Calendar as CalendarIcon, Tag, ArrowRightLeft, AlertTriangle, CheckCircle2,
   Hourglass, MoveRight, PenTool, Sparkles, Settings2,
+  Shuffle, Rocket, Check, XCircle,
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { MessageComposer } from "@/components/admin/MessageComposer";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import UnsavedChangesDialog from "@/components/admin/UnsavedChangesDialog";
 
 /* ───── Types ───── */
-type NodeType = "start" | "message" | "condition" | "wait" | "input" | "ai_gen" | "transfer" | "set_variable" | "choice" | "action" | "end";
+type NodeType = "start" | "message" | "condition" | "wait" | "input" | "ai_gen" | "transfer" | "set_variable" | "choice" | "action" | "end" | "branch" | "start_flow" | "split";
 
 interface FlowNode {
   id: string;
   type: NodeType;
   position: { x: number; y: number };
   data: Record<string, any>;
+  label?: string;
 }
 
 interface FlowEdge {
@@ -67,13 +73,27 @@ const NODE_TYPES: { type: NodeType; label: string; icon: any; color: string; bg:
   { type: "message", label: "Mensagem", icon: MessageSquare, color: "#3B82F6", bg: "bg-blue-50 border-blue-300" },
   { type: "choice", label: "Escolha", icon: ListChecks, color: "#0EA5E9", bg: "bg-sky-50 border-sky-300" },
   { type: "condition", label: "Condição", icon: GitBranch, color: "#F59E0B", bg: "bg-amber-50 border-amber-300" },
+  { type: "branch", label: "Sim / Não", icon: GitBranch, color: "#22C55E", bg: "bg-green-50 border-green-300" },
   { type: "wait", label: "Esperar", icon: Clock, color: "#8B5CF6", bg: "bg-purple-50 border-purple-300" },
   { type: "input", label: "Pergunta", icon: HelpCircle, color: "#10B981", bg: "bg-emerald-50 border-emerald-300" },
   { type: "action", label: "Ação", icon: Zap, color: "#F97316", bg: "bg-orange-50 border-orange-300" },
   { type: "ai_gen", label: "IA Gerar", icon: Bot, color: "#EC4899", bg: "bg-pink-50 border-pink-300" },
   { type: "transfer", label: "Transferir", icon: UserCheck, color: "#06B6D4", bg: "bg-cyan-50 border-cyan-300" },
   { type: "set_variable", label: "Variável", icon: Variable, color: "#6366F1", bg: "bg-indigo-50 border-indigo-300" },
+  { type: "split", label: "Split A/B", icon: Shuffle, color: "#A855F7", bg: "bg-violet-50 border-violet-300" },
+  { type: "start_flow", label: "Iniciar Fluxo", icon: Rocket, color: "#0891B2", bg: "bg-teal-50 border-teal-300" },
   { type: "end", label: "Fim", icon: Flag, color: "#EF4444", bg: "bg-red-50 border-red-300" },
+];
+
+const SAVE_TO_FIELDS: { value: string; label: string }[] = [
+  { value: "", label: "Não salvar" },
+  { value: "name", label: "Nome do cliente" },
+  { value: "email", label: "E-mail" },
+  { value: "phone", label: "Telefone" },
+  { value: "city", label: "Cidade" },
+  { value: "state", label: "Estado" },
+  { value: "tag", label: "Adicionar como Tag" },
+  { value: "custom", label: "Campo customizado (chave:valor)" },
 ];
 
 function genId() {
@@ -681,12 +701,15 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
       case "message": return { content_type: "text", content: "" };
       case "condition": return { condition_type: "keywords", options: [{ label: "Sim", keywords: ["sim", "quero"] }, { label: "Não", keywords: ["não", "nao"] }] };
       case "wait": return { wait_type: "delay", delay_value: 5, delay_unit: "m" };
-      case "input": return { question: "", variable_name: "resposta" };
+      case "input": return { question: "", variable_name: "resposta", save_to_field: "", custom_field_key: "" };
       case "ai_gen": return { prompt: "", model: llmConfig?.default_model || "google/gemini-3-flash-preview", agent_id: "" };
       case "transfer": return { target: "human", target_user_id: "", target_agent_id: "" };
       case "set_variable": return { variable: "", variables: [] };
       case "choice": return { question: "Escolha uma opção:", options: [{ label: "Opção 1", tag: "" }, { label: "Opção 2", tag: "" }] };
       case "action": return { action_type: "add_tag", tag: "" };
+      case "branch": return { variable_name: "", operator: "exists", compare_value: "" };
+      case "start_flow": return { target_flow_id: "" };
+      case "split": return { split_count: 2 };
       default: return {};
     }
   }
@@ -871,7 +894,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     };
   }, []);
 
-  function getOutputHandles(node: FlowNode): { label: string; index: number }[] {
+  function getOutputHandles(node: FlowNode): { label: string; index: number; color?: string }[] {
     if (node.type === "condition") {
       if (node.data.condition_type === "any_response") {
         return [
@@ -886,6 +909,18 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     }
     if (node.type === "choice") {
       return ((node.data.options || []) as { label: string }[]).map((o, i) => ({ label: o.label, index: i }));
+    }
+    if (node.type === "branch") {
+      return [
+        { label: "Sim", index: 0, color: "#22C55E" },
+        { label: "Não", index: 1, color: "#EF4444" },
+      ];
+    }
+    if (node.type === "split") {
+      const count = Math.max(2, Math.min(5, Number(node.data.split_count) || 2));
+      const letters = ["A", "B", "C", "D", "E"];
+      const colors = ["#A855F7", "#EC4899", "#F59E0B", "#10B981", "#3B82F6"];
+      return Array.from({ length: count }, (_, i) => ({ label: letters[i], index: i, color: colors[i] }));
     }
     return [];
   }
@@ -991,7 +1026,10 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-xs h-5">{o.label}</Badge>)}<Badge variant="outline" className="text-xs h-5 border-dashed">Default</Badge></div>;
       }
       case "wait": {
-        if (node.data.wait_type === "specific_date") return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Calendar className="h-3 w-3" />{DAYS.find(d => d.value === node.data.specific_day)?.label || "?"} {node.data.specific_time || ""}</p>;
+        if (node.data.wait_type === "specific_date") {
+          const dateStr = node.data.wait_date ? format(new Date(node.data.wait_date), "dd/MM/yyyy") : (DAYS.find(d => d.value === node.data.specific_day)?.label || "?");
+          return <p className="text-xs text-slate-600 flex items-center gap-1.5"><CalendarIcon className="h-3 w-3" />{dateStr} {node.data.wait_time || node.data.specific_time || ""}</p>;
+        }
         const units: Record<string, string> = { m: "min", h: "h", d: "dias" };
         return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Clock className="h-3 w-3" />{node.data.delay_value || 0} {units[node.data.delay_unit] || "min"}</p>;
       }
@@ -1023,6 +1061,19 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         const concat = vars.map(v => v.source_label || "?").join(" + ");
         return <p className="text-xs text-slate-600 break-words"><span className="font-medium">{node.data.variable || "var"}</span> = {concat}</p>;
       }
+      case "branch": {
+        const op = node.data.operator || "exists";
+        const opLabel: Record<string, string> = { exists: "existe", equals: "=", contains: "contém", is_true: "é verdadeiro" };
+        return <p className="text-xs text-slate-600 flex items-center gap-1.5"><GitBranch className="h-3 w-3" />{node.data.variable_name || "var"} {opLabel[op]} {node.data.compare_value || ""}</p>;
+      }
+      case "start_flow": {
+        const tgt = allFlows.find(f => f.id === node.data.target_flow_id);
+        return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Rocket className="h-3 w-3" />{tgt?.name || "Selecionar fluxo..."}</p>;
+      }
+      case "split": {
+        const c = Number(node.data.split_count) || 2;
+        return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Shuffle className="h-3 w-3" />Alternar entre {c} caminhos</p>;
+      }
       case "start": return <p className="text-xs text-slate-500">Ponto de entrada</p>;
       case "end": return <p className="text-xs text-slate-500">Encerra fluxo</p>;
       default: return null;
@@ -1043,6 +1094,19 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         </div>
         <ScrollArea className="h-[calc(100%-50px)]">
           <div className="p-3 space-y-3">
+            {/* ── Nome customizado do bloco ── */}
+            <div>
+              <Label className="text-xs">Nome do bloco (opcional)</Label>
+              <Input
+                value={n.label || ""}
+                onChange={e => setNodes(prev => prev.map(x => x.id === n.id ? { ...x, label: e.target.value } : x))}
+                placeholder={`Ex: ${meta.label} - boas-vindas`}
+                className="h-8 text-xs mt-1"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">ID: <code className="bg-muted px-1 rounded">{n.id}</code></p>
+            </div>
+            <div className="border-t -mx-3" />
+
             {/* ── Message ── */}
             {n.type === "message" && (
               <>
@@ -1203,11 +1267,20 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                       }} className="text-red-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
                     </div>
                   ))}
-                  <Button size="sm" variant="outline" className="h-6 text-[10px] mt-2 w-full" onClick={() => {
-                    updateNodeData(n.id, { options: [...(n.data.options || []), { label: `Opção ${(n.data.options?.length || 0) + 1}`, tag: "" }] });
-                  }}><Plus className="h-3 w-3 mr-1" /> Adicionar Opção</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 text-[10px] mt-2 w-full"
+                    disabled={(n.data.options?.length || 0) >= 4}
+                    onClick={() => {
+                      if ((n.data.options?.length || 0) >= 4) return;
+                      updateNodeData(n.id, { options: [...(n.data.options || []), { label: `Opção ${(n.data.options?.length || 0) + 1}`, tag: "" }] });
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> Adicionar Opção {(n.data.options?.length || 0) >= 4 && "(máx 4)"}
+                  </Button>
                 </div>
-                <p className="text-[10px] text-muted-foreground">Cada opção gera uma saída separada. Conecte cada uma ao próximo bloco.</p>
+                <p className="text-[10px] text-muted-foreground">Cada opção gera uma saída separada. Máximo de 4 escolhas.</p>
               </>
             )}
 
@@ -1274,16 +1347,40 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                 {n.data.wait_type === "specific_date" ? (
                   <>
                     <div>
-                      <Label className="text-xs">Dia da semana</Label>
-                      <Select value={n.data.specific_day || "monday"} onValueChange={v => updateNodeData(n.id, { specific_day: v })}>
-                        <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
-                        <SelectContent>{DAYS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
-                      </Select>
+                      <Label className="text-xs">Data específica</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full mt-1 h-8 text-xs justify-start font-normal",
+                              !n.data.wait_date && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                            {n.data.wait_date ? format(new Date(n.data.wait_date), "dd/MM/yyyy") : "Escolher data"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={n.data.wait_date ? new Date(n.data.wait_date) : undefined}
+                            onSelect={(d) => updateNodeData(n.id, { wait_date: d ? d.toISOString().split("T")[0] : "" })}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <p className="text-[10px] text-muted-foreground mt-1">O fluxo só continua a partir desse dia.</p>
                     </div>
                     <div>
                       <Label className="text-xs">Horário</Label>
-                      <Input type="time" value={n.data.specific_time || "09:00"}
-                        onChange={e => updateNodeData(n.id, { specific_time: e.target.value })} className="h-8 text-xs mt-1" />
+                      <Input
+                        type="time"
+                        value={n.data.wait_time || "09:00"}
+                        onChange={e => updateNodeData(n.id, { wait_time: e.target.value })}
+                        className="h-8 text-xs mt-1"
+                      />
                     </div>
                   </>
                 ) : (
@@ -1322,6 +1419,32 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                   <Input value={n.data.variable_name || ""} onChange={e => updateNodeData(n.id, { variable_name: e.target.value })}
                     placeholder="nome" className="h-8 text-xs mt-1" />
                 </div>
+                <div>
+                  <Label className="text-xs">Salvar também no cadastro do lead</Label>
+                  <Select
+                    value={n.data.save_to_field || "__none__"}
+                    onValueChange={v => updateNodeData(n.id, { save_to_field: v === "__none__" ? "" : v })}
+                  >
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Não salvar" /></SelectTrigger>
+                    <SelectContent>
+                      {SAVE_TO_FIELDS.map(f => (
+                        <SelectItem key={f.value || "none"} value={f.value || "__none__"}>{f.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {n.data.save_to_field === "custom" && (
+                  <div>
+                    <Label className="text-xs">Chave do campo customizado</Label>
+                    <Input
+                      value={n.data.custom_field_key || ""}
+                      onChange={e => updateNodeData(n.id, { custom_field_key: e.target.value })}
+                      placeholder="ex: profissao"
+                      className="h-8 text-xs mt-1"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">Salvo nas tags como <code>chave:valor</code>.</p>
+                  </div>
+                )}
               </>
             )}
 
@@ -1598,6 +1721,83 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
               </>
             )}
 
+            {/* ── Branch (Sim/Não) ── */}
+            {n.type === "branch" && (
+              <>
+                <div>
+                  <Label className="text-xs">Variável</Label>
+                  <Input value={n.data.variable_name || ""} onChange={e => updateNodeData(n.id, { variable_name: e.target.value })}
+                    placeholder="ex: resposta" className="h-8 text-xs mt-1" />
+                </div>
+                <div>
+                  <Label className="text-xs">Operador</Label>
+                  <Select value={n.data.operator || "exists"} onValueChange={v => updateNodeData(n.id, { operator: v })}>
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="exists">Existe (não vazio)</SelectItem>
+                      <SelectItem value="equals">Igual a</SelectItem>
+                      <SelectItem value="contains">Contém</SelectItem>
+                      <SelectItem value="is_true">É verdadeiro (sim/yes/1)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {(n.data.operator === "equals" || n.data.operator === "contains") && (
+                  <div>
+                    <Label className="text-xs">Valor de comparação</Label>
+                    <Input value={n.data.compare_value || ""} onChange={e => updateNodeData(n.id, { compare_value: e.target.value })}
+                      className="h-8 text-xs mt-1" />
+                  </div>
+                )}
+                <div className="flex gap-2 text-[10px]">
+                  <Badge className="bg-green-100 text-green-700 border-green-300"><Check className="h-3 w-3 mr-1" /> Saída Sim</Badge>
+                  <Badge className="bg-red-100 text-red-700 border-red-300"><XCircle className="h-3 w-3 mr-1" /> Saída Não</Badge>
+                </div>
+              </>
+            )}
+
+            {/* ── Start Flow ── */}
+            {n.type === "start_flow" && (
+              <>
+                <div>
+                  <Label className="text-xs">Fluxo a iniciar</Label>
+                  <Select value={n.data.target_flow_id || ""} onValueChange={v => updateNodeData(n.id, { target_flow_id: v })}>
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Selecionar fluxo..." /></SelectTrigger>
+                    <SelectContent>
+                      {allFlows.filter(f => f.id !== flow?.id).map(f => (
+                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="p-2 rounded border bg-amber-50 text-[10px] text-amber-800 flex items-start gap-1.5">
+                  <AlertTriangle className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                  <span>Encerra <strong>imediatamente</strong> o fluxo atual: cancela todas as mensagens pendentes para este contato e inicia o novo fluxo.</span>
+                </div>
+              </>
+            )}
+
+            {/* ── Split (round-robin) ── */}
+            {n.type === "split" && (
+              <>
+                <div>
+                  <Label className="text-xs">Quantidade de caminhos</Label>
+                  <Select
+                    value={String(n.data.split_count || 2)}
+                    onValueChange={v => updateNodeData(n.id, { split_count: Number(v) })}
+                  >
+                    <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2">2 (A / B)</SelectItem>
+                      <SelectItem value="3">3 (A / B / C)</SelectItem>
+                      <SelectItem value="4">4 (A / B / C / D)</SelectItem>
+                      <SelectItem value="5">5 (A / B / C / D / E)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground mt-1">Cada execução vai para o próximo caminho de forma intercalada (round-robin).</p>
+                </div>
+              </>
+            )}
+
             {/* ── Actions ── */}
             <div className="pt-3 border-t space-y-2">
               <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => disconnectAll(n.id)}>
@@ -1751,7 +1951,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                       <div className="flex-1 min-w-0">
                         <p className="text-[9px] uppercase tracking-wider text-slate-500 leading-none mb-0.5">WhatsApp</p>
                         <p className="text-xs font-semibold leading-tight truncate" style={{ color: meta.color }}>
-                          {isStart ? "Início" : meta.label}
+                          {isStart ? "Início" : (node.label || meta.label)}
                         </p>
                       </div>
                       <GripVertical className="h-3 w-3 text-slate-400 cursor-grab flex-shrink-0" />
@@ -1775,14 +1975,23 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                       <div className="border-t border-slate-100 bg-slate-50/50 px-3 py-2 space-y-1.5">
                         {handles.map((h, i) => (
                           <div key={i} className="flex items-center justify-between gap-2 text-[10px] group">
-                            <span className="text-slate-600 font-medium truncate">{h.label}</span>
+                            <span
+                              className="font-medium truncate"
+                              style={{ color: h.color || "#64748B" }}
+                            >
+                              {h.label}
+                            </span>
                             <div
                               title="Arraste para conectar"
                               className={`w-3 h-3 rounded-full border-2 cursor-crosshair flex-shrink-0 transition-all ${
                                 connecting?.nodeId === node.id && connecting?.handle === h.label
-                                  ? "border-slate-700 bg-slate-700 scale-125 animate-pulse"
-                                  : "border-slate-400 bg-white hover:border-slate-700 hover:scale-125"
+                                  ? "scale-125 animate-pulse"
+                                  : "bg-white hover:scale-125"
                               }`}
+                              style={{
+                                borderColor: h.color || "#94A3B8",
+                                backgroundColor: connecting?.nodeId === node.id && connecting?.handle === h.label ? (h.color || "#334155") : undefined,
+                              }}
                               onMouseDown={e => handleOutputMouseDown(e, node.id, h.label)}
                             />
                           </div>
@@ -1864,7 +2073,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                 </div>
                 <div>
                   <p className="text-[9px] font-semibold text-muted-foreground uppercase px-1 mb-1">Lógica</p>
-                  {(["condition", "wait", "ai_gen", "transfer", "action", "set_variable", "end"] as NodeType[]).map(t => {
+                  {(["condition", "branch", "wait", "ai_gen", "transfer", "action", "set_variable", "split", "start_flow", "end"] as NodeType[]).map(t => {
                     const m = NODE_TYPES.find(x => x.type === t)!;
                     const I = m.icon;
                     return (

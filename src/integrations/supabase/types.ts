@@ -3039,6 +3039,30 @@ export type Database = {
           },
         ]
       }
+      whatsapp_flow_split_state: {
+        Row: {
+          flow_id: string
+          last_index: number
+          node_id: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          flow_id: string
+          last_index?: number
+          node_id: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          flow_id?: string
+          last_index?: number
+          node_id?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_flows: {
         Row: {
           active: boolean
