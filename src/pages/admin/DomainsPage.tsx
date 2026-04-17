@@ -98,7 +98,7 @@ export default function DomainsPage() {
   };
 
   const statusBadge = (d: Domain) => {
-    if (d.verification_status === "verified") return <Badge className="bg-green-500/10 text-green-700 hover:bg-green-500/20"><CheckCircle2 className="w-3 h-3 mr-1" /> Verificado</Badge>;
+    if (d.verification_status === "verified") return <Badge className="bg-success/10 text-success hover:bg-success/20"><CheckCircle2 className="w-3 h-3 mr-1" /> Verificado</Badge>;
     if (d.verification_status === "failed") return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" /> Falhou</Badge>;
     return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" /> Pendente</Badge>;
   };
