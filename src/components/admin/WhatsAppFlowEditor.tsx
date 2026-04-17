@@ -1026,7 +1026,10 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-xs h-5">{o.label}</Badge>)}<Badge variant="outline" className="text-xs h-5 border-dashed">Default</Badge></div>;
       }
       case "wait": {
-        if (node.data.wait_type === "specific_date") return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Calendar className="h-3 w-3" />{DAYS.find(d => d.value === node.data.specific_day)?.label || "?"} {node.data.specific_time || ""}</p>;
+        if (node.data.wait_type === "specific_date") {
+          const dateStr = node.data.wait_date ? format(new Date(node.data.wait_date), "dd/MM/yyyy") : (DAYS.find(d => d.value === node.data.specific_day)?.label || "?");
+          return <p className="text-xs text-slate-600 flex items-center gap-1.5"><CalendarIcon className="h-3 w-3" />{dateStr} {node.data.wait_time || node.data.specific_time || ""}</p>;
+        }
         const units: Record<string, string> = { m: "min", h: "h", d: "dias" };
         return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Clock className="h-3 w-3" />{node.data.delay_value || 0} {units[node.data.delay_unit] || "min"}</p>;
       }
