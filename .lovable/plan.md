@@ -1,59 +1,74 @@
 
-## Plano: Padronizar ícones, unificar Broadcast (Funil + Flow) e melhorar fila
+## Plano: Auditoria e correção multi-tenant
 
-### 1. Substituir todos os emojis por ícones Lucide
-**Onde tem emoji em selects/labels** (busca ampla no admin):
-- `WhatsAppPage.tsx` → BroadcastTab: filtros de audiência (📋 Todos, 🏷️ Por Tag, 👤 Por Representante, 👨‍⚕️ Por Prescritor, 📦 Por Produto, 📍 Por Estado/Cidade)
-- ContactsTab, FunnelsTab, TemplatesTab, SendingConfigTab, QueueTab — qualquer emoji em `SelectItem`, badges, headers
-- `WhatsAppFlowEditor.tsx` — varredura final (qualquer emoji restante em legendas, badges de status, indicadores de delay)
-- Outros admin selects que ainda usem emoji (RepurchasePage, abandoned carts, etc.) — fazer pass de busca e trocar.
+### Problema raiz do erro "Tenant não encontrado"
+`SendingConfigTab` (e BroadcastTab) em `WhatsAppPage.tsx` resolvem o tenant lendo `tenant_users` direto (`select tenant_id where user_id = auth.uid`). Isso falha para:
+- **Super admins** que não têm linha em `tenant_users` (estão em `user_roles`).
+- **Super boss** ao trocar de tenant via `TenantSelector` (o hook `useTenant` muda, mas o código ignora).
+- Usuários com múltiplos tenants (pega o primeiro qualquer).
 
-**Padrão a aplicar:**
-```tsx
-<SelectItem value="tag">
-  <span className="flex items-center gap-2">
-    <Tag className="h-4 w-4 text-muted-foreground" /> Por Tag
-  </span>
-</SelectItem>
-```
-Mapeamento:
-- Todos os contatos → `Users`
-- Por Tag → `Tag`
-- Por Representante → `Briefcase`
-- Por Prescritor → `Stethoscope`
-- Por Produto → `Package`
-- Por Estado/Cidade → `MapPin`
+A solução: usar **`useTenant().tenantId`** (que já trata todos esses casos) em vez de re-consultar.
 
-### 2. Broadcast: suportar Funil OU Flow
-Hoje BroadcastTab só lista `whatsapp_funnels`. Adicionar:
-- **Toggle no topo**: `[Funil clássico] [Flow visual]` (Tabs/SegmentedControl)
-- Quando "Flow": carrega `whatsapp_flows` (active=true) no select.
-- No disparo:
-  - Funil → mantém lógica atual (insere no `whatsapp_message_queue` por step).
-  - Flow → chama edge function existente que dispara flow para um contato (ou cria nova `whatsapp-broadcast-flow` que itera contatos e enfileira start do flow). Verificar se já existe execução de flow por contato; se sim, reaproveitar.
-- Preview de contagem de contatos continua igual.
+### Correções pontuais (causa do erro reportado)
+**`src/pages/admin/WhatsAppPage.tsx`** — substituir os 3 trechos que leem `tenant_users` por `const { tenantId } = useTenant()`:
+- `SendingConfigTab` (load + save) — corrige o erro "Tenant não encontrado"
+- `BroadcastTab` (disparo) — usa o tenant ativo do contexto
+- Adicionar fallback: se `tenantId` for `DEFAULT_TENANT_ID` e não houver row em config, criar com esse default
 
-### 3. Redesenhar Fila de Transmissão (estilo ManyChat/BotFlow)
-**Problema atual**: lista plana de itens individuais, difícil de entender o que está rolando.
+### Auditoria multi-tenant — gaps encontrados
 
-**Novo design (QueueTab):**
-- **Header com KPIs em cards**: Pendentes / Enviando agora / Enviadas hoje / Falhas / Próximo envio em (countdown)
-- **Agrupamento por Campanha/Funil**: cada broadcast disparado vira um "card de campanha" expansível mostrando:
-  - Nome do funil/flow + horário disparo
-  - Barra de progresso (X/Y enviadas, %)
-  - Status chips: Enviadas (verde), Pendentes (amarelo), Falhas (vermelho)
-  - Velocidade estimada (msgs/min) + ETA conclusão
-  - Ações: Pausar campanha / Cancelar restantes / Reenviar falhas
-- **Lista detalhada** colapsável dentro de cada card: contato, telefone, status, horário agendado, instância usada, último erro
-- **Live update**: subscribe via Supabase realtime no `whatsapp_message_queue` para refletir progresso sem reload
-- **Filtros no topo**: por status (pendente/enviado/erro), por instância, busca por telefone/nome
-- Visual: cards com `Card` shadcn, `Progress` bar, `Badge` para status, ícones Lucide (`Send`, `Clock`, `CheckCheck`, `AlertCircle`, `Pause`, `Play`)
+**1. Inserts SEM `tenant_id` (RLS pode bloquear / dados vazam entre tenants):**
+- `WhatsAppPage.tsx`:
+  - `whatsapp_templates.insert(payload)` (linha 595)
+  - `whatsapp_template_folders.insert(...)` (linha 632)
+  - `whatsapp_funnels.insert(form)` (linha 926)
+  - `whatsapp_funnel_steps.insert(...)` (linha 943)
+- `WhatsAppFlowEditor.tsx`:
+  - `whatsapp_flows.insert(...)` em `duplicateFlow` (linha 171) e `save` (linha 729)
+- `RepresentativesPage.tsx`: `representatives.insert(form)` (linha 81)
+- `DoctorsPage.tsx`: `doctors.insert(payload)` (linha 143) + `coupons.insert(...)` (linha 152)
+- `LinksPage.tsx`: `short_links.insert(insertData)` (linha 124)
+- `AIAgentsPage.tsx`: `ai_agents` insert + `ai_agent_knowledge_bases.insert(...)` (sem tenant)
+- `AIKnowledgeBase.tsx`: `ai_kb_items.insert(...)` (linha 109) sem tenant
+- `AIMeetingRoom.tsx`: `ai_meetings.insert(...)` sem tenant
+- `CampaignConfigTool.tsx`: insert sem tenant
+- `LeadsPage.tsx` (manual add linha 168): sem tenant
+- `BannerPage.tsx` (`hero_banners.insert` linha 459): sem tenant
+- `TestimonialGenerator.tsx`: ok (já tem tenant_id)
 
-### Arquivos modificados
-- `src/pages/admin/WhatsAppPage.tsx` (BroadcastTab + QueueTab + ContactsTab + outros emojis)
-- `src/components/admin/WhatsAppFlowEditor.tsx` (varredura final emojis)
-- Possível nova edge function `whatsapp-broadcast-flow` se flows ainda não tiverem entrypoint de broadcast (verificar antes)
+**2. Pages que NÃO usam `useTenant()` mas fazem queries/inserts:**
+- `OrdersPage`, `DoctorsPage`, `RepresentativesPage`, `LinksPage`, `AIAgentsPage`, `RecoveryPage`, `PagesPage`, `PopupsPage`, `FeedbackApprovalPage`, `ReportsPage`, `IntegrationsPage`, `UsersPage`, `DashboardPage`, `CommissionsPage`, `RepCommissionsPage`, `CustomersPage`
+- A maioria depende de RLS para filtrar no SELECT, mas **inserts sem `tenant_id`** vão falhar ou cair no tenant errado quando RLS exigir match.
 
-### Investigação antes de codar
-- Verificar se há tabela/coluna que agrupe itens da fila por "broadcast batch" (ex: `broadcast_id`); se não existir, adicionar coluna `broadcast_id uuid` em `whatsapp_message_queue` + migration, e gerar um id ao disparar broadcast.
-- Verificar como flows são executados por contato hoje (entrada do flow runner) para reaproveitar no broadcast.
+**3. Edge functions com hardcode `DEFAULT_TENANT_ID = "00000000..."`:**
+- `create-prescriber-signup`, `register-prescriber` etc — usam fallback aceitável (resolvem por hostname). OK.
+- `whatsapp-process-queue`, `whatsapp-send`, `whatsapp-webhook` — já tenant-aware via `tenant_users` ou `instance.tenant_id`. OK.
+
+### Plano de execução
+
+**Fase 1 — Fix imediato do erro (alta prioridade)**
+- Refatorar `SendingConfigTab` e `BroadcastTab` em `WhatsAppPage.tsx` para usar `const { tenantId } = useTenant()` ao invés de `tenant_users` lookup.
+- Trocar todas as queries `.eq("tenant_id", tu.tenant_id)` por `.eq("tenant_id", tenantId)`.
+
+**Fase 2 — Adicionar `tenant_id` em todos os inserts admin**
+- Em cada arquivo listado acima:
+  1. Adicionar `const { tenantId } = useTenant()` no componente.
+  2. Incluir `tenant_id: tenantId` no objeto inserido.
+- Tabelas atingidas: `whatsapp_templates`, `whatsapp_template_folders`, `whatsapp_funnels`, `whatsapp_funnel_steps`, `whatsapp_flows`, `representatives`, `doctors`, `coupons`, `short_links`, `ai_agents`, `ai_agent_knowledge_bases`, `ai_kb_items`, `ai_meetings`, `campaign_config`, `popup_leads`, `hero_banners`.
+
+**Fase 3 — (Opcional, defesa em profundidade) trigger DB**
+- Criar trigger `BEFORE INSERT` nas tabelas tenant-scoped que faz `NEW.tenant_id := COALESCE(NEW.tenant_id, public.current_tenant_id())`. Garante que mesmo código antigo nunca insere sem tenant. Não bloqueia super admin (que pode passar tenant explicitamente).
+
+### Arquivos a modificar
+- `src/pages/admin/WhatsAppPage.tsx` (principal)
+- `src/components/admin/WhatsAppFlowEditor.tsx`
+- `src/pages/admin/RepresentativesPage.tsx`
+- `src/pages/admin/DoctorsPage.tsx`
+- `src/pages/admin/LinksPage.tsx`
+- `src/pages/admin/AIAgentsPage.tsx`
+- `src/components/admin/AIKnowledgeBase.tsx`
+- `src/components/admin/AIMeetingRoom.tsx`
+- `src/components/admin/tools/CampaignConfigTool.tsx` (verificar — já parece ok)
+- `src/pages/admin/LeadsPage.tsx` (add manual)
+- `src/pages/admin/BannerPage.tsx` (hero_banners)
+- (opcional) nova migration com trigger de defesa
