@@ -44,6 +44,30 @@ export default function CreateStorePage() {
     setErrors((e) => ({ ...e, [k]: "" }));
   };
 
+  const pollCloneStatus = async (tenantId: string) => {
+    const stages = [
+      { ms: 0, msg: "Criando sua loja..." },
+      { ms: 4000, msg: "Copiando produtos e configurações..." },
+      { ms: 9000, msg: "Preparando seu painel..." },
+      { ms: 15000, msg: "Quase lá..." },
+    ];
+    const startedAt = Date.now();
+    for (let i = 0; i < 30; i++) {
+      const elapsed = Date.now() - startedAt;
+      const stage = [...stages].reverse().find((s) => elapsed >= s.ms);
+      if (stage) setProvisionMsg(stage.msg);
+      const { data } = await supabase
+        .from("tenants")
+        .select("cloning_status")
+        .eq("id", tenantId)
+        .maybeSingle();
+      const status = (data as { cloning_status?: string } | null)?.cloning_status;
+      if (status === "completed" || status === "failed" || status == null) return status ?? "completed";
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    return "timeout";
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     setErrors({});
@@ -59,19 +83,19 @@ export default function CreateStorePage() {
         else toast.error(data.error);
         return;
       }
-      // Auto-login
-      const { error: loginErr } = await supabase.auth.signInWithPassword({
-        email: form.owner_email, password: form.owner_password,
-      });
-      if (loginErr) {
-        toast.success("Loja criada! Faça login para continuar.");
-        navigate("/login");
-      } else {
-        toast.success("Loja criada com sucesso!");
-        navigate("/admin");
-      }
+      // Show provisioning screen and poll
+      setProvisioning(true);
+      const tenantId = data?.tenant_id as string | undefined;
+      const [, ] = await Promise.all([
+        // Auto-login in parallel with polling
+        supabase.auth.signInWithPassword({ email: form.owner_email, password: form.owner_password }),
+        tenantId ? pollCloneStatus(tenantId) : Promise.resolve(),
+      ]);
+      toast.success("Loja criada com sucesso!");
+      navigate("/admin");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro inesperado");
+      setProvisioning(false);
     } finally {
       setLoading(false);
     }
