@@ -22,7 +22,9 @@ import {
   Zap, Settings2, Shuffle, Upload, Phone, Mail, UserPlus, Download, Inbox,
   ArrowRightLeft, Flag, Paperclip, Volume2, Link2, ChevronDown, ChevronRight, GripVertical,
   Bot, UserCheck, ArrowRight, ArrowUp, ArrowDown, Megaphone, Filter, Loader2,
-  Folder, FolderPlus, FolderOpen, FolderInput
+  Folder, FolderPlus, FolderOpen, FolderInput,
+  Tag, Briefcase, Stethoscope, Package, MapPin, CheckCheck, AlertCircle,
+  Hourglass, TrendingUp
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ConversationsTab from "@/components/admin/WhatsAppConversations";
