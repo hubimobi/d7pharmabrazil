@@ -923,8 +923,8 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           const tpl = templates.find(t => t.id === node.data.template_id);
           return (
             <div className="space-y-1">
-              <Badge variant="outline" className="text-[9px] h-4"><FileText className="h-2.5 w-2.5 mr-1" />{tpl?.name || "Template"}</Badge>
-              {tpl?.content && <p className="text-[11px] text-slate-600 italic whitespace-pre-wrap break-words">{tpl.content}</p>}
+              <Badge variant="outline" className="text-xs h-5"><FileText className="h-3 w-3 mr-1" />{tpl?.name || "Template"}</Badge>
+              {tpl?.content && <p className="text-xs text-slate-600 italic whitespace-pre-wrap break-words">{tpl.content}</p>}
             </div>
           );
         }
@@ -934,18 +934,15 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
           const prod = cfg?.product_id ? productsList.find(p => p.id === cfg.product_id) : null;
           return (
             <div className="space-y-1">
-              {prod && <Badge variant="outline" className="text-[9px] h-4"><ShoppingBag className="h-2.5 w-2.5 mr-1" />{prod.name}</Badge>}
-              <p className="text-[11px] text-blue-600 break-all whitespace-pre-wrap">{url || "Configurar link..."}</p>
+              {prod && <Badge variant="outline" className="text-xs h-5"><ShoppingBag className="h-3 w-3 mr-1" />{prod.name}</Badge>}
+              <p className="text-xs text-blue-600 break-all whitespace-pre-wrap">{url || "Configurar link..."}</p>
             </div>
           );
         }
         return (
           <div className="flex items-start gap-1.5">
-            <I className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />
-            <p
-              className="text-[11px] text-slate-600 whitespace-pre-wrap break-words"
-              style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', system-ui, sans-serif" }}
-            >
+            <I className="h-3.5 w-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-slate-600 whitespace-pre-wrap break-words">
               {ct === "text" ? (node.data.content || "Configurar...") : labels[ct] || ct}
             </p>
           </div>
@@ -953,53 +950,55 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
       }
       case "choice": {
         const opts = (node.data.options || []) as { label: string }[];
-        return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-[9px] h-4">{o.label}</Badge>)}</div>;
+        return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-xs h-5">{o.label}</Badge>)}</div>;
       }
       case "condition": {
         if (node.data.condition_type === "any_response") {
           return (
             <div className="flex gap-1 flex-wrap">
-              <Badge variant="outline" className="text-[9px] h-4">Qualquer resposta</Badge>
-              <Badge variant="outline" className="text-[9px] h-4 border-dashed">Sem resposta</Badge>
+              <Badge variant="outline" className="text-xs h-5">Qualquer resposta</Badge>
+              <Badge variant="outline" className="text-xs h-5 border-dashed">Sem resposta</Badge>
             </div>
           );
         }
         const opts = (node.data.options || []) as { label: string }[];
-        return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-[9px] h-4">{o.label}</Badge>)}<Badge variant="outline" className="text-[9px] h-4 border-dashed">Default</Badge></div>;
+        return <div className="flex gap-1 flex-wrap">{opts.map((o, i) => <Badge key={i} variant="outline" className="text-xs h-5">{o.label}</Badge>)}<Badge variant="outline" className="text-xs h-5 border-dashed">Default</Badge></div>;
       }
       case "wait": {
-        if (node.data.wait_type === "specific_date") return <p className="text-[11px] text-slate-600">📅 {DAYS.find(d => d.value === node.data.specific_day)?.label || "?"} {node.data.specific_time || ""}</p>;
+        if (node.data.wait_type === "specific_date") return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Calendar className="h-3 w-3" />{DAYS.find(d => d.value === node.data.specific_day)?.label || "?"} {node.data.specific_time || ""}</p>;
         const units: Record<string, string> = { m: "min", h: "h", d: "dias" };
-        return <p className="text-[11px] text-slate-600">⏱ {node.data.delay_value || 0} {units[node.data.delay_unit] || "min"}</p>;
+        return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Clock className="h-3 w-3" />{node.data.delay_value || 0} {units[node.data.delay_unit] || "min"}</p>;
       }
-      case "input": return <p className="text-[11px] text-slate-600 line-clamp-1">{node.data.question || "Pergunta..."}</p>;
+      case "input": return <p className="text-xs text-slate-600 line-clamp-1">{node.data.question || "Pergunta..."}</p>;
       case "action": {
-        const labels: Record<string, string> = { add_tag: "➕ Tag", remove_tag: "➖ Tag", go_to_flow: "↗️ Ir p/ fluxo", trigger_block: "⚡ Acionar bloco", mark_converted: "✅ Convertido" };
-        return <p className="text-[11px] text-slate-600">{labels[node.data.action_type] || "Ação"}: {node.data.tag || node.data.flow_id?.substring(0, 8) || node.data.block_id || ""}</p>;
+        const actionIcons: Record<string, any> = { add_tag: Tag, remove_tag: Tag, go_to_flow: MoveRight, trigger_block: Zap, mark_converted: CheckCircle2 };
+        const labels: Record<string, string> = { add_tag: "Add Tag", remove_tag: "Remover Tag", go_to_flow: "Ir p/ fluxo", trigger_block: "Acionar bloco", mark_converted: "Convertido" };
+        const AI = actionIcons[node.data.action_type] || Zap;
+        return <p className="text-xs text-slate-600 flex items-center gap-1.5"><AI className="h-3 w-3" />{labels[node.data.action_type] || "Ação"}: {node.data.tag || node.data.flow_id?.substring(0, 8) || node.data.block_id || ""}</p>;
       }
       case "ai_gen": {
         const agentName = node.data.agent_id ? agents.find(a => a.id === node.data.agent_id)?.name : null;
-        return <p className="text-[11px] text-slate-600 line-clamp-1">🤖 {agentName ? `[${agentName}] ` : ""}{node.data.prompt || "Prompt..."}</p>;
+        return <p className="text-xs text-slate-600 line-clamp-1 flex items-center gap-1.5"><Bot className="h-3 w-3 flex-shrink-0" />{agentName ? `[${agentName}] ` : ""}{node.data.prompt || "Prompt..."}</p>;
       }
       case "transfer": {
         if (node.data.target === "human" && node.data.target_user_id) {
           const userName = users.find(u => u.id === node.data.target_user_id)?.full_name;
-          return <p className="text-[11px] text-slate-600">👤 {userName || node.data.target_user_id.substring(0, 8)}</p>;
+          return <p className="text-xs text-slate-600 flex items-center gap-1.5"><UserCheck className="h-3 w-3" />{userName || node.data.target_user_id.substring(0, 8)}</p>;
         }
         if (node.data.target === "ai_agent" && node.data.target_agent_id) {
           const agName = agents.find(a => a.id === node.data.target_agent_id)?.name;
-          return <p className="text-[11px] text-slate-600">🤖 {agName || "Agente"}</p>;
+          return <p className="text-xs text-slate-600 flex items-center gap-1.5"><Bot className="h-3 w-3" />{agName || "Agente"}</p>;
         }
-        return <p className="text-[11px] text-slate-600">→ {node.data.target === "human" ? "Atendente" : node.data.target === "ai_agent" ? "Agente IA" : "Fila"}</p>;
+        return <p className="text-xs text-slate-600 flex items-center gap-1.5"><MoveRight className="h-3 w-3" />{node.data.target === "human" ? "Atendente" : node.data.target === "ai_agent" ? "Agente IA" : "Fila"}</p>;
       }
       case "set_variable": {
         const vars = (node.data.variables || []) as Array<{ source_label: string }>;
-        if (vars.length === 0) return <p className="text-[11px] text-slate-600">{node.data.variable || "var"} = {node.data.value || "..."}</p>;
+        if (vars.length === 0) return <p className="text-xs text-slate-600">{node.data.variable || "var"} = {node.data.value || "..."}</p>;
         const concat = vars.map(v => v.source_label || "?").join(" + ");
-        return <p className="text-[11px] text-slate-600 break-words"><span className="font-medium">{node.data.variable || "var"}</span> = {concat}</p>;
+        return <p className="text-xs text-slate-600 break-words"><span className="font-medium">{node.data.variable || "var"}</span> = {concat}</p>;
       }
-      case "start": return <p className="text-[11px] text-slate-500">Ponto de entrada</p>;
-      case "end": return <p className="text-[11px] text-slate-500">Encerra fluxo</p>;
+      case "start": return <p className="text-xs text-slate-500">Ponto de entrada</p>;
+      case "end": return <p className="text-xs text-slate-500">Encerra fluxo</p>;
       default: return null;
     }
   }
