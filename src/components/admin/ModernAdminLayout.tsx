@@ -479,6 +479,7 @@ export function ModernAdminLayout({ children }: { children: ReactNode }) {
           );
         })}
       </nav>
+      <TrialExpiredOverlay />
     </div>
   );
 }
