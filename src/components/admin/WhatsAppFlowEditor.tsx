@@ -1133,8 +1133,9 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                       </Select>
                     </div>
                     {n.data.link_url && (
-                      <div className="p-2 rounded border bg-slate-50 text-[10px] break-all text-blue-700">
-                        🔗 {n.data.link_url}
+                      <div className="p-2 rounded border bg-slate-50 text-xs break-all text-blue-700 flex items-start gap-1.5">
+                        <Link2 className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                        <span>{n.data.link_url}</span>
                       </div>
                     )}
                   </div>
