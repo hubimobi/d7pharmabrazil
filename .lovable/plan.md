@@ -1,71 +1,54 @@
 
 
-Fase 2 = #5 (isolamento de credenciais) + #6 (storage isolado) + #8 (branding dinâmico). Vou propor implementação fatiada começando pelo mais crítico: **#5**, porque é o único que causa **vazamento de dados entre lojas** (bug grave hoje).
+## Plano — Fase 2, Etapa #8: Branding Dinâmico por Tenant
 
-## Plano — Fase 2, Etapa 1: Isolamento de credenciais por tenant (#5)
-
-### Problema atual
-Tokens de Bling, TikTok Shop, Asaas, Evolution API, GHL e Cloudflare estão **globais** — toda loja compartilha as mesmas credenciais. Quando a Loja B conectar o Bling dela, vai sobrescrever o token da Loja A (`bling_tokens` não tem `tenant_id`).
+### Problema
+Hoje `index.html` tem `<title>`, favicon e OG image **estáticos do D7Pharma**. Toda loja nova aparece como "D7Pharma" no Google, WhatsApp share, Facebook e aba do navegador. Isso quebra a experiência multi-tenant.
 
 ### O que vou fazer
 
-**1. Nova tabela `tenant_integrations`** (substitui secrets globais)
-```text
-tenant_integrations
-├── id uuid pk
-├── tenant_id uuid (FK tenants, NOT NULL)
-├── provider text   ('bling' | 'tiktok_shop' | 'asaas' | 'evolution' | 'ghl' | 'cloudflare')
-├── credentials jsonb   (access_token, refresh_token, expires_at, api_key, etc.)
-├── active boolean
-├── last_used_at timestamptz
-├── UNIQUE(tenant_id, provider)
-```
-- RLS: admin do tenant lê/escreve só do próprio tenant; super_admin vê tudo.
-- Trigger `ensure_tenant_id` já existe → reutiliza.
+**1. `DynamicBranding.tsx` (novo componente client-side)**
+- Lê `useStoreSettings()` (já tem `store_name`, `favicon_url`, `logo_url`).
+- Atualiza dinamicamente:
+  - `document.title` base (substitui "D7 Pharma Brazil")
+  - `<link rel="icon">` para `favicon_url` do tenant
+  - `<meta name="theme-color">` com `design_bg_color`
+  - `<meta name="apple-mobile-web-app-title">` com `store_name`
+- Montado uma vez no `App.tsx` (singleton, igual `DesignTokenApplier`).
 
-**2. Migrar dados existentes** (sem perder integração atual)
-- Copia `bling_tokens` → `tenant_integrations(provider='bling', tenant_id=DEFAULT)`.
-- Copia `tiktok_tokens` → idem.
-- Copia campos relevantes de `store_settings` (Evolution, Cloudflare, Asaas) → idem por tenant.
-- Mantém tabelas antigas por enquanto (backward-compat); deprecar depois.
+**2. Refatorar `SEOHead.tsx`**
+- Hoje hardcoded: `${title} | D7 Pharma Brazil`.
+- Trocar por `${title} | ${storeName}` lendo de `useStoreSettings()`.
+- Default OG image: usa `logo_url` do tenant se `image` prop não passada.
+- Default `og:site_name` = `store_name`.
 
-**3. Helper compartilhado nas Edge Functions**
-Criar `supabase/functions/_shared/tenant-credentials.ts` com:
-- `resolveTenantId(req)` — extrai do JWT (`tenant_users`) ou body.
-- `getTenantCredentials(supabase, tenantId, provider)` — lê/refresca token.
-- `saveTenantCredentials(supabase, tenantId, provider, creds)`.
+**3. Adicionar campos SEO globais em `store_settings`** (migration)
+- `seo_default_title text` (ex: "Suplementos de Alta Performance")
+- `seo_default_description text`
+- `seo_default_og_image text`
+- `seo_keywords text`
+- Usados como fallback em todas as páginas sem SEO específico.
 
-**4. Atualizar Edge Functions críticas** para ler do tenant em vez de globais:
-- `bling-callback`, `bling-refresh-token`, `bling-list-products`, `bling-export-product`, `bling-sync-order`
-- `tiktok-shop-callback`, `tiktok-shop-sync-products`, `tiktok-shop-sync-orders`
-- `asaas-webhook` e `create-payment` → ler `ASAAS_API_KEY` do tenant
-- `whatsapp-instance`, `whatsapp-send`, `whatsapp-process-queue` → Evolution por tenant
-- `ghl-sync` → API key + location por tenant
-- `cloudflare-purge` → token+zone por tenant
+**4. UI em `StoreSettingsPage.tsx`** — nova aba "SEO & Branding"
+- Inputs para os 4 campos acima + preview de como aparece no Google/WhatsApp.
+- Upload de OG image (usa `tenantPath` já criado em #6).
 
-**5. Frontend: UI de gerenciamento**
-- Atualizar `IntegrationsPage.tsx` para CRUD em `tenant_integrations` em vez de mostrar secrets globais.
-- Bling: botão "Conectar" gera state com tenant_id → callback grava no tenant.
-- TikTok: idem.
-- Asaas/Evolution/GHL/Cloudflare: campos de input por tenant (substituir uso de `store_settings`).
+**5. Edge Function `seo-meta` (opcional, não nesta etapa)**
+- Pre-render de `<meta>` por hostname para crawlers que não executam JS (Facebook, WhatsApp).
+- Fica para etapa #8b se você quiser depois — bots modernos do Google/WhatsApp já executam JS suficiente pro client-side funcionar em 90% dos casos.
 
-**6. Fallback seguro**
-Se um tenant não tiver credencial própria, **NÃO** cair para a global (evita vazamento). Mostrar "Integração não configurada" e bloquear ação.
+**6. Atualizar `index.html`**
+- Trocar título estático por placeholder neutro ("Carregando…") — JS substitui em <500ms.
+- Remover OG image hardcoded do D7Pharma (vira fallback genérico).
+- Manter favicon `.ico` default só como fallback antes do JS rodar.
 
 ### Arquivos
-- **Migration nova**: tabela `tenant_integrations` + RLS + seed da migração de dados.
-- **Novo**: `supabase/functions/_shared/tenant-credentials.ts`
-- **Editar**: ~14 Edge Functions listadas acima
-- **Editar**: `src/pages/admin/IntegrationsPage.tsx` (refatorar cards de Bling/TikTok/Asaas/Evolution/GHL/Cloudflare)
+- **Novo**: `src/components/DynamicBranding.tsx`
+- **Editar**: `src/App.tsx` (montar `DynamicBranding`), `src/components/SEOHead.tsx`, `src/pages/admin/StoreSettingsPage.tsx`, `src/hooks/useStoreSettings.tsx` (tipos novos), `index.html`
+- **Migration**: adicionar 4 colunas SEO em `store_settings`
 
-### Escopo desta etapa
-**Apenas #5.** Storage (#6) e branding (#8) ficam pra etapas seguintes — cada uma é grande e independente. Faz sentido shipar #5 sozinho, validar, depois seguir.
+### Escopo
+**Apenas client-side branding (#8a).** Pre-render server-side (#8b via edge function) fica pra depois — só precisa se você notar problemas reais de share em WhatsApp/FB com lojas novas.
 
-### Tamanho
-Etapa grande (~14 funções + migration + UI). Posso fatiar ainda mais se preferir:
-- **5a**: tabela + helper + Bling+TikTok (os mais críticos, hoje quebrados)
-- **5b**: Asaas + Evolution + GHL + Cloudflare
-- **5c**: UI completa em `IntegrationsPage`
-
-Recomendo começar por **5a** (resolve o bug mais grave: ERPs cross-tenant). Confirma se quer 5a só ou Fase 5 completa de uma vez.
+Confirma?
 
