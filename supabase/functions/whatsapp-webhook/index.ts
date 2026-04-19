@@ -74,6 +74,52 @@ Deno.serve(async (req) => {
     const { evento, nome, telefone: rawTelefone, produto, link, cidade, extra, funnel_id, force, instance_id: overrideInstanceId } = parsed.data;
     const telefone = ensureBrazilCountryCode(rawTelefone);
 
+    const baseVariables: Record<string, string> = {
+      Nome: nome || "", Produto: produto || "", Link: link || "", Cidade: cidade || "", ...extra,
+    };
+
+    // ── 1) Tenta disparar Flows novos (state machine) ──
+    let flowsTriggered = 0;
+    try {
+      let flowQuery = supabase
+        .from("whatsapp_flows")
+        .select("id, nodes, tenant_id")
+        .eq("trigger_event", evento);
+      if (force && funnel_id) flowQuery = flowQuery.eq("id", funnel_id);
+      else flowQuery = flowQuery.eq("active", true);
+
+      const { data: flows } = await flowQuery;
+      for (const flow of flows ?? []) {
+        const firstNodeId = (flow.nodes as any[])?.[0]?.id;
+        if (!firstNodeId) continue;
+
+        // evita duplicar sessão ativa para o mesmo contato no mesmo flow
+        const { data: existing } = await supabase
+          .from("whatsapp_flow_sessions")
+          .select("id")
+          .eq("contact_phone", telefone)
+          .eq("flow_id", flow.id)
+          .in("status", ["active", "waiting_input"])
+          .maybeSingle();
+        if (existing) continue;
+
+        await supabase.from("whatsapp_flow_sessions").insert({
+          tenant_id: flow.tenant_id,
+          instance_id: overrideInstanceId || null,
+          contact_phone: telefone,
+          contact_name: nome || "",
+          flow_id: flow.id,
+          current_node_id: firstNodeId,
+          variables: baseVariables,
+          status: "active",
+        });
+        flowsTriggered++;
+      }
+    } catch (e) {
+      console.error("flow trigger error:", e);
+    }
+
+    // ── 2) Funis antigos (compatibilidade) ──
     let query = supabase
       .from("whatsapp_funnels")
       .select("*, whatsapp_funnel_steps(*, whatsapp_templates(*))")
@@ -88,15 +134,13 @@ Deno.serve(async (req) => {
 
     const { data: funnels } = await query;
 
-    if (!funnels || funnels.length === 0) {
-      return new Response(JSON.stringify({ message: "No active funnel for event", evento }), {
+    if ((!funnels || funnels.length === 0) && flowsTriggered === 0) {
+      return new Response(JSON.stringify({ message: "No active funnel/flow for event", evento }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const variables: Record<string, string> = {
-      Nome: nome || "", Produto: produto || "", Link: link || "", Cidade: cidade || "", ...extra,
-    };
+    const variables: Record<string, string> = baseVariables;
 
     let queued = 0;
 
@@ -205,7 +249,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ success: true, queued, evento }), {
+    return new Response(JSON.stringify({ success: true, queued, flowsTriggered, evento }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
