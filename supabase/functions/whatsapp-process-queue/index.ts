@@ -197,17 +197,24 @@ Deno.serve(async (req) => {
     }
 
     const remainingCapacity = effectiveDailyLimit - totalSentToday;
-    const batchLimit = Math.min(config.messages_per_batch, remainingCapacity);
+    // Lote pequeno por execução. O cron deve rodar em intervalos curtos.
+    // Em vez de setTimeout dentro da função, usamos reschedule persistente.
+    const batchLimit = Math.min(config.messages_per_batch, remainingCapacity, 10);
 
-    // Fetch pending messages
-    const { data: messages } = await supabase
-      .from("whatsapp_message_queue")
-      .select("*")
-      .eq("status", "pending")
-      .lte("scheduled_at", new Date().toISOString())
-      .order("priority", { ascending: true })
-      .order("scheduled_at", { ascending: true })
-      .limit(batchLimit);
+    // Claim atômico via RPC (FOR UPDATE SKIP LOCKED) — evita duas execuções
+    // pegarem as mesmas linhas e enviarem duplicado.
+    const workerId = crypto.randomUUID();
+    const { data: messages, error: claimErr } = await supabase.rpc("claim_whatsapp_messages", {
+      _worker_id: workerId,
+      _batch_size: batchLimit,
+      _tenant_id: null,
+    });
+    if (claimErr) {
+      console.error("claim_whatsapp_messages error:", claimErr);
+      return new Response(JSON.stringify({ error: "claim failed", details: claimErr.message }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!messages || messages.length === 0) {
       return new Response(JSON.stringify({
@@ -226,7 +233,11 @@ Deno.serve(async (req) => {
     if (connectedInstances.length === 0) {
       const postponedAt = new Date(Date.now() + 600000).toISOString();
       for (const msg of messages) {
+        // Devolve o claim: volta a 'pending' e adia 10 min
         await supabase.from("whatsapp_message_queue").update({
+          status: "pending",
+          claimed_by: null,
+          claimed_at: null,
           scheduled_at: postponedAt,
           error_message: "Aguardando instância conectada",
         }).eq("id", msg.id);
@@ -495,9 +506,11 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Smart delay based on config
-      const delay = computeDelay(config);
-      await new Promise(r => setTimeout(r, delay));
+      // ⚠️ Anti-ban persistente: NÃO usamos setTimeout dentro da edge function
+      // (Edge Function tem timeout ~150s; setTimeout consome CPU e morre no meio).
+      // Em vez disso, ao final desta iteração re-agendamos as próximas mensagens
+      // pendentes do mesmo telefone com delay calculado.
+      const interMessageDelay = computeDelay(config);
 
       // Pick instance
       let instance;
@@ -685,7 +698,11 @@ async function handleSendError(supabase: any, msg: any, errorData: any) {
   const retryCount = (msg.retry_count || 0) + 1;
   if (retryCount >= msg.max_retries) {
     await supabase.from("whatsapp_message_queue").update({
-      status: "failed", error_message: JSON.stringify(errorData), retry_count: retryCount,
+      status: "failed",
+      error_message: JSON.stringify(errorData),
+      retry_count: retryCount,
+      claimed_by: null,
+      claimed_at: null,
     }).eq("id", msg.id);
     await supabase.from("whatsapp_message_log").insert({
       contact_phone: msg.contact_phone, contact_name: msg.contact_name, instance_id: null, instance_name: null,
@@ -694,17 +711,27 @@ async function handleSendError(supabase: any, msg: any, errorData: any) {
       tenant_id: msg.tenant_id || null,
     });
   } else {
+    // Devolve para 'pending' com backoff exponencial e libera o claim
     await supabase.from("whatsapp_message_queue").update({
-      retry_count: retryCount, scheduled_at: new Date(Date.now() + 300000 * retryCount).toISOString(), error_message: JSON.stringify(errorData),
+      status: "pending",
+      claimed_by: null,
+      claimed_at: null,
+      retry_count: retryCount,
+      scheduled_at: new Date(Date.now() + 300000 * retryCount).toISOString(),
+      error_message: JSON.stringify(errorData),
     }).eq("id", msg.id);
   }
 }
 
 async function handleRetry(supabase: any, msg: any, errorMessage: string) {
   const retryCount = (msg.retry_count || 0) + 1;
+  const isFinal = retryCount >= msg.max_retries;
   await supabase.from("whatsapp_message_queue").update({
-    retry_count: retryCount, error_message: errorMessage,
-    status: retryCount >= msg.max_retries ? "failed" : "pending",
+    retry_count: retryCount,
+    error_message: errorMessage,
+    status: isFinal ? "failed" : "pending",
+    claimed_by: null,
+    claimed_at: null,
     scheduled_at: new Date(Date.now() + 300000 * retryCount).toISOString(),
   }).eq("id", msg.id);
 }
