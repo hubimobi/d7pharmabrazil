@@ -391,11 +391,15 @@ function InstancesTab() {
     const map: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       connected: { label: "Conectado", variant: "default" },
       disconnected: { label: "Desconectado", variant: "destructive" },
+      connecting: { label: "Conectando…", variant: "secondary" },
       qr_ready: { label: "Aguardando QR", variant: "secondary" },
     };
     const info = map[s] || { label: s, variant: "outline" as const };
     return <Badge variant={info.variant}>{info.label}</Badge>;
   };
+
+  // Detect instances stuck in "connecting" or "qr_ready" — webhook diagnoses pareamento incompleto
+  const stuckInstances = instances.filter(i => i.active && (i.status === "connecting" || i.status === "qr_ready"));
 
   return (
     <div className="space-y-4">
