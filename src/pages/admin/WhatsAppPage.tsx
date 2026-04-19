@@ -358,18 +358,22 @@ function InstancesTab() {
       if (res.error || res.data?.error) {
         const msg = res.data?.error || "Erro ao verificar status";
         if (res.data?.retryable) {
-          // Evolution API unreachable — show DB-stored status instead of failing
-          toast.warning(`${msg}. Exibindo status salvo: ${inst.status}`);
+          toast.warning(`${msg}. Status salvo: ${inst.status}`);
         } else {
           toast.error(msg);
         }
         return;
       }
       const status = res.data?.status || "desconhecido";
+      const rawState = res.data?.raw_state;
       if (status === "unknown") {
         toast.warning(`Evolution API indisponível. Status salvo: ${inst.status}`);
+      } else if (rawState === "connecting") {
+        toast.warning(`Estado real Evolution: connecting (aguardando QR/pareamento). Escaneie o QR Code agora.`);
+      } else if (rawState === "open") {
+        toast.success(`✅ Conectada (state=open) — pronta para receber mensagens`);
       } else {
-        toast.success(`Status: ${status}`);
+        toast.info(`Status: ${status} (raw=${rawState || "?"})`);
       }
       loadInstances();
     } catch (e: any) { toast.error(e.message); }
