@@ -81,23 +81,39 @@ Deno.serve(async (req) => {
     // ── CONNECTION_UPDATE ──
     if (event === "connection.update") {
       const state = payload.data?.state || payload.state || "";
-      
-      // Only act on definitive states: "open" or "close"
-      // Ignore "connecting" and other intermediate states to prevent downgrading "connected" instances
+
+      // Map Evolution states to our status values:
+      //   open       → connected   (pareado e online)
+      //   connecting → connecting  (aguardando QR / pareamento — NÃO marcamos disconnected)
+      //   close      → disconnected
+      // Sempre gravamos `last_state_at` para detectar instâncias travadas.
       let mappedStatus: string | null = null;
-      if (state === "open") {
-        mappedStatus = "connected";
-      } else if (state === "close") {
-        mappedStatus = "disconnected";
-      }
+      if (state === "open") mappedStatus = "connected";
+      else if (state === "close") mappedStatus = "disconnected";
+      else if (state === "connecting") mappedStatus = "connecting";
 
       console.log(`[webhook] connection.update state="${state}" → "${mappedStatus ?? 'IGNORED'}" instanceId=${instanceId}`);
 
       if (mappedStatus && instanceRecord) {
-        await supabase
+        // Não rebaixar uma instância já `connected` para `connecting`
+        // (Evolution às vezes manda `connecting` mesmo após pareada quando reconecta socket)
+        const { data: current } = await supabase
           .from("whatsapp_instances")
-          .update({ status: mappedStatus })
-          .eq("id", instanceRecord.id);
+          .select("status")
+          .eq("id", instanceRecord.id)
+          .maybeSingle();
+
+        const shouldUpdate =
+          mappedStatus === "connected" ||
+          mappedStatus === "disconnected" ||
+          (mappedStatus === "connecting" && current?.status !== "connected");
+
+        if (shouldUpdate) {
+          await supabase
+            .from("whatsapp_instances")
+            .update({ status: mappedStatus })
+            .eq("id", instanceRecord.id);
+        }
       }
 
       return new Response(JSON.stringify({ ok: true, status: mappedStatus ?? "ignored", state }), {

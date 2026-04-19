@@ -175,13 +175,18 @@ export default function ConversationsTab() {
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_conversations" }, () => loadConversations())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_message_log" }, (payload) => {
         const newMsg = payload.new as any;
-        if (selected && newMsg.contact_phone === selected.contact_phone) {
+        if (
+          selected &&
+          newMsg.contact_phone === selected.contact_phone &&
+          // Só anexa se for da mesma instância da conversa (evita misturar canais)
+          (!selected.instance_id || !newMsg.instance_id || newMsg.instance_id === selected.instance_id)
+        ) {
           setMessages(prev => [...prev, newMsg as Message]);
         }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [selected?.contact_phone]);
+  }, [selected?.contact_phone, selected?.instance_id]);
 
   async function loadInstances() {
     const { data } = await supabase.from("whatsapp_instances").select("id, name, status").eq("active", true).order("name");
@@ -199,10 +204,14 @@ export default function ConversationsTab() {
   }
 
   async function loadMessages(conv: Conversation) {
-    const { data } = await supabase
+    let q = supabase
       .from("whatsapp_message_log").select("*")
       .eq("contact_phone", conv.contact_phone)
       .order("created_at", { ascending: true }).limit(500);
+    // Filtra por instance_id quando a conversa está vinculada a uma instância,
+    // para evitar misturar histórico de outros canais com o mesmo telefone.
+    if (conv.instance_id) q = q.eq("instance_id", conv.instance_id);
+    const { data } = await q;
     setMessages((data || []) as unknown as Message[]);
     if (conv.unread_count > 0) {
       await supabase.from("whatsapp_conversations").update({ unread_count: 0 } as any).eq("id", conv.id);

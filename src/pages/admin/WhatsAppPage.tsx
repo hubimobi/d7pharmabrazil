@@ -358,18 +358,22 @@ function InstancesTab() {
       if (res.error || res.data?.error) {
         const msg = res.data?.error || "Erro ao verificar status";
         if (res.data?.retryable) {
-          // Evolution API unreachable — show DB-stored status instead of failing
-          toast.warning(`${msg}. Exibindo status salvo: ${inst.status}`);
+          toast.warning(`${msg}. Status salvo: ${inst.status}`);
         } else {
           toast.error(msg);
         }
         return;
       }
       const status = res.data?.status || "desconhecido";
+      const rawState = res.data?.raw_state;
       if (status === "unknown") {
         toast.warning(`Evolution API indisponível. Status salvo: ${inst.status}`);
+      } else if (rawState === "connecting") {
+        toast.warning(`Estado real Evolution: connecting (aguardando QR/pareamento). Escaneie o QR Code agora.`);
+      } else if (rawState === "open") {
+        toast.success(`✅ Conectada (state=open) — pronta para receber mensagens`);
       } else {
-        toast.success(`Status: ${status}`);
+        toast.info(`Status: ${status} (raw=${rawState || "?"})`);
       }
       loadInstances();
     } catch (e: any) { toast.error(e.message); }
@@ -391,11 +395,15 @@ function InstancesTab() {
     const map: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       connected: { label: "Conectado", variant: "default" },
       disconnected: { label: "Desconectado", variant: "destructive" },
+      connecting: { label: "Conectando…", variant: "secondary" },
       qr_ready: { label: "Aguardando QR", variant: "secondary" },
     };
     const info = map[s] || { label: s, variant: "outline" as const };
     return <Badge variant={info.variant}>{info.label}</Badge>;
   };
+
+  // Detect instances stuck in "connecting" or "qr_ready" — webhook diagnoses pareamento incompleto
+  const stuckInstances = instances.filter(i => i.active && (i.status === "connecting" || i.status === "qr_ready"));
 
   return (
     <div className="space-y-4">
@@ -403,6 +411,23 @@ function InstancesTab() {
         <h3 className="text-lg font-semibold">WhatsApps Conectados</h3>
         <Button onClick={() => setShowAdd(true)} size="sm"><Plus className="h-4 w-4 mr-1" /> Nova Instância</Button>
       </div>
+
+      {stuckInstances.length > 0 && (
+        <Card className="border-amber-500/40 bg-amber-50 dark:bg-amber-950/20">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 text-sm">
+              <p className="font-semibold text-amber-900 dark:text-amber-200">
+                {stuckInstances.length === 1 ? "1 instância" : `${stuckInstances.length} instâncias`} aguardando pareamento
+              </p>
+              <p className="text-amber-800 dark:text-amber-300 text-xs mt-1">
+                {stuckInstances.map(i => i.name).join(", ")} — não terminou o pareamento via QR Code.
+                Sem isso, a Evolution API não envia eventos de mensagens e nenhuma conversa entra. Clique em <strong>QR Code</strong> e escaneie em até 60 segundos com o WhatsApp do celular (Aparelhos conectados → Conectar aparelho).
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {instances.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">

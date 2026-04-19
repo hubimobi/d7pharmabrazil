@@ -194,22 +194,19 @@ Deno.serve(async (req) => {
       });
       const evo = await safeJson(evoRes);
       if (!evo.ok) {
-        // If infra error, mark instance as potentially disconnected but don't block UI
         if (evo.isInfraError) {
-          return new Response(JSON.stringify({ status: "unknown", error: "Evolution API temporariamente indisponível", retryable: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          return new Response(JSON.stringify({ status: "unknown", raw_state: null, error: "Evolution API temporariamente indisponível", retryable: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
         return new Response(JSON.stringify({ error: "Evolution API indisponível", details: evo.data }), { status: 502, headers: corsHeaders });
       }
 
-      const state = evo.data?.state || evo.data?.instance?.state || "unknown";
-      
-      // Only update DB for definitive states — ignore "connecting" and other intermediate states
+      // Evolution real states: open | connecting | close
+      const rawState = evo.data?.state || evo.data?.instance?.state || "unknown";
+
       let mappedStatus: string | null = null;
-      if (state === "open") {
-        mappedStatus = "connected";
-      } else if (state === "close") {
-        mappedStatus = "disconnected";
-      }
+      if (rawState === "open") mappedStatus = "connected";
+      else if (rawState === "close") mappedStatus = "disconnected";
+      else if (rawState === "connecting") mappedStatus = "connecting";
 
       if (mappedStatus) {
         await supabase.from("whatsapp_instances").update({ status: mappedStatus }).eq("id", instance_id);
@@ -221,7 +218,7 @@ Deno.serve(async (req) => {
       }
 
       const finalStatus = mappedStatus || inst.status || "unknown";
-      return new Response(JSON.stringify({ status: finalStatus, raw: evo.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ status: finalStatus, raw_state: rawState, raw: evo.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ── DISCONNECT ──
