@@ -408,6 +408,23 @@ function InstancesTab() {
         <Button onClick={() => setShowAdd(true)} size="sm"><Plus className="h-4 w-4 mr-1" /> Nova Instância</Button>
       </div>
 
+      {stuckInstances.length > 0 && (
+        <Card className="border-amber-500/40 bg-amber-50 dark:bg-amber-950/20">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 text-sm">
+              <p className="font-semibold text-amber-900 dark:text-amber-200">
+                {stuckInstances.length === 1 ? "1 instância" : `${stuckInstances.length} instâncias`} aguardando pareamento
+              </p>
+              <p className="text-amber-800 dark:text-amber-300 text-xs mt-1">
+                {stuckInstances.map(i => i.name).join(", ")} — não terminou o pareamento via QR Code.
+                Sem isso, a Evolution API não envia eventos de mensagens e nenhuma conversa entra. Clique em <strong>QR Code</strong> e escaneie em até 60 segundos com o WhatsApp do celular (Aparelhos conectados → Conectar aparelho).
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {instances.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
           <Smartphone className="h-12 w-12 mx-auto mb-3 opacity-40" />
