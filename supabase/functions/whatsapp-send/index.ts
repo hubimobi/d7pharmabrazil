@@ -233,7 +233,21 @@ Deno.serve(async (req) => {
       }).eq("id", instance.id);
     }
 
-    return new Response(JSON.stringify({ success, instance_used: instance.name, evo_response: evo.data }), {
+    // Build clearer error message for failures
+    let errorDetail: string | null = null;
+    if (!success) {
+      const evoMsg = evo.data?.message || evo.data?.error || evo.data?.response?.message;
+      errorDetail = typeof evoMsg === "string" ? evoMsg : JSON.stringify(evo.data).substring(0, 500);
+    }
+
+    return new Response(JSON.stringify({
+      success,
+      instance_used: instance.name,
+      instance_id: instance.id,
+      evo_status: evo.status,
+      error: success ? undefined : `Evolution API erro ${evo.status}: ${errorDetail}`,
+      evo_response: evo.data,
+    }), {
       status: success ? 200 : 502,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
