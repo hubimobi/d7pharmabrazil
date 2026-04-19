@@ -197,17 +197,24 @@ Deno.serve(async (req) => {
     }
 
     const remainingCapacity = effectiveDailyLimit - totalSentToday;
-    const batchLimit = Math.min(config.messages_per_batch, remainingCapacity);
+    // Lote pequeno por execução. O cron deve rodar em intervalos curtos.
+    // Em vez de setTimeout dentro da função, usamos reschedule persistente.
+    const batchLimit = Math.min(config.messages_per_batch, remainingCapacity, 10);
 
-    // Fetch pending messages
-    const { data: messages } = await supabase
-      .from("whatsapp_message_queue")
-      .select("*")
-      .eq("status", "pending")
-      .lte("scheduled_at", new Date().toISOString())
-      .order("priority", { ascending: true })
-      .order("scheduled_at", { ascending: true })
-      .limit(batchLimit);
+    // Claim atômico via RPC (FOR UPDATE SKIP LOCKED) — evita duas execuções
+    // pegarem as mesmas linhas e enviarem duplicado.
+    const workerId = crypto.randomUUID();
+    const { data: messages, error: claimErr } = await supabase.rpc("claim_whatsapp_messages", {
+      _worker_id: workerId,
+      _batch_size: batchLimit,
+      _tenant_id: null,
+    });
+    if (claimErr) {
+      console.error("claim_whatsapp_messages error:", claimErr);
+      return new Response(JSON.stringify({ error: "claim failed", details: claimErr.message }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!messages || messages.length === 0) {
       return new Response(JSON.stringify({
