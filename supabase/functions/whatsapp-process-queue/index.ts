@@ -506,9 +506,11 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Smart delay based on config
-      const delay = computeDelay(config);
-      await new Promise(r => setTimeout(r, delay));
+      // ⚠️ Anti-ban persistente: NÃO usamos setTimeout dentro da edge function
+      // (Edge Function tem timeout ~150s; setTimeout consome CPU e morre no meio).
+      // Em vez disso, ao final desta iteração re-agendamos as próximas mensagens
+      // pendentes do mesmo telefone com delay calculado.
+      const interMessageDelay = computeDelay(config);
 
       // Pick instance
       let instance;
