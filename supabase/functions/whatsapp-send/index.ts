@@ -95,7 +95,16 @@ Deno.serve(async (req) => {
       if (tpl) finalMessage = tpl.content;
     }
 
-    const { data: storeSettings } = await supabase.from("store_settings").select("display_name, attendant_name, store_name").limit(1).single();
+    // Resolve tenant FIRST so we can scope all queries
+    const { data: tenantRow } = await supabase.from("tenant_users").select("tenant_id, role").eq("user_id", user.id).limit(1).maybeSingle();
+    const callerTenantId = tenantRow?.tenant_id || null;
+    const isSuperAdmin = tenantRow?.role === "super_admin";
+
+    // Store settings scoped by tenant (fallback to first row if not multi-tenant yet)
+    let storeQuery = supabase.from("store_settings").select("display_name, attendant_name, store_name");
+    if (callerTenantId) storeQuery = storeQuery.eq("tenant_id", callerTenantId);
+    const { data: storeSettings } = await storeQuery.limit(1).maybeSingle();
+
     const mergedVars = {
       ...variables,
       Nome_da_Empresa: storeSettings?.display_name || storeSettings?.store_name || "",
@@ -109,25 +118,25 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "No message content" }), { status: 400, headers: corsHeaders });
     }
 
-    // Pick instance
+    // Pick instance — scoped to caller's tenant (super_admin can use any)
     let instance: any = null;
     if (instance_id) {
-      const { data } = await supabase.from("whatsapp_instances").select("*").eq("id", instance_id).eq("active", true).single();
+      let q = supabase.from("whatsapp_instances").select("*").eq("id", instance_id).eq("active", true);
+      if (!isSuperAdmin && callerTenantId) q = q.eq("tenant_id", callerTenantId);
+      const { data } = await q.maybeSingle();
       instance = data;
     } else {
-      const { data: instances } = await supabase
+      let q = supabase
         .from("whatsapp_instances")
         .select("*")
         .eq("active", true)
-        .eq("status", "connected")
+        .eq("status", "connected");
+      if (!isSuperAdmin && callerTenantId) q = q.eq("tenant_id", callerTenantId);
+      const { data: instances } = await q
         .order("messages_sent_today", { ascending: true })
         .limit(1);
       instance = instances?.[0];
     }
-
-    // Resolve tenant
-    const { data: tenantRow } = await supabase.from("tenant_users").select("tenant_id").eq("user_id", user.id).limit(1).maybeSingle();
-    const callerTenantId = tenantRow?.tenant_id || null;
 
     if (!instance) {
       await supabase.from("whatsapp_message_queue").insert({
@@ -136,28 +145,29 @@ Deno.serve(async (req) => {
         variables, status: "pending", scheduled_at: new Date().toISOString(),
         tenant_id: callerTenantId,
       });
-      return new Response(JSON.stringify({ queued: true, reason: "No active instance" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ queued: true, reason: "Nenhuma instância WhatsApp conectada para este tenant. A mensagem foi enfileirada e será enviada assim que houver uma instância online." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Check daily limit
     if (instance.messages_sent_today >= instance.daily_limit) {
-      const { data: altInstances } = await supabase
+      let altQ = supabase
         .from("whatsapp_instances").select("*")
         .eq("active", true).eq("status", "connected")
         .neq("id", instance.id)
-        .lt("messages_sent_today", instance.daily_limit)
-        .order("messages_sent_today", { ascending: true }).limit(1);
-      
+        .lt("messages_sent_today", instance.daily_limit);
+      if (!isSuperAdmin && callerTenantId) altQ = altQ.eq("tenant_id", callerTenantId);
+      const { data: altInstances } = await altQ.order("messages_sent_today", { ascending: true }).limit(1);
+
       if (altInstances?.[0]) {
         instance = altInstances[0];
       } else {
-      await supabase.from("whatsapp_message_queue").insert({
+        await supabase.from("whatsapp_message_queue").insert({
           contact_phone: phone, contact_name: contact_name || "",
           message_content: finalMessage, template_id, funnel_id, step_id, instance_id: instance.id,
           variables, status: "pending", scheduled_at: new Date(Date.now() + 3600000).toISOString(),
           tenant_id: callerTenantId,
         });
-        return new Response(JSON.stringify({ queued: true, reason: "Daily limit reached" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ queued: true, reason: "Limite diário atingido em todas as instâncias do tenant." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
 
