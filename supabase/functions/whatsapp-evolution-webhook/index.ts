@@ -226,6 +226,23 @@ Deno.serve(async (req) => {
           tenant_id: tenantId,
         });
 
+        // Avança Flow Session se houver uma esperando input deste contato
+        if (direction === "inbound" && instanceId && phone) {
+          try {
+            const userText = typeof content === "string" ? content : "";
+            const { data: sessionId } = await supabase.rpc("advance_flow_session_with_input", {
+              _instance_id: instanceId,
+              _contact_phone: phone,
+              _user_input: userText,
+            });
+            if (sessionId) {
+              console.log(`[webhook] flow session ${sessionId} reactivated by inbound input`);
+            }
+          } catch (e) {
+            console.error("[webhook] advance_flow_session_with_input error:", e);
+          }
+        }
+
         processed++;
       }
 
