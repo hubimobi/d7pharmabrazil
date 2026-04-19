@@ -3180,6 +3180,92 @@ export type Database = {
           },
         ]
       }
+      whatsapp_flow_sessions: {
+        Row: {
+          contact_name: string | null
+          contact_phone: string
+          created_at: string
+          current_node_id: string | null
+          expires_at: string | null
+          flow_id: string | null
+          funnel_id: string | null
+          id: string
+          instance_id: string | null
+          last_event_at: string
+          last_user_input: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          variables: Json
+          waiting_for: string | null
+        }
+        Insert: {
+          contact_name?: string | null
+          contact_phone: string
+          created_at?: string
+          current_node_id?: string | null
+          expires_at?: string | null
+          flow_id?: string | null
+          funnel_id?: string | null
+          id?: string
+          instance_id?: string | null
+          last_event_at?: string
+          last_user_input?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          variables?: Json
+          waiting_for?: string | null
+        }
+        Update: {
+          contact_name?: string | null
+          contact_phone?: string
+          created_at?: string
+          current_node_id?: string | null
+          expires_at?: string | null
+          flow_id?: string | null
+          funnel_id?: string | null
+          id?: string
+          instance_id?: string | null
+          last_event_at?: string
+          last_user_input?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          variables?: Json
+          waiting_for?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_flow_sessions_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_flow_sessions_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_flow_sessions_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_flow_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_flow_split_state: {
         Row: {
           flow_id: string
@@ -4977,6 +5063,41 @@ export type Database = {
       }
     }
     Functions: {
+      advance_flow_session_with_input: {
+        Args: {
+          _contact_phone: string
+          _instance_id: string
+          _user_input: string
+        }
+        Returns: string
+      }
+      claim_flow_sessions: {
+        Args: { _batch_size?: number; _worker_id: string }
+        Returns: {
+          contact_name: string | null
+          contact_phone: string
+          created_at: string
+          current_node_id: string | null
+          expires_at: string | null
+          flow_id: string | null
+          funnel_id: string | null
+          id: string
+          instance_id: string | null
+          last_event_at: string
+          last_user_input: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          variables: Json
+          waiting_for: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "whatsapp_flow_sessions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       claim_whatsapp_messages: {
         Args: { _batch_size?: number; _tenant_id?: string; _worker_id: string }
         Returns: {
@@ -5013,6 +5134,7 @@ export type Database = {
         }
       }
       current_tenant_id: { Args: never; Returns: string }
+      expire_flow_sessions: { Args: never; Returns: number }
       get_active_representatives_public: {
         Args: never
         Returns: {
