@@ -233,7 +233,11 @@ Deno.serve(async (req) => {
     if (connectedInstances.length === 0) {
       const postponedAt = new Date(Date.now() + 600000).toISOString();
       for (const msg of messages) {
+        // Devolve o claim: volta a 'pending' e adia 10 min
         await supabase.from("whatsapp_message_queue").update({
+          status: "pending",
+          claimed_by: null,
+          claimed_at: null,
           scheduled_at: postponedAt,
           error_message: "Aguardando instância conectada",
         }).eq("id", msg.id);
