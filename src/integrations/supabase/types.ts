@@ -3576,6 +3576,8 @@ export type Database = {
         Row: {
           broadcast_id: string | null
           broadcast_name: string | null
+          claimed_at: string | null
+          claimed_by: string | null
           contact_name: string
           contact_phone: string
           created_at: string
@@ -3583,6 +3585,7 @@ export type Database = {
           flow_id: string | null
           funnel_id: string | null
           id: string
+          idempotency_key: string | null
           instance_id: string | null
           max_retries: number
           message_content: string
@@ -3599,6 +3602,8 @@ export type Database = {
         Insert: {
           broadcast_id?: string | null
           broadcast_name?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
           contact_name?: string
           contact_phone: string
           created_at?: string
@@ -3606,6 +3611,7 @@ export type Database = {
           flow_id?: string | null
           funnel_id?: string | null
           id?: string
+          idempotency_key?: string | null
           instance_id?: string | null
           max_retries?: number
           message_content?: string
@@ -3622,6 +3628,8 @@ export type Database = {
         Update: {
           broadcast_id?: string | null
           broadcast_name?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
           contact_name?: string
           contact_phone?: string
           created_at?: string
@@ -3629,6 +3637,7 @@ export type Database = {
           flow_id?: string | null
           funnel_id?: string | null
           id?: string
+          idempotency_key?: string | null
           instance_id?: string | null
           max_retries?: number
           message_content?: string
@@ -4968,6 +4977,41 @@ export type Database = {
       }
     }
     Functions: {
+      claim_whatsapp_messages: {
+        Args: { _batch_size?: number; _tenant_id?: string; _worker_id: string }
+        Returns: {
+          broadcast_id: string | null
+          broadcast_name: string | null
+          claimed_at: string | null
+          claimed_by: string | null
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          error_message: string | null
+          flow_id: string | null
+          funnel_id: string | null
+          id: string
+          idempotency_key: string | null
+          instance_id: string | null
+          max_retries: number
+          message_content: string
+          priority: number
+          retry_count: number
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          step_id: string | null
+          template_id: string | null
+          tenant_id: string | null
+          variables: Json
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "whatsapp_message_queue"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       current_tenant_id: { Args: never; Returns: string }
       get_active_representatives_public: {
         Args: never
@@ -5003,6 +5047,10 @@ export type Database = {
       is_super_admin: { Args: { uid?: string }; Returns: boolean }
       is_tenant_staff: { Args: { _tenant_id: string }; Returns: boolean }
       is_valid_active_tenant: { Args: { _tenant_id: string }; Returns: boolean }
+      rescue_stuck_whatsapp_messages: {
+        Args: { _stuck_minutes?: number }
+        Returns: number
+      }
       user_belongs_to_tenant: { Args: { tid: string }; Returns: boolean }
     }
     Enums: {
