@@ -1,92 +1,118 @@
 
 
-O usuário fez uma análise técnica precisa do sistema atual e quer evoluir para uma arquitetura tipo ManyChat. Vou validar as 3 falhas apontadas lendo o código real e propor um plano de refatoração.
+Vou implementar as **Fases 3 e 4** do plano aprovado: State Machine de fluxos + modularização dos steps.
 
-## Análise das falhas apontadas
+## Fase 3 — State Machine (`whatsapp_flow_sessions`)
 
-**1. Race condition na fila** — Vou confirmar lendo `whatsapp-process-queue/index.ts`. Pelo summary, o select pega `pending` e depois faz update — sem `FOR UPDATE SKIP LOCKED` nem claim atômico. Se o cron disparar 2x em paralelo (acontece quando uma execução demora mais que o intervalo), os dois workers pegam as mesmas linhas e enviam duplicado.
-
-**2. setTimeout em Edge Function** — Edge Functions Supabase têm timeout (~150s wall clock e CPU limits agressivos). Usar `setTimeout` para espaçar envios trava CPU e desperdiça quota. Pior: se o batch tem 100 mensagens com delay de 5s entre cada = 500s, morre no meio.
-
-**3. Monolítica** — `whatsapp-process-queue` mistura: validação de número, limites diários, escolha de instância, envio, retry, branches de funil (condition/transfer/wait/save/branch/start_flow/split). Adicionar novo tipo de step exige tocar nesse arquivo gigante.
-
-**4. Falta de State Machine** — Hoje o "estado" do usuário no funil está implícito na fila (`whatsapp_message_queue`). Não há tabela `flow_sessions` que guarde "user X está no node Y do flow Z aguardando resposta". Quando o cliente responde, não há onde retomar.
-
-## Plano de refatoração (4 fases incrementais)
-
-### Fase 1 — Atomicidade e idempotência (resolve #1)
-
-Criar função SQL `claim_whatsapp_messages(worker_id, batch_size)` que faz:
+**Migration nova:**
 ```sql
-UPDATE whatsapp_message_queue
-SET status='processing', claimed_by=worker_id, claimed_at=now()
-WHERE id IN (
-  SELECT id FROM whatsapp_message_queue
-  WHERE status='pending' AND scheduled_at <= now()
-  ORDER BY priority DESC, scheduled_at ASC
-  LIMIT batch_size
-  FOR UPDATE SKIP LOCKED
-)
-RETURNING *;
+CREATE TABLE public.whatsapp_flow_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  instance_id uuid REFERENCES whatsapp_instances(id) ON DELETE SET NULL,
+  contact_phone text NOT NULL,
+  contact_name text,
+  flow_id uuid,                  -- pode referenciar whatsapp_flows OU funnel
+  funnel_id uuid,
+  current_node_id text,
+  variables jsonb DEFAULT '{}',
+  status text NOT NULL DEFAULT 'active', -- active | waiting_input | completed | aborted | expired
+  waiting_for text,              -- 'text' | 'choice' | 'media' | null
+  last_event_at timestamptz DEFAULT now(),
+  expires_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX ON whatsapp_flow_sessions (instance_id, contact_phone) WHERE status IN ('active','waiting_input');
+CREATE INDEX ON whatsapp_flow_sessions (tenant_id, status);
+CREATE INDEX ON whatsapp_flow_sessions (expires_at) WHERE status = 'waiting_input';
 ```
 
-Adicionar colunas: `claimed_by uuid`, `claimed_at timestamptz`, `idempotency_key text unique`. Worker só processa o que conseguiu claimar. Se crashear, job de "rescue" devolve `processing` com `claimed_at < now()-5min` para `pending`.
+RLS: tenant_staff vê do próprio tenant, super_admin vê tudo.
 
-### Fase 2 — Substituir setTimeout por re-agendamento (resolve #2)
+Função SQL `advance_flow_session(session_id, user_input)` para casamento atômico de input → próxima aresta.
 
-Em vez de `await sleep(delay)` dentro do handler, calcular `next_scheduled_at = now() + jitter` e fazer UPDATE na próxima mensagem da fila. O cron roda a cada 30s e processa apenas o que está "vencido". Cada execução envia 1 lote pequeno (5-10 msgs) e termina rápido. Anti-ban vira persistente no banco, não em memória.
+Função SQL `expire_flow_sessions()` chamada por cron — marca `waiting_input` com `expires_at < now()` como `expired`.
 
-### Fase 3 — State Machine de fluxos (resolve #4, base para ManyChat)
+## Fase 4 — Engine modular
 
-Nova tabela `whatsapp_flow_sessions`:
+**Estrutura nova:**
 ```
-id, tenant_id, instance_id, contact_phone, flow_id,
-current_node_id, variables jsonb, status (active/waiting_input/completed/aborted),
-last_event_at, expires_at, created_at
+supabase/functions/_shared/flow-engine/
+  ├── engine.ts          // orquestrador: dispatch + persist
+  ├── types.ts           // FlowContext, NodeHandler, NextAction
+  └── steps/
+      ├── message.ts     // envia texto via fila
+      ├── condition.ts   // avalia variável
+      ├── wait_input.ts  // pausa sessão como waiting_input
+      ├── transfer.ts    // marca conversa como humano
+      ├── set_variable.ts
+      ├── start_flow.ts  // troca flow_id
+      ├── ai_reply.ts    // chama ai-agent-chat
+      └── end.ts
 ```
 
-Quando webhook recebe mensagem de entrada:
-1. Procura sessão ativa por `(instance_id, contact_phone)`
-2. Se status=`waiting_input`, casa a resposta com a aresta esperada e avança o nó
-3. Se não tem sessão, dispara matchers de gatilho (palavra-chave, evento)
+Cada step exporta:
+```ts
+export const handler: NodeHandler = {
+  type: 'message',
+  async execute(ctx, node) {
+    // ...
+    return { kind: 'next', nextNodeId: '...' }
+      | { kind: 'wait', waitingFor: 'text' }
+      | { kind: 'complete' }
+      | { kind: 'jump', flowId, nodeId };
+  }
+}
+```
 
-Isso é exatamente o modelo do ManyChat: o **estado** é a fonte da verdade, a fila é só executora.
+`engine.ts` faz `Map<string, NodeHandler>` e despacha. Adicionar bloco novo = criar arquivo + registrar no map.
 
-### Fase 4 — Modularizar steps (resolve #3)
+## Edge Functions novas/modificadas
 
-Criar `supabase/functions/_shared/flow-steps/` com um handler por tipo:
-- `message.ts`, `condition.ts`, `transfer.ts`, `wait_input.ts`, `branch.ts`, `start_flow.ts`, `set_variable.ts`, `ai_reply.ts`
+**Nova `whatsapp-flow-tick`** (cron 30s):
+- Claim atômico de sessões `active` com nó pendente (não `waiting_input`)
+- Despacha um passo por sessão e persiste
+- Termina rápido (sem setTimeout)
 
-Cada handler exporta `execute(ctx, node) -> NextAction`. O orquestrador (`flow-engine`) só faz dispatch por tipo. Adicionar novo bloco = criar novo arquivo, sem tocar no engine.
+**Modificar `whatsapp-evolution-webhook`** (`MESSAGES_UPSERT` inbound):
+1. Procura `flow_session` ativa por `(instance_id, contact_phone)` com `status='waiting_input'`
+2. Se encontrar: chama `advance_flow_session` com texto recebido → reativa para `active`
+3. Senão: dispara matchers de gatilho (palavra-chave bate com `whatsapp_flows.trigger_*`) → cria nova sessão
 
-### Arquivos a criar/modificar
+**Modificar `whatsapp-webhook`** (gatilho de evento, ex: `carrinho_abandonado`):
+- Em vez de enfileirar todas as mensagens de uma vez, cria `flow_session` no nó inicial e deixa o tick processar.
+- Mantém compatibilidade com funis antigos (se flow não existe, usa caminho antigo).
 
-**Novos:**
-- `supabase/migrations/<ts>_whatsapp_state_machine.sql` — colunas idempotência + tabela `whatsapp_flow_sessions` + função `claim_whatsapp_messages` + job rescue
-- `supabase/functions/_shared/flow-steps/*.ts` — handlers modulares
-- `supabase/functions/_shared/flow-engine.ts` — orquestrador
-- `supabase/functions/whatsapp-flow-tick/index.ts` — cron leve (claim + dispatch + reschedule)
-- `supabase/functions/whatsapp-flow-rescue/index.ts` — recupera mensagens travadas em `processing`
+**Cron jobs (via SQL pg_cron):**
+- `whatsapp-flow-tick` a cada 30s
+- `expire_flow_sessions()` a cada 1min
 
-**Modificados:**
-- `supabase/functions/whatsapp-process-queue/index.ts` — fica só como compatibilidade, delega para o novo engine
-- `supabase/functions/whatsapp-evolution-webhook/index.ts` — em `MESSAGES_UPSERT` inbound, consulta `whatsapp_flow_sessions` e avança o nó se houver sessão `waiting_input`
-- `supabase/functions/whatsapp-webhook/index.ts` (trigger de funil) — cria `flow_session` em vez de só enfileirar mensagens
-- `supabase/config.toml` — agendar `whatsapp-flow-tick` a cada 30s e `whatsapp-flow-rescue` a cada 5min via pg_cron
+## Compatibilidade
 
-### Resultado esperado
+- Funis antigos (`whatsapp_funnels` + `whatsapp_funnel_steps`) continuam funcionando pelo caminho atual.
+- Flows novos (`whatsapp_flows` JSON nodes/edges) usam o engine novo.
+- `WhatsAppFlowEditor` já produz o formato certo — sem mudança de UI.
 
-- Zero envios duplicados (claim atômico + idempotency_key)
-- Funciona com filas de qualquer tamanho (re-agendamento, sem setTimeout)
-- Conversação bidirecional real (webhook avança a sessão quando cliente responde)
-- Adicionar novo tipo de bloco = 1 arquivo novo, sem risco de regressão
-- Base sólida para evoluir para ManyChat (drag-drop já existe em `WhatsAppFlowEditor`, falta só o motor)
+## Arquivos
 
-### Riscos e mitigação
+**Criar:**
+- `supabase/migrations/<ts>_whatsapp_flow_sessions.sql`
+- `supabase/functions/_shared/flow-engine/engine.ts`
+- `supabase/functions/_shared/flow-engine/types.ts`
+- `supabase/functions/_shared/flow-engine/steps/{message,condition,wait_input,transfer,set_variable,start_flow,ai_reply,end}.ts`
+- `supabase/functions/whatsapp-flow-tick/index.ts`
 
-- **Migração de dados**: mensagens já em `pending` continuam funcionando (engine novo lê o mesmo formato)
-- **Rollback**: manter `whatsapp-process-queue` antigo desabilitado mas presente por 1 sprint
-- **Compatibilidade UI**: `WhatsAppFlowEditor` já modela nodes/edges no formato certo, não precisa mudar
+**Modificar:**
+- `supabase/functions/whatsapp-evolution-webhook/index.ts` — branch inbound consulta flow_sessions
+- `supabase/functions/whatsapp-webhook/index.ts` — quando trigger casa um flow novo, cria session
+- Cron via insert SQL (não migração) com URL + anon key
 
-Posso fazer tudo de uma vez ou só Fase 1+2 primeiro (ataca os bugs críticos sem mexer em estado de fluxo). Recomendo dividir: aprovar Fase 1+2 agora (rápido, alto impacto) e fazer 3+4 num segundo ciclo.
+## Resultado
+
+- Conversação bidirecional: cliente responde → engine avança nó certo
+- Estado persistente sobrevive a crashes e deploys
+- Adicionar novo bloco = 1 arquivo, sem regressão
+- Base ManyChat completa (faltará só polimento de UI no editor)
 
