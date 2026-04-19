@@ -698,7 +698,11 @@ async function handleSendError(supabase: any, msg: any, errorData: any) {
   const retryCount = (msg.retry_count || 0) + 1;
   if (retryCount >= msg.max_retries) {
     await supabase.from("whatsapp_message_queue").update({
-      status: "failed", error_message: JSON.stringify(errorData), retry_count: retryCount,
+      status: "failed",
+      error_message: JSON.stringify(errorData),
+      retry_count: retryCount,
+      claimed_by: null,
+      claimed_at: null,
     }).eq("id", msg.id);
     await supabase.from("whatsapp_message_log").insert({
       contact_phone: msg.contact_phone, contact_name: msg.contact_name, instance_id: null, instance_name: null,
@@ -707,17 +711,27 @@ async function handleSendError(supabase: any, msg: any, errorData: any) {
       tenant_id: msg.tenant_id || null,
     });
   } else {
+    // Devolve para 'pending' com backoff exponencial e libera o claim
     await supabase.from("whatsapp_message_queue").update({
-      retry_count: retryCount, scheduled_at: new Date(Date.now() + 300000 * retryCount).toISOString(), error_message: JSON.stringify(errorData),
+      status: "pending",
+      claimed_by: null,
+      claimed_at: null,
+      retry_count: retryCount,
+      scheduled_at: new Date(Date.now() + 300000 * retryCount).toISOString(),
+      error_message: JSON.stringify(errorData),
     }).eq("id", msg.id);
   }
 }
 
 async function handleRetry(supabase: any, msg: any, errorMessage: string) {
   const retryCount = (msg.retry_count || 0) + 1;
+  const isFinal = retryCount >= msg.max_retries;
   await supabase.from("whatsapp_message_queue").update({
-    retry_count: retryCount, error_message: errorMessage,
-    status: retryCount >= msg.max_retries ? "failed" : "pending",
+    retry_count: retryCount,
+    error_message: errorMessage,
+    status: isFinal ? "failed" : "pending",
+    claimed_by: null,
+    claimed_at: null,
     scheduled_at: new Date(Date.now() + 300000 * retryCount).toISOString(),
   }).eq("id", msg.id);
 }
