@@ -1878,6 +1878,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         </div>
         <Button variant={testPanelOpen ? "default" : "outline"} size="sm" onClick={() => setTestPanelOpen(v => !v)}><Play className="h-4 w-4 mr-1" /> Testar</Button>
         <Button onClick={save} disabled={saving} size="sm"><Save className="h-4 w-4 mr-1" /> {saving ? "..." : "Salvar"}</Button>
+        <Button variant="outline" size="sm" onClick={() => setExitDialog(true)}><X className="h-4 w-4 mr-1" /> Sair</Button>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
