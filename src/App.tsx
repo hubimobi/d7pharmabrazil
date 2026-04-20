@@ -74,6 +74,7 @@ const RepurchasePage = lazy(() => import("./pages/admin/RepurchasePage"));
 const WhatsAppPage = lazy(() => import("./pages/admin/WhatsAppPage"));
 const FeedbackApprovalPage = lazy(() => import("./pages/admin/FeedbackApprovalPage"));
 const DomainsPage = lazy(() => import("./pages/admin/DomainsPage"));
+const AuditLogPage = lazy(() => import("./pages/admin/AuditLogPage"));
 
 // Lazy-loaded SUPERBOSS pages
 const RequireSuperboss = lazy(() => import("./components/superboss/RequireSuperboss"));
@@ -190,6 +191,7 @@ const App = () => (
                 <Route path="/admin/whatsapp" element={<AdminRoute><WhatsAppPage /></AdminRoute>} />
                 <Route path="/admin/feedbacks" element={<AdminRoute><FeedbackApprovalPage /></AdminRoute>} />
                 <Route path="/admin/dominios" element={<AdminRoute><DomainsPage /></AdminRoute>} />
+                <Route path="/admin/auditoria" element={<AdminRoute><AuditLogPage /></AdminRoute>} />
                 <Route path="/l/:code" element={<LinkRedirectPage />} />
                 <Route path="/superboss" element={
                   <Suspense fallback={<PageLoader />}>
