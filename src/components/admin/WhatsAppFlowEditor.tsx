@@ -1530,10 +1530,15 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                   }}>
                     <SelectTrigger className="h-8 text-xs mt-1"><SelectValue placeholder="Usar configuração padrão" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__default__">Padrão ({llmConfig?.default_model || "Lovable AI"})</SelectItem>
-                      {agents.map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.model})</SelectItem>)}
+                      <SelectItem value="__default__">Padrão (sem agente)</SelectItem>
+                      {agents.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {n.data.agent_id && (
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Modelo do agente: {agents.find(a => a.id === n.data.agent_id)?.model || "—"}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs">Prompt</Label>
