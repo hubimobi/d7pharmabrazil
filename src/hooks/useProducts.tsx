@@ -90,9 +90,10 @@ export function useProducts() {
   const { tenantId } = useTenant();
   return useQuery({
     queryKey: ["products", tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("products")
+        .from("products_public" as any)
         .select("*")
         .eq("active", true)
         .eq("tenant_id", tenantId)
@@ -107,9 +108,10 @@ export function useProduct(slug: string | undefined) {
   const { tenantId } = useTenant();
   return useQuery({
     queryKey: ["product", slug, tenantId],
+    enabled: !!slug && !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("products")
+        .from("products_public" as any)
         .select("*")
         .eq("slug", slug!)
         .eq("active", true)
@@ -118,6 +120,5 @@ export function useProduct(slug: string | undefined) {
       if (error) throw error;
       return mapDbProduct(data);
     },
-    enabled: !!slug,
   });
 }
