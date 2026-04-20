@@ -1560,15 +1560,23 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                       setAiTesting(true);
                       setAiTestResult(null);
                       try {
+                        if (!n.data.agent_id) {
+                          setAiTestResult("❌ Selecione um Agente IA antes de testar.");
+                          setAiTesting(false);
+                          return;
+                        }
+                        const promptText = (n.data.prompt || "")
+                          .replace("{Nome}", "João")
+                          .replace("{mensagem_anterior}", "Olá, preciso de ajuda")
+                          .replace("{contexto_conversa}", "Cliente interessado em produtos");
                         const { data, error } = await supabase.functions.invoke("ai-agent-chat", {
                           body: {
-                            message: n.data.prompt.replace("{Nome}", "João").replace("{mensagem_anterior}", "Olá, preciso de ajuda").replace("{contexto_conversa}", "Cliente interessado em produtos"),
-                            agentId: n.data.agent_id || undefined,
-                            model: n.data.model,
+                            agent_id: n.data.agent_id,
+                            messages: [{ role: "user", content: promptText }],
                           },
                         });
                         if (error) throw error;
-                        setAiTestResult(data?.reply || data?.message || JSON.stringify(data));
+                        setAiTestResult(data?.reply || data?.message || data?.content || JSON.stringify(data));
                       } catch (e: any) {
                         setAiTestResult(`❌ Erro: ${e.message}`);
                       }
