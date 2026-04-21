@@ -2126,21 +2126,46 @@ function BroadcastTab() {
                 4. Números participantes
               </Label>
               <div className="flex flex-wrap gap-2">
-                {instances.map(inst => (
-                  <Button 
-                    key={inst.id}
-                    variant={selectedInstances.includes(inst.id) ? "default" : "outline"}
-                    size="sm"
-                    className="h-8 text-[11px] gap-1.5"
-                    onClick={() => {
-                      setSelectedInstances(prev => 
-                        prev.includes(inst.id) ? prev.filter(i => i !== inst.id) : [...prev, inst.id]
-                      );
-                    }}
-                  >
-                    <Smartphone className="h-3.5 w-3.5" /> {inst.instance_name}
-                  </Button>
-                ))}
+                {instances.map(inst => {
+                  const display = getInstanceDisplay(inst);
+                  const selected = selectedInstances.includes(inst.id);
+                  return (
+                    <button
+                      key={inst.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedInstances(prev =>
+                          prev.includes(inst.id) ? prev.filter(i => i !== inst.id) : [...prev, inst.id]
+                        );
+                      }}
+                      className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
+                        selected
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-background hover:bg-muted/50"
+                      }`}
+                    >
+                      <Smartphone className={`h-4 w-4 mt-0.5 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                      <div className="flex flex-col min-w-0">
+                        <span className={`text-xs font-semibold leading-tight ${display.hasMeta ? "" : "text-muted-foreground italic"}`}>
+                          {display.name}
+                        </span>
+                        {display.phone ? (
+                          <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                            {display.phone}
+                          </span>
+                        ) : !display.hasMeta ? (
+                          <span className="text-[10px] text-amber-600 leading-tight mt-0.5">
+                            Aguardando dados do WhatsApp
+                          </span>
+                        ) : null}
+                        <span className="flex items-center gap-1 text-[10px] text-emerald-600 leading-tight mt-0.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          Conectado
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
                 {instances.length === 0 && <p className="text-[10px] text-muted-foreground italic">Nenhuma instância online para seleção específica.</p>}
               </div>
               <p className="text-[10px] text-muted-foreground mt-2">
