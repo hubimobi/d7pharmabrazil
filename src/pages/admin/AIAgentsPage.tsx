@@ -142,24 +142,38 @@ export default function AIAgentsPage() {
     },
   });
 
-  // Build available models from active LLM config
-  const availableModels = (() => {
-    const activeExternal = (llmConfigs || []).find((c: any) => c.active && c.provider !== "lovable");
-    if (activeExternal) {
-      const providerModels = EXTERNAL_MODELS[activeExternal.provider] || [];
-      // Put the configured default model first
-      const sorted = [...providerModels].sort((a, b) => 
-        a.value === activeExternal.default_model ? -1 : b.value === activeExternal.default_model ? 1 : 0
-      );
-      return sorted;
+  // Build available models dynamically from ALL active LLM configs.
+  // - Lovable AI: expose all known Lovable models.
+  // - External providers: expose just their configured default_model (the one user set).
+  // - Sort by is_default first.
+  const availableModels: { value: string; label: string }[] = (() => {
+    const list: { value: string; label: string; isDefault: boolean }[] = [];
+    const actives = (llmConfigs || []).filter((c: any) => c.active);
+    if (actives.length === 0) {
+      return LOVABLE_MODELS;
     }
-    return LOVABLE_MODELS;
+    for (const cfg of actives) {
+      const provLabel = cfg.provider === "lovable" ? "Lovable AI" : cfg.provider === "xai" ? "xAI (Grok)" : cfg.provider === "openai" ? "OpenAI" : cfg.provider === "anthropic" ? "Anthropic" : cfg.provider;
+      if (cfg.provider === "lovable") {
+        for (const m of LOVABLE_MODELS) {
+          list.push({ value: m.value, label: `${provLabel} — ${m.label}`, isDefault: !!cfg.is_default && m.value === (cfg.default_model || LOVABLE_MODELS[0].value) });
+        }
+      } else {
+        const knownLabel = (EXTERNAL_MODELS[cfg.provider] || []).find(m => m.value === cfg.default_model)?.label || cfg.default_model;
+        list.push({ value: cfg.default_model, label: `${provLabel} — ${knownLabel}`, isDefault: !!cfg.is_default });
+      }
+    }
+    // sort: is_default first
+    list.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+    return list.map(({ value, label }) => ({ value, label }));
   })();
 
   const defaultModel = (() => {
-    const activeExternal = (llmConfigs || []).find((c: any) => c.active && c.provider !== "lovable");
-    if (activeExternal?.default_model) return activeExternal.default_model;
-    return "google/gemini-3-flash-preview";
+    const def = (llmConfigs || []).find((c: any) => c.active && c.is_default);
+    if (def?.default_model) return def.default_model;
+    const ext = (llmConfigs || []).find((c: any) => c.active && c.provider !== "lovable");
+    if (ext?.default_model) return ext.default_model;
+    return LOVABLE_MODELS[0].value;
   })();
 
   const [agentKbIds, setAgentKbIds] = useState<string[]>([]);
