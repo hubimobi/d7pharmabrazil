@@ -778,7 +778,6 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
       }
       toast.success("Fluxo salvo!");
       setDirty(false);
-      onBack();
     } catch (e: any) { toast.error(e.message); }
     setSaving(false);
   }
