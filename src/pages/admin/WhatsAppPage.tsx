@@ -274,10 +274,71 @@ function InstancesTab() {
     funnel_roles: ["all"],
   });
   const [loading, setLoading] = useState(false);
-  const [qrDialog, setQrDialog] = useState<{ open: boolean; qr: string | null; id: string }>({ open: false, qr: null, id: "" });
+  const [qrDialog, setQrDialog] = useState<{
+    open: boolean;
+    qr: string | null;
+    id: string;
+    pollStatus: "waiting" | "connecting" | "connected";
+    pollStartedAt: number;
+  }>({ open: false, qr: null, id: "", pollStatus: "waiting", pollStartedAt: 0 });
+  const [refreshingQr, setRefreshingQr] = useState(false);
   const [evoConfig, setEvoConfig] = useState<{ url: string; key: string } | null>(null);
 
   useEffect(() => { (async () => { await loadInstances(); await loadEvoConfig(); await refreshAllStatuses(); })(); }, []);
+
+  // Poll connection status while QR dialog is open
+  useEffect(() => {
+    if (!qrDialog.open || !qrDialog.id) return;
+    if (qrDialog.pollStatus === "connected") return;
+
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const res = await supabase.functions.invoke("whatsapp-instance", {
+          body: { action: "status", instance_id: qrDialog.id },
+        });
+        if (cancelled) return;
+        const rawState: string = res.data?.raw_state || res.data?.state || "";
+        const status: string = res.data?.status || "";
+        const isConnected = rawState === "open" || status === "connected";
+        const isPairing = rawState === "connecting" && (status === "connecting" || status === "pairing");
+
+        if (isConnected) {
+          setQrDialog((prev) => ({ ...prev, pollStatus: "connected" }));
+          toast.success("WhatsApp conectado com sucesso!");
+          loadInstances();
+          setTimeout(() => {
+            setQrDialog({ open: false, qr: null, id: "", pollStatus: "waiting", pollStartedAt: 0 });
+          }, 2000);
+        } else if (isPairing) {
+          setQrDialog((prev) => (prev.pollStatus === "waiting" ? { ...prev, pollStatus: "connecting" } : prev));
+        }
+      } catch {
+        // silent — keep polling
+      }
+    }, 3000);
+
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [qrDialog.open, qrDialog.id, qrDialog.pollStatus]);
+
+  async function refreshQr() {
+    if (!qrDialog.id) return;
+    setRefreshingQr(true);
+    try {
+      const res = await supabase.functions.invoke("whatsapp-instance", {
+        body: { action: "qrcode", instance_id: qrDialog.id },
+      });
+      if (res.data?.qrcode) {
+        setQrDialog((prev) => ({ ...prev, qr: res.data.qrcode, pollStatus: "waiting", pollStartedAt: Date.now() }));
+        toast.success("Novo QR Code gerado");
+      } else {
+        toast.error(res.data?.error || "Não foi possível gerar novo QR");
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+    setRefreshingQr(false);
+  }
 
   async function refreshAllStatuses() {
     const { data } = await supabase.from("whatsapp_instances").select("id, status, active").eq("active", true);
