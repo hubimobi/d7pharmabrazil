@@ -274,10 +274,71 @@ function InstancesTab() {
     funnel_roles: ["all"],
   });
   const [loading, setLoading] = useState(false);
-  const [qrDialog, setQrDialog] = useState<{ open: boolean; qr: string | null; id: string }>({ open: false, qr: null, id: "" });
+  const [qrDialog, setQrDialog] = useState<{
+    open: boolean;
+    qr: string | null;
+    id: string;
+    pollStatus: "waiting" | "connecting" | "connected";
+    pollStartedAt: number;
+  }>({ open: false, qr: null, id: "", pollStatus: "waiting", pollStartedAt: 0 });
+  const [refreshingQr, setRefreshingQr] = useState(false);
   const [evoConfig, setEvoConfig] = useState<{ url: string; key: string } | null>(null);
 
   useEffect(() => { (async () => { await loadInstances(); await loadEvoConfig(); await refreshAllStatuses(); })(); }, []);
+
+  // Poll connection status while QR dialog is open
+  useEffect(() => {
+    if (!qrDialog.open || !qrDialog.id) return;
+    if (qrDialog.pollStatus === "connected") return;
+
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const res = await supabase.functions.invoke("whatsapp-instance", {
+          body: { action: "status", instance_id: qrDialog.id },
+        });
+        if (cancelled) return;
+        const rawState: string = res.data?.raw_state || res.data?.state || "";
+        const status: string = res.data?.status || "";
+        const isConnected = rawState === "open" || status === "connected";
+        const isPairing = rawState === "connecting" && (status === "connecting" || status === "pairing");
+
+        if (isConnected) {
+          setQrDialog((prev) => ({ ...prev, pollStatus: "connected" }));
+          toast.success("WhatsApp conectado com sucesso!");
+          loadInstances();
+          setTimeout(() => {
+            setQrDialog({ open: false, qr: null, id: "", pollStatus: "waiting", pollStartedAt: 0 });
+          }, 2000);
+        } else if (isPairing) {
+          setQrDialog((prev) => (prev.pollStatus === "waiting" ? { ...prev, pollStatus: "connecting" } : prev));
+        }
+      } catch {
+        // silent — keep polling
+      }
+    }, 3000);
+
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [qrDialog.open, qrDialog.id, qrDialog.pollStatus]);
+
+  async function refreshQr() {
+    if (!qrDialog.id) return;
+    setRefreshingQr(true);
+    try {
+      const res = await supabase.functions.invoke("whatsapp-instance", {
+        body: { action: "qrcode", instance_id: qrDialog.id },
+      });
+      if (res.data?.qrcode) {
+        setQrDialog((prev) => ({ ...prev, qr: res.data.qrcode, pollStatus: "waiting", pollStartedAt: Date.now() }));
+        toast.success("Novo QR Code gerado");
+      } else {
+        toast.error(res.data?.error || "Não foi possível gerar novo QR");
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+    setRefreshingQr(false);
+  }
 
   async function refreshAllStatuses() {
     const { data } = await supabase.from("whatsapp_instances").select("id, status, active").eq("active", true);
@@ -330,7 +391,7 @@ function InstancesTab() {
       }
       toast.success("Instância criada!");
       if (res.data?.qrcode) {
-        setQrDialog({ open: true, qr: res.data.qrcode, id: res.data.instance?.id });
+        setQrDialog({ open: true, qr: res.data.qrcode, id: res.data.instance?.id, pollStatus: "waiting", pollStartedAt: Date.now() });
       }
       setForm({ name: "", funnel_roles: ["all"] });
       setShowAdd(false);
@@ -356,7 +417,7 @@ function InstancesTab() {
         return;
       }
       if (res.data?.qrcode) {
-        setQrDialog({ open: true, qr: res.data.qrcode, id: inst.id });
+        setQrDialog({ open: true, qr: res.data.qrcode, id: inst.id, pollStatus: "waiting", pollStartedAt: Date.now() });
       } else {
         toast.info("Nenhum QR Code disponível. Verifique o status.");
       }
@@ -558,16 +619,64 @@ function InstancesTab() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={qrDialog.open} onOpenChange={(o) => setQrDialog({ ...qrDialog, open: o })}>
+      <Dialog
+        open={qrDialog.open}
+        onOpenChange={(o) => setQrDialog((prev) => ({ ...prev, open: o, ...(o ? {} : { pollStatus: "waiting", pollStartedAt: 0, qr: null, id: "" }) }))}
+      >
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Escanear QR Code</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>
+              {qrDialog.pollStatus === "connected"
+                ? "Pronto!"
+                : qrDialog.pollStatus === "connecting"
+                ? "Conectando..."
+                : "Escanear QR Code"}
+            </DialogTitle>
+          </DialogHeader>
           <div className="flex flex-col items-center gap-4 py-4">
-            {qrDialog.qr ? (
-              <img src={qrDialog.qr.startsWith("data:") ? qrDialog.qr : `data:image/png;base64,${qrDialog.qr}`} alt="QR Code" className="w-64 h-64 rounded-lg border" />
+            {qrDialog.pollStatus === "connected" ? (
+              <>
+                <div className="w-64 h-64 rounded-lg border bg-muted/30 flex items-center justify-center">
+                  <CheckCircle className="w-24 h-24 text-green-600" />
+                </div>
+                <p className="text-base font-medium text-center">WhatsApp conectado com sucesso!</p>
+                <p className="text-xs text-muted-foreground">Fechando em 2s...</p>
+              </>
             ) : (
-              <p className="text-muted-foreground">Nenhum QR Code disponível</p>
+              <>
+                {qrDialog.qr ? (
+                  <div className="relative">
+                    <img
+                      src={qrDialog.qr.startsWith("data:") ? qrDialog.qr : `data:image/png;base64,${qrDialog.qr}`}
+                      alt="QR Code"
+                      className={`w-64 h-64 rounded-lg border transition-opacity ${qrDialog.pollStatus === "connecting" ? "opacity-30" : ""}`}
+                    />
+                    {qrDialog.pollStatus === "connecting" && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">Nenhum QR Code disponível</p>
+                )}
+                {qrDialog.pollStatus === "connecting" ? (
+                  <p className="text-sm font-medium text-center">🔄 Pareando com WhatsApp...</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Aguardando escaneamento...
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground text-center">
+                  Abra o WhatsApp no celular → Dispositivos Conectados → Conectar Dispositivo
+                </p>
+                <Button variant="outline" size="sm" onClick={refreshQr} disabled={refreshingQr} className="gap-2">
+                  <RefreshCw className={`w-4 h-4 ${refreshingQr ? "animate-spin" : ""}`} />
+                  {refreshingQr ? "Gerando..." : "Gerar novo QR"}
+                </Button>
+              </>
             )}
-            <p className="text-xs text-muted-foreground text-center">Abra o WhatsApp no celular → Dispositivos Conectados → Conectar Dispositivo</p>
           </div>
         </DialogContent>
       </Dialog>
