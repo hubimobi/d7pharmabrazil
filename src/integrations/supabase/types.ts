@@ -2949,6 +2949,7 @@ export type Database = {
           template_id: string | null
           trial_ends_at: string | null
           updated_at: string | null
+          whatsapp_settings: Json | null
         }
         Insert: {
           active?: boolean | null
@@ -2970,6 +2971,7 @@ export type Database = {
           template_id?: string | null
           trial_ends_at?: string | null
           updated_at?: string | null
+          whatsapp_settings?: Json | null
         }
         Update: {
           active?: boolean | null
@@ -2991,6 +2993,7 @@ export type Database = {
           template_id?: string | null
           trial_ends_at?: string | null
           updated_at?: string | null
+          whatsapp_settings?: Json | null
         }
         Relationships: [
           {
@@ -3119,6 +3122,86 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "visitor_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_campaigns: {
+        Row: {
+          auto_pause_threshold: number | null
+          consecutive_errors_count: number | null
+          created_at: string | null
+          delivered_count: number | null
+          error_reason: string | null
+          failed_count: number | null
+          flow_id: string | null
+          funnel_id: string | null
+          id: string
+          instance_ids: string[] | null
+          name: string
+          read_count: number | null
+          scheduled_at: string | null
+          sent_count: number | null
+          status: string | null
+          tenant_id: string | null
+          timezone: string | null
+          total_contacts: number | null
+          updated_at: string | null
+          working_days: number[] | null
+          working_hours: Json | null
+        }
+        Insert: {
+          auto_pause_threshold?: number | null
+          consecutive_errors_count?: number | null
+          created_at?: string | null
+          delivered_count?: number | null
+          error_reason?: string | null
+          failed_count?: number | null
+          flow_id?: string | null
+          funnel_id?: string | null
+          id?: string
+          instance_ids?: string[] | null
+          name: string
+          read_count?: number | null
+          scheduled_at?: string | null
+          sent_count?: number | null
+          status?: string | null
+          tenant_id?: string | null
+          timezone?: string | null
+          total_contacts?: number | null
+          updated_at?: string | null
+          working_days?: number[] | null
+          working_hours?: Json | null
+        }
+        Update: {
+          auto_pause_threshold?: number | null
+          consecutive_errors_count?: number | null
+          created_at?: string | null
+          delivered_count?: number | null
+          error_reason?: string | null
+          failed_count?: number | null
+          flow_id?: string | null
+          funnel_id?: string | null
+          id?: string
+          instance_ids?: string[] | null
+          name?: string
+          read_count?: number | null
+          scheduled_at?: string | null
+          sent_count?: number | null
+          status?: string | null
+          tenant_id?: string | null
+          timezone?: string | null
+          total_contacts?: number | null
+          updated_at?: string | null
+          working_days?: number[] | null
+          working_hours?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_campaigns_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3626,6 +3709,8 @@ export type Database = {
       }
       whatsapp_message_log: {
         Row: {
+          api_id: string | null
+          campaign_id: string | null
           contact_name: string
           contact_phone: string
           conversation_id: string | null
@@ -3643,6 +3728,8 @@ export type Database = {
           tenant_id: string | null
         }
         Insert: {
+          api_id?: string | null
+          campaign_id?: string | null
           contact_name?: string
           contact_phone: string
           conversation_id?: string | null
@@ -3660,6 +3747,8 @@ export type Database = {
           tenant_id?: string | null
         }
         Update: {
+          api_id?: string | null
+          campaign_id?: string | null
           contact_name?: string
           contact_phone?: string
           conversation_id?: string | null
@@ -3677,6 +3766,13 @@ export type Database = {
           tenant_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "whatsapp_message_log_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "whatsapp_message_log_conversation_id_fkey"
             columns: ["conversation_id"]
