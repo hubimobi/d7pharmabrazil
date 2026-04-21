@@ -403,6 +403,7 @@ export type Database = {
           created_at: string
           default_model: string
           id: string
+          is_default: boolean
           provider: string
           tenant_id: string | null
         }
@@ -412,6 +413,7 @@ export type Database = {
           created_at?: string
           default_model?: string
           id?: string
+          is_default?: boolean
           provider?: string
           tenant_id?: string | null
         }
@@ -421,6 +423,7 @@ export type Database = {
           created_at?: string
           default_model?: string
           id?: string
+          is_default?: boolean
           provider?: string
           tenant_id?: string | null
         }

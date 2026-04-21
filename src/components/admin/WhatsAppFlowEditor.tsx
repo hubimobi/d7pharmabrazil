@@ -693,8 +693,10 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
     supabase.from("coupons").select("code, doctor_id, doctors(id, name)").not("doctor_id", "is", null).eq("active", true).then(({ data }) => {
       setDoctorsCoupons((data || []).map((c: any) => ({ doctor_id: c.doctor_id, doctor_name: c.doctors?.name || "—", coupon_code: c.code })));
     });
-    supabase.from("ai_llm_config").select("provider, default_model").eq("active", true).limit(1).single().then(({ data }) => {
-      if (data) setLlmConfig(data as any);
+    supabase.from("ai_llm_config").select("provider, default_model, is_default, active").eq("active", true).then(({ data }) => {
+      const rows = (data || []) as any[];
+      const def = rows.find(r => r.is_default) || rows.find(r => r.provider !== "lovable") || rows[0];
+      if (def) setLlmConfig({ provider: def.provider, default_model: def.default_model } as any);
     });
     supabase.from("customer_tags").select("tag").then(({ data }) => {
       const tags = Array.from(new Set((data || []).map((r: any) => r.tag).filter(Boolean))) as string[];
