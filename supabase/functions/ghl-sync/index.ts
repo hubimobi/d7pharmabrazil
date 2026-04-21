@@ -258,7 +258,7 @@ serve(async (req) => {
             details: `Oportunidade criada para pedido #${payload.order_id.slice(0, 8)}, valor R$ ${payload.order_total.toFixed(2)}`,
           });
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Opportunity creation failed (non-fatal):", err);
         await supabaseAdmin.from("integration_logs").insert({
           integration: "ghl",
@@ -278,7 +278,7 @@ serve(async (req) => {
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error("ghl-sync error:", err);
 
     try {
@@ -291,7 +291,7 @@ serve(async (req) => {
         status: "error",
         details: err.message,
       });
-    } catch (_) {}
+    } catch (_: any) {}
 
     return new Response(
       JSON.stringify({ error: err.message }),

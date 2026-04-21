@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, payment_id: paymentId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("pay-commissions error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },

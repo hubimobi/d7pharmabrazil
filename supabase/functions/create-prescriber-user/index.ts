@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     await supabase.from("user_roles").insert({ user_id: userId, role: "prescriber" });
 
     return new Response(JSON.stringify({ success: true, user_id: userId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  } catch (err) {
+  } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
   }
 });
