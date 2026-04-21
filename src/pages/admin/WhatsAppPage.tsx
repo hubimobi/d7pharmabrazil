@@ -277,7 +277,21 @@ function InstancesTab() {
   const [qrDialog, setQrDialog] = useState<{ open: boolean; qr: string | null; id: string }>({ open: false, qr: null, id: "" });
   const [evoConfig, setEvoConfig] = useState<{ url: string; key: string } | null>(null);
 
-  useEffect(() => { loadInstances(); loadEvoConfig(); }, []);
+  useEffect(() => { (async () => { await loadInstances(); await loadEvoConfig(); await refreshAllStatuses(); })(); }, []);
+
+  async function refreshAllStatuses() {
+    const { data } = await supabase.from("whatsapp_instances").select("id, status, active").eq("active", true);
+    const list = (data || []) as Array<{ id: string; status: string }>;
+    // Only refresh those not yet "connected" — avoid hammering Evolution for healthy ones
+    const targets = list.filter((i) => i.status !== "connected");
+    if (targets.length === 0) return;
+    await Promise.all(
+      targets.map((i) =>
+        supabase.functions.invoke("whatsapp-instance", { body: { action: "status", instance_id: i.id } }).catch(() => null)
+      )
+    );
+    await loadInstances();
+  }
 
   async function loadEvoConfig() {
     const { data } = await supabase.from("store_settings").select("evolution_api_url, evolution_api_key").limit(1).single();
