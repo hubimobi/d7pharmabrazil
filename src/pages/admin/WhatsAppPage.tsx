@@ -1693,24 +1693,33 @@ function BroadcastTab() {
   const [loading, setLoading] = useState(false);
   const [broadcastInterval, setBroadcastInterval] = useState(30000); // default 30s
   const [campaignName, setCampaignName] = useState("");
+  const [instances, setInstances] = useState<any[]>([]);
+
+  // Advanced settings
+  const [selectedInstances, setSelectedInstances] = useState<string[]>([]);
+  const [workingHoursLimit, setWorkingHoursLimit] = useState(true);
+  const [workingRange, setWorkingRange] = useState({ start: "08:00", end: "18:00" });
+  const [workingDays, setWorkingDays] = useState<number[]>([1, 2, 3, 4, 5]);
 
   useEffect(() => { loadData(); }, []);
   useEffect(() => { estimateAudience(); }, [filterType, filterValue]);
 
   async function loadData() {
-    const [{ data: f }, { data: fl }, { data: rp }, { data: d }, { data: p }, { data: t }] = await Promise.all([
+    const [{ data: f }, { data: fl }, { data: rp }, { data: d }, { data: p }, { data: t }, { data: i }] = await Promise.all([
       supabase.from("whatsapp_funnels").select("*").eq("active", true).order("name"),
       supabase.from("whatsapp_flows").select("id, name, description").eq("active", true).order("name"),
       supabase.from("representatives").select("id, name").eq("active", true),
       supabase.from("doctors").select("id, name").eq("active", true),
       supabase.from("products").select("id, name").eq("active", true),
       supabase.from("customer_tags").select("tag"),
+      supabase.from("whatsapp_instances").select("*").eq("active", true).eq("status", "connected"),
     ]);
     setFunnels((f || []) as unknown as WhatsAppFunnel[]);
     setFlows((fl || []) as any);
     setReps(rp || []);
     setDoctors(d || []);
     setProducts(p || []);
+    setInstances(i || []);
     const uniqueTags = [...new Set((t || []).map((x: any) => x.tag))];
     setTags(uniqueTags);
 
@@ -1795,18 +1804,44 @@ function BroadcastTab() {
     if (!confirm(`Confirma disparar para ~${estimatedCount || "?"} contatos?`)) return;
     setLoading(true);
     try {
-      const broadcastId = crypto.randomUUID();
-      const targetName = isFlow
-        ? flows.find(f => f.id === targetId)?.name || "Flow"
-        : funnels.find(f => f.id === targetId)?.name || "Funil";
-      const broadcastName = campaignName.trim() || `${isFlow ? "Flow" : "Funil"}: ${targetName}`;
-
       const contactPhones = await gatherContacts();
       if (contactPhones.length === 0) {
         toast.error("Nenhum contato com telefone encontrado");
         setLoading(false);
         return;
       }
+
+      // 1. Criar Registro da Campanha (Fase 2)
+      const targetName = isFlow
+        ? flows.find(f => f.id === targetId)?.name || "Flow"
+        : funnels.find(f => f.id === targetId)?.name || "Funil";
+      const broadcastName = campaignName.trim() || `${isFlow ? "Flow" : "Funil"}: ${targetName}`;
+
+      const { data: campaign, error: campaignErr } = await supabase
+        .from("whatsapp_campaigns")
+        .insert({
+          tenant_id: tenantId,
+          name: broadcastName,
+          status: "running",
+          flow_id: isFlow ? targetId : null,
+          funnel_id: isFlow ? null : targetId,
+          total_contacts: contactPhones.length,
+          instance_ids: selectedInstances.length > 0 ? selectedInstances : null,
+          working_hours: workingHoursLimit ? workingRange : null,
+          working_days: workingHoursLimit ? workingDays : null,
+          scheduled_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+
+      if (campaignErr || !campaign) {
+        toast.error("Erro ao criar registro de campanha.");
+        console.error(campaignErr);
+        setLoading(false);
+        return;
+      }
+
+      const campaignId = campaign.id;
 
       // Tenant resolvido via useTenant() (suporta super_admin e troca de tenant)
 
@@ -1857,8 +1892,9 @@ function BroadcastTab() {
         template_id: templateId,
         status: "pending",
         scheduled_at: new Date(Date.now() + idx * broadcastInterval).toISOString(),
-        broadcast_id: broadcastId,
+        broadcast_id: campaignId, // Usamos o ID da campanha como broadcast_id também para compatibilidade
         broadcast_name: broadcastName,
+        campaign_id: campaignId,
         tenant_id: tenantId,
       }));
 
@@ -1947,7 +1983,37 @@ function BroadcastTab() {
             <Separator />
 
             <div>
-              <Label className="font-semibold">4. Filtrar Audiência</Label>
+              <Label className="font-semibold flex items-center gap-2 mb-2">
+                <Smartphone className="h-4 w-4 text-muted-foreground" />
+                4. Números participantes
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {instances.map(inst => (
+                  <Button 
+                    key={inst.id}
+                    variant={selectedInstances.includes(inst.id) ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 text-[11px] gap-1.5"
+                    onClick={() => {
+                      setSelectedInstances(prev => 
+                        prev.includes(inst.id) ? prev.filter(i => i !== inst.id) : [...prev, inst.id]
+                      );
+                    }}
+                  >
+                    <Smartphone className="h-3.5 w-3.5" /> {inst.instance_name}
+                  </Button>
+                ))}
+                {instances.length === 0 && <p className="text-[10px] text-muted-foreground italic">Nenhuma instância online para seleção específica.</p>}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                Se nenhum for selecionado, o sistema usará **todos** os números disponíveis para rodízio automático.
+              </p>
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label className="font-semibold">5. Filtrar Audiência</Label>
               <Select value={filterType} onValueChange={(v) => { setFilterType(v); setFilterValue(""); }}>
                 <SelectTrigger className="mt-2">
                   <SelectValue>
@@ -2042,6 +2108,43 @@ function BroadcastTab() {
                 <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 flex gap-2">
                   <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-700">O disparo enfileira todos os contatos respeitando o limite diário de cada instância e o intervalo configurado ({Math.round(broadcastInterval/1000)}s entre envios).</p>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-semibold">Horário Comercial</Label>
+                      <p className="text-[10px] text-muted-foreground">Pausa envios fora da janela ou finais de semana.</p>
+                    </div>
+                    <Switch checked={workingHoursLimit} onCheckedChange={setWorkingHoursLimit} />
+                  </div>
+
+                  {workingHoursLimit && (
+                    <div className="space-y-3 animate-in fade-in slide-in-from-top-1">
+                      <div className="flex items-center gap-2">
+                        <Input type="time" value={workingRange.start} onChange={e => setWorkingRange(p => ({...p, start: e.target.value}))} className="h-8 text-xs" />
+                        <span className="text-xs text-muted-foreground">até</span>
+                        <Input type="time" value={workingRange.end} onChange={e => setWorkingRange(p => ({...p, end: e.target.value}))} className="h-8 text-xs" />
+                      </div>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"].map((day, idx) => (
+                          <button
+                            key={idx}
+                            className={`h-7 px-2 rounded flex items-center justify-center text-[10px] font-bold border transition-colors ${
+                              workingDays.includes(idx) ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-transparent"
+                            }`}
+                            onClick={() => {
+                              setWorkingDays(prev => prev.includes(idx) ? prev.filter(d => d !== idx) : [...prev, idx]);
+                            }}
+                          >
+                            {day}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2449,8 +2552,12 @@ interface CampaignGroup {
   id: string | null;
   name: string;
   type: "funnel" | "flow" | "single";
+  status?: string;
+  error_reason?: string | null;
   total: number;
   sent: number;
+  delivered: number;
+  read: number;
   pending: number;
   failed: number;
   cancelled: number;
@@ -2476,13 +2583,14 @@ function StatusKPI({ icon: Icon, label, value, tone }: { icon: any; label: strin
 }
 
 function CampaignCard({
-  group, onCancelGroup, onRetryFailed, onCancelOne, onRetryOne,
+  group, onCancelGroup, onRetryFailed, onCancelOne, onRetryOne, onToggleStatus,
 }: {
   group: CampaignGroup;
   onCancelGroup: (g: CampaignGroup) => void;
   onRetryFailed: (g: CampaignGroup) => void;
   onCancelOne: (id: string) => void;
   onRetryOne: (id: string) => void;
+  onToggleStatus: (g: CampaignGroup) => void;
 }) {
   const [open, setOpen] = useState(false);
   const total = group.total;
@@ -2515,20 +2623,42 @@ function CampaignCard({
               {etaMinutes !== null && <> · ETA: ~{etaMinutes} min</>}
             </p>
 
+            {group.status === "paused" && group.error_reason && (
+              <div className="mt-2 p-2 rounded bg-red-50 border border-red-100 flex items-start gap-2 animate-pulse">
+                <AlertCircle className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
+                <p className="text-[10px] text-red-700 leading-tight">
+                  <span className="font-bold">PAUSA DE SEGURANÇA:</span> {group.error_reason}
+                </p>
+              </div>
+            )}
+
             <div className="mt-3 space-y-2">
               <Progress value={progress} className="h-2" />
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">{group.sent} de {total} enviadas ({progress}%)</span>
-                <div className="flex items-center gap-1.5">
-                  {group.sent > 0 && <Badge className="bg-green-500/15 text-green-700 border-green-200 hover:bg-green-500/20 gap-1"><CheckCheck className="h-3 w-3" /> {group.sent}</Badge>}
-                  {group.pending > 0 && <Badge className="bg-amber-500/15 text-amber-700 border-amber-200 hover:bg-amber-500/20 gap-1"><Clock className="h-3 w-3" /> {group.pending}</Badge>}
-                  {group.failed > 0 && <Badge className="bg-red-500/15 text-red-700 border-red-200 hover:bg-red-500/20 gap-1"><AlertCircle className="h-3 w-3" /> {group.failed}</Badge>}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  {group.sent > 0 && <Badge variant="secondary" className="bg-blue-500/10 text-blue-700 gap-1 shrink-0"><Send className="h-3 w-3" /> {group.sent}</Badge>}
+                  {group.delivered > 0 && <Badge variant="secondary" className="bg-green-500/10 text-green-700 gap-1 shrink-0"><CheckCheck className="h-3 w-3" /> {group.delivered}</Badge>}
+                  {group.read > 0 && <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 gap-1 shrink-0"><Eye className="h-3 w-3" /> {group.read}</Badge>}
+                  {group.pending > 0 && <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 gap-1 shrink-0"><Clock className="h-3 w-3" /> {group.pending}</Badge>}
+                  {group.failed > 0 && <Badge variant="secondary" className="bg-red-500/10 text-red-700 gap-1 shrink-0"><AlertCircle className="h-3 w-3" /> {group.failed}</Badge>}
                 </div>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 mb-1">
+              {group.status === "paused" ? (
+                <Button size="sm" variant="outline" className="h-7 text-xs bg-amber-50" onClick={() => onToggleStatus(group)}>
+                  <Play className="h-3 w-3 mr-1" /> Retomar
+                </Button>
+              ) : group.pending > 0 ? (
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onToggleStatus(group)}>
+                  <Pause className="h-3 w-3 mr-1" /> Pausar
+                </Button>
+              ) : null}
+            </div>
             {group.failed > 0 && (
               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onRetryFailed(group)}>
                 <RefreshCw className="h-3 w-3 mr-1" /> Reenviar falhas
@@ -2606,6 +2736,7 @@ function QueueTab() {
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [search, setSearch] = useState("");
   const [sentToday, setSentToday] = useState(0);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
 
   useEffect(() => {
     loadQueue();
@@ -2620,12 +2751,13 @@ function QueueTab() {
   }, []);
 
   async function loadQueue() {
-    const { data } = await supabase
-      .from("whatsapp_message_queue")
-      .select("*")
-      .order("scheduled_at", { ascending: false })
-      .limit(500);
-    setItems((data || []) as any);
+    const [{ data: queueData }, { data: campaignData }] = await Promise.all([
+      supabase.from("whatsapp_message_queue").select("*").order("scheduled_at", { ascending: false }).limit(1000),
+      supabase.from("whatsapp_campaigns").select("*").order("created_at", { ascending: false }).limit(50),
+    ]);
+    
+    setItems((queueData || []) as any);
+    setCampaigns(campaignData || []);
 
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
     const { count } = await supabase
@@ -2674,6 +2806,20 @@ function QueueTab() {
     toast.success(`${ids.length} mensagens reenviadas`);
     loadQueue();
   }
+  async function toggleStatus(g: CampaignGroup) {
+    if (!g.id) return;
+    const newStatus = g.status === "paused" ? "running" : "paused";
+    const { error } = await supabase
+      .from("whatsapp_campaigns")
+      .update({ status: newStatus })
+      .eq("id", g.key);
+    
+    if (error) toast.error("Erro ao alterar status: " + error.message);
+    else {
+      toast.success(newStatus === "paused" ? "Campanha pausada" : "Campanha retomada");
+      loadQueue();
+    }
+  }
 
   const filtered = items.filter(i => {
     if (statusFilter === "active" && !["pending", "processing", "failed"].includes(i.status)) return false;
@@ -2691,11 +2837,16 @@ function QueueTab() {
     let g = groupsMap.get(key);
     if (!g) {
       const type: CampaignGroup["type"] = item.flow_id ? "flow" : item.funnel_id ? "funnel" : "single";
+      const dbCampaign = campaigns.find(c => c.id === item.campaign_id || c.id === item.broadcast_id);
+      
       g = {
         key, id: item.broadcast_id,
-        name: item.broadcast_name || (item.flow_id ? "Flow direto" : item.funnel_id ? "Funil direto" : "Envio avulso"),
+        name: dbCampaign?.name || item.broadcast_name || (item.flow_id ? "Flow direto" : item.funnel_id ? "Funil direto" : "Envio avulso"),
         type,
-        total: 0, sent: 0, pending: 0, failed: 0, cancelled: 0,
+        status: dbCampaign?.status,
+        error_reason: dbCampaign?.error_reason,
+        total: 0, sent: 0, delivered: dbCampaign?.delivered_count || 0, read: dbCampaign?.read_count || 0,
+        pending: 0, failed: 0, cancelled: 0,
         firstScheduled: item.scheduled_at, lastSent: null, items: [],
       };
       groupsMap.set(key, g);
@@ -2785,6 +2936,7 @@ function QueueTab() {
               onRetryFailed={retryFailed}
               onCancelOne={cancelOne}
               onRetryOne={retryOne}
+              onToggleStatus={toggleStatus}
             />
           ))}
         </div>

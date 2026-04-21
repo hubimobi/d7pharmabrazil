@@ -14,6 +14,17 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Validação de segurança: Webhook Secret
+    const authHeader = req.headers.get("apikey");
+    const webhookSecret = Deno.env.get("WHATSAPP_WEBHOOK_SECRET");
+    
+    if (webhookSecret && authHeader !== webhookSecret) {
+      console.error("[webhook] UNAUTHORIZED: invalid apikey header");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { 
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+
     const payload = await req.json();
     
     // Log full payload for debugging
@@ -58,21 +69,11 @@ Deno.serve(async (req) => {
         .maybeSingle();
       instanceRecord = data;
     }
-    // Fallback: if only one instance exists, use it
     if (!instanceRecord) {
-      const { data, count } = await supabase
-        .from("whatsapp_instances")
-        .select("id, tenant_id, instance_name", { count: "exact" })
-        .eq("active", true)
-        .limit(1);
-      if (count === 1 && data?.[0]) {
-        instanceRecord = data[0];
-        console.log(`[webhook] fallback to single active instance: ${instanceRecord.id}`);
-      }
-    }
-
-    if (!instanceRecord) {
-      console.warn(`[webhook] NO INSTANCE FOUND for name="${instanceName}" apiId="${apiInstanceId}"`);
+      console.warn(`[webhook] IGNORED: instance not found for name="${instanceName}" apiId="${apiInstanceId}"`);
+      return new Response(JSON.stringify({ ok: true, ignored: true, reason: "instance_not_found" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const tenantId = instanceRecord?.tenant_id || null;
@@ -254,8 +255,34 @@ Deno.serve(async (req) => {
 
     // ── MESSAGES_UPDATE (status updates like delivered, read) ──
     if (event === "messages.update" || rawEvent === "MESSAGES_UPDATE") {
-      console.log(`[webhook] messages.update received, acknowledging`);
-      return new Response(JSON.stringify({ ok: true, event: "messages.update" }), {
+      const updates = payload.data || [];
+      const updateList = Array.isArray(updates) ? updates : [updates];
+      
+      let updatedCount = 0;
+      for (const upd of updateList) {
+        const messageId = upd.key?.id;
+        const status = upd.status;
+        
+        if (!messageId || !status) continue;
+
+        // Map Evolution status to our status
+        // 3 = delivered (check), 4 = read (double blue check), 5 = played
+        let mappedStatus = null;
+        if (status === 3) mappedStatus = "delivered";
+        else if (status === 4 || status === 5) mappedStatus = "read";
+
+        if (mappedStatus) {
+          const { error } = await supabase
+            .from("whatsapp_message_log")
+            .update({ status: mappedStatus })
+            .eq("api_id", messageId);
+          
+          if (!error) updatedCount++;
+        }
+      }
+
+      console.log(`[webhook] messages.update: updated ${updatedCount}/${updateList.length} status logs`);
+      return new Response(JSON.stringify({ ok: true, updated: updatedCount }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

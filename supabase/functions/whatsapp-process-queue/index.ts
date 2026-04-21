@@ -27,11 +27,32 @@ const DEFAULT_CONFIG: SendingConfig = {
   messages_per_batch: 10,
   batch_interval_seconds: 30,
   batch_interval_variance: 15,
-  daily_global_limit: 500,
+  daily_global_limit: 1000,
   validate_numbers: true,
   warmup_mode: false,
   warmup_daily_increase: 20,
 };
+
+function renderSpintax(text: string): string {
+  return text.replace(/\{([^{}]+)\}/g, (_match, choices) => {
+    const parts = choices.split("|");
+    return parts[Math.floor(Math.random() * parts.length)];
+  });
+}
+
+/**
+ * Injeta caracteres Unicode invisíveis (U+200B a U+200D) aleatoriamente 
+ * no final do texto para torná-lo único aos olhos do WhatsApp (Anti-Spam).
+ */
+function injectInvisibleWatermark(text: string): string {
+  const watermarks = ["\u200B", "\u200C", "\u200D"];
+  const length = 3 + Math.floor(Math.random() * 5); 
+  let randomMark = "";
+  for (let i = 0; i < length; i++) {
+    randomMark += watermarks[Math.floor(Math.random() * watermarks.length)];
+  }
+  return text + randomMark;
+}
 
 async function loadSendingConfig(supabase: any, tenantId: string | null): Promise<SendingConfig> {
   if (!tenantId) return DEFAULT_CONFIG;
@@ -197,9 +218,10 @@ Deno.serve(async (req) => {
     }
 
     const remainingCapacity = effectiveDailyLimit - totalSentToday;
-    // Lote pequeno por execução. O cron deve rodar em intervalos curtos.
-    // Em vez de setTimeout dentro da função, usamos reschedule persistente.
-    const batchLimit = Math.min(config.messages_per_batch, remainingCapacity, 10);
+    
+    // VETERAN TWEAK: Reduzimos o lote por execução para garantir que NÃO excedemos o timeout (150s).
+    // O pg_cron rodará a cada 1min, então 5 mensagens por minuto é sustentável e seguro.
+    const batchLimit = Math.min(config.messages_per_batch, remainingCapacity, 5);
 
     // Claim atômico via RPC (FOR UPDATE SKIP LOCKED) — evita duas execuções
     // pegarem as mesmas linhas e enviarem duplicado.
@@ -242,16 +264,24 @@ Deno.serve(async (req) => {
           error_message: "Aguardando instância conectada",
         }).eq("id", msg.id);
       }
+      console.log(`[queue] ${messages.length} mensagem(ns) adiada(s): nenhuma instância conectada ou pareada.`);
       return new Response(JSON.stringify({
         processed: 0,
         postponed: messages.length,
         total: messages.length,
         connected_instances: 0,
-        diagnostic: `${messages.length} mensagem(ns) adiada(s): nenhuma instância conectada.`,
+        diagnostic: `${messages.length} mensagem(ns) adiada(s): aguardando conexão ativa dos WhatsApps.`,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const funnelIds = Array.from(new Set(messages.map((msg) => msg.funnel_id).filter(Boolean)));
+    const campaignIds = Array.from(new Set(messages.map((msg) => msg.campaign_id).filter(Boolean)));
+    const campaignsMap = new Map<string, any>();
+    if (campaignIds.length > 0) {
+      const { data: campaignData } = await supabase.from("whatsapp_campaigns").select("*").in("id", campaignIds);
+      for (const camp of campaignData || []) campaignsMap.set(camp.id, camp);
+    }
+
+    const funnelIds = Array.from(new Set(messages.map((msg) => msg.campaign_id ? null : msg.funnel_id).filter(Boolean)));
     const funnelTypeById = new Map<string, string>();
     if (funnelIds.length > 0) {
       const { data: funnelData } = await supabase.from("whatsapp_funnels").select("id, type").in("id", funnelIds);
@@ -262,6 +292,20 @@ Deno.serve(async (req) => {
       if (!Array.isArray(roles) || roles.length === 0) return ["all"];
       const values = roles.filter((role): role is string => typeof role === "string");
       return values.includes("all") ? ["all"] : values;
+    };
+
+    const isWithinWorkingHours = (campaign: any): boolean => {
+      if (!campaign) return true;
+      const tz = campaign.timezone || "America/Sao_Paulo";
+      const now = new Date(new Intl.DateTimeFormat("en-US", { timeZone: tz }).format(new Date()));
+      
+      // Check Days
+      if (campaign.working_days && !campaign.working_days.includes(now.getDay())) return false;
+      
+      // Check Hours
+      const hours = campaign.working_hours || { start: "08:00", end: "18:00" };
+      const currentStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      return currentStr >= hours.start && currentStr <= hours.end;
     };
 
     let processed = 0;
@@ -512,28 +556,77 @@ Deno.serve(async (req) => {
       // pendentes do mesmo telefone com delay calculado.
       const interMessageDelay = computeDelay(config);
 
-      // Pick instance
+      // Pick instance using random rotation among compatible ones
       let instance;
+      const attachedCampaign = msg.campaign_id ? campaignsMap.get(msg.campaign_id) : null;
+
+      // Check Time Window
+      if (!isWithinWorkingHours(attachedCampaign)) {
+        const nextWindow = new Date(Date.now() + 1800000).toISOString(); // adia 30 min
+        await supabase.from("whatsapp_message_queue").update({
+          status: "pending",
+          claimed_by: null,
+          claimed_at: null,
+          scheduled_at: nextWindow,
+          error_message: "Fora do horário comercial da campanha",
+        }).eq("id", msg.id);
+        postponed++;
+        continue;
+      }
+
       if (msg.instance_id) {
         const { data } = await supabase.from("whatsapp_instances").select("*").eq("id", msg.instance_id).eq("active", true).eq("status", "connected").single();
         instance = data;
       }
+      
       if (!instance) {
         const funnelType = msg.funnel_id ? funnelTypeById.get(msg.funnel_id) : null;
-        instance = connectedInstances.find((candidate) => {
+        const restrictedIds = attachedCampaign?.instance_ids || [];
+
+        // Sorteia candidatos para o rodízio ser real
+        const candidates = connectedInstances.filter((candidate) => {
+          // Se a campanha restringiu os números, só usa esses
+          if (restrictedIds.length > 0 && !restrictedIds.includes(candidate.id)) return false;
+          
           const roles = normalizeRoles(candidate.funnel_roles);
           if (candidate.messages_sent_today >= candidate.daily_limit) return false;
           return roles.includes("all") || (!!funnelType && roles.includes(funnelType));
         });
-        if (!instance) {
-          instance = connectedInstances.find(i => i.messages_sent_today < i.daily_limit);
+
+        if (candidates.length > 0) {
+          instance = candidates[Math.floor(Math.random() * candidates.length)];
+        } else {
+          // Fallback: qualquer uma com saldo (dentro da restrição se houver)
+          const anyWithSaldo = connectedInstances.filter(i => {
+            if (restrictedIds.length > 0 && !restrictedIds.includes(i.id)) return false;
+            return i.messages_sent_today < i.daily_limit;
+          });
+          if (anyWithSaldo.length > 0) {
+            instance = anyWithSaldo[Math.floor(Math.random() * anyWithSaldo.length)];
+          }
         }
       }
 
       if (!instance) {
+        const errorMsg = attachedCampaign?.instance_ids?.length > 0 
+          ? "Números selecionados estão offline ou com limite atingido"
+          : "Limite diário atingido em todas as instâncias";
+
+        // Auto-pause se a instância específica sumiu
+        if (attachedCampaign && attachedCampaign.status === 'running') {
+             await supabase.from("whatsapp_campaigns").update({ 
+               status: 'paused', 
+               error_reason: errorMsg 
+             }).eq("id", attachedCampaign.id);
+        }
+
+        console.log(`[queue] Sem instâncias disponíveis para msg ${msg.id}: ${errorMsg}`);
         await supabase.from("whatsapp_message_queue").update({
+          status: "pending",
+          claimed_by: null,
+          claimed_at: null,
           scheduled_at: new Date(Date.now() + 1800000).toISOString(),
-          error_message: "Limite diário atingido em todas as instâncias",
+          error_message: errorMsg,
         }).eq("id", msg.id);
         postponed++;
         continue;
@@ -557,12 +650,21 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Spintax rendering
+      let finalContent = msg.message_content;
+      if (finalContent && finalContent.includes("{") && finalContent.includes("|")) {
+        finalContent = renderSpintax(finalContent);
+      }
+      
+      // VETERAN TWEAK: Invisible Watermarking (Anti-Ban)
+      finalContent = injectInvisibleWatermark(finalContent);
+
       // Handle send_file step type
       if (parsedContent?.step_type === "send_file") {
         const cfg = parsedContent.config || {};
         try {
           let endpoint = "sendText";
-          let body: any = { number: formattedPhone, text: cfg.caption || cfg.url || "" };
+          let body: any = { number: formattedPhone, text: renderSpintax(cfg.caption || cfg.url || "") };
 
           if (cfg.file_type === "file" || cfg.file_type === "audio") {
             endpoint = "sendMedia";
@@ -599,6 +701,8 @@ Deno.serve(async (req) => {
               contact_phone: msg.contact_phone, contact_name: msg.contact_name, instance_id: instance.id, instance_name: instance.name,
               message_content: `[${cfg.file_type}] ${cfg.url}`, direction: "outbound", status: "sent", funnel_id: msg.funnel_id, step_id: msg.step_id,
               tenant_id: instance.tenant_id || msg.tenant_id || null,
+              campaign_id: msg.campaign_id,
+              api_id: evo.data?.key?.id || null,
             });
             await supabase.from("whatsapp_instances").update({ messages_sent_today: instance.messages_sent_today + 1, last_message_at: new Date().toISOString() }).eq("id", instance.id);
             processed++;
@@ -626,8 +730,10 @@ Deno.serve(async (req) => {
           await supabase.from("whatsapp_message_queue").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", msg.id);
           await supabase.from("whatsapp_message_log").insert({
             contact_phone: msg.contact_phone, contact_name: msg.contact_name, instance_id: instance.id, instance_name: instance.name,
-            message_content: msg.message_content, direction: "outbound", status: "sent", funnel_id: msg.funnel_id, step_id: msg.step_id,
+            message_content: finalContent, direction: "outbound", status: "sent", funnel_id: msg.funnel_id, step_id: msg.step_id,
             tenant_id: instance.tenant_id || msg.tenant_id || null,
+            campaign_id: msg.campaign_id,
+            api_id: evo.data?.key?.id || null,
           });
 
           // Upsert conversation
