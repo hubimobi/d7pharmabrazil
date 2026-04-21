@@ -142,6 +142,18 @@ export default function AILLMConfig() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const setDefaultMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("ai_llm_config" as any).update({ is_default: true } as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai-llm-config"] });
+      toast.success("Provedor padrão atualizado!");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const selectedProvider = PROVIDERS.find((p) => p.value === form.provider);
 
   // Calculate stats
