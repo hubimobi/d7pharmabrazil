@@ -20,6 +20,7 @@ interface LLMConfig {
   api_key_name: string;
   default_model: string;
   active: boolean;
+  is_default: boolean;
   created_at: string;
 }
 
@@ -187,7 +188,9 @@ export default function AILLMConfig() {
       <div className="grid gap-4 sm:grid-cols-3">
         {PROVIDERS.map((prov) => {
           const config = configs?.find((c) => c.provider === prov.value);
-          const isActive = prov.value === "lovable" ? !configs?.some((c) => c.active && c.provider !== "lovable") : config?.active;
+          // Lovable is always available as fallback; "active" reflects DB row when present
+          const isActive = prov.value === "lovable" ? true : !!config?.active;
+          const isDefault = !!config?.is_default || (prov.value === "lovable" && !configs?.some((c) => c.is_default));
           return (
             <Card
               key={prov.value}
@@ -196,7 +199,7 @@ export default function AILLMConfig() {
                 provider: prov.value,
                 api_key_name: config?.api_key_name || "",
                 default_model: config?.default_model || prov.models[0]?.value || "",
-                active: config?.active || false,
+                active: config?.active || prov.value === "lovable",
               })}
             >
               <CardContent className="p-5">
@@ -204,12 +207,26 @@ export default function AILLMConfig() {
                   <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                     {prov.value === "lovable" ? <Sparkles className="h-5 w-5 text-primary" /> : <Cpu className="h-5 w-5 text-primary" />}
                   </div>
-                  {isActive ? <CheckCircle className="h-5 w-5 text-green-500" /> : <div className="h-5 w-5 rounded-full border-2 border-muted" />}
+                  <div className="flex items-center gap-1">
+                    {isDefault && <Badge className="text-[10px]">Padrão</Badge>}
+                    {isActive ? <CheckCircle className="h-5 w-5 text-green-500" /> : <div className="h-5 w-5 rounded-full border-2 border-muted" />}
+                  </div>
                 </div>
                 <h4 className="font-medium">{prov.label}</h4>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {prov.value === "lovable" ? "Sem necessidade de API Key" : config?.active ? "Configurado e ativo" : "Requer API Key"}
+                  {prov.value === "lovable" ? "Sempre disponível como fallback" : config?.active ? "Configurado e ativo" : "Requer API Key"}
                 </p>
+                {isActive && !isDefault && config && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 w-full"
+                    onClick={(e) => { e.stopPropagation(); setDefaultMut.mutate(config.id); }}
+                    disabled={setDefaultMut.isPending}
+                  >
+                    Tornar padrão
+                  </Button>
+                )}
               </CardContent>
             </Card>
           );
@@ -251,7 +268,7 @@ export default function AILLMConfig() {
             <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
               <div>
                 <p className="text-sm font-medium">Ativar este provedor</p>
-                <p className="text-xs text-muted-foreground">Desativa o Lovable AI como padrão</p>
+                <p className="text-xs text-muted-foreground">Você pode ativar vários provedores. Use "Tornar padrão" no card para escolher qual será usado por padrão.</p>
               </div>
               <Switch checked={form.active} onCheckedChange={(v) => setForm({ ...form, active: v })} />
             </div>
