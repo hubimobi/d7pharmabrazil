@@ -391,7 +391,7 @@ function InstancesTab() {
       }
       toast.success("Instância criada!");
       if (res.data?.qrcode) {
-        setQrDialog({ open: true, qr: res.data.qrcode, id: res.data.instance?.id });
+        setQrDialog({ open: true, qr: res.data.qrcode, id: res.data.instance?.id, pollStatus: "waiting", pollStartedAt: Date.now() });
       }
       setForm({ name: "", funnel_roles: ["all"] });
       setShowAdd(false);
