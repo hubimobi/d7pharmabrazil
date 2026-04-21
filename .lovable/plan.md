@@ -1,79 +1,58 @@
 
 
-## Problema identificado
+## Problemas a corrigir
 
-A vitrine **não exibe produtos para visitantes anônimos** (que é a maioria dos clientes da loja). Os 5 produtos existem e estão ativos, mas a tabela `products` só tem políticas RLS para usuários **logados**:
+### 1. Configurações da loja não carrega (403)
+A migration anterior fez `security_invoker = on` na view `store_settings_public` **e revogou** SELECT na tabela `store_settings` para `anon`/`authenticated`. Como `security_invoker` faz a view rodar com permissões do chamador, a view também perde acesso à tabela → toda página que usa `useStoreSettings` quebra (Configurações, Home, Header, Footer, Checkout).
 
-| Tabela | Policy para anônimos? | Resultado |
-|---|---|---|
-| `products` | ❌ Não existe | Anônimo vê 0 produtos |
-| `product_combos` | ✅ `active = true` | Anônimo vê combos |
+**Correção:** voltar a view para `security_invoker = off` (SECURITY DEFINER comportamento padrão), mantendo a tabela `store_settings` revogada de `anon`/`authenticated` e apenas `GRANT SELECT` na view. A view continua escondendo colunas sensíveis (Evolution API key, CNPJ, endereço), e como roda como owner ela mesma faz a leitura. Mantém a segurança e restaura o carregamento.
 
-A `current_tenant_id()` retorna NULL para visitantes não logados, então `tenant_id = current_tenant_id()` nunca casa. Resultado: a Home, `FeaturedCarousel`, `AllProducts`, `ProductsPage` e `ProductDetail` voltam arrays vazios.
+### 2. Lista de modelos do agente mostra nomes genéricos
+Hoje em `AIAgentsPage.tsx` (campo "Modelo de IA" do dialog de edição) o select é populado a partir de constantes hardcoded `LOVABLE_MODELS` / `EXTERNAL_MODELS`. O usuário quer que mostre **somente os provedores LLM já cadastrados e ativos** em "Configuração LLM".
 
-Também há um problema de segurança apontado pelo scanner: a view `products_public` (que esconde `cost_price`) existe e é a forma correta de exposição pública, mas o frontend ignora ela e consulta `products` diretamente — perdendo proteção de margem **e** quebrando o acesso público.
+**Correção:**
+- Permitir múltiplas linhas ativas em `ai_llm_config` (hoje a UI assume apenas uma; vou suportar várias).
+- Adicionar coluna `is_default boolean` em `ai_llm_config` (somente um pode ser default por tenant — garantido por trigger).
+- Em `AIAgentsPage`, montar a lista de modelos dinamicamente: para cada provider ativo, listar seu `default_model` (com label `"<Provider> — <Modelo>"`). O primeiro item será o default global (linha com `is_default = true`).
+- Em `AILLMConfig`, na tela de cards: permitir ativar **vários provedores** simultaneamente e marcar um como "Padrão" (radio). Lovable AI continua como fallback automático.
 
-## Solução
+### 3. Revisão completa da lógica de IA
+Vou padronizar todas as edge functions que usam IA para o mesmo helper `getActiveLLM`:
+- Hoje cada função (`product-qa`, `analyze-copy-score`, `generate-ad-copy`, `generate-testimonials`, `generate-profile-copy`, `ai-agent-chat`) tem sua própria cópia do helper. Vou extrair para `supabase/functions/_shared/llm.ts` e fazer todas importarem.
+- O helper passa a respeitar: (a) override por agente (`agent.llm_override` quando aplicável), (b) `is_default = true` em `ai_llm_config`, (c) primeiro `active = true`, (d) fallback Lovable AI.
+- Sempre logar consumo em `ai_token_usage` com o provider/model realmente usado.
+- Mapa atualizado de surfaces que usam IA (manter consistência):
+  - **Agentes (chat):** `ai-agent-chat` — chat admin, WhatsApp via flow `ai_reply`.
+  - **Ferramentas /admin/tools:** `generate-testimonials`, `generate-image`, `generate-ad-copy`, `analyze-copy-score`, `generate-profile-copy`, gerador de campanha.
+  - **Loja pública:** `product-qa` (perguntas no produto).
+  - **WhatsApp:** `improve-message-copy` (composer), `ai_reply` (flow step).
+  - **Edição:** `remove-background` (logos).
 
-### 1. Adicionar policy pública de leitura na tabela `products` (migration)
+### 4. Default de modelo no editor de Flow WhatsApp
+Já corrigido em mensagem anterior (mostra `default_model` do provider ativo). Revisar para usar a mesma fonte unificada.
 
-```sql
--- Permite que qualquer visitante (anon + authenticated) leia produtos ativos
--- Filtro de tenant fica a cargo do frontend (passa tenant_id do hostname)
-CREATE POLICY "products_public_select"
-ON public.products
-FOR SELECT
-TO anon, authenticated
-USING (active = true);
-```
+## Mudanças por arquivo
 
-Isso é seguro porque:
-- A tabela já é exposta via vitrine pública (qualquer um vê produtos no site)
-- O filtro por `tenant_id` continua sendo feito no frontend com o tenant resolvido pelo hostname
-- A view `products_public` continua escondendo `cost_price` nas consultas que a usam
+**Migrations (1 nova):**
+1. Reverter `store_settings_public` para `security_invoker = off`; manter REVOKE na tabela; manter GRANT SELECT na view.
+2. Adicionar `ai_llm_config.is_default boolean default false`; trigger garantindo no máximo 1 default por tenant; marcar Lovable como default se nenhum existir.
 
-### 2. Migrar consultas públicas para `products_public`
-
-Trocar `from("products")` por `from("products_public")` em:
-- `src/hooks/useProducts.tsx` (`useProducts` + `useProduct`)
-- `src/components/checkout/CartRecommendations.tsx` (já usa o hook, ok)
-- Manter `from("products")` apenas em telas admin (`src/pages/admin/ProductsPage.tsx`)
-
-Isso resolve simultaneamente:
-- A vitrine volta a funcionar para anônimos
-- `cost_price` deixa de vazar em qualquer consulta pública (aborda finding de segurança secundária)
-
-### 3. Garantir filtro consistente por `tenantId` resolvido
-
-Revisar que todos os hooks de catálogo (`useProducts`, `useProduct`, `useCombos`) só rodam **depois** de `isResolved` no `TenantProvider`. Já está OK porque `TenantProvider` retorna `null` até resolver, mas vou confirmar e se necessário adicionar `enabled: !!tenantId` nas queries para evitar requests com tenant errado durante o boot.
-
-### 4. Corrigir o finding de segurança paralelo (whatsapp_instances)
-
-Já que o usuário está na tela de Security, aproveitar para corrigir o erro relacionado:
-- A policy `whatsapp_instances_admin_select` permite que admin de tenant A leia chaves de API do tenant B
-- Substituir por `(tenant_id = current_tenant_id()) OR is_super_admin()`
-
-## Arquivos alterados
-
-**Migration nova:**
-- `supabase/migrations/<ts>_fix_products_public_access.sql`
-  - `CREATE POLICY products_public_select` em `products`
-  - `DROP POLICY whatsapp_instances_admin_select` + recria com escopo de tenant
-  - `GRANT SELECT ON products_public TO anon, authenticated`
+**Edge Functions:**
+- Criar `supabase/functions/_shared/llm.ts` com `getActiveLLM(sb, { agentLlmOverride? })` e `logTokenUsage(sb, {...})`.
+- Refatorar `ai-agent-chat`, `product-qa`, `analyze-copy-score`, `generate-ad-copy`, `generate-testimonials`, `generate-profile-copy` para usar o helper compartilhado.
 
 **Frontend:**
-- `src/hooks/useProducts.tsx` → consultar `products_public`
-- (verificar se `ProductDetail` e outros lugares precisam ajustar tipos)
-
-## Resultado esperado
-
-- Home volta a mostrar produtos em destaque, "Todos os Produtos" e carrossel para qualquer visitante
-- `/produtos` e `/produto/:slug` voltam a funcionar para anônimos
-- `cost_price` deixa de ser exposto na vitrine pública
-- Finding de WhatsApp instances (vazamento entre tenants) corrigido
-- Combos continuam funcionando como já funcionavam
+- `src/components/admin/AILLMConfig.tsx`: substituir lógica "apenas 1 ativo" por múltiplos ativos + radio de Padrão; salvar `is_default`.
+- `src/pages/admin/AIAgentsPage.tsx`: montar `availableModels` a partir de **todos** os configs ativos (não só o primeiro externo); ordenar por `is_default` primeiro; rótulos `"<Provider> — <Modelo>"`.
+- `src/components/admin/WhatsAppFlowEditor.tsx`: usar mesma fonte de defaults do `AIAgentsPage`.
 
 ## Riscos
+- Baixo. A correção da view restaura acesso sem expor colunas sensíveis (a view não as projeta). A mudança de `is_default` é aditiva.
+- Será necessário re-deploy das edge functions refatoradas (automático).
 
-- Baixo. Mudança de SELECT de tabela para view com mesmas colunas (menos `cost_price`). Se algum componente usar `cost_price` na vitrine (não deveria), precisa ajustar — vou confirmar antes de migrar.
+## Resultado esperado
+- `/admin/configuracoes` volta a carregar; Home, Checkout e cabeçalho voltam a buscar branding.
+- No dialog do agente: dropdown lista exatamente os provedores/modelos cadastrados e ativos em LLM Config, com o "Padrão" no topo.
+- Possível ativar vários provedores e definir qual é o padrão.
+- Toda IA do sistema passa por um único caminho de seleção de provedor com logs unificados de tokens.
 
