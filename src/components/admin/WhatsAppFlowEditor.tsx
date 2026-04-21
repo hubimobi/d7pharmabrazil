@@ -2140,7 +2140,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         open={exitDialog}
         onStay={() => setExitDialog(false)}
         onLeave={() => { setExitDialog(false); setDirty(false); onBack(); }}
-        onSaveAndLeave={async () => { setExitDialog(false); await save(); }}
+        onSaveAndLeave={async () => { setExitDialog(false); await save(); onBack(); }}
         hasSave
       />
 
