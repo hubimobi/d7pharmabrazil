@@ -417,7 +417,7 @@ function InstancesTab() {
         return;
       }
       if (res.data?.qrcode) {
-        setQrDialog({ open: true, qr: res.data.qrcode, id: inst.id });
+        setQrDialog({ open: true, qr: res.data.qrcode, id: inst.id, pollStatus: "waiting", pollStartedAt: Date.now() });
       } else {
         toast.info("Nenhum QR Code disponível. Verifique o status.");
       }
