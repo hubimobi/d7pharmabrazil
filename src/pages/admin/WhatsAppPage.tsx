@@ -1842,6 +1842,21 @@ function BroadcastTab() {
   useEffect(() => { loadData(); }, []);
   useEffect(() => { estimateAudience(); }, [filterType, filterValue]);
 
+  // Auto-refresh status of instances every 10s so the user sees Connected/Disconnected live
+  useEffect(() => {
+    const interval = setInterval(() => { refreshInstances(); }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function refreshInstances() {
+    const { data } = await supabase
+      .from("whatsapp_instances")
+      .select("*")
+      .eq("active", true)
+      .order("created_at", { ascending: false });
+    setInstances(data || []);
+  }
+
   async function loadData() {
     const [{ data: f }, { data: fl }, { data: rp }, { data: d }, { data: p }, { data: t }, { data: i }] = await Promise.all([
       supabase.from("whatsapp_funnels").select("*").eq("active", true).order("name"),
@@ -1850,7 +1865,7 @@ function BroadcastTab() {
       supabase.from("doctors").select("id, name").eq("active", true),
       supabase.from("products").select("id, name").eq("active", true),
       supabase.from("customer_tags").select("tag"),
-      supabase.from("whatsapp_instances").select("*").eq("active", true).eq("status", "connected"),
+      supabase.from("whatsapp_instances").select("*").eq("active", true).order("created_at", { ascending: false }),
     ]);
     setFunnels((f || []) as unknown as WhatsAppFunnel[]);
     setFlows((fl || []) as any);
