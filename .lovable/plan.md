@@ -2,81 +2,53 @@
 
 ## Problema
 
-Quando o usuário escaneia o QR Code, a instância conecta na Evolution (aparece como "open"/"connected" nos logs e no WhatsApp do celular), mas o modal do QR Code **continua aberto** sem nenhum feedback. O usuário não sabe se deu certo e precisa fechar manualmente e clicar em "Status" para confirmar.
+Na aba **WhatsApp → Disparos em Massa** (Broadcasts), a coluna/campo "Número" da lista de instâncias mostra o `instance_name` técnico (ex: `d7pharma_1776107871039`) em vez do nome do dono e do telefone real conectado (ex: `Luciano Leal — 55 47 8482-6726`).
 
-## Causa
-
-O `Dialog` de QR Code em `WhatsAppPage.tsx` (linhas 561-573) só mostra a imagem estática. Não existe:
-- Polling que verifique o status da instância enquanto o QR está exibido.
-- Feedback visual de "aguardando conexão" / "conectado".
-- Auto-fechamento após conexão bem-sucedida.
+A informação correta já existe no banco — a tabela `whatsapp_instances` tem as colunas `owner_name` (ou `profile_name`) e `owner_jid`/`phone_number` que são preenchidas pelo webhook da Evolution quando a conexão é estabelecida (vimos esses dados na lista principal: "Luciano Leal / 554784826726").
 
 ## Solução
 
-Transformar o modal do QR Code em um fluxo autoguiado com polling ativo:
-
-### 1. Polling a cada 3 segundos enquanto o modal estiver aberto
-- Ao abrir o `qrDialog`, inicia um `setInterval` que chama `whatsapp-instance` com `action: "status"` para a instância em questão.
-- Para o polling quando o modal fechar, o componente desmontar ou o status virar `connected`.
-
-### 2. Estados visuais no modal
+Trocar a renderização do seletor/lista de instâncias do módulo de Broadcasts para mostrar:
 
 ```text
-┌─ Escanear QR Code ─────────────┐
-│                                │
-│     [imagem do QR 256x256]     │
-│                                │
-│  ⏳ Aguardando escaneamento...  │   ← estado inicial (raw_state = "connecting" / close)
-│                                │
-│  Abra WhatsApp → Dispositivos  │
-│  Conectados → Conectar         │
-└────────────────────────────────┘
-
-┌─ Conectando... ────────────────┐
-│                                │
-│     [imagem do QR esmaecida]   │
-│                                │
-│  🔄 Pareando com WhatsApp...    │   ← intermediário (raw_state = "connecting" após scan)
-└────────────────────────────────┘
-
-┌─ ✅ Pronto! ───────────────────┐
-│                                │
-│       ✔ (ícone grande verde)   │
-│                                │
-│   WhatsApp conectado com       │   ← final (raw_state = "open")
-│   sucesso!                     │
-│                                │
-│   Fechando em 2s...            │
-└────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ ☑  Luciano Leal                          │
+│    +55 47 8482-6726                      │
+│    🟢 Conectado                           │
+└──────────────────────────────────────────┘
 ```
 
-### 3. Auto-fechamento
-- Quando o polling detectar `raw_state === "open"` ou `status === "connected"`:
-  - Mostra tela de sucesso por 2 segundos.
-  - Fecha o modal automaticamente.
-  - Chama `loadInstances()` para atualizar a lista.
-  - Dispara toast `"WhatsApp conectado com sucesso!"`.
+em vez do atual:
 
-### 4. Timeout e expiração do QR
-- Se após 60 segundos ainda não conectou, exibir botão **"Gerar novo QR"** que re-invoca `action: "qrcode"`.
-- QR Codes da Evolution expiram rapidamente — botão de refresh manual evita ficar preso.
+```text
+┌──────────────────────────────────────────┐
+│ ☑  d7pharma_1776107871039                │
+└──────────────────────────────────────────┘
+```
 
-### 5. Badge de status em tempo real na lista
-Na lista de instâncias (já existente), aproveitar que `loadInstances()` é chamado após a conexão para refletir o badge de "Conectado" imediatamente sem exigir refresh da página.
+### Detalhes de implementação
 
-## Arquivos afetados
+1. **Localizar o componente de seleção de instâncias do Broadcast**  
+   Provavelmente em `src/components/admin/` (ex: `BroadcastDialog.tsx` / dentro de `WhatsAppPage.tsx` aba broadcasts). Vou inspecionar para confirmar antes de editar.
 
-- `src/pages/admin/WhatsAppPage.tsx`
-  - Estado `qrDialog` ganha novos campos: `pollStatus: "waiting" | "connecting" | "connected"`, `pollStartedAt: number`.
-  - Novo `useEffect` com `setInterval` disparado pela abertura do modal.
-  - JSX do `Dialog` (linhas 561-573) refatorado para mostrar os três estados + botão "Gerar novo QR".
-  - Função `getQR(inst)` e o sucesso do `createInstance()` resetam os campos de polling ao abrir.
+2. **Atualizar a query** que carrega as instâncias para também trazer:
+   - `owner_name` (ou `profile_name` — o que estiver populado)
+   - `phone_number` (ou derivar de `owner_jid` removendo `@s.whatsapp.net`)
+   - `connection_state` / `status`
 
-Nenhuma mudança em edge function, migration ou schema — o endpoint `status` já retorna `raw_state` suficiente.
+3. **Helper de formatação** — criar uma função pequena `formatInstanceLabel(inst)`:
+   - Nome: `inst.owner_name || inst.profile_name || "Sem nome"`
+   - Telefone: formatado como `+55 (47) 8482-6726` a partir de `phone_number` ou `owner_jid.split("@")[0]`
+   - Fallback: se nenhum dos dois estiver preenchido, mostra o `instance_name` em cinza com aviso "Aguardando dados do WhatsApp"
+
+4. **Aplicar nos três pontos onde a instância aparece no Broadcast:**
+   - Lista de seleção de "Números participantes" (checkboxes/multi-select).
+   - Resumo "X instâncias selecionadas" (tooltip ou chips).
+   - Coluna de origem nos logs/relatórios da campanha (se aparecer o ID).
+
+5. **Sem mudança de schema nem migration.** Apenas leitura de colunas já existentes.
 
 ## Resultado esperado
 
-- Ao escanear o QR, em até 3s o modal muda para "Pareando..." e depois "Conectado ✓", fechando sozinho.
-- Usuário recebe confirmação clara sem precisar clicar em "Status" manualmente.
-- Se o QR expirar sem scan, aparece botão para gerar novo sem fechar o modal.
+Ao abrir a tela de Broadcasts, o usuário vê os WhatsApps disponíveis identificados pelo nome do dono + número de telefone real conectado, igual aparece no celular, em vez do ID interno. Se algum número ainda não tiver os metadados sincronizados, o nome técnico aparece com aviso visual para o usuário saber que precisa reconectar/aguardar.
 
