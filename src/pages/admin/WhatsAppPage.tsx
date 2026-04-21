@@ -1775,6 +1775,35 @@ function SendingConfigTab() {
 // ==================== BROADCAST TAB ====================
 type BroadcastMode = "funnel" | "flow";
 
+// Format BR phone: 5547984826726 -> +55 (47) 98482-6726
+function formatBRPhone(raw?: string | null): string {
+  if (!raw) return "";
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 10) return raw;
+  let d = digits;
+  if (!d.startsWith("55") && d.length <= 11) d = "55" + d;
+  const cc = d.slice(0, 2);
+  const ddd = d.slice(2, 4);
+  const rest = d.slice(4);
+  if (rest.length === 9) return `+${cc} (${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+  if (rest.length === 8) return `+${cc} (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+  return `+${cc} ${ddd} ${rest}`;
+}
+
+function getInstanceDisplay(inst: any): { name: string; phone: string; hasMeta: boolean } {
+  const name = inst?.owner_name || inst?.profile_name || "";
+  const phoneRaw =
+    inst?.phone_number ||
+    (inst?.owner_jid ? String(inst.owner_jid).split("@")[0] : "");
+  const phone = formatBRPhone(phoneRaw);
+  const hasMeta = Boolean(name || phone);
+  return {
+    name: name || inst?.instance_name || "Sem nome",
+    phone,
+    hasMeta,
+  };
+}
+
 const FILTER_OPTIONS = [
   { value: "all", label: "Todos os contatos", icon: Users },
   { value: "tag", label: "Por Tag", icon: Tag },
