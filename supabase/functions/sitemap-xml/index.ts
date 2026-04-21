@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     return new Response(xml, {
       headers: { ...corsHeaders, "Content-Type": "application/xml; charset=utf-8" },
     });
-  } catch (error) {
+  } catch (error: any) {
     return new Response(`Error: ${error.message}`, { status: 500, headers: corsHeaders });
   }
 });

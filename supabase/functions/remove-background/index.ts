@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,7 +57,7 @@ serve(async (req) => {
         image_url: { url: image_url },
       };
     } else {
-      const base64 = base64Encode(imgBytes);
+      const base64 = base64Encode(imgBytes as any);
       const mimeType = imgResponse.headers.get("content-type") || "image/jpeg";
       imageContent = {
         type: "image_url",
@@ -232,7 +233,7 @@ serve(async (req) => {
     
     // Encode as PNG with transparency
     const pngBytes = await img.encode(1); // PNG format
-    const finalBase64 = base64Encode(pngBytes);
+    const finalBase64 = base64Encode(pngBytes as any);
 
     console.log("Background removed successfully with green-screen technique");
 

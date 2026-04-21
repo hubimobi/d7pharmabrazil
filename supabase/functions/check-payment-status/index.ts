@@ -89,7 +89,7 @@ serve(async (req) => {
             body: JSON.stringify({ order_id }),
           });
           console.log("Bling sync triggered for order:", order_id);
-        } catch (blingErr) {
+        } catch (blingErr: any) {
           console.error("Bling sync failed (non-fatal):", blingErr);
         }
       }
@@ -98,7 +98,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ status, payment_id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("check-payment-status error:", err);
 
     try {
@@ -111,7 +111,7 @@ serve(async (req) => {
         status: "error",
         details: err.message,
       });
-    } catch (_) {}
+    } catch (_: any) {}
 
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,

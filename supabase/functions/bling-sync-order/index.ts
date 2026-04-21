@@ -140,7 +140,7 @@ serve(async (req) => {
           }
           // No name match — treat as no duplicate found, proceed with creation
         }
-      } catch (e) {
+      } catch (e: any) {
         console.log("Bling search failed, proceeding with sync:", e.message);
       }
     }
@@ -253,7 +253,7 @@ serve(async (req) => {
               { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
-        } catch (_) { /* fallthrough */ }
+        } catch (_: any) { /* fallthrough */ }
         
         // If search failed, still treat as success
         await supabase.from("integration_logs").insert({ integration: "bling", action: "sync_order", status: "success", details: `Pedido ${orderRef} já existe no Bling (duplicata detectada).` });
@@ -283,7 +283,7 @@ serve(async (req) => {
       JSON.stringify({ success: true, bling_order: blingData }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error("bling-sync-order error:", err);
     return new Response(
       JSON.stringify({ error: err.message }),

@@ -52,8 +52,6 @@ serve(async (req) => {
     const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     if (!imageUrl) throw new Error("Nenhuma imagem gerada");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, "");

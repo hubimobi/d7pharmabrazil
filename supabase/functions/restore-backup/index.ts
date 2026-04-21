@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
       record_id: recordId,
     }), { headers: jsonHeaders });
 
-  } catch (err) {
+  } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message || "Internal error" }), { status: 500, headers: jsonHeaders });
   }
 });

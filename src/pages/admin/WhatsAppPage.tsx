@@ -2545,6 +2545,7 @@ interface QueueRow {
   funnel_id: string | null;
   flow_id: string | null;
   instance_id: string | null;
+  campaign_id?: string | null;
 }
 
 interface CampaignGroup {
