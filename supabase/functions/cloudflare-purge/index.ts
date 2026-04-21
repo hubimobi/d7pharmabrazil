@@ -2,7 +2,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getTenantCredentials, DEFAULT_TENANT_ID } from "../_shared/tenant-credentials.ts";
 
 interface CloudflareCreds { api_token: string; zone_id: string; }

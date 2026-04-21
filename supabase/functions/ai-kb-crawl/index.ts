@@ -29,7 +29,7 @@ serve(async (req) => {
       });
     }
 
-    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    // sb already created above
 
     // Simple fetch and extract text
     let formattedUrl = url.trim();
