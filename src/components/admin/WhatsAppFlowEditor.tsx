@@ -778,7 +778,6 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
       }
       toast.success("Fluxo salvo!");
       setDirty(false);
-      onBack();
     } catch (e: any) { toast.error(e.message); }
     setSaving(false);
   }
@@ -2141,7 +2140,7 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
         open={exitDialog}
         onStay={() => setExitDialog(false)}
         onLeave={() => { setExitDialog(false); setDirty(false); onBack(); }}
-        onSaveAndLeave={async () => { setExitDialog(false); await save(); }}
+        onSaveAndLeave={async () => { setExitDialog(false); await save(); onBack(); }}
         hasSave
       />
 
