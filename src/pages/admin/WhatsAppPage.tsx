@@ -1859,6 +1859,8 @@ function BroadcastTab() {
   const [testPhone, setTestPhone] = useState("");
   const [testStatus, setTestStatus] = useState<null | { id: string; status: string; error_message?: string | null }>(null);
   const testPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [skipRecent, setSkipRecent] = useState(true);
+  const [skipDays, setSkipDays] = useState(30);
 
   useEffect(() => { loadData(); }, []);
   useEffect(() => { estimateAudience(); }, [filterType, filterValue]);
@@ -1967,9 +1969,39 @@ function BroadcastTab() {
       });
       contactPhones = Array.from(phoneMap.entries()).map(([phone, name]) => ({ phone, name }));
     }
+
+    // Deduplicate by phone (keep first occurrence)
+    const seen = new Set<string>();
+    contactPhones = contactPhones.filter(c => {
+      const phone = c.phone.replace(/\D/g, "");
+      if (seen.has(phone)) return false;
+      seen.add(phone);
+      return true;
+    }).map(c => ({ ...c, phone: c.phone.replace(/\D/g, "") }));
+
+    // Skip contacts already reached by this funnel/flow in the last N days
+    if (skipRecent && contactPhones.length > 0) {
+      const isFlow = mode === "flow";
+      const targetId = isFlow ? selectedFlow : selectedFunnel;
+      if (targetId) {
+        const since = new Date(Date.now() - skipDays * 86_400_000).toISOString();
+        const column = isFlow ? "flow_id" : "funnel_id";
+        const { data: recentRows } = await supabase
+          .from("whatsapp_message_queue")
+          .select("contact_phone")
+          .eq(column, targetId)
+          .eq("status", "sent")
+          .gte("scheduled_at", since);
+        if (recentRows && recentRows.length > 0) {
+          const recentPhones = new Set(recentRows.map((r: any) => r.contact_phone.replace(/\D/g, "")));
+          contactPhones = contactPhones.filter(c => !recentPhones.has(c.phone));
+        }
+      }
+    }
+
     return contactPhones;
   }
-  
+
   async function startTestBroadcast() {
     const isFlow = mode === "flow";
     const targetId = isFlow ? selectedFlow : selectedFunnel;
@@ -2044,15 +2076,22 @@ function BroadcastTab() {
     const targetId = isFlow ? selectedFlow : selectedFunnel;
     if (!targetId) { toast.error(`Selecione um ${isFlow ? "flow" : "funil"}`); return; }
     if (estimatedCount === 0) { toast.error("Nenhum contato encontrado com os filtros selecionados"); return; }
-    if (!confirm(`Confirma disparar para ~${estimatedCount || "?"} contatos?`)) return;
     setLoading(true);
     try {
       const contactPhones = await gatherContacts();
       if (contactPhones.length === 0) {
-        toast.error("Nenhum contato com telefone encontrado");
+        const skipMsg = skipRecent
+          ? ` — todos já receberam este ${isFlow ? "flow" : "funil"} nos últimos ${skipDays} dias`
+          : "";
+        toast.error(`Nenhum contato disponível para disparo${skipMsg}`);
         setLoading(false);
         return;
       }
+      const skippedCount = (estimatedCount ?? contactPhones.length) - contactPhones.length;
+      const confirmMsg = skipRecent && skippedCount > 0
+        ? `Disparar para ${contactPhones.length} contato(s)?\n\n⚠️ ${skippedCount} contato(s) ignorado(s) por já terem recebido este ${isFlow ? "flow" : "funil"} nos últimos ${skipDays} dias.`
+        : `Confirmar disparo para ${contactPhones.length} contato(s)?`;
+      if (!confirm(confirmMsg)) { setLoading(false); return; }
 
       // 1. Criar Registro da Campanha (Fase 2)
       const targetName = isFlow
@@ -2349,7 +2388,10 @@ function BroadcastTab() {
                     <Users className="h-8 w-8 text-primary" />
                     <div>
                       <p className="text-2xl font-bold">{estimatedCount !== null ? estimatedCount : "—"}</p>
-                      <p className="text-xs text-muted-foreground">contatos estimados</p>
+                      <p className="text-xs text-muted-foreground">
+                        contatos estimados
+                        {skipRecent && <span className="ml-1 text-amber-600 font-medium">· excluindo recentes ({skipDays}d)</span>}
+                      </p>
                     </div>
                   </div>
                   <Badge variant={estimatedCount && estimatedCount > 0 ? "default" : "secondary"}>
@@ -2410,6 +2452,32 @@ function BroadcastTab() {
                           </button>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  {/* Skip recently contacted */}
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-semibold">Evitar reenvio</Label>
+                      <p className="text-[10px] text-muted-foreground">Remove quem já recebeu este funil/flow recentemente.</p>
+                    </div>
+                    <Switch checked={skipRecent} onCheckedChange={setSkipRecent} />
+                  </div>
+
+                  {skipRecent && (
+                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">Ignorar quem recebeu nos últimos</span>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={365}
+                        value={skipDays}
+                        onChange={e => setSkipDays(Math.max(1, parseInt(e.target.value) || 30))}
+                        className="h-7 w-16 text-xs text-center"
+                      />
+                      <span className="text-xs text-muted-foreground">dias</span>
                     </div>
                   )}
                 </div>
