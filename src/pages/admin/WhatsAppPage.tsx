@@ -1790,17 +1790,21 @@ function formatBRPhone(raw?: string | null): string {
   return `+${cc} ${ddd} ${rest}`;
 }
 
-function getInstanceDisplay(inst: any): { name: string; phone: string; hasMeta: boolean } {
-  const name = inst?.owner_name || inst?.profile_name || "";
+function getInstanceDisplay(inst: any): { name: string; phone: string; hasMeta: boolean; status: string; connected: boolean } {
+  const name = inst?.name || inst?.owner_name || inst?.profile_name || "";
   const phoneRaw =
     inst?.phone_number ||
     (inst?.owner_jid ? String(inst.owner_jid).split("@")[0] : "");
   const phone = formatBRPhone(phoneRaw);
-  const hasMeta = Boolean(name || phone);
+  const hasMeta = Boolean(name);
+  const connected = inst?.connection_state === "open" || inst?.status === "connected";
+
   return {
-    name: name || inst?.instance_name || "Sem nome",
-    phone,
+    name: name || inst?.instance_name || "Aguardando sincronização",
+    phone: phone || "Sem telefone",
     hasMeta,
+    connected,
+    status: connected ? "Conectado" : "Desconectado",
   };
 }
 
@@ -1838,6 +1842,7 @@ function BroadcastTab() {
   const [workingHoursLimit, setWorkingHoursLimit] = useState(true);
   const [workingRange, setWorkingRange] = useState({ start: "08:00", end: "18:00" });
   const [workingDays, setWorkingDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [testPhone, setTestPhone] = useState("");
 
   useEffect(() => { loadData(); }, []);
   useEffect(() => { estimateAudience(); }, [filterType, filterValue]);
@@ -1947,6 +1952,57 @@ function BroadcastTab() {
       contactPhones = Array.from(phoneMap.entries()).map(([phone, name]) => ({ phone, name }));
     }
     return contactPhones;
+  }
+  
+  async function startTestBroadcast() {
+    const isFlow = mode === "flow";
+    const targetId = isFlow ? selectedFlow : selectedFunnel;
+    if (!targetId) { toast.error(`Selecione um ${isFlow ? "flow" : "funil"}`); return; }
+    if (!testPhone || testPhone.length < 10) { toast.error("Digite um telefone válido com DDD"); return; }
+    
+    setLoading(true);
+    try {
+      const cleanPhone = testPhone.replace(/\D/g, "");
+      const targetName = isFlow ? flows.find(f => f.id === targetId)?.name : funnels.find(f => f.id === targetId)?.name;
+      
+      let messageContent = "";
+      let stepId: string | null = null;
+      let templateId: string | null = null;
+      let firstStepFunnelId: string | null = null;
+      let flowIdField: string | null = null;
+
+      if (!isFlow) {
+        const { data: steps } = await supabase.from("whatsapp_funnel_steps").select("*").eq("funnel_id", targetId).eq("active", true).order("step_order");
+        if (!steps || steps.length === 0) { toast.error("Funil sem etapas ativas"); setLoading(false); return; }
+        const firstStep = steps[0];
+        messageContent = firstStep.step_type === "message_template" && firstStep.template_id 
+          ? "Template" 
+          : firstStep.step_type === "message_custom" ? (firstStep.config as any)?.custom_message || firstStep.label : firstStep.label || "Mensagem de teste";
+        stepId = firstStep.id; templateId = firstStep.template_id || null; firstStepFunnelId = targetId;
+      } else {
+        messageContent = `[FLOW] Execução de Teste`;
+        flowIdField = targetId;
+      }
+
+      const { error } = await supabase.from("whatsapp_message_queue").insert({
+        contact_phone: cleanPhone,
+        contact_name: "Teste Interno",
+        message_content: messageContent,
+        funnel_id: firstStepFunnelId,
+        flow_id: flowIdField,
+        step_id: stepId,
+        template_id: templateId,
+        status: "pending",
+        scheduled_at: new Date().toISOString(), // Immediato
+        broadcast_name: `[TESTE] ${targetName}`,
+        tenant_id: tenantId,
+        instance_id: selectedInstances.length > 0 ? selectedInstances[Math.floor(Math.random() * selectedInstances.length)] : null
+      });
+
+      if (error) { toast.error(`Erro ao enfileirar teste: ${error.message}`); }
+      else { toast.success("Disparo de teste enfileirado nas próximas execuções!"); setTestPhone(""); }
+    } catch (e: any) { toast.error(`Erro no teste: ${e.message}`); }
+    setLoading(false);
   }
 
   async function startBroadcast() {
@@ -2140,7 +2196,7 @@ function BroadcastTab() {
                 <Smartphone className="h-4 w-4 text-muted-foreground" />
                 4. Números participantes
               </Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                 {instances.map(inst => {
                   const display = getInstanceDisplay(inst);
                   const selected = selectedInstances.includes(inst.id);
@@ -2153,36 +2209,35 @@ function BroadcastTab() {
                           prev.includes(inst.id) ? prev.filter(i => i !== inst.id) : [...prev, inst.id]
                         );
                       }}
-                      className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
+                      className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition-all duration-200 ${
                         selected
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-background hover:bg-muted/50"
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/20"
+                          : "border-border bg-background hover:border-primary/50 hover:bg-muted/30"
                       }`}
                     >
-                      <Smartphone className={`h-4 w-4 mt-0.5 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
-                      <div className="flex flex-col min-w-0">
-                        <span className={`text-xs font-semibold leading-tight ${display.hasMeta ? "" : "text-muted-foreground italic"}`}>
-                          {display.name}
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Smartphone className={`h-4 w-4 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                          <span className={`text-sm font-bold truncate leading-tight ${display.hasMeta ? "text-foreground" : "text-muted-foreground italic"}`}>
+                            {display.name}
+                          </span>
+                        </div>
+                        <div className={`h-2 w-2 rounded-full shrink-0 ${display.connected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-amber-500"}`} />
+                      </div>
+                      
+                      <div className="flex items-baseline justify-between mt-1 pt-1 border-t border-muted/30">
+                        <span className="text-[10px] tabular-nums text-muted-foreground font-medium">
+                          {display.phone}
                         </span>
-                        {display.phone ? (
-                          <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-                            {display.phone}
-                          </span>
-                        ) : !display.hasMeta ? (
-                          <span className="text-[10px] text-amber-600 leading-tight mt-0.5">
-                            Aguardando dados do WhatsApp
-                          </span>
-                        ) : null}
-                        <span className="flex items-center gap-1 text-[10px] text-emerald-600 leading-tight mt-0.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          Conectado
+                        <span className={`text-[10px] font-bold ${display.connected ? "text-green-600/80" : "text-amber-600/80"}`}>
+                          {display.status}
                         </span>
                       </div>
                     </button>
                   );
                 })}
-                {instances.length === 0 && <p className="text-[10px] text-muted-foreground italic">Nenhuma instância online para seleção específica.</p>}
               </div>
+              {instances.length === 0 && <p className="text-[10px] text-muted-foreground italic">Nenhuma instância online para seleção específica.</p>}
               <p className="text-[10px] text-muted-foreground mt-2">
                 Se nenhum for selecionado, o sistema usará **todos** os números disponíveis para rodízio automático.
               </p>
@@ -2330,12 +2385,38 @@ function BroadcastTab() {
             <Button
               onClick={startBroadcast}
               disabled={loading || (mode === "funnel" ? !selectedFunnel : !selectedFlow) || estimatedCount === 0}
-              className="w-full"
-              size="lg"
+              className="w-full h-12 text-md"
             >
-              <Megaphone className="h-4 w-4 mr-2" />
-              {loading ? "Iniciando..." : `Disparar Transmissão${estimatedCount ? ` (${estimatedCount})` : ""}`}
+              <Megaphone className="h-5 w-5 mr-2" />
+              {loading ? "Iniciando..." : `Disparar Transmissão Real${estimatedCount ? ` (${estimatedCount})` : ""}`}
             </Button>
+            
+            <Separator className="my-2" />
+            
+            <div className="bg-muted/30 p-4 rounded-xl border border-dashed flex flex-col gap-3">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <Settings2 className="h-4 w-4 text-muted-foreground" /> Teste de Disparo
+              </Label>
+              <div className="flex gap-2">
+                <Input 
+                  placeholder="Seu WhatsApp (ex: 47999990000)" 
+                  value={testPhone} 
+                  onChange={e => setTestPhone(e.target.value)}
+                  className="flex-1 bg-background"
+                />
+                <Button 
+                  onClick={startTestBroadcast}
+                  disabled={loading || !testPhone || (mode === "funnel" ? !selectedFunnel : !selectedFlow)}
+                  variant="secondary"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Testar Envio
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                O teste envia a ativação imediatamente ignorando filtros de horário limitante e agenda no topo da fila.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -2743,6 +2824,7 @@ interface CampaignGroup {
   firstScheduled: string;
   lastSent: string | null;
   items: QueueRow[];
+  instance_ids?: string[] | null;
 }
 
 function StatusKPI({ icon: Icon, label, value, tone }: { icon: any; label: string; value: number | string; tone: string }) {
@@ -2762,7 +2844,7 @@ function StatusKPI({ icon: Icon, label, value, tone }: { icon: any; label: strin
 }
 
 function CampaignCard({
-  group, onCancelGroup, onRetryFailed, onCancelOne, onRetryOne, onToggleStatus,
+  group, onCancelGroup, onRetryFailed, onCancelOne, onRetryOne, onToggleStatus, instances = [],
 }: {
   group: CampaignGroup;
   onCancelGroup: (g: CampaignGroup) => void;
@@ -2770,6 +2852,7 @@ function CampaignCard({
   onCancelOne: (id: string) => void;
   onRetryOne: (id: string) => void;
   onToggleStatus: (g: CampaignGroup) => void;
+  instances?: any[];
 }) {
   const [open, setOpen] = useState(false);
   const total = group.total;
@@ -2801,6 +2884,20 @@ function CampaignCard({
               Iniciado em {new Date(group.firstScheduled).toLocaleString("pt-BR")}
               {etaMinutes !== null && <> · ETA: ~{etaMinutes} min</>}
             </p>
+
+            {group.instance_ids && group.instance_ids.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {group.instance_ids.map(id => {
+                  const inst = instances.find(i => i.id === id);
+                  const display = getInstanceDisplay(inst || { instance_name: id });
+                  return (
+                    <Badge key={id} variant="secondary" className="text-[9px] h-4 bg-muted text-muted-foreground border-transparent">
+                      <Smartphone className="h-2 w-2 mr-1" /> {display.name}
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
 
             {group.status === "paused" && group.error_reason && (
               <div className="mt-2 p-2 rounded bg-red-50 border border-red-100 flex items-start gap-2 animate-pulse">
@@ -2916,6 +3013,7 @@ function QueueTab() {
   const [search, setSearch] = useState("");
   const [sentToday, setSentToday] = useState(0);
   const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [instances, setInstances] = useState<any[]>([]);
 
   useEffect(() => {
     loadQueue();
@@ -2930,13 +3028,15 @@ function QueueTab() {
   }, []);
 
   async function loadQueue() {
-    const [{ data: queueData }, { data: campaignData }] = await Promise.all([
+    const [{ data: queueData }, { data: campaignData }, { data: instancesData }] = await Promise.all([
       supabase.from("whatsapp_message_queue").select("*").order("scheduled_at", { ascending: false }).limit(1000),
       supabase.from("whatsapp_campaigns").select("*").order("created_at", { ascending: false }).limit(50),
+      supabase.from("whatsapp_instances").select("*").eq("active", true),
     ]);
     
     setItems((queueData || []) as any);
     setCampaigns(campaignData || []);
+    setInstances(instancesData || []);
 
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
     const { count } = await supabase
@@ -3027,6 +3127,7 @@ function QueueTab() {
         total: 0, sent: 0, delivered: dbCampaign?.delivered_count || 0, read: dbCampaign?.read_count || 0,
         pending: 0, failed: 0, cancelled: 0,
         firstScheduled: item.scheduled_at, lastSent: null, items: [],
+        instance_ids: dbCampaign?.instance_ids,
       };
       groupsMap.set(key, g);
     }
@@ -3111,6 +3212,7 @@ function QueueTab() {
             <CampaignCard
               key={g.key}
               group={g}
+              instances={instances}
               onCancelGroup={cancelGroup}
               onRetryFailed={retryFailed}
               onCancelOne={cancelOne}
