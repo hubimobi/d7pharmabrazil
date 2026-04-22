@@ -73,7 +73,16 @@ export async function runSession(supabase: any, session: FlowSession): Promise<v
     return;
   }
 
+  // Track visited nodes to detect infinite loops (A→B→A cycles)
+  const visitedInTick = new Set<string>();
+
   for (let step = 0; step < MAX_STEPS_PER_TICK; step++) {
+    if (visitedInTick.has(currentId)) {
+      console.error(`[engine] Cycle detected at node ${currentId} in flow ${session.flow_id}`);
+      await persistSession(supabase, session, { status: "error", current_node_id: currentId });
+      return;
+    }
+    visitedInTick.add(currentId);
     const node = findNode(flow, currentId);
     if (!node) {
       await persistSession(supabase, session, { status: "error", current_node_id: currentId });

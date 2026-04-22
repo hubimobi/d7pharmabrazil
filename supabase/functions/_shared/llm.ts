@@ -45,14 +45,19 @@ function lovable(model?: string): LLMSelection {
 
 export async function getActiveLLM(
   sb: any,
-  opts?: { agentLlmOverride?: string | null; agentModel?: string | null; defaultModel?: string },
+  opts?: {
+    agentLlmOverride?: string | null;
+    agentModel?: string | null;
+    defaultModel?: string;
+    tenantId?: string | null;
+  },
 ): Promise<LLMSelection> {
-  const { agentLlmOverride, agentModel, defaultModel } = opts || {};
+  const { agentLlmOverride, agentModel, defaultModel, tenantId } = opts || {};
 
-  const { data: configs } = await sb
-    .from("ai_llm_config")
-    .select("*")
-    .eq("active", true);
+  // FIX: scope LLM config lookup to tenant so configs don't bleed between tenants
+  let query = sb.from("ai_llm_config").select("*").eq("active", true);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { data: configs } = await query;
 
   const list = (configs || []) as any[];
 
@@ -73,7 +78,7 @@ export async function getActiveLLM(
   const firstSel = buildExternal(firstExt);
   if (firstSel) return { ...firstSel, model: agentModel || firstSel.model };
 
-  // 4) lovable
+  // 4) lovable fallback
   return lovable(agentModel || defaultModel);
 }
 
@@ -86,6 +91,7 @@ export async function logTokenUsage(
     selection: LLMSelection;
     input_tokens: number;
     output_tokens: number;
+    tenant_id?: string | null;
   },
 ) {
   try {
@@ -98,6 +104,7 @@ export async function logTokenUsage(
       output_tokens: args.output_tokens,
       total_tokens: args.input_tokens + args.output_tokens,
       function_name: args.function_name,
+      tenant_id: args.tenant_id ?? null,
     });
   } catch (e) {
     console.error("logTokenUsage error:", e);
