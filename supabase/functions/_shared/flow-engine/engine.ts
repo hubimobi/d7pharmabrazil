@@ -7,6 +7,10 @@ import { handler as setVarHandler } from "./steps/set_variable.ts";
 import { handler as startFlowHandler } from "./steps/start_flow.ts";
 import { handler as aiReplyHandler } from "./steps/ai_reply.ts";
 import { handler as endHandler } from "./steps/end.ts";
+import { handler as branchHandler } from "./steps/branch.ts";
+import { handler as actionHandler } from "./steps/action.ts";
+import { handler as choiceHandler } from "./steps/choice.ts";
+import { handler as splitHandler } from "./steps/split.ts";
 
 const HANDLERS: Record<string, NodeHandler> = {
   message: messageHandler,
@@ -15,11 +19,17 @@ const HANDLERS: Record<string, NodeHandler> = {
   condition: conditionHandler,
   wait_input: waitHandler,
   wait: waitHandler,
+  input: waitHandler,           // alias used by some flow editors
   transfer: transferHandler,
   set_variable: setVarHandler,
   start_flow: startFlowHandler,
   ai_reply: aiReplyHandler,
+  ai_gen: aiReplyHandler,       // alias used by some flow editors
   end: endHandler,
+  branch: branchHandler,
+  action: actionHandler,
+  choice: choiceHandler,
+  split: splitHandler,
 };
 
 const MAX_STEPS_PER_TICK = 10; // segurança anti-loop

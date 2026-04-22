@@ -12,8 +12,15 @@ function evalCondition(left: any, op: string, right: any): boolean {
     case "ends_with": return a.endsWith(b);
     case "is_empty": return a.length === 0;
     case "is_not_empty": return a.length > 0;
-    case "gt": return Number(a) > Number(b);
-    case "lt": return Number(a) < Number(b);
+    case "gt": {
+      // supports BR format (1.234,56) and US format (1,234.56)
+      const toNum = (s: string) => parseFloat(s.replace(/\./g, "").replace(",", "."));
+      return toNum(a) > toNum(b);
+    }
+    case "lt": {
+      const toNum = (s: string) => parseFloat(s.replace(/\./g, "").replace(",", "."));
+      return toNum(a) < toNum(b);
+    }
     default: return false;
   }
 }

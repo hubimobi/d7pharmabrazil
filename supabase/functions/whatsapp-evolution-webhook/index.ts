@@ -219,12 +219,12 @@ Deno.serve(async (req) => {
           });
 
           // Advance Flow Session if one is waiting for input from this contact
-          if (instanceId && phone) {
+          if (phone && tenantId) {
             try {
               const userText = typeof content === "string" ? content : "";
               const { data: sessionId } = await supabase.rpc("advance_flow_session_with_input", {
-                _instance_id: instanceId,
                 _contact_phone: phone,
+                _tenant_id: tenantId,
                 _user_input: userText,
               });
               if (sessionId) {

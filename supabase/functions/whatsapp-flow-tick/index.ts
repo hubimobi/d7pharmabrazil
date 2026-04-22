@@ -30,22 +30,31 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: claimErr.message }), { status: 500, headers: corsHeaders });
     }
 
+    const allSessions = sessions ?? [];
+    const CONCURRENCY = 5;
     let processed = 0;
-    for (const s of sessions ?? []) {
-      try {
-        await runSession(supabase, s);
-        processed++;
-      } catch (e) {
-        console.error("runSession error", s.id, e);
-        await supabase
-          .from("whatsapp_flow_sessions")
-          .update({ status: "error" })
-          .eq("id", s.id);
+
+    // Process in chunks to limit DB pressure while still parallelizing
+    for (let i = 0; i < allSessions.length; i += CONCURRENCY) {
+      const chunk = allSessions.slice(i, i + CONCURRENCY);
+      const results = await Promise.allSettled(chunk.map((s: any) => runSession(supabase, s)));
+      for (let j = 0; j < results.length; j++) {
+        if (results[j].status === "fulfilled") {
+          processed++;
+        } else {
+          const s = chunk[j];
+          const reason = (results[j] as PromiseRejectedResult).reason;
+          console.error("runSession error", s.id, reason);
+          await supabase
+            .from("whatsapp_flow_sessions")
+            .update({ status: "error" })
+            .eq("id", s.id);
+        }
       }
     }
 
     return new Response(
-      JSON.stringify({ ok: true, claimed: sessions?.length ?? 0, processed }),
+      JSON.stringify({ ok: true, claimed: allSessions.length, processed }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
