@@ -8,9 +8,8 @@ const corsHeaders = {
 
 function ensureBrazilCountryCode(phone: string): string {
   const digits = phone.replace(/\D/g, "");
-  if (digits.length === 10 || digits.length === 11) {
-    return "55" + digits;
-  }
+  if (digits.length >= 12 && digits.startsWith("55")) return digits;
+  if (digits.length === 10 || digits.length === 11) return "55" + digits;
   return digits;
 }
 
@@ -50,7 +49,6 @@ const WebhookSchema = z.object({
   link: z.string().max(2000).optional(),
   cidade: z.string().max(200).optional(),
   extra: z.record(z.string()).optional(),
-  // New fields for test execution
   funnel_id: z.string().uuid().optional(),
   force: z.boolean().optional(),
   instance_id: z.string().uuid().optional(),
@@ -65,6 +63,20 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Security: require WHATSAPP_WEBHOOK_SECRET when set.
+    // Callers must pass it as Bearer token OR as x-webhook-secret header.
+    const webhookSecret = Deno.env.get("WHATSAPP_WEBHOOK_SECRET");
+    if (webhookSecret) {
+      const authHeader = req.headers.get("authorization") || "";
+      const secretHeader = req.headers.get("x-webhook-secret") || "";
+      const token = authHeader.replace("Bearer ", "").trim();
+      if (token !== webhookSecret && secretHeader !== webhookSecret) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const body = await req.json();
     const parsed = WebhookSchema.safeParse(body);
     if (!parsed.success) {
@@ -78,7 +90,7 @@ Deno.serve(async (req) => {
       Nome: nome || "", Produto: produto || "", Link: link || "", Cidade: cidade || "", ...extra,
     };
 
-    // ── 1) Tenta disparar Flows novos (state machine) ──
+    // ── 1) Trigger new Flows (state machine) ──
     let flowsTriggered = 0;
     try {
       let flowQuery = supabase
@@ -93,7 +105,7 @@ Deno.serve(async (req) => {
         const firstNodeId = (flow.nodes as any[])?.[0]?.id;
         if (!firstNodeId) continue;
 
-        // evita duplicar sessão ativa para o mesmo contato no mesmo flow
+        // Dedup: don't start a new session if one is already active for this contact+flow
         const { data: existing } = await supabase
           .from("whatsapp_flow_sessions")
           .select("id")
@@ -119,13 +131,12 @@ Deno.serve(async (req) => {
       console.error("flow trigger error:", e);
     }
 
-    // ── 2) Funis antigos (compatibilidade) ──
+    // ── 2) Legacy funnels (backward compatibility) ──
     let query = supabase
       .from("whatsapp_funnels")
       .select("*, whatsapp_funnel_steps(*, whatsapp_templates(*))")
       .eq("trigger_event", evento);
 
-    // If force mode (test execution), allow inactive funnels and filter by specific funnel_id
     if (force && funnel_id) {
       query = query.eq("id", funnel_id);
     } else {
@@ -141,10 +152,27 @@ Deno.serve(async (req) => {
     }
 
     const variables: Record<string, string> = baseVariables;
-
     let queued = 0;
 
-    for (const funnel of funnels) {
+    for (const funnel of funnels ?? []) {
+      const funnelTenantId = funnel.tenant_id || null;
+
+      // FIX: deduplication — skip if there are already pending messages for this phone+funnel.
+      // This prevents duplicate queuing when the same webhook fires multiple times (e-commerce retries).
+      // Allow re-trigger only in force/test mode.
+      if (!force) {
+        const { count } = await supabase
+          .from("whatsapp_message_queue")
+          .select("*", { count: "exact", head: true })
+          .eq("contact_phone", telefone)
+          .eq("funnel_id", funnel.id)
+          .eq("status", "pending");
+        if ((count || 0) > 0) {
+          console.log(`[webhook] dedup: funnel ${funnel.id} already has ${count} pending msgs for ${telefone}, skipping`);
+          continue;
+        }
+      }
+
       const steps = (funnel.whatsapp_funnel_steps || []).sort((a: any, b: any) => a.step_order - b.step_order);
 
       let cumulativeDelay = 0;
@@ -175,6 +203,7 @@ Deno.serve(async (req) => {
             status: "pending",
             scheduled_at: scheduledAt,
             priority: 1,
+            tenant_id: funnelTenantId,
           });
           queued++;
           continue;
@@ -194,6 +223,7 @@ Deno.serve(async (req) => {
             status: "pending",
             scheduled_at: scheduledAt,
             priority: 1,
+            tenant_id: funnelTenantId,
           });
           queued++;
           continue;
@@ -222,11 +252,13 @@ Deno.serve(async (req) => {
             status: "pending",
             scheduled_at: scheduledAt,
             priority: evento === "carrinho_abandonado" ? 3 : 5,
+            tenant_id: funnelTenantId,
           });
           queued++;
           continue;
         }
 
+        // Replace variables BEFORE spintax so variable values don't accidentally match spintax patterns
         messageContent = replaceVariables(messageContent, variables);
         messageContent = parseSpintax(messageContent);
 
@@ -244,6 +276,7 @@ Deno.serve(async (req) => {
           status: "pending",
           scheduled_at: scheduledAt,
           priority: evento === "carrinho_abandonado" ? 3 : 5,
+          tenant_id: funnelTenantId,
         });
         queued++;
       }
@@ -254,6 +287,6 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("whatsapp-webhook error:", err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: (err as Error).message }), { status: 500, headers: corsHeaders });
   }
 });

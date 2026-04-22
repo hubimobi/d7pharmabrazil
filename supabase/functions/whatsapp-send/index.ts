@@ -24,6 +24,14 @@ async function safeJson(res: Response): Promise<{ ok: boolean; status: number; d
   }
 }
 
+function injectInvisibleWatermark(text: string): string {
+  const watermarks = ["\u200B", "\u200C", "\u200D"];
+  const length = 3 + Math.floor(Math.random() * 5);
+  let mark = "";
+  for (let i = 0; i < length; i++) mark += watermarks[Math.floor(Math.random() * watermarks.length)];
+  return text + mark;
+}
+
 function parseSpintax(text: string): string {
   const regex = /\{([^{}]+)\}/;
   let result = text;
@@ -113,6 +121,7 @@ Deno.serve(async (req) => {
 
     finalMessage = replaceVariables(finalMessage, mergedVars);
     finalMessage = parseSpintax(finalMessage);
+    finalMessage = injectInvisibleWatermark(finalMessage);
 
     if (!finalMessage) {
       return new Response(JSON.stringify({ error: "No message content" }), { status: 400, headers: corsHeaders });

@@ -14,33 +14,31 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Validação de segurança: Webhook Secret
+    // Webhook secret validation
     const authHeader = req.headers.get("apikey");
     const webhookSecret = Deno.env.get("WHATSAPP_WEBHOOK_SECRET");
-    
+
     if (webhookSecret && authHeader !== webhookSecret) {
       console.error("[webhook] UNAUTHORIZED: invalid apikey header");
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { 
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
     const payload = await req.json();
-    
-    // Log full payload for debugging
+
     console.log(`[webhook] FULL PAYLOAD: ${JSON.stringify(payload).substring(0, 2000)}`);
-    
+
     // Normalize event name (Evolution v1 vs v2 formats)
     const rawEvent = payload.event || payload.type || "";
     const event = rawEvent.toLowerCase().replace(/_/g, ".").replace(/\s+/g, ".");
-    
-    // Extract instance name from multiple possible fields
+
     const instanceName = payload.instance || payload.instanceName || payload.sender?.instance || "";
     const apiInstanceId = payload.instanceId || payload.instance_id || "";
 
     console.log(`[webhook] event="${rawEvent}" normalized="${event}" instance="${instanceName}" apiId="${apiInstanceId}" keys=${Object.keys(payload).join(",")}`);
 
-    // Find our instance record - try multiple strategies
+    // Find our instance record — try multiple strategies
     let instanceRecord: any = null;
     if (instanceName) {
       const { data } = await supabase
@@ -50,7 +48,6 @@ Deno.serve(async (req) => {
         .maybeSingle();
       instanceRecord = data;
     }
-    // Fallback: try by api instance id in name field
     if (!instanceRecord && apiInstanceId) {
       const { data } = await supabase
         .from("whatsapp_instances")
@@ -59,7 +56,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
       instanceRecord = data;
     }
-    // Fallback: try partial match on instance_name
+    // Fallback: partial match (last resort)
     if (!instanceRecord && instanceName) {
       const { data } = await supabase
         .from("whatsapp_instances")
@@ -83,27 +80,21 @@ Deno.serve(async (req) => {
     if (event === "connection.update") {
       const state = payload.data?.state || payload.state || "";
 
-      // Map Evolution states to our status values:
-      //   open       → connected   (pareado e online)
-      //   connecting → connecting  (aguardando QR / pareamento — NÃO marcamos disconnected)
-      //   close      → disconnected
-      // Sempre gravamos `last_state_at` para detectar instâncias travadas.
       let mappedStatus: string | null = null;
       if (state === "open") mappedStatus = "connected";
       else if (state === "close") mappedStatus = "disconnected";
       else if (state === "connecting") mappedStatus = "connecting";
 
-      console.log(`[webhook] connection.update state="${state}" → "${mappedStatus ?? 'IGNORED'}" instanceId=${instanceId}`);
+      console.log(`[webhook] connection.update state="${state}" → "${mappedStatus ?? "IGNORED"}" instanceId=${instanceId}`);
 
       if (mappedStatus && instanceRecord) {
-        // Não rebaixar uma instância já `connected` para `connecting`
-        // (Evolution às vezes manda `connecting` mesmo após pareada quando reconecta socket)
         const { data: current } = await supabase
           .from("whatsapp_instances")
           .select("status")
           .eq("id", instanceRecord.id)
           .maybeSingle();
 
+        // Don't downgrade connected → connecting (Evolution sends spurious connecting events)
         const shouldUpdate =
           mappedStatus === "connected" ||
           mappedStatus === "disconnected" ||
@@ -112,7 +103,7 @@ Deno.serve(async (req) => {
         if (shouldUpdate) {
           await supabase
             .from("whatsapp_instances")
-            .update({ status: mappedStatus })
+            .update({ status: mappedStatus, last_state_at: new Date().toISOString() })
             .eq("id", instanceRecord.id);
         }
       }
@@ -123,9 +114,8 @@ Deno.serve(async (req) => {
     }
 
     // ── MESSAGES_UPSERT ──
-    // Handle various event name formats: messages.upsert, messages.upsert, MESSAGES_UPSERT
-    if (event === "messages.upsert" || event === "messages.upsert" || rawEvent === "MESSAGES_UPSERT" || rawEvent === "messages.upsert") {
-      // Extract messages from various payload structures
+    // FIX: removed duplicate condition (was `event === "messages.upsert" || event === "messages.upsert"`)
+    if (event === "messages.upsert" || rawEvent === "MESSAGES_UPSERT") {
       let messages: any[] = [];
       if (Array.isArray(payload.data?.messages)) {
         messages = payload.data.messages;
@@ -134,7 +124,6 @@ Deno.serve(async (req) => {
       } else if (payload.data?.message) {
         messages = [payload.data];
       } else if (payload.data?.key) {
-        // Single message at data level
         messages = [payload.data];
       } else if (payload.message) {
         messages = [payload];
@@ -142,12 +131,12 @@ Deno.serve(async (req) => {
 
       console.log(`[webhook] messages.upsert: ${messages.length} message(s) to process`);
 
-      let processed = 0;
+      let processedCount = 0;
       for (const msg of messages) {
         const key = msg.key || {};
         const isFromMe = key.fromMe === true;
         const remoteJid = key.remoteJid || msg.remoteJid || "";
-        
+
         // Skip status@broadcast and groups
         if (!remoteJid || remoteJid === "status@broadcast" || remoteJid.includes("@g.us")) {
           console.log(`[webhook] skipping jid=${remoteJid}`);
@@ -156,8 +145,7 @@ Deno.serve(async (req) => {
 
         const phone = remoteJid.replace("@s.whatsapp.net", "").replace("@c.us", "");
         const contactName = msg.pushName || msg.verifiedBizName || phone;
-        
-        // Extract message content from various message types
+
         const msgBody = msg.message || {};
         const content =
           msgBody.conversation ||
@@ -176,10 +164,11 @@ Deno.serve(async (req) => {
           (msgBody.documentMessage ? "[documento]" : null) ||
           (msgBody.locationMessage ? "[localização]" : null) ||
           "[mídia]";
-        
-        const direction = isFromMe ? "outbound" : "inbound";
 
-        console.log(`[webhook] msg: phone=${phone} name=${contactName} dir=${direction} content="${typeof content === 'string' ? content.substring(0, 50) : '[obj]'}"`);
+        const direction = isFromMe ? "outbound" : "inbound";
+        const safeContent = typeof content === "string" ? content.substring(0, 500) : "[mídia]";
+
+        console.log(`[webhook] msg: phone=${phone} name=${contactName} dir=${direction} content="${safeContent.substring(0, 50)}"`);
 
         // Upsert conversation
         const { data: existing } = await supabase
@@ -188,8 +177,6 @@ Deno.serve(async (req) => {
           .eq("contact_phone", phone)
           .eq("instance_id", instanceId)
           .maybeSingle();
-
-        const safeContent = typeof content === "string" ? content.substring(0, 500) : "[mídia]";
 
         if (existing) {
           await supabase
@@ -215,58 +202,62 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Log message
-        await supabase.from("whatsapp_message_log").insert({
-          contact_phone: phone,
-          contact_name: contactName,
-          instance_name: instanceRecord?.instance_name || instanceName || null,
-          instance_id: instanceId,
-          message_content: typeof content === "string" ? content.substring(0, 2000) : "[mídia]",
-          direction,
-          status: "delivered",
-          tenant_id: tenantId,
-        });
+        // FIX: outbound messages are already logged by process-queue with api_id.
+        // Logging them again here would create duplicate entries in the message log.
+        // We skip outbound logging here — status updates come via messages.update.
+        // Only log inbound messages from the webhook.
+        if (direction === "inbound") {
+          await supabase.from("whatsapp_message_log").insert({
+            contact_phone: phone,
+            contact_name: contactName,
+            instance_name: instanceRecord?.instance_name || instanceName || null,
+            instance_id: instanceId,
+            message_content: typeof content === "string" ? content.substring(0, 2000) : "[mídia]",
+            direction: "inbound",
+            status: "delivered",
+            tenant_id: tenantId,
+          });
 
-        // Avança Flow Session se houver uma esperando input deste contato
-        if (direction === "inbound" && instanceId && phone) {
-          try {
-            const userText = typeof content === "string" ? content : "";
-            const { data: sessionId } = await supabase.rpc("advance_flow_session_with_input", {
-              _instance_id: instanceId,
-              _contact_phone: phone,
-              _user_input: userText,
-            });
-            if (sessionId) {
-              console.log(`[webhook] flow session ${sessionId} reactivated by inbound input`);
+          // Advance Flow Session if one is waiting for input from this contact
+          if (instanceId && phone) {
+            try {
+              const userText = typeof content === "string" ? content : "";
+              const { data: sessionId } = await supabase.rpc("advance_flow_session_with_input", {
+                _instance_id: instanceId,
+                _contact_phone: phone,
+                _user_input: userText,
+              });
+              if (sessionId) {
+                console.log(`[webhook] flow session ${sessionId} reactivated by inbound input`);
+              }
+            } catch (e) {
+              console.error("[webhook] advance_flow_session_with_input error:", e);
             }
-          } catch (e) {
-            console.error("[webhook] advance_flow_session_with_input error:", e);
           }
         }
 
-        processed++;
+        processedCount++;
       }
 
-      console.log(`[webhook] messages.upsert: processed=${processed}/${messages.length}`);
-      return new Response(JSON.stringify({ ok: true, processed }), {
+      console.log(`[webhook] messages.upsert: processed=${processedCount}/${messages.length}`);
+      return new Response(JSON.stringify({ ok: true, processed: processedCount }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ── MESSAGES_UPDATE (status updates like delivered, read) ──
+    // ── MESSAGES_UPDATE (delivery / read receipts) ──
     if (event === "messages.update" || rawEvent === "MESSAGES_UPDATE") {
       const updates = payload.data || [];
       const updateList = Array.isArray(updates) ? updates : [updates];
-      
+
       let updatedCount = 0;
       for (const upd of updateList) {
         const messageId = upd.key?.id;
         const status = upd.status;
-        
+
         if (!messageId || !status) continue;
 
-        // Map Evolution status to our status
-        // 3 = delivered (check), 4 = read (double blue check), 5 = played
+        // Evolution status codes: 3=delivered, 4=read, 5=played
         let mappedStatus = null;
         if (status === 3) mappedStatus = "delivered";
         else if (status === 4 || status === 5) mappedStatus = "read";
@@ -276,7 +267,7 @@ Deno.serve(async (req) => {
             .from("whatsapp_message_log")
             .update({ status: mappedStatus })
             .eq("api_id", messageId);
-          
+
           if (!error) updatedCount++;
         }
       }
@@ -287,7 +278,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Other events — acknowledge
+    // Other events — acknowledge silently
     console.log(`[webhook] ignored event: ${event} (raw: ${rawEvent})`);
     return new Response(JSON.stringify({ ok: true, event, ignored: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

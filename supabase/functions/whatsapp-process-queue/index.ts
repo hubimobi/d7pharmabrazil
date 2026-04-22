@@ -7,9 +7,10 @@ const corsHeaders = {
 
 function ensureBrazilCountryCode(phone: string): string {
   const digits = phone.replace(/\D/g, "");
-  if (digits.length === 10 || digits.length === 11) {
-    return "55" + digits;
-  }
+  // Already has country code (12-13 digits with 55 prefix)
+  if (digits.length >= 12 && digits.startsWith("55")) return digits;
+  // Add 55 for 10-11 digit Brazilian numbers (DDD + number)
+  if (digits.length === 10 || digits.length === 11) return "55" + digits;
   return digits;
 }
 
@@ -40,18 +41,38 @@ function renderSpintax(text: string): string {
   });
 }
 
-/**
- * Injeta caracteres Unicode invisíveis (U+200B a U+200D) aleatoriamente 
- * no final do texto para torná-lo único aos olhos do WhatsApp (Anti-Spam).
- */
+// Injeta caracteres Unicode invisíveis aleatoriamente no final do texto
+// para tornar cada mensagem única aos olhos do detector de spam do WhatsApp.
 function injectInvisibleWatermark(text: string): string {
   const watermarks = ["\u200B", "\u200C", "\u200D"];
-  const length = 3 + Math.floor(Math.random() * 5); 
+  const length = 3 + Math.floor(Math.random() * 5);
   let randomMark = "";
   for (let i = 0; i < length; i++) {
     randomMark += watermarks[Math.floor(Math.random() * watermarks.length)];
   }
   return text + randomMark;
+}
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function simulateHumanTyping(instance: any, phone: string, text: string) {
+  try {
+    // 1. Send "composing" or "recording" presence state
+    const isAudio = false; // Add audio detect if needed
+    await fetch(`${instance.api_url}/chat/sendPresence/${instance.instance_name}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: instance.api_key },
+      body: JSON.stringify({ number: phone, presence: isAudio ? "recording" : "composing", delay: 0 }),
+    });
+    
+    // 2. Compute dynamic wait time (simulate 6 chars per second = ~150ms per char)
+    // Capped between 1.5s and 6s to prevent Edge Function timeout
+    const msToWait = Math.min(6000, Math.max(1500, text.length * 50));
+    await delay(msToWait);
+  } catch (err) {
+    // Ignore presence errors, allow message to proceed anyway
+    console.error(`[Anti-Ban] Error simulating presence for ${phone}:`, err);
+  }
 }
 
 async function loadSendingConfig(supabase: any, tenantId: string | null): Promise<SendingConfig> {
@@ -100,11 +121,9 @@ async function validateWhatsAppNumber(
       body: JSON.stringify({ numbers: [phone] }),
     });
     const data = await res.json();
-    // Evolution API returns array of { exists, jid, number }
     const results = Array.isArray(data) ? data : [data];
     const exists = results.some((r: any) => r.exists === true);
 
-    // Cache result
     await supabase.from("whatsapp_number_validation").upsert({
       phone,
       exists_on_whatsapp: exists,
@@ -129,7 +148,6 @@ async function cancelAllPendingForPhone(supabase: any, contactPhone: string, ten
   if (tenantId) query.eq("tenant_id", tenantId);
   await query;
 
-  // Log
   await supabase.from("whatsapp_message_log").insert({
     contact_phone: contactPhone,
     contact_name: contactPhone,
@@ -161,6 +179,24 @@ function computeDelay(config: SendingConfig): number {
   return Math.max(2000, base + randomOffset); // minimum 2s
 }
 
+// FIX: Correct timezone-aware current time.
+// new Date(Intl.format()) would re-parse the formatted string as UTC — wrong.
+// toLocaleString with en-CA gives ISO-like "YYYY-MM-DD, HH:MM:SS" parseable correctly.
+function isWithinWorkingHours(campaign: any): boolean {
+  if (!campaign) return true;
+  const tz = campaign.timezone || "America/Sao_Paulo";
+
+  const nowInTz = new Date(new Date().toLocaleString("en-US", { timeZone: tz }));
+
+  if (campaign.working_days && !campaign.working_days.includes(nowInTz.getDay())) return false;
+
+  const hours = campaign.working_hours || { start: "08:00", end: "18:00" };
+  const hh = String(nowInTz.getHours()).padStart(2, "0");
+  const mm = String(nowInTz.getMinutes()).padStart(2, "0");
+  const currentStr = `${hh}:${mm}`;
+  return currentStr >= hours.start && currentStr <= hours.end;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -184,23 +220,20 @@ Deno.serve(async (req) => {
           messages_sent_today: 0,
           last_reset_at: now.toISOString(),
         }).eq("id", inst.id);
+        inst.messages_sent_today = 0;
       }
     }
 
     const connectedInstances = (allInstances || []).filter(i => i.status === "connected");
 
-    // Determine tenant from first connected instance
     const tenantId = connectedInstances[0]?.tenant_id || null;
 
-    // Load sending config
     const config = await loadSendingConfig(supabase, tenantId);
 
-    // Check global daily limit
     const totalSentToday = (allInstances || []).reduce((sum, i) => sum + (i.messages_sent_today || 0), 0);
     let effectiveDailyLimit = config.daily_global_limit;
 
     if (config.warmup_mode) {
-      // In warmup, limit grows based on oldest instance age
       const oldestCreated = (allInstances || []).reduce((oldest, i) => {
         const d = new Date(i.created_at).getTime();
         return d < oldest ? d : oldest;
@@ -218,13 +251,8 @@ Deno.serve(async (req) => {
     }
 
     const remainingCapacity = effectiveDailyLimit - totalSentToday;
-    
-    // VETERAN TWEAK: Reduzimos o lote por execução para garantir que NÃO excedemos o timeout (150s).
-    // O pg_cron rodará a cada 1min, então 5 mensagens por minuto é sustentável e seguro.
     const batchLimit = Math.min(config.messages_per_batch, remainingCapacity, 5);
 
-    // Claim atômico via RPC (FOR UPDATE SKIP LOCKED) — evita duas execuções
-    // pegarem as mesmas linhas e enviarem duplicado.
     const workerId = crypto.randomUUID();
     const { data: messages, error: claimErr } = await supabase.rpc("claim_whatsapp_messages", {
       _worker_id: workerId,
@@ -255,7 +283,6 @@ Deno.serve(async (req) => {
     if (connectedInstances.length === 0) {
       const postponedAt = new Date(Date.now() + 600000).toISOString();
       for (const msg of messages) {
-        // Devolve o claim: volta a 'pending' e adia 10 min
         await supabase.from("whatsapp_message_queue").update({
           status: "pending",
           claimed_by: null,
@@ -281,7 +308,7 @@ Deno.serve(async (req) => {
       for (const camp of campaignData || []) campaignsMap.set(camp.id, camp);
     }
 
-    const funnelIds = Array.from(new Set(messages.map((msg) => msg.campaign_id ? null : msg.funnel_id).filter(Boolean)));
+    const funnelIds = Array.from(new Set(messages.map((msg) => msg.funnel_id).filter(Boolean)));
     const funnelTypeById = new Map<string, string>();
     if (funnelIds.length > 0) {
       const { data: funnelData } = await supabase.from("whatsapp_funnels").select("id, type").in("id", funnelIds);
@@ -294,24 +321,16 @@ Deno.serve(async (req) => {
       return values.includes("all") ? ["all"] : values;
     };
 
-    const isWithinWorkingHours = (campaign: any): boolean => {
-      if (!campaign) return true;
-      const tz = campaign.timezone || "America/Sao_Paulo";
-      const now = new Date(new Intl.DateTimeFormat("en-US", { timeZone: tz }).format(new Date()));
-      
-      // Check Days
-      if (campaign.working_days && !campaign.working_days.includes(now.getDay())) return false;
-      
-      // Check Hours
-      const hours = campaign.working_hours || { start: "08:00", end: "18:00" };
-      const currentStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      return currentStr >= hours.start && currentStr <= hours.end;
-    };
-
     let processed = 0;
     let errors = 0;
     let postponed = 0;
     let invalidNumbers = 0;
+
+    // Anti-ban: track phones sent to in this batch to avoid double-sending same phone.
+    // In-memory counter per instance to avoid stale reads for the counter update.
+    const instanceSentThisBatch = new Map<string, number>();
+    // Track phones already sent in this batch to apply per-phone delay
+    const phonesSentThisBatch = new Set<string>();
 
     for (const msg of messages) {
       // Check if this is a special step type
@@ -373,7 +392,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Handle wait_until_date — postpone until target date/time
+      // FIX: wait_until_date MUST release the claim (status+claimed_by+claimed_at)
+      // otherwise the message stays in "processing" until the 20-min janitor rescues it.
       if (parsedContent?.step_type === "wait_until_date") {
         const cfg = parsedContent.config || {};
         const dateStr = cfg.wait_date; // YYYY-MM-DD
@@ -382,6 +402,9 @@ Deno.serve(async (req) => {
           const target = new Date(`${dateStr}T${timeStr}:00`);
           if (target.getTime() > Date.now()) {
             await supabase.from("whatsapp_message_queue").update({
+              status: "pending",
+              claimed_by: null,
+              claimed_at: null,
               scheduled_at: target.toISOString(),
             }).eq("id", msg.id);
             postponed++;
@@ -476,7 +499,6 @@ Deno.serve(async (req) => {
         const cfg = parsedContent.config || {};
         const targetFlowId = cfg.target_flow_id as string | undefined;
         if (targetFlowId && targetFlowId !== msg.funnel_id) {
-          // 1. Cancel all pending msgs for this contact in current flow
           await supabase
             .from("whatsapp_message_queue")
             .update({ status: "cancelled", error_message: "Substituído por start_flow" })
@@ -484,7 +506,6 @@ Deno.serve(async (req) => {
             .eq("funnel_id", msg.funnel_id)
             .eq("status", "pending");
 
-          // 2. Enqueue first step of target flow
           const { data: targetFlow } = await supabase
             .from("whatsapp_funnels")
             .select("*, whatsapp_funnel_steps(*, whatsapp_templates(*))")
@@ -550,19 +571,28 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // ⚠️ Anti-ban persistente: NÃO usamos setTimeout dentro da edge function
-      // (Edge Function tem timeout ~150s; setTimeout consome CPU e morre no meio).
-      // Em vez disso, ao final desta iteração re-agendamos as próximas mensagens
-      // pendentes do mesmo telefone com delay calculado.
-      const interMessageDelay = computeDelay(config);
+      // ─── Real message send path ───
 
-      // Pick instance using random rotation among compatible ones
-      let instance;
+      // Anti-ban: if this phone was already sent a message in this batch,
+      // defer the current message by interMessageDelay to avoid burst-sending.
+      const interMessageDelay = computeDelay(config);
+      if (phonesSentThisBatch.has(msg.contact_phone)) {
+        await supabase.from("whatsapp_message_queue").update({
+          status: "pending",
+          claimed_by: null,
+          claimed_at: null,
+          scheduled_at: new Date(Date.now() + interMessageDelay).toISOString(),
+          error_message: "Anti-ban: adiado para respeitar intervalo mínimo entre mensagens ao mesmo número",
+        }).eq("id", msg.id);
+        postponed++;
+        continue;
+      }
+
       const attachedCampaign = msg.campaign_id ? campaignsMap.get(msg.campaign_id) : null;
 
       // Check Time Window
       if (!isWithinWorkingHours(attachedCampaign)) {
-        const nextWindow = new Date(Date.now() + 1800000).toISOString(); // adia 30 min
+        const nextWindow = new Date(Date.now() + 1800000).toISOString();
         await supabase.from("whatsapp_message_queue").update({
           status: "pending",
           claimed_by: null,
@@ -574,50 +604,61 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      let instance;
       if (msg.instance_id) {
         const { data } = await supabase.from("whatsapp_instances").select("*").eq("id", msg.instance_id).eq("active", true).eq("status", "connected").single();
         instance = data;
       }
-      
+
       if (!instance) {
         const funnelType = msg.funnel_id ? funnelTypeById.get(msg.funnel_id) : null;
         const restrictedIds = attachedCampaign?.instance_ids || [];
 
-        // Sorteia candidatos para o rodízio ser real
         const candidates = connectedInstances.filter((candidate) => {
-          // Se a campanha restringiu os números, só usa esses
           if (restrictedIds.length > 0 && !restrictedIds.includes(candidate.id)) return false;
-          
           const roles = normalizeRoles(candidate.funnel_roles);
-          if (candidate.messages_sent_today >= candidate.daily_limit) return false;
+          // Use in-batch counter + persisted counter to check daily limit accurately
+          const sentSoFar = (instanceSentThisBatch.get(candidate.id) || 0);
+          if ((candidate.messages_sent_today + sentSoFar) >= candidate.daily_limit) return false;
           return roles.includes("all") || (!!funnelType && roles.includes(funnelType));
         });
 
         if (candidates.length > 0) {
-          instance = candidates[Math.floor(Math.random() * candidates.length)];
+          // True Round-Robin: sort by minimum sent today to guarantee balanced distribution
+          candidates.sort((a, b) => {
+            const aTotal = a.messages_sent_today + (instanceSentThisBatch.get(a.id) || 0);
+            const bTotal = b.messages_sent_today + (instanceSentThisBatch.get(b.id) || 0);
+            return aTotal - bTotal;
+          });
+          instance = candidates[0];
         } else {
-          // Fallback: qualquer uma com saldo (dentro da restrição se houver)
+          // Fallback if no matching pipeline roles: just pick any with remaining quota
           const anyWithSaldo = connectedInstances.filter(i => {
             if (restrictedIds.length > 0 && !restrictedIds.includes(i.id)) return false;
-            return i.messages_sent_today < i.daily_limit;
+            const sentSoFar = (instanceSentThisBatch.get(i.id) || 0);
+            return (i.messages_sent_today + sentSoFar) < i.daily_limit;
           });
           if (anyWithSaldo.length > 0) {
-            instance = anyWithSaldo[Math.floor(Math.random() * anyWithSaldo.length)];
+            anyWithSaldo.sort((a, b) => {
+              const aTotal = a.messages_sent_today + (instanceSentThisBatch.get(a.id) || 0);
+              const bTotal = b.messages_sent_today + (instanceSentThisBatch.get(b.id) || 0);
+              return aTotal - bTotal;
+            });
+            instance = anyWithSaldo[0];
           }
         }
       }
 
       if (!instance) {
-        const errorMsg = attachedCampaign?.instance_ids?.length > 0 
+        const errorMsg = attachedCampaign?.instance_ids?.length > 0
           ? "Números selecionados estão offline ou com limite atingido"
           : "Limite diário atingido em todas as instâncias";
 
-        // Auto-pause se a instância específica sumiu
-        if (attachedCampaign && attachedCampaign.status === 'running') {
-             await supabase.from("whatsapp_campaigns").update({ 
-               status: 'paused', 
-               error_reason: errorMsg 
-             }).eq("id", attachedCampaign.id);
+        if (attachedCampaign && attachedCampaign.status === "running") {
+          await supabase.from("whatsapp_campaigns").update({
+            status: "paused",
+            error_reason: errorMsg,
+          }).eq("id", attachedCampaign.id);
         }
 
         console.log(`[queue] Sem instâncias disponíveis para msg ${msg.id}: ${errorMsg}`);
@@ -642,7 +683,6 @@ Deno.serve(async (req) => {
             status: "failed",
             error_message: "Número não existe no WhatsApp",
           }).eq("id", msg.id);
-          // Cascade cancel all pending messages for this phone
           await cancelAllPendingForPhone(supabase, msg.contact_phone, msg.tenant_id || tenantId);
           invalidNumbers++;
           errors++;
@@ -650,13 +690,12 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Spintax rendering
+      // FIX: apply spintax and watermark to finalContent, then USE finalContent for the actual send.
+      // Previous code computed finalContent but sent msg.message_content (raw) — anti-spam was bypassed.
       let finalContent = msg.message_content;
-      if (finalContent && finalContent.includes("{") && finalContent.includes("|")) {
+      if (finalContent && finalContent.includes("|")) {
         finalContent = renderSpintax(finalContent);
       }
-      
-      // VETERAN TWEAK: Invisible Watermarking (Anti-Ban)
       finalContent = injectInvisibleWatermark(finalContent);
 
       // Handle send_file step type
@@ -688,6 +727,9 @@ Deno.serve(async (req) => {
             body = { number: formattedPhone, text: `${cfg.caption ? cfg.caption + "\n" : ""}${finalUrl}` };
           }
 
+          // Anti-ban: Humanize sending time
+          await simulateHumanTyping(instance, formattedPhone, typeof body.text === "string" ? body.text : "media");
+
           const evoRes = await fetch(`${instance.api_url}/message/${endpoint}/${instance.instance_name}`, {
             method: "POST",
             headers: { "Content-Type": "application/json", apikey: instance.api_key },
@@ -704,25 +746,32 @@ Deno.serve(async (req) => {
               campaign_id: msg.campaign_id,
               api_id: evo.data?.key?.id || null,
             });
-            await supabase.from("whatsapp_instances").update({ messages_sent_today: instance.messages_sent_today + 1, last_message_at: new Date().toISOString() }).eq("id", instance.id);
+            // FIX: use atomic DB increment to avoid stale counter race condition
+            await supabase.rpc("increment_instance_sent_today", { _instance_id: instance.id });
+            instanceSentThisBatch.set(instance.id, (instanceSentThisBatch.get(instance.id) || 0) + 1);
+            phonesSentThisBatch.add(msg.contact_phone);
             processed++;
           } else {
-            await handleSendError(supabase, msg, evo.data);
+            await handleSendError(supabase, msg, evo.data, campaignsMap);
             errors++;
           }
         } catch (sendErr) {
-          await handleRetry(supabase, msg, sendErr.message);
+          await handleRetry(supabase, msg, (sendErr as Error).message);
           errors++;
         }
         continue;
       }
 
       // Standard text message send
+      // FIX: send finalContent (spintax resolved + watermark injected), not raw msg.message_content
       try {
+        // Anti-ban: Simulate human typing delay
+        await simulateHumanTyping(instance, formattedPhone, finalContent);
+
         const evoRes = await fetch(`${instance.api_url}/message/sendText/${instance.instance_name}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", apikey: instance.api_key },
-          body: JSON.stringify({ number: formattedPhone, text: msg.message_content }),
+          body: JSON.stringify({ number: formattedPhone, text: finalContent }),
         });
         const evo = await safeJson(evoRes);
 
@@ -736,7 +785,8 @@ Deno.serve(async (req) => {
             api_id: evo.data?.key?.id || null,
           });
 
-          // Upsert conversation
+          // Upsert conversation (store raw content for readability in UI — without watermark chars)
+          const displayContent = msg.message_content.substring(0, 500);
           const { data: existingConv } = await supabase
             .from("whatsapp_conversations")
             .select("id")
@@ -746,7 +796,7 @@ Deno.serve(async (req) => {
 
           if (existingConv) {
             await supabase.from("whatsapp_conversations").update({
-              last_message: msg.message_content.substring(0, 500),
+              last_message: displayContent,
               last_message_at: new Date().toISOString(),
               contact_name: msg.contact_name || msg.contact_phone,
             }).eq("id", existingConv.id);
@@ -754,7 +804,7 @@ Deno.serve(async (req) => {
             await supabase.from("whatsapp_conversations").insert({
               contact_phone: msg.contact_phone,
               contact_name: msg.contact_name || msg.contact_phone,
-              last_message: msg.message_content.substring(0, 500),
+              last_message: displayContent,
               last_message_at: new Date().toISOString(),
               unread_count: 0,
               status: "open",
@@ -763,14 +813,24 @@ Deno.serve(async (req) => {
             });
           }
 
-          await supabase.from("whatsapp_instances").update({ messages_sent_today: instance.messages_sent_today + 1, last_message_at: new Date().toISOString() }).eq("id", instance.id);
+          // FIX: atomic increment to avoid race condition when multiple messages
+          // are processed for the same instance in the same batch execution.
+          await supabase.rpc("increment_instance_sent_today", { _instance_id: instance.id });
+          await supabase.from("whatsapp_instances").update({ last_message_at: new Date().toISOString() }).eq("id", instance.id);
+          instanceSentThisBatch.set(instance.id, (instanceSentThisBatch.get(instance.id) || 0) + 1);
+          phonesSentThisBatch.add(msg.contact_phone);
           processed++;
+          
+          // Anti-ban: Spacing out requests within the SAME batch to avoid
+          // hitting the API with concurrent millisecond-exact bursts.
+          await delay(1500 + Math.random() * 1000); 
+
         } else {
-          await handleSendError(supabase, msg, evo.data);
+          await handleSendError(supabase, msg, evo.data, campaignsMap);
           errors++;
         }
       } catch (sendErr) {
-        await handleRetry(supabase, msg, sendErr.message);
+        await handleRetry(supabase, msg, (sendErr as Error).message);
         errors++;
       }
     }
@@ -796,12 +856,31 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("whatsapp-process-queue error:", err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: (err as Error).message }), { status: 500, headers: corsHeaders });
   }
 });
 
-async function handleSendError(supabase: any, msg: any, errorData: any) {
+// FIX: also increments consecutive_errors_count so campaigns auto-pause correctly
+async function handleSendError(supabase: any, msg: any, errorData: any, campaignsMap?: Map<string, any>) {
   const retryCount = (msg.retry_count || 0) + 1;
+
+  // Update campaign consecutive error counter for auto-pause logic
+  if (msg.campaign_id && campaignsMap) {
+    const camp = campaignsMap.get(msg.campaign_id);
+    if (camp && camp.status === "running") {
+      const newCount = (camp.consecutive_errors_count || 0) + 1;
+      const threshold = camp.auto_pause_threshold || 10;
+      const shouldPause = newCount >= threshold;
+      await supabase.from("whatsapp_campaigns").update({
+        consecutive_errors_count: newCount,
+        ...(shouldPause ? { status: "paused", error_reason: `Auto-pause: ${newCount} erros consecutivos` } : {}),
+      }).eq("id", camp.id);
+      // Update local cache so subsequent iterations in this batch see the updated count
+      camp.consecutive_errors_count = newCount;
+      if (shouldPause) camp.status = "paused";
+    }
+  }
+
   if (retryCount >= msg.max_retries) {
     await supabase.from("whatsapp_message_queue").update({
       status: "failed",
@@ -817,7 +896,7 @@ async function handleSendError(supabase: any, msg: any, errorData: any) {
       tenant_id: msg.tenant_id || null,
     });
   } else {
-    // Devolve para 'pending' com backoff exponencial e libera o claim
+    // Exponential backoff: 5min, 10min, 15min...
     await supabase.from("whatsapp_message_queue").update({
       status: "pending",
       claimed_by: null,
