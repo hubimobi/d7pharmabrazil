@@ -1857,6 +1857,8 @@ function BroadcastTab() {
   const [workingRange, setWorkingRange] = useState({ start: "08:00", end: "18:00" });
   const [workingDays, setWorkingDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [testPhone, setTestPhone] = useState("");
+  const [testStatus, setTestStatus] = useState<null | { id: string; status: string; error_message?: string | null }>(null);
+  const testPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => { loadData(); }, []);
   useEffect(() => { estimateAudience(); }, [filterType, filterValue]);
@@ -1998,7 +2000,7 @@ function BroadcastTab() {
         flowIdField = targetId;
       }
 
-      const { error } = await supabase.from("whatsapp_message_queue").insert({
+      const { data: inserted, error } = await supabase.from("whatsapp_message_queue").insert({
         contact_phone: cleanPhone,
         contact_name: "Teste Interno",
         message_content: messageContent,
@@ -2007,14 +2009,32 @@ function BroadcastTab() {
         step_id: stepId,
         template_id: templateId,
         status: "pending",
-        scheduled_at: new Date().toISOString(), // Immediato
+        scheduled_at: new Date().toISOString(),
         broadcast_name: `[TESTE] ${targetName}`,
         tenant_id: tenantId,
         instance_id: selectedInstances.length > 0 ? selectedInstances[Math.floor(Math.random() * selectedInstances.length)] : null
-      });
+      }).select("id, status, error_message").single();
 
-      if (error) { toast.error(`Erro ao enfileirar teste: ${error.message}`); }
-      else { toast.success("Disparo de teste enfileirado nas próximas execuções!"); setTestPhone(""); }
+      if (error) {
+        toast.error(`Erro ao enfileirar teste: ${error.message}`);
+      } else {
+        setTestStatus({ id: inserted.id, status: inserted.status, error_message: inserted.error_message });
+        // Poll for up to 60s until status is terminal
+        if (testPollRef.current) clearInterval(testPollRef.current);
+        const deadline = Date.now() + 60_000;
+        testPollRef.current = setInterval(async () => {
+          const { data: row } = await supabase
+            .from("whatsapp_message_queue")
+            .select("id, status, error_message")
+            .eq("id", inserted.id)
+            .single();
+          if (row) setTestStatus({ id: row.id, status: row.status, error_message: row.error_message });
+          if (!row || ["sent", "error", "failed"].includes(row?.status) || Date.now() > deadline) {
+            clearInterval(testPollRef.current!);
+            testPollRef.current = null;
+          }
+        }, 2000);
+      }
     } catch (e: any) { toast.error(`Erro no teste: ${e.message}`); }
     setLoading(false);
   }
@@ -2427,6 +2447,32 @@ function BroadcastTab() {
                   Testar Envio
                 </Button>
               </div>
+              {testStatus && (
+                <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border ${
+                  testStatus.status === "sent"
+                    ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-950/30 dark:border-green-800 dark:text-green-300"
+                    : testStatus.status === "error" || testStatus.status === "failed"
+                    ? "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-800 dark:text-red-300"
+                    : "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-300"
+                }`}>
+                  {testStatus.status === "sent" ? (
+                    <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                  ) : testStatus.status === "error" || testStatus.status === "failed" ? (
+                    <XCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                  ) : (
+                    <Loader2 className="h-3.5 w-3.5 flex-shrink-0 animate-spin" />
+                  )}
+                  <span className="font-medium">
+                    {testStatus.status === "sent" && "Mensagem enviada com sucesso"}
+                    {testStatus.status === "pending" && "Na fila — aguardando processamento…"}
+                    {testStatus.status === "processing" && "Enviando…"}
+                    {(testStatus.status === "error" || testStatus.status === "failed") && (
+                      <>Falha no envio{testStatus.error_message ? `: ${testStatus.error_message}` : ""}</>
+                    )}
+                    {!["sent","pending","processing","error","failed"].includes(testStatus.status) && testStatus.status}
+                  </span>
+                </div>
+              )}
               <p className="text-[10px] text-muted-foreground leading-tight">
                 O teste envia a ativação imediatamente ignorando filtros de horário limitante e agenda no topo da fila.
               </p>
