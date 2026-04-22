@@ -495,10 +495,24 @@ function InstancesTab() {
               <p className="font-semibold text-amber-900 dark:text-amber-200">
                 {stuckInstances.length === 1 ? "1 instância" : `${stuckInstances.length} instâncias`} aguardando pareamento
               </p>
-              <p className="text-amber-800 dark:text-amber-300 text-xs mt-1">
-                {stuckInstances.map(i => i.name).join(", ")} — não terminou o pareamento via QR Code.
-                Sem isso, a Evolution API não envia eventos de mensagens e nenhuma conversa entra. Clique em <strong>QR Code</strong> e escaneie em até 60 segundos com o WhatsApp do celular (Aparelhos conectados → Conectar aparelho).
+              <p className="text-amber-800 dark:text-amber-300 text-xs mt-1 mb-3">
+                Sem o pareamento via QR Code a Evolution API não envia eventos e nenhuma conversa entra.
+                Escaneie com o WhatsApp do celular em <strong>Aparelhos conectados → Conectar aparelho</strong>.
               </p>
+              <div className="flex flex-wrap gap-2">
+                {stuckInstances.map(inst => (
+                  <Button
+                    key={inst.id}
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-500 text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40 h-7 text-xs"
+                    onClick={() => getQR(inst)}
+                  >
+                    <QrCode className="h-3 w-3 mr-1" />
+                    Escanear QR — {inst.name}
+                  </Button>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
