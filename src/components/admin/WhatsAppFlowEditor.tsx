@@ -1564,35 +1564,133 @@ function FlowCanvas({ flow, onBack }: { flow: Flow | null; onBack: () => void })
                   <Button variant="outline" size="sm" className="w-full text-xs" disabled={aiTesting || !n.data.prompt}
                     onClick={async () => {
                       setAiTesting(true);
-                      setAiTestResult(null);
+                      setAiTestResult("...");
                       try {
-                        if (!n.data.agent_id) {
-                          setAiTestResult("❌ Selecione um Agente IA antes de testar.");
-                          setAiTesting(false);
-                          return;
-                        }
                         const promptText = (n.data.prompt || "")
-                          .replace("{Nome}", "João")
-                          .replace("{mensagem_anterior}", "Olá, preciso de ajuda")
-                          .replace("{contexto_conversa}", "Cliente interessado em produtos");
-                        const { data, error } = await supabase.functions.invoke("ai-agent-chat", {
-                          body: {
-                            agent_id: n.data.agent_id,
-                            messages: [{ role: "user", content: promptText }],
-                          },
-                        });
-                        if (error) throw error;
-                        setAiTestResult(data?.reply || data?.message || data?.content || JSON.stringify(data));
+                          .replace("{Nome}", "João Silva")
+                          .replace("{Telefone}", "47999990000")
+                          .replace("{mensagem_anterior}", "Olá, preciso de ajuda com meu pedido")
+                          .replace("{contexto_conversa}", "Cliente interessado em produtos farmacêuticos");
+
+                        // Get real JWT for the edge function call
+                        const { data: { session: authSession } } = await supabase.auth.getSession();
+                        const token = authSession?.access_token;
+                        if (!token) throw new Error("Sessão expirada. Faça login novamente.");
+
+                        // If no agent selected, use a temporary prompt-only approach
+                        const agentIdToUse = n.data.agent_id || null;
+
+                        if (!agentIdToUse) {
+                          // Direct LLM call without agent — use the Lovable AI gateway
+                          const res = await fetch(
+                            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-agent-chat`,
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({
+                                agent_id: "__prompt_test__",
+                                messages: [
+                                  { role: "system", content: promptText },
+                                  { role: "user", content: "Responda conforme o prompt acima com um exemplo realista." },
+                                ],
+                              }),
+                            }
+                          );
+                          if (!res.ok) {
+                            const err = await res.json().catch(() => ({}));
+                            throw new Error(err.error || `Erro ${res.status}`);
+                          }
+                          if (res.body) {
+                            const reader = res.body.getReader();
+                            const decoder = new TextDecoder();
+                            let buf = "";
+                            let out = "";
+                            while (true) {
+                              const { done, value } = await reader.read();
+                              if (done) break;
+                              buf += decoder.decode(value, { stream: true });
+                              let idx: number;
+                              while ((idx = buf.indexOf("\n")) !== -1) {
+                                let line = buf.slice(0, idx);
+                                buf = buf.slice(idx + 1);
+                                if (line.endsWith("\r")) line = line.slice(0, -1);
+                                if (!line.startsWith("data: ")) continue;
+                                const js = line.slice(6).trim();
+                                if (js === "[DONE]") break;
+                                try {
+                                  const p = JSON.parse(js);
+                                  const c = p.choices?.[0]?.delta?.content;
+                                  if (c) { out += c; setAiTestResult(out); }
+                                } catch { break; }
+                              }
+                            }
+                            if (!out) setAiTestResult("Sem resposta do modelo.");
+                          }
+                        } else {
+                          // Call with agent for full context (KB, system prompt, etc.)
+                          const res = await fetch(
+                            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-agent-chat`,
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({
+                                agent_id: agentIdToUse,
+                                messages: [{ role: "user", content: promptText }],
+                              }),
+                            }
+                          );
+                          if (!res.ok) {
+                            const err = await res.json().catch(() => ({}));
+                            throw new Error(err.error || `Erro ${res.status}`);
+                          }
+                          if (res.body) {
+                            const reader = res.body.getReader();
+                            const decoder = new TextDecoder();
+                            let buf = "";
+                            let out = "";
+                            while (true) {
+                              const { done, value } = await reader.read();
+                              if (done) break;
+                              buf += decoder.decode(value, { stream: true });
+                              let idx: number;
+                              while ((idx = buf.indexOf("\n")) !== -1) {
+                                let line = buf.slice(0, idx);
+                                buf = buf.slice(idx + 1);
+                                if (line.endsWith("\r")) line = line.slice(0, -1);
+                                if (!line.startsWith("data: ")) continue;
+                                const js = line.slice(6).trim();
+                                if (js === "[DONE]") break;
+                                try {
+                                  const p = JSON.parse(js);
+                                  const c = p.choices?.[0]?.delta?.content;
+                                  if (c) { out += c; setAiTestResult(out); }
+                                } catch { break; }
+                              }
+                            }
+                            if (!out) setAiTestResult("Sem resposta do modelo.");
+                          }
+                        }
                       } catch (e: any) {
                         setAiTestResult(`❌ Erro: ${e.message}`);
                       }
                       setAiTesting(false);
                     }}>
-                    <Play className="h-3 w-3 mr-1" /> {aiTesting ? "Testando..." : "Testar Prompt"}
+                    <Play className="h-3 w-3 mr-1" /> {aiTesting ? "Gerando..." : "Testar Prompt"}
                   </Button>
-                  {aiTestResult && (
-                    <div className="mt-2 p-2 rounded border bg-slate-50 text-[11px] text-slate-700 max-h-32 overflow-y-auto whitespace-pre-wrap">
+                  {aiTestResult && aiTestResult !== "..." && (
+                    <div className="mt-2 p-2 rounded border bg-slate-50 text-[11px] text-slate-700 max-h-40 overflow-y-auto whitespace-pre-wrap leading-relaxed">
                       {aiTestResult}
+                    </div>
+                  )}
+                  {aiTestResult === "..." && (
+                    <div className="mt-2 p-2 rounded border bg-slate-50 text-[11px] text-muted-foreground animate-pulse">
+                      Gerando resposta...
                     </div>
                   )}
                 </div>

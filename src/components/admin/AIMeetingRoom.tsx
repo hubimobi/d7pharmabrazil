@@ -5,32 +5,20 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import {
-  Users, Plus, Loader2, Send, Bot, User, FileText, MessageSquare, ArrowLeft,
-} from "lucide-react";
+import { Users, Plus, Loader2, Send, Bot, User, FileText, MessageSquare, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { callSSE } from "@/hooks/useSSEStream";
 
-interface AIAgent {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-}
-
+interface AIAgent { id: string; name: string; icon: string; color: string; }
+interface MeetingMsg { role: string; agent_id?: string; agent_name?: string; content: string; }
 interface Meeting {
-  id: string;
-  title: string;
-  agent_ids: string[];
-  messages: { role: string; agent_id?: string; agent_name?: string; content: string }[];
-  summary: string;
-  user_id: string;
-  created_at: string;
+  id: string; title: string; agent_ids: string[]; messages: MeetingMsg[];
+  summary: string; user_id: string; created_at: string;
 }
 
 export default function AIMeetingRoom() {
@@ -71,11 +59,7 @@ export default function AIMeetingRoom() {
     mutationFn: async () => {
       if (!user) throw new Error("Login necessário");
       const { data, error } = await supabase.from("ai_meetings" as any).insert({
-        title: newTitle,
-        agent_ids: selectedAgentIds,
-        user_id: user.id,
-        messages: [],
-        summary: "",
+        title: newTitle, agent_ids: selectedAgentIds, user_id: user.id, messages: [], summary: "",
       } as any).select().single();
       if (error) throw error;
       return data as unknown as Meeting;
@@ -83,87 +67,58 @@ export default function AIMeetingRoom() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["ai-meetings"] });
       setActiveMeeting(data);
-      setShowCreate(false);
-      setNewTitle("");
-      setSelectedAgentIds([]);
+      setShowCreate(false); setNewTitle(""); setSelectedAgentIds([]);
       toast.success("Reunião criada!");
     },
     onError: (e: any) => toast.error(e.message),
   });
 
-  const toggleAgent = (id: string) => {
+  const toggleAgent = (id: string) =>
     setSelectedAgentIds((prev) => prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]);
-  };
 
   const getAgentName = (id: string) => agents?.find((a) => a.id === id)?.name || "Agente";
   const getAgentColor = (id: string) => agents?.find((a) => a.id === id)?.color || "#2563eb";
 
   const sendMessage = async () => {
     if (!input.trim() || !activeMeeting || isLoading) return;
-    const userMsg = { role: "user", content: input.trim() };
-    const updatedMessages = [...(activeMeeting.messages || []), userMsg];
-    setActiveMeeting({ ...activeMeeting, messages: updatedMessages });
+    const userMsg: MeetingMsg = { role: "user", content: input.trim() };
+    const baseMessages = [...(activeMeeting.messages || []), userMsg];
+    setActiveMeeting((prev) => prev ? { ...prev, messages: baseMessages } : prev);
     setInput("");
     setIsLoading(true);
 
+    const finalMessages = [...baseMessages];
+
     try {
-      // Each agent responds in sequence
       for (const agentId of activeMeeting.agent_ids as string[]) {
         const agentName = getAgentName(agentId);
-        const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-agent-chat`;
-        const resp = await fetch(CHAT_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
+
+        // Add streaming placeholder for this agent
+        const placeholderIdx = finalMessages.length;
+        finalMessages.push({ role: "assistant", agent_id: agentId, agent_name: agentName, content: "" });
+        setActiveMeeting((prev) => prev ? { ...prev, messages: [...finalMessages] } : prev);
+
+        let agentContent = "";
+        await callSSE(
+          "ai-agent-chat",
+          {
             agent_id: agentId,
-            messages: updatedMessages.map((m: any) => ({
+            messages: baseMessages.map((m) => ({
               role: m.role === "user" ? "user" : "assistant",
               content: m.agent_name ? `[${m.agent_name}]: ${m.content}` : m.content,
             })),
             session_id: activeMeeting.id,
             meeting_mode: true,
-          }),
-        });
-
-        if (!resp.ok) throw new Error("Erro na resposta do agente " + agentName);
-
-        // Read non-streaming for meeting (simpler)
-        let fullContent = "";
-        if (resp.body) {
-          const reader = resp.body.getReader();
-          const decoder = new TextDecoder();
-          let buf = "";
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buf += decoder.decode(value, { stream: true });
-            let idx: number;
-            while ((idx = buf.indexOf("\n")) !== -1) {
-              let line = buf.slice(0, idx);
-              buf = buf.slice(idx + 1);
-              if (line.endsWith("\r")) line = line.slice(0, -1);
-              if (!line.startsWith("data: ")) continue;
-              const json = line.slice(6).trim();
-              if (json === "[DONE]") continue;
-              try {
-                const p = JSON.parse(json);
-                const c = p.choices?.[0]?.delta?.content;
-                if (c) fullContent += c;
-              } catch {}
-            }
-          }
-        }
-
-        const agentMsg = { role: "assistant", agent_id: agentId, agent_name: agentName, content: fullContent };
-        updatedMessages.push(agentMsg);
-        setActiveMeeting((prev) => prev ? { ...prev, messages: [...updatedMessages] } : prev);
+          },
+          (chunk) => {
+            agentContent += chunk;
+            finalMessages[placeholderIdx] = { role: "assistant", agent_id: agentId, agent_name: agentName, content: agentContent };
+            setActiveMeeting((prev) => prev ? { ...prev, messages: [...finalMessages] } : prev);
+          },
+        );
       }
 
-      // Save to DB
-      await supabase.from("ai_meetings" as any).update({ messages: updatedMessages } as any).eq("id", activeMeeting.id);
+      await supabase.from("ai_meetings" as any).update({ messages: finalMessages } as any).eq("id", activeMeeting.id);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -172,62 +127,35 @@ export default function AIMeetingRoom() {
   };
 
   const generateSummary = async () => {
-    if (!activeMeeting) return;
+    if (!activeMeeting || (activeMeeting.messages || []).length === 0) return;
     setIsSummarizing(true);
+    let summary = "";
+    setActiveMeeting((prev) => prev ? { ...prev, summary: "Gerando resumo..." } : prev);
+
     try {
-      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-agent-chat`;
-      const summaryMessages = [
+      const transcript = (activeMeeting.messages || [])
+        .map((m) => `${m.agent_name || "Usuário"}: ${m.content}`).join("\n\n");
+
+      await callSSE(
+        "ai-agent-chat",
         {
-          role: "user",
-          content: `Gere um resumo/ata desta reunião entre agentes de IA. Inclua os principais pontos discutidos, decisões e próximos passos.\n\nConversa:\n${(activeMeeting.messages || []).map((m) => `${m.agent_name || "Usuário"}: ${m.content}`).join("\n\n")}`,
-        },
-      ];
-      const resp = await fetch(CHAT_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
           agent_id: (activeMeeting.agent_ids as string[])[0],
-          messages: summaryMessages,
+          messages: [{ role: "user", content: `Gere um resumo/ata desta reunião entre agentes de IA. Inclua os principais pontos discutidos, decisões e próximos passos.\n\nConversa:\n${transcript}` }],
           session_id: activeMeeting.id,
           summary_mode: true,
-        }),
-      });
-
-      let summary = "";
-      if (resp.body) {
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buf = "";
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          let idx: number;
-          while ((idx = buf.indexOf("\n")) !== -1) {
-            let line = buf.slice(0, idx);
-            buf = buf.slice(idx + 1);
-            if (line.endsWith("\r")) line = line.slice(0, -1);
-            if (!line.startsWith("data: ")) continue;
-            const json = line.slice(6).trim();
-            if (json === "[DONE]") continue;
-            try {
-              const p = JSON.parse(json);
-              const c = p.choices?.[0]?.delta?.content;
-              if (c) summary += c;
-            } catch {}
-          }
-        }
-      }
+        },
+        (chunk) => {
+          summary += chunk;
+          setActiveMeeting((prev) => prev ? { ...prev, summary } : prev);
+        },
+      );
 
       await supabase.from("ai_meetings" as any).update({ summary } as any).eq("id", activeMeeting.id);
-      setActiveMeeting((prev) => prev ? { ...prev, summary } : prev);
       qc.invalidateQueries({ queryKey: ["ai-meetings"] });
       toast.success("Resumo gerado!");
     } catch (e: any) {
       toast.error(e.message);
+      setActiveMeeting((prev) => prev ? { ...prev, summary: "" } : prev);
     } finally {
       setIsSummarizing(false);
     }
@@ -252,11 +180,11 @@ export default function AIMeetingRoom() {
           </div>
           <Button size="sm" variant="outline" onClick={generateSummary} disabled={isSummarizing || (activeMeeting.messages || []).length === 0}>
             {isSummarizing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <FileText className="h-3.5 w-3.5 mr-1" />}
-            Gerar Resumo
+            {isSummarizing ? "Gerando..." : "Gerar Resumo"}
           </Button>
         </div>
 
-        {activeMeeting.summary && (
+        {activeMeeting.summary && activeMeeting.summary !== "Gerando resumo..." && (
           <Card className="mb-4 border-primary/20 bg-primary/5">
             <CardContent className="p-4">
               <h4 className="text-sm font-semibold mb-2 flex items-center gap-2"><FileText className="h-4 w-4" /> Resumo da Reunião</h4>
@@ -282,7 +210,7 @@ export default function AIMeetingRoom() {
                 )}
                 <div className={`max-w-[75%] ${msg.role === "user" ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2.5" : "bg-muted rounded-2xl rounded-tl-sm px-4 py-2.5"}`}>
                   {msg.agent_name && <p className="text-xs font-semibold mb-1" style={{ color: msg.agent_id ? getAgentColor(msg.agent_id) : undefined }}>{msg.agent_name}</p>}
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  <p className="text-sm whitespace-pre-wrap">{msg.content || <span className="opacity-40 italic">digitando...</span>}</p>
                 </div>
                 {msg.role === "user" && (
                   <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -291,13 +219,13 @@ export default function AIMeetingRoom() {
                 )}
               </div>
             ))}
-            {isLoading && (
+            {isLoading && (activeMeeting.messages || []).at(-1)?.content === "" && (
               <div className="flex gap-3">
                 <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 </div>
                 <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-2.5">
-                  <p className="text-sm text-muted-foreground">Agentes respondendo...</p>
+                  <p className="text-sm text-muted-foreground">Agente pensando...</p>
                 </div>
               </div>
             )}
@@ -328,17 +256,14 @@ export default function AIMeetingRoom() {
           <h3 className="text-lg font-semibold">Sala de Reunião</h3>
           <p className="text-sm text-muted-foreground">Converse com múltiplos agentes ao mesmo tempo e gere resumos automáticos</p>
         </div>
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4 mr-2" /> Nova Reunião
-        </Button>
+        <Button onClick={() => setShowCreate(true)}><Plus className="h-4 w-4 mr-2" /> Nova Reunião</Button>
       </div>
 
       {loadingMeetings ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : (meetings || []).length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
-          <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p>Nenhuma reunião criada</p>
+          <Users className="h-12 w-12 mx-auto mb-3 opacity-30" /><p>Nenhuma reunião criada</p>
         </CardContent></Card>
       ) : (
         <div className="space-y-2">

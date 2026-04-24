@@ -70,10 +70,23 @@ export const handler: NodeHandler = {
           .select("type, content")
           .in("knowledge_base_id", kbIds)
           .eq("status", "trained")
-          .limit(10);
+          .limit(40);
 
         if (items && items.length > 0) {
-          const contextParts = items.map((i: any) => {
+          // Score by keyword relevance against last user input
+          const queryWords = String(lastInput).toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
+          const ranked = (items as any[])
+            .map((item) => {
+              const text = [item.content?.question, item.content?.answer, item.content?.text, item.content?.crawled_content]
+                .filter(Boolean).join(" ").toLowerCase();
+              const score = queryWords.reduce((s: number, w: string) => s + (text.includes(w) ? 1 : 0), 0);
+              return { item, score };
+            })
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 8)
+            .map(({ item }) => item);
+
+          const contextParts = ranked.map((i: any) => {
             if (i.type === "faq") return `P: ${i.content.question}\nR: ${i.content.answer}`;
             if (i.type === "text") return String(i.content.text ?? "").substring(0, 2000);
             if (i.type === "url") return String(i.content.crawled_content ?? "").substring(0, 2000);

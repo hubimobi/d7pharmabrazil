@@ -9,13 +9,34 @@ const corsHeaders = {
 
 const MAX_MESSAGES = 50;
 const MAX_MESSAGE_CHARS = 4000;
-const MAX_KB_ITEMS = 20;
+const MAX_KB_FETCH = 60;   // fetch more, score by relevance
+const MAX_KB_CONTEXT = 10; // inject top-N most relevant
+
+// Keyword relevance scoring: how many query words appear in the item content
+function scoreKbItem(item: any, queryWords: string[]): number {
+  if (queryWords.length === 0) return 1;
+  const text = [
+    item.content?.question,
+    item.content?.answer,
+    item.content?.text,
+    item.content?.crawled_content,
+    typeof item.content?.data === "string" ? item.content.data : "",
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  let score = queryWords.reduce((s: number, w: string) => s + (text.includes(w) ? 1 : 0), 0);
+  // Bonus: FAQ exact question prefix match
+  if (item.type === "faq") {
+    const q = (item.content?.question || "").toLowerCase();
+    if (queryWords.some((w: string) => q.startsWith(w))) score += 2;
+  }
+  return score;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // ── Auth: require valid JWT ──────────────────────────────────────────────
+    // ── Auth: require valid user JWT ─────────────────────────────────────────
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -39,7 +60,7 @@ serve(async (req) => {
 
     const sb = createClient(supabaseUrl, serviceKey);
 
-    // Resolve tenant from JWT user
+    // Resolve tenant
     const { data: tenantUser } = await sb
       .from("tenant_users")
       .select("tenant_id")
@@ -48,22 +69,16 @@ serve(async (req) => {
       .maybeSingle();
     const tenantId = tenantUser?.tenant_id || null;
 
-    // ── Input validation ─────────────────────────────────────────────────────
+    // ── Input validation ──────────────────────────────────────────────────────
     const body = await req.json();
     const { agent_id, messages } = body;
 
-    if (!agent_id || !messages) {
-      return new Response(JSON.stringify({ error: "agent_id and messages required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return new Response(JSON.stringify({ error: "messages must be a non-empty array" }), {
+    if (!agent_id || !messages || !Array.isArray(messages) || messages.length === 0) {
+      return new Response(JSON.stringify({ error: "agent_id e messages são obrigatórios" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Truncate messages and content to prevent cost abuse / prompt injection
     const safeMessages = messages
       .slice(-MAX_MESSAGES)
       .map((m: any) => ({
@@ -71,70 +86,100 @@ serve(async (req) => {
         content: String(m.content ?? "").substring(0, MAX_MESSAGE_CHARS),
       }));
 
-    // ── Load agent — scoped to caller's tenant ───────────────────────────────
-    let agentQuery = sb.from("ai_agents").select("*").eq("id", agent_id);
-    if (tenantId) agentQuery = agentQuery.eq("tenant_id", tenantId);
-    const { data: agent, error: agentErr } = await agentQuery.maybeSingle();
-    if (agentErr || !agent) {
-      return new Response(JSON.stringify({ error: "Agent not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // ── Load agent ────────────────────────────────────────────────────────────
+    // Special case: "__prompt_test__" means inline prompt from messages (no agent lookup)
+    const isPromptTest = agent_id === "__prompt_test__";
 
-    // ── Knowledge base context — limited and scoped ──────────────────────────
-    let kbContext = "";
-    const { data: kbLinks } = await sb
-      .from("ai_agent_knowledge_bases")
-      .select("knowledge_base_id")
-      .eq("agent_id", agent_id);
-
-    if (kbLinks && kbLinks.length > 0) {
-      const kbIds = kbLinks.map((l: any) => l.knowledge_base_id);
-      const { data: items } = await sb
-        .from("ai_kb_items")
-        .select("type, content")
-        .in("knowledge_base_id", kbIds)
-        .eq("status", "trained")
-        .limit(MAX_KB_ITEMS);
-
-      if (items && items.length > 0) {
-        const faqEntries = items
-          .filter((i: any) => i.type === "faq")
-          .map((i: any) => `P: ${i.content.question}\nR: ${i.content.answer}`);
-        const textEntries = items
-          .filter((i: any) => i.type === "text")
-          .map((i: any) => String(i.content.text ?? "").substring(0, 3000));
-        const urlEntries = items
-          .filter((i: any) => i.type === "url" && i.content.crawled_content)
-          .map((i: any) => String(i.content.crawled_content).substring(0, 3000));
-        const tableEntries = items
-          .filter((i: any) => i.type === "table")
-          .map((i: any) => i.content.data);
-
-        const parts = [];
-        if (faqEntries.length) parts.push("## FAQ\n" + faqEntries.join("\n\n"));
-        if (textEntries.length) parts.push("## Textos de Referência\n" + textEntries.join("\n\n---\n\n"));
-        if (urlEntries.length) parts.push("## Conteúdo de Sites\n" + urlEntries.join("\n\n---\n\n"));
-        if (tableEntries.length) parts.push("## Dados Tabulares\n" + tableEntries.join("\n\n"));
-        if (parts.length) kbContext = "\n\n# BASE DE CONHECIMENTO\nUse as informações abaixo para responder:\n\n" + parts.join("\n\n");
+    let agent: any = null;
+    if (!isPromptTest) {
+      let agentQuery = sb.from("ai_agents").select("*").eq("id", agent_id);
+      if (tenantId) agentQuery = agentQuery.eq("tenant_id", tenantId);
+      const { data: agentData, error: agentErr } = await agentQuery.maybeSingle();
+      if (agentErr || !agentData) {
+        return new Response(JSON.stringify({ error: "Agente não encontrado" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
+      agent = agentData;
     }
 
-    // ── Resolve LLM ──────────────────────────────────────────────────────────
+    // ── Knowledge base — relevance-ranked ────────────────────────────────────────
+    let kbContext = "";
+    if (agent) {
+      const { data: kbLinks } = await sb
+        .from("ai_agent_knowledge_bases")
+        .select("knowledge_base_id")
+        .eq("agent_id", agent.id);
+
+      if (kbLinks && kbLinks.length > 0) {
+        const kbIds = kbLinks.map((l: any) => l.knowledge_base_id);
+        const { data: items } = await sb
+          .from("ai_kb_items")
+          .select("type, content")
+          .in("knowledge_base_id", kbIds)
+          .eq("status", "trained")
+          .limit(MAX_KB_FETCH);
+
+        if (items && items.length > 0) {
+          // Extract query words from last user message for scoring
+          const lastUserMsg = safeMessages.filter((m: any) => m.role === "user").pop()?.content?.toLowerCase() || "";
+          const queryWords = lastUserMsg.split(/\s+/).filter((w: string) => w.length > 3);
+
+          // Score and sort by relevance, take top MAX_KB_CONTEXT
+          const ranked = (items as any[])
+            .map((item) => ({ item, score: scoreKbItem(item, queryWords) }))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, MAX_KB_CONTEXT)
+            .map(({ item }) => item);
+
+          const faqEntries = ranked
+            .filter((i: any) => i.type === "faq")
+            .map((i: any) => `P: ${i.content.question}\nR: ${i.content.answer}`);
+          const textEntries = ranked
+            .filter((i: any) => i.type === "text")
+            .map((i: any) => String(i.content.text ?? "").substring(0, 3000));
+          const urlEntries = ranked
+            .filter((i: any) => i.type === "url" && i.content.crawled_content)
+            .map((i: any) => String(i.content.crawled_content).substring(0, 3000));
+          const tableEntries = ranked
+            .filter((i: any) => i.type === "table")
+            .map((i: any) => i.content.data);
+
+          const parts = [];
+          if (faqEntries.length) parts.push("## FAQ\n" + faqEntries.join("\n\n"));
+          if (textEntries.length) parts.push("## Textos de Referência\n" + textEntries.join("\n\n---\n\n"));
+          if (urlEntries.length) parts.push("## Conteúdo de Sites\n" + urlEntries.join("\n\n---\n\n"));
+          if (tableEntries.length) parts.push("## Dados Tabulares\n" + tableEntries.join("\n\n"));
+          if (parts.length) kbContext = "\n\n# BASE DE CONHECIMENTO\nUse as informações abaixo para responder:\n\n" + parts.join("\n\n");
+        }
+      }
+    } // end if(agent)
+
+    // ── Resolve LLM ────────────────────────────────────────────────────────────
     const selection = await getActiveLLM(sb, {
-      agentLlmOverride: agent.llm_override,
-      agentModel: agent.model,
+      agentLlmOverride: agent?.llm_override,
+      agentModel: agent?.model || (body.model as string | undefined),
       tenantId,
     });
 
-    const systemPrompt = (agent.system_prompt || "Você é um assistente útil.") + kbContext;
-    const allMessages = [{ role: "system", content: systemPrompt }, ...safeMessages];
+    // For __prompt_test__, the system prompt comes from the messages array itself
+    // (the caller sets role:"system" as first message). For real agents, build it normally.
+    let systemPrompt: string;
+    let chatMessages: any[];
+    if (isPromptTest) {
+      const sysMsg = safeMessages.find((m: any) => m.role === "system");
+      systemPrompt = sysMsg?.content || "Você é um assistente útil.";
+      chatMessages = safeMessages.filter((m: any) => m.role !== "system");
+    } else {
+      systemPrompt = (agent.system_prompt || "Você é um assistente útil.") + kbContext;
+      chatMessages = safeMessages;
+    }
+    const allMessages = [{ role: "system", content: systemPrompt }, ...chatMessages];
 
-    // Estimate input tokens for logging (4 chars ≈ 1 token)
     const inputChars = allMessages.reduce((sum: number, m: any) => sum + (m.content?.length || 0), 0);
     const estimatedInputTokens = Math.ceil(inputChars / 4);
 
-    let response = await callLLM(selection, allMessages, agent.temperature ?? 0.7, true);
+    let response = await callLLM(selection, allMessages, agent?.temperature ?? 0.7, true);
 
     // Fallback to Lovable AI on external failure
     if (!response.ok && selection.provider !== "lovable") {
@@ -159,15 +204,17 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Erro na IA" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fire-and-forget token logging
-    // Output tokens are estimated since streaming doesn't return usage stats
+    // Estimate output tokens (~0.3x input is a reasonable heuristic for chat)
+    const estimatedOutputTokens = Math.ceil(estimatedInputTokens * 0.3);
+
     logTokenUsage(sb, {
       agent_id,
       agent_name: agent.name || "",
       function_name: "ai-agent-chat",
       selection,
       input_tokens: estimatedInputTokens,
-      output_tokens: 0, // updated to 0 — streaming makes real count unavailable here
+      output_tokens: estimatedOutputTokens,
+      tenant_id: tenantId,
     });
 
     return new Response(response.body, {
@@ -181,14 +228,12 @@ serve(async (req) => {
   }
 });
 
-// Separated so fallback reuse is clean and Anthropic format differences are handled centrally
 async function callLLM(
   selection: { apiUrl: string; apiKey: string; model: string; provider: string },
   messages: any[],
   temperature: number,
   stream: boolean,
 ): Promise<Response> {
-  // Anthropic uses a different auth header and message format
   if (selection.provider === "anthropic") {
     const systemMsg = messages.find((m) => m.role === "system");
     const chatMessages = messages.filter((m) => m.role !== "system");
@@ -210,18 +255,12 @@ async function callLLM(
     });
   }
 
-  // OpenAI-compatible (OpenAI, xAI, Lovable)
   return fetch(selection.apiUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${selection.apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: selection.model,
-      messages,
-      temperature,
-      stream,
-    }),
+    body: JSON.stringify({ model: selection.model, messages, temperature, stream }),
   });
 }

@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
     if (authErr || !user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-    const isAdmin = (roles || []).some((r: any) => ["admin","super_admin","administrador","financeiro"].includes(r.role));
+    const isAdmin = (roles || []).some((r: any) => ["admin", "super_admin", "administrador", "financeiro"].includes(r.role));
     if (!isAdmin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const { representative_id, representative_name, representative_pix, commission_ids, total, type } = await req.json();
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, payment_id: paymentId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("pay-commissions error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },

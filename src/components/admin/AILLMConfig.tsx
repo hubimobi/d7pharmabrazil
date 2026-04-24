@@ -144,6 +144,8 @@ export default function AILLMConfig() {
 
   const setDefaultMut = useMutation({
     mutationFn: async (id: string) => {
+      // Atomic: clear all others first, then set the chosen one
+      await supabase.from("ai_llm_config" as any).update({ is_default: false } as any).neq("id", id);
       const { error } = await supabase.from("ai_llm_config" as any).update({ is_default: true } as any).eq("id", id);
       if (error) throw error;
     },

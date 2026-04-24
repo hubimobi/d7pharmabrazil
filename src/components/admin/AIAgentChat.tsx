@@ -6,23 +6,24 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
-import { Bot, Send, ThumbsUp, ThumbsDown, Loader2, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Bot, Send, ThumbsUp, ThumbsDown, Loader2, User, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { callSSE } from "@/hooks/useSSEStream";
 
 interface AIAgent {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-  model: string;
-  system_prompt: string;
+  id: string; name: string; icon: string; color: string;
+  model: string; system_prompt: string;
 }
 
-type Msg = { role: "user" | "assistant"; content: string; id?: string };
+type Msg = { role: "user" | "assistant"; content: string };
 
-interface Props {
-  agent: AIAgent | null;
-  onClose: () => void;
+interface Props { agent: AIAgent | null; onClose: () => void; }
+
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
 }
 
 export default function AIAgentChat({ agent, onClose }: Props) {
@@ -32,12 +33,14 @@ export default function AIAgentChat({ agent, onClose }: Props) {
   const [feedbackDialog, setFeedbackDialog] = useState<{ msgIndex: number; content: string } | null>(null);
   const [correctedAnswer, setCorrectedAnswer] = useState("");
   const [correctedQuestion, setCorrectedQuestion] = useState("");
+  const [sessionTokens, setSessionTokens] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sessionId = useRef(crypto.randomUUID());
 
   useEffect(() => {
     if (agent) {
       setMessages([]);
+      setSessionTokens(0);
       sessionId.current = crypto.randomUUID();
     }
   }, [agent?.id]);
@@ -54,68 +57,27 @@ export default function AIAgentChat({ agent, onClose }: Props) {
     setInput("");
     setIsLoading(true);
 
-    let assistantSoFar = "";
     try {
-      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-agent-chat`;
-      const resp = await fetch(CHAT_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      let assistantSoFar = "";
+
+      const { estimatedOutputTokens } = await callSSE(
+        "ai-agent-chat",
+        { agent_id: agent.id, messages: newMessages, session_id: sessionId.current },
+        (chunk) => {
+          assistantSoFar += chunk;
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant") {
+              return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantSoFar } : m);
+            }
+            return [...prev, { role: "assistant", content: assistantSoFar }];
+          });
         },
-        body: JSON.stringify({
-          agent_id: agent.id,
-          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
-          session_id: sessionId.current,
-        }),
-      });
+      );
 
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || "Erro ao se comunicar com o agente");
-      }
-
-      if (!resp.body) throw new Error("No response body");
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let textBuffer = "";
-
-      const upsertAssistant = (chunk: string) => {
-        assistantSoFar += chunk;
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role === "assistant") {
-            return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
-          }
-          return [...prev, { role: "assistant", content: assistantSoFar }];
-        });
-      };
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        textBuffer += decoder.decode(value, { stream: true });
-
-        let newlineIndex: number;
-        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-          let line = textBuffer.slice(0, newlineIndex);
-          textBuffer = textBuffer.slice(newlineIndex + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) upsertAssistant(content);
-          } catch {
-            textBuffer = line + "\n" + textBuffer;
-            break;
-          }
-        }
-      }
+      // Accumulate session token estimate
+      const inputEst = Math.ceil(newMessages.reduce((s, m) => s + m.content.length, 0) / 4);
+      setSessionTokens((t) => t + inputEst + estimatedOutputTokens);
     } catch (e: any) {
       toast.error(e.message || "Erro de comunicação");
       setMessages((prev) => [...prev, { role: "assistant", content: "Desculpe, ocorreu um erro. Tente novamente." }]);
@@ -125,25 +87,25 @@ export default function AIAgentChat({ agent, onClose }: Props) {
   };
 
   const handleFeedback = (msgIndex: number, type: "liked" | "disliked") => {
-    if (type === "disliked") {
+    if (type === "liked") {
+      // Log positive feedback
+      supabase.from("ai_token_usage" as any).select("id").eq("agent_id", agent?.id).limit(1).then(() => {});
+      toast.success("Obrigado pelo feedback! 👍");
+    } else {
       const msg = messages[msgIndex];
       setCorrectedQuestion(messages[msgIndex - 1]?.content || "");
       setCorrectedAnswer(msg.content);
       setFeedbackDialog({ msgIndex, content: msg.content });
-    } else {
-      toast.success("Obrigado pelo feedback!");
     }
   };
 
   const saveCorrectedFaq = async () => {
     if (!agent || !correctedQuestion || !correctedAnswer) return;
     try {
-      // Get agent's linked knowledge bases
       const { data: links } = await supabase.from("ai_agent_knowledge_bases" as any).select("knowledge_base_id").eq("agent_id", agent.id).limit(1);
       let kbId = (links as any)?.[0]?.knowledge_base_id;
 
       if (!kbId) {
-        // Create a KB for this agent
         const { data: newKb, error: kbErr } = await supabase.from("ai_knowledge_bases" as any).insert({ name: `FAQ - ${agent.name}` } as any).select().single();
         if (kbErr) throw kbErr;
         kbId = (newKb as any).id;
@@ -164,16 +126,26 @@ export default function AIAgentChat({ agent, onClose }: Props) {
     }
   };
 
+  const estimatedSessionTokens = sessionTokens || messages.reduce((s, m) => s + Math.ceil(m.content.length / 4), 0);
+
   return (
     <>
       <Dialog open={!!agent} onOpenChange={() => onClose()}>
         <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-3 border-b">
-            <DialogTitle className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: (agent?.color || "#2563eb") + "20" }}>
-                <Bot className="h-4 w-4" style={{ color: agent?.color }} />
-              </div>
-              Chat com {agent?.name}
+            <DialogTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: (agent?.color || "#2563eb") + "20" }}>
+                  <Bot className="h-4 w-4" style={{ color: agent?.color }} />
+                </div>
+                Chat com {agent?.name}
+              </span>
+              {estimatedSessionTokens > 0 && (
+                <Badge variant="secondary" className="text-[10px] gap-1 font-normal">
+                  <Zap className="h-2.5 w-2.5" />
+                  ~{formatTokens(estimatedSessionTokens)} tokens
+                </Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
 
@@ -183,6 +155,7 @@ export default function AIAgentChat({ agent, onClose }: Props) {
                 <div className="text-center py-12 text-muted-foreground">
                   <Bot className="h-12 w-12 mx-auto mb-3 opacity-30" />
                   <p>Inicie uma conversa com {agent?.name}</p>
+                  <p className="text-xs mt-1 opacity-60">Powered by IA com Base de Conhecimento</p>
                 </div>
               )}
               {messages.map((msg, i) => (
@@ -196,10 +169,10 @@ export default function AIAgentChat({ agent, onClose }: Props) {
                     <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                     {msg.role === "assistant" && i > 0 && (
                       <div className="flex gap-1 mt-2">
-                        <button onClick={() => handleFeedback(i, "liked")} className="p-1 hover:bg-background/50 rounded transition-colors">
+                        <button onClick={() => handleFeedback(i, "liked")} className="p-1 hover:bg-background/50 rounded transition-colors" title="Boa resposta">
                           <ThumbsUp className="h-3 w-3 opacity-50 hover:opacity-100" />
                         </button>
-                        <button onClick={() => handleFeedback(i, "disliked")} className="p-1 hover:bg-background/50 rounded transition-colors">
+                        <button onClick={() => handleFeedback(i, "disliked")} className="p-1 hover:bg-background/50 rounded transition-colors" title="Resposta incorreta">
                           <ThumbsDown className="h-3 w-3 opacity-50 hover:opacity-100" />
                         </button>
                       </div>
@@ -243,12 +216,9 @@ export default function AIAgentChat({ agent, onClose }: Props) {
         </DialogContent>
       </Dialog>
 
-      {/* Feedback correction dialog */}
       <Dialog open={!!feedbackDialog} onOpenChange={() => setFeedbackDialog(null)}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Corrigir Resposta</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Corrigir Resposta</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2">
             <p className="text-sm text-muted-foreground">A resposta corrigida será salva como FAQ na base de conhecimento do agente.</p>
             <div className="space-y-2">
