@@ -27,7 +27,7 @@ import {
   Bot, UserCheck, ArrowRight, ArrowUp, ArrowDown, Megaphone, Filter, Loader2,
   Folder, FolderPlus, FolderOpen, FolderInput,
   Tag, Briefcase, Stethoscope, Package, MapPin, CheckCheck, AlertCircle,
-  Hourglass, TrendingUp
+  Hourglass, TrendingUp, Globe, Camera, MessageCircle,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ConversationsTab from "@/components/admin/WhatsAppConversations";
@@ -2028,7 +2028,25 @@ function BroadcastTab() {
           : firstStep.step_type === "message_custom" ? (firstStep.config as any)?.custom_message || firstStep.label : firstStep.label || "Mensagem de teste";
         stepId = firstStep.id; templateId = firstStep.template_id || null; firstStepFunnelId = targetId;
       } else {
-        messageContent = `[FLOW] Execução de Teste`;
+        // Resolve first message node of the Flow so the queue has real content to send
+        const { data: flowNodes } = await supabase
+          .from("whatsapp_flow_nodes")
+          .select("*")
+          .eq("flow_id", targetId)
+          .eq("type", "message")
+          .order("created_at")
+          .limit(10);
+
+        const firstMsgNode = (flowNodes || []).find((n: any) =>
+          n.data?.content || n.data?.message || n.data?.text
+        );
+
+        if (firstMsgNode) {
+          messageContent = firstMsgNode.data?.content || firstMsgNode.data?.message || firstMsgNode.data?.text || "[FLOW] Mensagem de teste";
+          stepId = firstMsgNode.id;
+        } else {
+          messageContent = `[FLOW] ${flows.find(f => f.id === targetId)?.name || "Teste"} — mensagem de validação`;
+        }
         flowIdField = targetId;
       }
 
@@ -2567,7 +2585,22 @@ function ContactsTab() {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadAll(); }, []);
+  // WhatsApp API extraction
+  const [instances, setInstances] = useState<{ id: string; name: string; status: string }[]>([]);
+  const [selectedInstanceForExtract, setSelectedInstanceForExtract] = useState("");
+  const [groups, setGroups] = useState<{ id: string; subject: string; size: number }[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [extracting, setExtracting] = useState(false);
+  const [extractResult, setExtractResult] = useState<{ imported: number; total: number } | null>(null);
+
+  // Instagram
+  const [igAccessToken, setIgAccessToken] = useState("");
+  const [igUserId, setIgUserId] = useState("");
+  const [igPosts, setIgPosts] = useState<{ id: string; caption: string; timestamp: string; media_type: string }[]>([]);
+  const [selectedPostId, setSelectedPostId] = useState("");
+  const [loadingIgPosts, setLoadingIgPosts] = useState(false);
+
+  useEffect(() => { loadAll(); loadInstances(); }, []);
 
   async function loadAll() {
     const [{ data: logData }, { data: contactData }] = await Promise.all([
@@ -2576,6 +2609,12 @@ function ContactsTab() {
     ]);
     setLogs((logData || []) as unknown as MessageLog[]);
     setContacts(contactData || []);
+  }
+
+  async function loadInstances() {
+    const { data } = await supabase.from("whatsapp_instances").select("id, name, status").eq("active", true).order("name");
+    setInstances((data || []) as any);
+    if (data && data.length === 1) setSelectedInstanceForExtract(data[0].id);
   }
 
   const allContacts = (() => {
@@ -2654,9 +2693,115 @@ function ContactsTab() {
     loadAll();
   }
 
+  // ── WhatsApp API extraction ──
+  async function fetchGroupsList() {
+    if (!selectedInstanceForExtract) { toast.error("Selecione uma instância"); return; }
+    setExtracting(true);
+    setGroups([]);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-extract-contacts", {
+        body: { instance_id: selectedInstanceForExtract, source: "groups" },
+      });
+      if (error || data?.error) throw new Error(error?.message || data?.error);
+      setGroups(data.groups || []);
+      if (!data.groups?.length) toast.info("Nenhum grupo encontrado nesta instância");
+    } catch (e: any) {
+      toast.error(`Erro ao buscar grupos: ${e.message}`);
+    }
+    setExtracting(false);
+  }
+
+  async function extractWhatsApp(source: "groups" | "contacts" | "conversations") {
+    if (!selectedInstanceForExtract) { toast.error("Selecione uma instância"); return; }
+    if (source === "groups" && selectedGroupIds.length === 0) { toast.error("Selecione pelo menos um grupo"); return; }
+    setExtracting(true);
+    setExtractResult(null);
+    try {
+      const body: any = { instance_id: selectedInstanceForExtract, source };
+      if (source === "groups") body.group_ids = selectedGroupIds;
+      const { data, error } = await supabase.functions.invoke("whatsapp-extract-contacts", { body });
+      if (error || data?.error) throw new Error(error?.message || data?.error);
+      setExtractResult({ imported: data.imported, total: data.total });
+      toast.success(`${data.imported} contato(s) importado(s)!`);
+      loadAll();
+    } catch (e: any) {
+      toast.error(`Erro na extração: ${e.message}`);
+    }
+    setExtracting(false);
+  }
+
+  // ── Instagram extraction ──
+  async function fetchInstagramPosts() {
+    if (!igAccessToken || !igUserId) { toast.error("Informe o Token e o ID de usuário"); return; }
+    setLoadingIgPosts(true);
+    setIgPosts([]);
+    try {
+      const { data, error } = await supabase.functions.invoke("instagram-extract-contacts", {
+        body: { source: "list_posts", access_token: igAccessToken, ig_user_id: igUserId },
+      });
+      if (error || data?.error) throw new Error(error?.message || data?.error);
+      setIgPosts(data.posts || []);
+      if (!data.posts?.length) toast.info("Nenhuma publicação encontrada");
+    } catch (e: any) {
+      toast.error(`Erro Instagram: ${e.message}`);
+    }
+    setLoadingIgPosts(false);
+  }
+
+  async function extractInstagramComments() {
+    if (!igAccessToken || !selectedPostId) { toast.error("Selecione uma publicação"); return; }
+    setExtracting(true);
+    setExtractResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("instagram-extract-contacts", {
+        body: { source: "comments", access_token: igAccessToken, media_id: selectedPostId },
+      });
+      if (error || data?.error) throw new Error(error?.message || data?.error);
+      setExtractResult({ imported: data.imported, total: data.extracted });
+      toast.success(`${data.imported} comentadores importados!`);
+      loadAll();
+    } catch (e: any) {
+      toast.error(`Erro: ${e.message}`);
+    }
+    setExtracting(false);
+  }
+
+  function handleInstagramFollowersCSV(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const csv_data = ev.target?.result as string || "";
+      setExtracting(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("instagram-extract-contacts", {
+          body: { source: "followers_csv", csv_data },
+        });
+        if (error || data?.error) throw new Error(error?.message || data?.error);
+        toast.success(`${data.imported} seguidores importados!`);
+        loadAll();
+      } catch (err: any) {
+        toast.error(`Erro: ${err.message}`);
+      }
+      setExtracting(false);
+    };
+    reader.readAsText(file);
+  }
+
+  function resetExtractState() {
+    setExtractResult(null);
+    setGroups([]);
+    setSelectedGroupIds([]);
+    setIgPosts([]);
+    setSelectedPostId("");
+  }
+
   const sourceLabels: Record<string, string> = {
-    csv: "CSV", manual: "Manual", whatsapp_group: "Grupo WhatsApp",
+    csv: "CSV", manual: "Manual", whatsapp_group: "Grupo WA",
+    whatsapp_groups_api: "Grupos WA", whatsapp_contacts_api: "Contatos WA",
+    whatsapp_conversations: "Conversas WA",
     google_contacts: "Google", whatsapp_device: "Dispositivo", mensagem: "Mensagem",
+    instagram_comments: "Instagram", instagram_followers: "Instagram",
   };
 
   return (
@@ -2676,40 +2821,89 @@ function ContactsTab() {
         </div>
       </div>
 
-      <Dialog open={showImport} onOpenChange={(v) => { setShowImport(v); if (!v) setImportSource(null); }}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={showImport} onOpenChange={(v) => { setShowImport(v); if (!v) { setImportSource(null); resetExtractState(); } }}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {importSource === "manual" ? "Adicionar Contato" : importSource ? `Importar via ${sourceLabels[importSource] || importSource}` : "Importar Contatos"}
+              {importSource === "manual" ? "Adicionar Contato"
+                : importSource ? `Importar — ${sourceLabels[importSource] || importSource}`
+                : "Importar Contatos"}
             </DialogTitle>
           </DialogHeader>
 
+          {/* ── Source picker grid ── */}
           {!importSource && (
-            <div className="grid grid-cols-2 gap-3 py-2">
-              <button onClick={() => setImportSource("whatsapp_group")}
-                className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition text-center">
-                <Users className="h-8 w-8 text-primary" />
-                <span className="text-sm font-medium">Grupo do WhatsApp</span>
-                <span className="text-xs text-muted-foreground">Importar membros de um grupo</span>
-              </button>
-              <button onClick={() => setImportSource("google_contacts")}
-                className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition text-center">
-                <Mail className="h-8 w-8 text-primary" />
-                <span className="text-sm font-medium">Contatos do Google</span>
-                <span className="text-xs text-muted-foreground">Exportar do Google e importar CSV</span>
-              </button>
-              <button onClick={() => setImportSource("csv")}
-                className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition text-center">
-                <FileText className="h-8 w-8 text-primary" />
-                <span className="text-sm font-medium">Lista em CSV</span>
-                <span className="text-xs text-muted-foreground">Telefone e nome separados por vírgula</span>
-              </button>
-              <button onClick={() => setImportSource("whatsapp_device")}
-                className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition text-center">
-                <Smartphone className="h-8 w-8 text-primary" />
-                <span className="text-sm font-medium">Seu WhatsApp</span>
-                <span className="text-xs text-muted-foreground">Sincronizar contatos via instância</span>
-              </button>
+            <div className="space-y-4 py-2">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">WhatsApp</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => { setImportSource("whatsapp_groups_api"); resetExtractState(); }}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:border-green-500 hover:bg-green-50 transition text-center">
+                    <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center">
+                      <Users className="h-4 w-4 text-green-600" />
+                    </div>
+                    <span className="text-xs font-semibold">Grupos</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Membros dos grupos conectados</span>
+                  </button>
+                  <button onClick={() => { setImportSource("whatsapp_contacts_api"); resetExtractState(); }}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:border-green-500 hover:bg-green-50 transition text-center">
+                    <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center">
+                      <Smartphone className="h-4 w-4 text-green-600" />
+                    </div>
+                    <span className="text-xs font-semibold">Contatos</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Agenda do dispositivo</span>
+                  </button>
+                  <button onClick={() => { setImportSource("whatsapp_conversations"); resetExtractState(); }}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:border-green-500 hover:bg-green-50 transition text-center">
+                    <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center">
+                      <MessageCircle className="h-4 w-4 text-green-600" />
+                    </div>
+                    <span className="text-xs font-semibold">Conversas</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Histórico de mensagens</span>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Instagram</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => { setImportSource("instagram_comments"); resetExtractState(); }}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:border-pink-500 hover:bg-pink-50 transition text-center">
+                    <div className="h-9 w-9 rounded-full bg-pink-100 flex items-center justify-center">
+                      <MessageCircle className="h-4 w-4 text-pink-600" />
+                    </div>
+                    <span className="text-xs font-semibold">Comentários</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Quem comentou em posts</span>
+                  </button>
+                  <button onClick={() => { setImportSource("instagram_followers_csv"); resetExtractState(); }}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:border-pink-500 hover:bg-pink-50 transition text-center">
+                    <div className="h-9 w-9 rounded-full bg-pink-100 flex items-center justify-center">
+                      <Camera className="h-4 w-4 text-pink-600" />
+                    </div>
+                    <span className="text-xs font-semibold">Seguidores CSV</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Exportação do Instagram</span>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Outros</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => setImportSource("csv")}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition text-center">
+                    <FileText className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-xs font-semibold">CSV</span>
+                  </button>
+                  <button onClick={() => setImportSource("google_contacts")}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition text-center">
+                    <Mail className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-xs font-semibold">Google</span>
+                  </button>
+                  <button onClick={() => setImportSource("manual")}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition text-center">
+                    <UserPlus className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-xs font-semibold">Manual</span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -2822,19 +3016,174 @@ function ContactsTab() {
             </div>
           )}
 
+          {/* ── Instance selector (shared) ── */}
+          {["whatsapp_groups_api", "whatsapp_contacts_api", "whatsapp_conversations"].includes(importSource || "") && (
+            <div className="mb-3">
+              <Label className="text-xs mb-1 block">Instância WhatsApp</Label>
+              <Select value={selectedInstanceForExtract} onValueChange={setSelectedInstanceForExtract}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Selecionar instância..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {instances.map(i => (
+                    <SelectItem key={i.id} value={i.id} className="text-xs">
+                      <span className={`mr-1.5 ${i.status === "connected" ? "text-green-500" : "text-slate-400"}`}>●</span>
+                      {i.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* ── WhatsApp Grupos (API) ── */}
+          {importSource === "whatsapp_groups_api" && (
+            <div className="space-y-3">
+              {groups.length === 0 ? (
+                <Button className="w-full" onClick={fetchGroupsList} disabled={extracting || !selectedInstanceForExtract}>
+                  {extracting ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Buscando...</> : <><Users className="h-4 w-4 mr-1" /> Buscar Grupos</>}
+                </Button>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">{groups.length} grupo(s) encontrado(s). Selecione quais importar:</p>
+                  <ScrollArea className="h-48 border rounded-lg p-2">
+                    {groups.map(g => (
+                      <label key={g.id} className="flex items-center gap-2 py-1.5 px-1 hover:bg-muted rounded cursor-pointer">
+                        <Checkbox
+                          checked={selectedGroupIds.includes(g.id)}
+                          onCheckedChange={(c) => setSelectedGroupIds(prev => c ? [...prev, g.id] : prev.filter(id => id !== g.id))}
+                        />
+                        <span className="text-xs flex-1 truncate">{g.subject}</span>
+                        <Badge variant="outline" className="text-[9px] h-4">{g.size || "?"} membros</Badge>
+                      </label>
+                    ))}
+                  </ScrollArea>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => setSelectedGroupIds(groups.map(g => g.id))}>Todos</Button>
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => setSelectedGroupIds([])}>Nenhum</Button>
+                    <Button className="flex-1 text-xs" onClick={() => extractWhatsApp("groups")} disabled={extracting || selectedGroupIds.length === 0}>
+                      {extracting ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> Importando...</> : <><Download className="h-3.5 w-3.5 mr-1" /> Importar {selectedGroupIds.length > 0 ? `(${selectedGroupIds.length})` : ""}</>}
+                    </Button>
+                  </div>
+                  {extractResult && <p className="text-xs text-green-600 font-medium">✓ {extractResult.imported} contatos importados de {extractResult.total} encontrados.</p>}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── WhatsApp Contatos do Dispositivo (API) ── */}
+          {importSource === "whatsapp_contacts_api" && (
+            <div className="space-y-3">
+              <div className="rounded-lg bg-muted/50 border p-3 text-xs text-muted-foreground">
+                Sincroniza todos os contatos salvos na agenda do celular conectado via WhatsApp. O nome e telefone de cada contato são importados automaticamente.
+              </div>
+              {extractResult ? (
+                <p className="text-xs text-green-600 font-medium">✓ {extractResult.imported} contatos sincronizados de {extractResult.total} encontrados.</p>
+              ) : (
+                <Button className="w-full" onClick={() => extractWhatsApp("contacts")} disabled={extracting || !selectedInstanceForExtract}>
+                  {extracting ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Sincronizando...</> : <><Smartphone className="h-4 w-4 mr-1" /> Sincronizar Contatos da Agenda</>}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* ── WhatsApp Conversas ── */}
+          {importSource === "whatsapp_conversations" && (
+            <div className="space-y-3">
+              <div className="rounded-lg bg-muted/50 border p-3 text-xs text-muted-foreground">
+                Extrai todos os números que já trocaram mensagens com esta instância e os salva como contatos. Útil para criar uma base a partir do histórico.
+              </div>
+              {extractResult ? (
+                <p className="text-xs text-green-600 font-medium">✓ {extractResult.imported} contatos importados do histórico.</p>
+              ) : (
+                <Button className="w-full" onClick={() => extractWhatsApp("conversations")} disabled={extracting || !selectedInstanceForExtract}>
+                  {extracting ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Extraindo...</> : <><MessageCircle className="h-4 w-4 mr-1" /> Extrair do Histórico de Conversas</>}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* ── Instagram Comentários ── */}
+          {importSource === "instagram_comments" && (
+            <div className="space-y-3">
+              <div className="rounded-lg bg-pink-50 border border-pink-200 p-3 space-y-1">
+                <p className="text-xs font-semibold text-pink-800">Acesso via Instagram Graph API</p>
+                <p className="text-[11px] text-pink-700">Necessário: Token de acesso de uma conta Business/Creator conectada via Meta for Developers.</p>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs mb-1 block">Token de Acesso</Label>
+                  <Input value={igAccessToken} onChange={e => setIgAccessToken(e.target.value)} placeholder="EAAxxxxx..." className="h-8 text-xs font-mono" type="password" />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">ID do Usuário Instagram</Label>
+                  <Input value={igUserId} onChange={e => setIgUserId(e.target.value)} placeholder="17841400000000000" className="h-8 text-xs" />
+                </div>
+              </div>
+              {igPosts.length === 0 ? (
+                <Button className="w-full" onClick={fetchInstagramPosts} disabled={loadingIgPosts || !igAccessToken || !igUserId}>
+                  {loadingIgPosts ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Buscando posts...</> : <><Camera className="h-4 w-4 mr-1" /> Buscar Publicações</>}
+                </Button>
+              ) : (
+                <>
+                  <div>
+                    <Label className="text-xs mb-1 block">Selecionar Publicação</Label>
+                    <Select value={selectedPostId} onValueChange={setSelectedPostId}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Escolha um post..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {igPosts.map(p => (
+                          <SelectItem key={p.id} value={p.id} className="text-xs">
+                            {p.media_type} · {p.caption?.substring(0, 40) || p.id} · {new Date(p.timestamp).toLocaleDateString("pt-BR")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {extractResult ? (
+                    <p className="text-xs text-green-600 font-medium">✓ {extractResult.imported} comentadores importados.</p>
+                  ) : (
+                    <Button className="w-full" onClick={extractInstagramComments} disabled={extracting || !selectedPostId}>
+                      {extracting ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Extraindo...</> : <><Download className="h-4 w-4 mr-1" /> Extrair Comentadores</>}
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── Instagram Seguidores CSV ── */}
+          {importSource === "instagram_followers_csv" && (
+            <div className="space-y-3">
+              <div className="rounded-lg border p-4 space-y-2">
+                <p className="text-sm font-medium">Como exportar seus seguidores do Instagram:</p>
+                <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside leading-relaxed">
+                  <li>No app Instagram: <strong>Perfil → ≡ → Configurações → Central de Contas</strong></li>
+                  <li>Clique em <strong>Suas informações e permissões → Baixar suas informações</strong></li>
+                  <li>Selecione: <strong>Seguidores e seguindo → Seguidores</strong></li>
+                  <li>Formato: <strong>JSON ou CSV</strong> → Solicitar download</li>
+                  <li>Você receberá o arquivo por e-mail em até 48h</li>
+                </ol>
+              </div>
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-700">
+                Também aceita qualquer CSV com coluna <code className="bg-blue-100 px-1 rounded">username</code> ou <code className="bg-blue-100 px-1 rounded">account handle</code>.
+              </div>
+              <div>
+                <input ref={fileInputRef} type="file" accept=".csv,.json,.txt" className="hidden" onChange={handleInstagramFollowersCSV} />
+                <Button className="w-full" onClick={() => fileInputRef.current?.click()} disabled={extracting}>
+                  {extracting ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Importando...</> : <><Upload className="h-4 w-4 mr-1" /> Enviar arquivo CSV de seguidores</>}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Legacy: whatsapp_device ── */}
           {importSource === "whatsapp_device" && (
             <div className="space-y-3">
-              <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
-                <p className="text-sm text-foreground">Esta funcionalidade sincroniza os contatos da sua instância do WhatsApp conectada via Evolution API.</p>
-                <p className="text-xs text-muted-foreground mt-2">Certifique-se de que sua instância está ativa e conectada na aba "Instâncias".</p>
-              </div>
-              <Button className="w-full" disabled>
-                <Smartphone className="h-4 w-4 mr-1" /> Sincronizar Contatos (em breve)
-              </Button>
-              <Separator />
-              <p className="text-xs text-muted-foreground">Enquanto isso, exporte seus contatos pelo WhatsApp e importe via CSV:</p>
-              <Button variant="outline" size="sm" onClick={() => setImportSource("csv")}>
-                <FileText className="h-4 w-4 mr-1" /> Importar via CSV
+              <p className="text-sm text-muted-foreground">Use a opção <strong>Contatos do WhatsApp</strong> no menu principal para sincronizar via API.</p>
+              <Button variant="outline" size="sm" onClick={() => setImportSource("whatsapp_contacts_api")}>
+                <Smartphone className="h-4 w-4 mr-1" /> Sincronizar via API
               </Button>
             </div>
           )}
@@ -2983,6 +3332,7 @@ function CampaignCard({
   instances?: any[];
 }) {
   const [open, setOpen] = useState(false);
+  const [previewItem, setPreviewItem] = useState<QueueRow | null>(null);
   const total = group.total;
   const progress = total > 0 ? Math.round((group.sent / total) * 100) : 0;
   const TypeIcon = group.type === "flow" ? Zap : group.type === "funnel" ? GitBranch : Send;
@@ -2995,142 +3345,184 @@ function CampaignCard({
   }
 
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-0">
-        <div className="p-4 flex items-start gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <TypeIcon className="h-5 w-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-semibold text-sm truncate">{group.name}</h4>
-              <Badge variant="outline" className="text-xs">
-                {group.type === "flow" ? "Flow" : group.type === "funnel" ? "Funil" : "Avulso"}
-              </Badge>
+    <>
+      <Card className="overflow-hidden">
+        <CardContent className="p-0">
+          <div className="p-4 flex items-start gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <TypeIcon className="h-5 w-5" />
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Iniciado em {new Date(group.firstScheduled).toLocaleString("pt-BR")}
-              {etaMinutes !== null && <> · ETA: ~{etaMinutes} min</>}
-            </p>
-
-            {group.instance_ids && group.instance_ids.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {group.instance_ids.map(id => {
-                  const inst = instances.find(i => i.id === id);
-                  const display = getInstanceDisplay(inst || { instance_name: id });
-                  return (
-                    <Badge key={id} variant="secondary" className="text-[9px] h-4 bg-muted text-muted-foreground border-transparent">
-                      <Smartphone className="h-2 w-2 mr-1" /> {display.name}
-                    </Badge>
-                  );
-                })}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="font-semibold text-sm truncate">{group.name}</h4>
+                <Badge variant="outline" className="text-xs">
+                  {group.type === "flow" ? "Flow" : group.type === "funnel" ? "Funil" : "Avulso"}
+                </Badge>
               </div>
-            )}
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Iniciado em {new Date(group.firstScheduled).toLocaleString("pt-BR")}
+                {etaMinutes !== null && <> · ETA: ~{etaMinutes} min</>}
+              </p>
 
-            {group.status === "paused" && group.error_reason && (
-              <div className="mt-2 p-2 rounded bg-red-50 border border-red-100 flex items-start gap-2 animate-pulse">
-                <AlertCircle className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
-                <p className="text-[10px] text-red-700 leading-tight">
-                  <span className="font-bold">PAUSA DE SEGURANÇA:</span> {group.error_reason}
-                </p>
-              </div>
-            )}
+              {group.instance_ids && group.instance_ids.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {group.instance_ids.map(id => {
+                    const inst = instances.find(i => i.id === id);
+                    const display = getInstanceDisplay(inst || { instance_name: id });
+                    return (
+                      <Badge key={id} variant="secondary" className="text-[9px] h-4 bg-muted text-muted-foreground border-transparent">
+                        <Smartphone className="h-2 w-2 mr-1" /> {display.name}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
 
-            <div className="mt-3 space-y-2">
-              <Progress value={progress} className="h-2" />
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">{group.sent} de {total} enviadas ({progress}%)</span>
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                  {group.sent > 0 && <Badge variant="secondary" className="bg-blue-500/10 text-blue-700 gap-1 shrink-0"><Send className="h-3 w-3" /> {group.sent}</Badge>}
-                  {group.delivered > 0 && <Badge variant="secondary" className="bg-green-500/10 text-green-700 gap-1 shrink-0"><CheckCheck className="h-3 w-3" /> {group.delivered}</Badge>}
-                  {group.read > 0 && <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 gap-1 shrink-0"><Eye className="h-3 w-3" /> {group.read}</Badge>}
-                  {group.pending > 0 && <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 gap-1 shrink-0"><Clock className="h-3 w-3" /> {group.pending}</Badge>}
-                  {group.failed > 0 && <Badge variant="secondary" className="bg-red-500/10 text-red-700 gap-1 shrink-0"><AlertCircle className="h-3 w-3" /> {group.failed}</Badge>}
+              {group.status === "paused" && group.error_reason && (
+                <div className="mt-2 p-2 rounded bg-red-50 border border-red-100 flex items-start gap-2 animate-pulse">
+                  <AlertCircle className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-red-700 leading-tight">
+                    <span className="font-bold">PAUSA DE SEGURANÇA:</span> {group.error_reason}
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-3 space-y-2">
+                <Progress value={progress} className="h-2" />
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{group.sent} de {total} enviadas ({progress}%)</span>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                    {group.sent > 0 && <Badge variant="secondary" className="bg-blue-500/10 text-blue-700 gap-1 shrink-0"><Send className="h-3 w-3" /> {group.sent}</Badge>}
+                    {group.delivered > 0 && <Badge variant="secondary" className="bg-green-500/10 text-green-700 gap-1 shrink-0"><CheckCheck className="h-3 w-3" /> {group.delivered}</Badge>}
+                    {group.read > 0 && <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 gap-1 shrink-0"><Eye className="h-3 w-3" /> {group.read}</Badge>}
+                    {group.pending > 0 && <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 gap-1 shrink-0"><Clock className="h-3 w-3" /> {group.pending}</Badge>}
+                    {group.failed > 0 && <Badge variant="secondary" className="bg-red-500/10 text-red-700 gap-1 shrink-0"><AlertCircle className="h-3 w-3" /> {group.failed}</Badge>}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex flex-col gap-1.5 shrink-0">
-            <div className="flex items-center gap-1 mb-1">
-              {group.status === "paused" ? (
-                <Button size="sm" variant="outline" className="h-7 text-xs bg-amber-50" onClick={() => onToggleStatus(group)}>
-                  <Play className="h-3 w-3 mr-1" /> Retomar
+            <div className="flex flex-col gap-1.5 shrink-0">
+              <div className="flex items-center gap-1 mb-1">
+                {group.status === "paused" ? (
+                  <Button size="sm" variant="outline" className="h-7 text-xs bg-amber-50" onClick={() => onToggleStatus(group)}>
+                    <Play className="h-3 w-3 mr-1" /> Retomar
+                  </Button>
+                ) : group.pending > 0 ? (
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onToggleStatus(group)}>
+                    <Pause className="h-3 w-3 mr-1" /> Pausar
+                  </Button>
+                ) : null}
+              </div>
+              {group.failed > 0 && (
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onRetryFailed(group)}>
+                  <RefreshCw className="h-3 w-3 mr-1" /> Reenviar falhas
                 </Button>
-              ) : group.pending > 0 ? (
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onToggleStatus(group)}>
-                  <Pause className="h-3 w-3 mr-1" /> Pausar
+              )}
+              {group.pending > 0 && (
+                <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => onCancelGroup(group)}>
+                  <XCircle className="h-3 w-3 mr-1" /> Cancelar restantes
                 </Button>
-              ) : null}
+              )}
             </div>
-            {group.failed > 0 && (
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onRetryFailed(group)}>
-                <RefreshCw className="h-3 w-3 mr-1" /> Reenviar falhas
-              </Button>
-            )}
-            {group.pending > 0 && (
-              <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => onCancelGroup(group)}>
-                <XCircle className="h-3 w-3 mr-1" /> Cancelar restantes
-              </Button>
-            )}
           </div>
-        </div>
 
-        <Collapsible open={open} onOpenChange={setOpen}>
-          <CollapsibleTrigger asChild>
-            <button className="w-full px-4 py-2 border-t flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:bg-muted/50 transition-colors">
-              {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-              {open ? "Ocultar" : "Ver"} detalhes ({total} {total === 1 ? "envio" : "envios"})
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="border-t bg-muted/20 max-h-80 overflow-y-auto">
-              {group.items.map((item) => {
-                const statusMeta = item.status === "sent"
-                  ? { icon: CheckCheck, color: "text-green-600", label: "Enviada" }
-                  : item.status === "failed"
-                    ? { icon: AlertCircle, color: "text-red-600", label: `Falhou (${item.retry_count}x)` }
-                    : item.status === "cancelled"
-                      ? { icon: XCircle, color: "text-muted-foreground", label: "Cancelada" }
-                      : item.status === "processing"
-                        ? { icon: Send, color: "text-blue-600", label: "Enviando" }
-                        : { icon: Clock, color: "text-amber-600", label: "Pendente" };
-                const StatusIcon = statusMeta.icon;
-                return (
-                  <div key={item.id} className="px-4 py-2.5 flex items-center gap-3 border-b last:border-b-0 text-xs">
-                    <StatusIcon className={`h-4 w-4 shrink-0 ${statusMeta.color}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium truncate">{item.contact_name || item.contact_phone}</span>
-                        <span className="text-muted-foreground">{item.contact_phone}</span>
+          <Collapsible open={open} onOpenChange={setOpen}>
+            <CollapsibleTrigger asChild>
+              <button className="w-full px-4 py-2 border-t flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:bg-muted/50 transition-colors">
+                {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                {open ? "Ocultar" : "Ver"} detalhes ({total} {total === 1 ? "envio" : "envios"})
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="border-t bg-muted/20 max-h-80 overflow-y-auto">
+                {group.items.map((item) => {
+                  const statusMeta = item.status === "sent"
+                    ? { icon: CheckCheck, color: "text-green-600", label: "Enviada" }
+                    : item.status === "failed"
+                      ? { icon: AlertCircle, color: "text-red-600", label: `Falhou (${item.retry_count}x)` }
+                      : item.status === "cancelled"
+                        ? { icon: XCircle, color: "text-muted-foreground", label: "Cancelada" }
+                        : item.status === "processing"
+                          ? { icon: Send, color: "text-blue-600", label: "Enviando" }
+                          : { icon: Clock, color: "text-amber-600", label: "Pendente" };
+                  const StatusIcon = statusMeta.icon;
+                  return (
+                    <div key={item.id} className="px-4 py-2.5 flex items-center gap-3 border-b last:border-b-0 text-xs">
+                      <StatusIcon className={`h-4 w-4 shrink-0 ${statusMeta.color}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium truncate">{item.contact_name || item.contact_phone}</span>
+                          <span className="text-muted-foreground">{item.contact_phone}</span>
+                        </div>
+                        <p className="text-muted-foreground truncate mt-0.5">
+                          {statusMeta.label} · {item.sent_at ? `enviada ${new Date(item.sent_at).toLocaleString("pt-BR")}` : `agendada ${new Date(item.scheduled_at).toLocaleString("pt-BR")}`}
+                        </p>
+                        {item.error_message && (
+                          <p className="text-destructive truncate mt-0.5">{item.error_message}</p>
+                        )}
                       </div>
-                      <p className="text-muted-foreground truncate mt-0.5">
-                        {statusMeta.label} · {item.sent_at ? `enviada ${new Date(item.sent_at).toLocaleString("pt-BR")}` : `agendada ${new Date(item.scheduled_at).toLocaleString("pt-BR")}`}
-                      </p>
-                      {item.error_message && (
-                        <p className="text-destructive truncate mt-0.5">{item.error_message}</p>
-                      )}
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      {item.status === "failed" && (
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => onRetryOne(item.id)}>
-                          <RefreshCw className="h-3.5 w-3.5" />
+                      <div className="flex gap-1 shrink-0">
+                        {/* Preview button — see full message content */}
+                        <Button
+                          size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                          title="Ver conteúdo da mensagem"
+                          onClick={() => setPreviewItem(item)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
                         </Button>
-                      )}
-                      {(item.status === "pending" || item.status === "failed") && (
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => onCancelOne(item.id)}>
-                          <XCircle className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
+                        {item.status === "failed" && (
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => onRetryOne(item.id)}>
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {(item.status === "pending" || item.status === "failed") && (
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => onCancelOne(item.id)}>
+                            <XCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </CardContent>
+      </Card>
+
+      {/* Message preview dialog */}
+      <Dialog open={!!previewItem} onOpenChange={() => setPreviewItem(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-4 w-4" /> Conteúdo da Mensagem
+            </DialogTitle>
+          </DialogHeader>
+          {previewItem && (
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Phone className="h-3.5 w-3.5" />
+                <span className="font-medium text-foreground">{previewItem.contact_name || previewItem.contact_phone}</span>
+                <span>{previewItem.contact_phone}</span>
+              </div>
+              <div className="rounded-2xl rounded-tl-sm bg-muted p-4 text-sm whitespace-pre-wrap leading-relaxed">
+                {previewItem.message_content || <span className="italic text-muted-foreground">Sem conteúdo (disparo via Flow/Funil — conteúdo resolvido na hora do envio)</span>}
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Status: <strong>{previewItem.status}</strong></span>
+                <span>Agendado: {new Date(previewItem.scheduled_at).toLocaleString("pt-BR")}</span>
+              </div>
+              {previewItem.error_message && (
+                <div className="rounded-lg bg-red-50 border border-red-100 p-3 text-xs text-red-700">
+                  <strong>Erro:</strong> {previewItem.error_message}
+                </div>
+              )}
             </div>
-          </CollapsibleContent>
-        </Collapsible>
-      </CardContent>
-    </Card>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
