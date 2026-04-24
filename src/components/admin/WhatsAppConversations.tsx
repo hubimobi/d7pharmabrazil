@@ -17,8 +17,17 @@ import {
   Paperclip, Smile, Mic, ChevronDown, ChevronRight,
   Users, FolderOpen, Star, Copy, Edit, Trash2,
   MessageCircle, AtSign, UserX, Filter, ArrowUpDown,
-  Bot, MoreVertical, Megaphone,
+  Bot, MoreVertical, Megaphone, Mail, Globe, GitBranch,
+  Loader2, Save, Megaphone as CampaignIcon, Check,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { format, formatDistanceToNow, isToday, isYesterday, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -56,6 +65,27 @@ interface Template {
   name: string;
   content: string;
   active: boolean;
+}
+
+interface ContactProfile {
+  id: string;
+  phone: string;
+  name: string;
+  email: string | null;
+  notes: string | null;
+  source: string;
+  ad_source: string | null;
+  first_campaign_id: string | null;
+  tags: string[];
+  converted: boolean;
+  created_at: string;
+}
+
+interface CampaignRecord {
+  broadcast_name: string | null;
+  campaign_id: string | null;
+  status: string;
+  scheduled_at: string;
 }
 
 /* ───────── Helpers ───────── */
@@ -156,6 +186,17 @@ export default function ConversationsTab() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Lead CRM state
+  const [contactProfile, setContactProfile] = useState<ContactProfile | null>(null);
+  const [prevConversations, setPrevConversations] = useState<Conversation[]>([]);
+  const [contactCampaigns, setContactCampaigns] = useState<CampaignRecord[]>([]);
+  const [funnels, setFunnels] = useState<{ id: string; name: string }[]>([]);
+  const [selectedFunnelToAdd, setSelectedFunnelToAdd] = useState("");
+  const [addingToFunnel, setAddingToFunnel] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: "", email: "", notes: "", ad_source: "" });
+
   // Accordion states
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     conversations: true, folders: false, teams: false, channels: true, labels: false,
@@ -164,8 +205,16 @@ export default function ConversationsTab() {
   const toggleSection = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
 
   /* ── Data loading ── */
-  useEffect(() => { loadConversations(); loadTemplates(); loadInstances(); }, []);
-  useEffect(() => { if (selected) loadMessages(selected); }, [selected?.id]);
+  useEffect(() => { loadConversations(); loadTemplates(); loadInstances(); loadFunnelsList(); }, []);
+  useEffect(() => {
+    if (selected) {
+      loadMessages(selected);
+      loadContactProfile(selected.contact_phone);
+      loadPrevConversations(selected.contact_phone, selected.id);
+      loadContactCampaigns(selected.contact_phone);
+      setEditingContact(false);
+    }
+  }, [selected?.id]);
   useEffect(() => { loadConversations(); }, [filter, selectedInstanceId, listTab]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -175,13 +224,12 @@ export default function ConversationsTab() {
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_conversations" }, () => loadConversations())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_message_log" }, (payload) => {
         const newMsg = payload.new as any;
-        if (
-          selected &&
-          newMsg.contact_phone === selected.contact_phone &&
-          // Só anexa se for da mesma instância da conversa (evita misturar canais)
-          (!selected.instance_id || !newMsg.instance_id || newMsg.instance_id === selected.instance_id)
-        ) {
-          setMessages(prev => [...prev, newMsg as Message]);
+        // Show all messages for this contact regardless of which instance sent/received
+        if (selected && newMsg.contact_phone === selected.contact_phone) {
+          setMessages(prev => {
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg as Message];
+          });
         }
       })
       .subscribe();
@@ -204,13 +252,12 @@ export default function ConversationsTab() {
   }
 
   async function loadMessages(conv: Conversation) {
-    let q = supabase
+    // Load ALL messages for this phone number across all instances so history
+    // is never lost when a contact writes from a different WhatsApp number.
+    const q = supabase
       .from("whatsapp_message_log").select("*")
       .eq("contact_phone", conv.contact_phone)
       .order("created_at", { ascending: true }).limit(500);
-    // Filtra por instance_id quando a conversa está vinculada a uma instância,
-    // para evitar misturar histórico de outros canais com o mesmo telefone.
-    if (conv.instance_id) q = q.eq("instance_id", conv.instance_id);
     const { data } = await q;
     setMessages((data || []) as unknown as Message[]);
     if (conv.unread_count > 0) {
@@ -222,6 +269,131 @@ export default function ConversationsTab() {
   async function loadTemplates() {
     const { data } = await supabase.from("whatsapp_templates").select("id, name, content, active").eq("active", true).order("name");
     setTemplates((data || []) as unknown as Template[]);
+  }
+
+  async function loadFunnelsList() {
+    const { data } = await supabase.from("whatsapp_funnels").select("id, name").eq("active", true).order("name");
+    setFunnels((data || []) as any);
+  }
+
+  async function loadContactProfile(phone: string) {
+    const cleanPhone = phone.replace(/\D/g, "");
+    const { data } = await supabase
+      .from("whatsapp_contacts")
+      .select("*")
+      .eq("phone", cleanPhone)
+      .maybeSingle();
+    setContactProfile(data as ContactProfile | null);
+    if (data) {
+      setContactForm({
+        name: data.name || "",
+        email: data.email || "",
+        notes: data.notes || "",
+        ad_source: (data as any).ad_source || "",
+      });
+    } else {
+      setContactForm({ name: "", email: "", notes: "", ad_source: "" });
+    }
+  }
+
+  async function saveContactProfile() {
+    if (!selected) return;
+    setSavingContact(true);
+    const cleanPhone = selected.contact_phone.replace(/\D/g, "");
+    const payload: any = {
+      phone: cleanPhone,
+      name: contactForm.name || selected.contact_name || "",
+      email: contactForm.email || null,
+      notes: contactForm.notes || null,
+      ad_source: contactForm.ad_source || null,
+      source: contactProfile?.source || "whatsapp",
+      tenant_id: selected.tenant_id,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase
+      .from("whatsapp_contacts")
+      .upsert(payload, { onConflict: "tenant_id,phone" });
+    if (!error) {
+      toast.success("Contato atualizado");
+      await loadContactProfile(cleanPhone);
+      if (contactForm.name && contactForm.name !== selected.contact_name) {
+        await supabase.from("whatsapp_conversations")
+          .update({ contact_name: contactForm.name } as any)
+          .eq("id", selected.id);
+        setSelected({ ...selected, contact_name: contactForm.name });
+        loadConversations();
+      }
+      setEditingContact(false);
+    } else {
+      toast.error("Erro ao salvar contato");
+    }
+    setSavingContact(false);
+  }
+
+  async function loadPrevConversations(phone: string, currentId: string) {
+    const { data } = await supabase
+      .from("whatsapp_conversations")
+      .select("id, contact_name, last_message, last_message_at, status, instance_id")
+      .eq("contact_phone", phone)
+      .neq("id", currentId)
+      .order("last_message_at", { ascending: false })
+      .limit(10);
+    setPrevConversations((data || []) as unknown as Conversation[]);
+  }
+
+  async function loadContactCampaigns(phone: string) {
+    const cleanPhone = phone.replace(/\D/g, "");
+    const { data } = await supabase
+      .from("whatsapp_message_queue")
+      .select("broadcast_name, campaign_id, status, scheduled_at")
+      .eq("contact_phone", cleanPhone)
+      .not("broadcast_name", "is", null)
+      .order("scheduled_at", { ascending: false })
+      .limit(30);
+    const seen = new Set<string>();
+    const unique = (data || []).filter((r: any) => {
+      const key = r.campaign_id || r.broadcast_name;
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    setContactCampaigns(unique as CampaignRecord[]);
+  }
+
+  async function addToFunnel() {
+    if (!selectedFunnelToAdd || !selected) return;
+    setAddingToFunnel(true);
+    const { data: steps } = await supabase
+      .from("whatsapp_funnel_steps")
+      .select("*")
+      .eq("funnel_id", selectedFunnelToAdd)
+      .eq("active", true)
+      .order("step_order")
+      .limit(1);
+    const firstStep = steps?.[0];
+    if (!firstStep) { toast.error("Funil sem etapas ativas"); setAddingToFunnel(false); return; }
+    const funnel = funnels.find(f => f.id === selectedFunnelToAdd);
+    const messageContent = (firstStep.config as any)?.custom_message || firstStep.label || "Mensagem do funil";
+    const { error } = await supabase.from("whatsapp_message_queue").insert({
+      contact_phone: selected.contact_phone.replace(/\D/g, ""),
+      contact_name: selected.contact_name,
+      message_content: messageContent,
+      funnel_id: selectedFunnelToAdd,
+      step_id: firstStep.id,
+      status: "pending",
+      scheduled_at: new Date().toISOString(),
+      broadcast_name: `[CONV] ${funnel?.name || "Funil"}`,
+      instance_id: selected.instance_id || null,
+      tenant_id: selected.tenant_id,
+    });
+    if (!error) {
+      toast.success(`Lead adicionado ao funil "${funnel?.name}"`);
+      setSelectedFunnelToAdd("");
+      loadContactCampaigns(selected.contact_phone);
+    } else {
+      toast.error("Erro ao adicionar ao funil");
+    }
+    setAddingToFunnel(false);
   }
 
   /* ── Actions ── */
@@ -872,17 +1044,13 @@ export default function ConversationsTab() {
            ════════════════════════════════════════════════════ */}
         {selected && showDetails && (
           <div className="w-[300px] flex-shrink-0 border-l flex flex-col bg-white dark:bg-slate-950">
-            {/* Contact / Copilot tabs */}
+            {/* Tabs */}
             <div className="flex border-b">
               {(["contact", "copilot"] as const).map(tab => {
-                const labels = { contact: "Contato", copilot: "Copilot" };
+                const labels = { contact: "Lead", copilot: "Copilot" };
                 return (
-                  <button
-                    key={tab}
-                    onClick={() => setContactTab(tab)}
-                    className={`flex-1 py-2.5 text-[12px] font-medium relative transition-colors ${
-                      contactTab === tab ? "text-[#1F93FF]" : "text-slate-500 hover:text-slate-700"
-                    }`}
+                  <button key={tab} onClick={() => setContactTab(tab)}
+                    className={`flex-1 py-2.5 text-[12px] font-medium relative transition-colors ${contactTab === tab ? "text-[#1F93FF]" : "text-slate-500 hover:text-slate-700"}`}
                   >
                     {labels[tab]}
                     {contactTab === tab && <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#1F93FF] rounded-full" />}
@@ -893,77 +1061,173 @@ export default function ConversationsTab() {
 
             {contactTab === "contact" ? (
               <ScrollArea className="flex-1">
-                <div className="p-4">
-                  {/* Contact header */}
-                  <div className="flex flex-col items-center text-center mb-4">
-                    <div className="h-16 w-16 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: getAvatarColor(selected.contact_name || selected.contact_phone) }}>
-                      <span className="text-white text-xl font-bold">
-                        {getInitials(selected.contact_name || selected.contact_phone)}
-                      </span>
-                    </div>
-                    <h4 className="font-semibold text-[15px] text-slate-900 dark:text-white">{selected.contact_name || "Sem nome"}</h4>
-                    <p className="text-[12px] text-slate-500 mt-0.5">Cliente</p>
-                  </div>
+                <div className="p-4 space-y-3">
 
-                  {/* Contact details */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-slate-50 dark:hover:bg-slate-900 group">
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3.5 w-3.5 text-slate-400" />
-                        <span className="text-[12px] text-slate-700 dark:text-slate-300">{selected.contact_phone}</span>
-                      </div>
-                      <button onClick={() => copyToClipboard(selected.contact_phone)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-600 transition-opacity">
-                        <Copy className="h-3 w-3" />
+                  {/* ── Avatar + name ── */}
+                  <div className="flex flex-col items-center text-center">
+                    <div className="h-14 w-14 rounded-full flex items-center justify-center mb-2" style={{ backgroundColor: getAvatarColor(selected.contact_name || selected.contact_phone) }}>
+                      <span className="text-white text-lg font-bold">{getInitials(selected.contact_name || selected.contact_phone)}</span>
+                    </div>
+                    <h4 className="font-semibold text-[14px] text-slate-900 dark:text-white leading-tight">
+                      {contactForm.name || selected.contact_name || "Sem nome"}
+                    </h4>
+                    {contactProfile?.converted && (
+                      <Badge className="mt-1 h-4 text-[9px] bg-green-100 text-green-700 border-green-200">
+                        <Check className="h-2.5 w-2.5 mr-0.5" /> Convertido
+                      </Badge>
+                    )}
+                    <div className="flex items-center gap-2 mt-2">
+                      <button onClick={() => window.open(`https://wa.me/${selected.contact_phone.replace(/\D/g, "")}`, "_blank")} className="h-7 w-7 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-green-600 transition-colors">
+                        <ExternalLink className="h-3 w-3" />
+                      </button>
+                      <button onClick={() => setEditingContact(e => !e)} className={`h-7 w-7 rounded-lg border flex items-center justify-center transition-colors ${editingContact ? "border-[#1F93FF] bg-[#1F93FF]/10 text-[#1F93FF]" : "border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-[#1F93FF]"}`}>
+                        <Edit className="h-3 w-3" />
                       </button>
                     </div>
                   </div>
 
-                  {/* Action buttons row */}
-                  <div className="flex items-center justify-center gap-2 mb-4">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button onClick={() => window.open(`https://wa.me/${selected.contact_phone.replace(/\D/g, "")}`, "_blank")} className="h-8 w-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-[#1F93FF] transition-colors">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">Abrir no WhatsApp</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button className="h-8 w-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-[#1F93FF] transition-colors">
-                          <Edit className="h-3.5 w-3.5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">Editar contato</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button className="h-8 w-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-[#1F93FF] transition-colors">
-                          <Users className="h-3.5 w-3.5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">Mesclar contatos</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button className="h-8 w-8 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-red-500 transition-colors">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">Excluir</TooltipContent>
-                    </Tooltip>
-                  </div>
+                  <Separator />
 
-                  <Separator className="mb-3" />
+                  {/* ── Dados do Lead ── */}
+                  <Collapsible defaultOpen>
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-1.5 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
+                      <span>Dados do Lead</span>
+                      <ChevronRight className={`h-3.5 w-3.5 transition-transform ${true ? "rotate-90" : ""}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="space-y-2 pb-2">
+                        {/* Phone (read-only) */}
+                        <div className="flex items-center gap-2 py-1 group">
+                          <Phone className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                          <span className="text-[12px] text-slate-700 dark:text-slate-300 flex-1">{selected.contact_phone}</span>
+                          <button onClick={() => copyToClipboard(selected.contact_phone)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-600 transition-opacity">
+                            <Copy className="h-3 w-3" />
+                          </button>
+                        </div>
 
-                  {/* Conversation Actions */}
+                        {editingContact ? (
+                          <div className="space-y-2">
+                            <div>
+                              <Label className="text-[10px] text-slate-500 mb-0.5 block">Nome</Label>
+                              <Input value={contactForm.name} onChange={e => setContactForm(p => ({ ...p, name: e.target.value }))} className="h-7 text-[12px]" placeholder="Nome completo" />
+                            </div>
+                            <div>
+                              <Label className="text-[10px] text-slate-500 mb-0.5 block">E-mail</Label>
+                              <Input value={contactForm.email} onChange={e => setContactForm(p => ({ ...p, email: e.target.value }))} className="h-7 text-[12px]" placeholder="email@exemplo.com" type="email" />
+                            </div>
+                            <div>
+                              <Label className="text-[10px] text-slate-500 mb-0.5 block">Origem / Anúncio</Label>
+                              <Input value={contactForm.ad_source} onChange={e => setContactForm(p => ({ ...p, ad_source: e.target.value }))} className="h-7 text-[12px]" placeholder="ex: Google Ads, Instagram" />
+                            </div>
+                            <div>
+                              <Label className="text-[10px] text-slate-500 mb-0.5 block">Notas</Label>
+                              <Textarea value={contactForm.notes} onChange={e => setContactForm(p => ({ ...p, notes: e.target.value }))} className="min-h-[56px] text-[12px] resize-none" placeholder="Observações sobre este lead..." rows={3} />
+                            </div>
+                            <div className="flex gap-1.5">
+                              <Button size="sm" className="flex-1 h-7 text-[11px] gap-1 bg-[#1F93FF] hover:bg-[#1780E0] text-white" onClick={saveContactProfile} disabled={savingContact}>
+                                {savingContact ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                                Salvar
+                              </Button>
+                              <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setEditingContact(false)}>
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {contactProfile?.email && (
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                                <span className="text-[12px] text-slate-700 dark:text-slate-300 truncate">{contactProfile.email}</span>
+                              </div>
+                            )}
+                            {(contactProfile as any)?.ad_source && (
+                              <div className="flex items-center gap-2">
+                                <Globe className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                                <span className="text-[12px] text-slate-700 dark:text-slate-300 truncate">{(contactProfile as any).ad_source}</span>
+                              </div>
+                            )}
+                            {contactProfile?.notes && (
+                              <div className="flex items-start gap-2 mt-1">
+                                <StickyNote className="h-3.5 w-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
+                                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-3">{contactProfile.notes}</p>
+                              </div>
+                            )}
+                            {!contactProfile && (
+                              <button onClick={() => setEditingContact(true)} className="text-[11px] text-[#1F93FF] hover:underline flex items-center gap-1 mt-1">
+                                <Plus className="h-3 w-3" /> Adicionar dados do lead
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Separator />
+
+                  {/* ── Adicionar ao Funil ── */}
+                  <Collapsible defaultOpen>
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-1.5 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
+                      <span className="flex items-center gap-1.5"><GitBranch className="h-3.5 w-3.5" /> Adicionar ao Funil</span>
+                      <ChevronRight className="h-3.5 w-3.5 rotate-90" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="pb-2 space-y-2">
+                        <Select value={selectedFunnelToAdd} onValueChange={setSelectedFunnelToAdd}>
+                          <SelectTrigger className="h-7 text-[12px]">
+                            <SelectValue placeholder="Selecionar funil..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {funnels.map(f => (
+                              <SelectItem key={f.id} value={f.id} className="text-[12px]">{f.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" className="w-full h-7 text-[11px] bg-[#1F93FF] hover:bg-[#1780E0] text-white gap-1" onClick={addToFunnel} disabled={!selectedFunnelToAdd || addingToFunnel}>
+                          {addingToFunnel ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                          Enfileirar no Funil
+                        </Button>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Separator />
+
+                  {/* ── Labels ── */}
+                  <Collapsible defaultOpen>
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-1.5 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
+                      <span className="flex items-center gap-1.5"><Tag className="h-3.5 w-3.5" /> Labels</span>
+                      <Plus className="h-3.5 w-3.5" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="space-y-2 pb-2">
+                        <div className="flex flex-wrap gap-1">
+                          {(selected.tags || []).map(tag => (
+                            <Badge key={tag} className={`text-[10px] gap-1 pr-1 h-5 border-0 text-white ${getLabelColor(tag)}`}>
+                              {tag}
+                              <button onClick={() => removeTag(tag)} className="hover:text-red-200 ml-0.5"><X className="h-2.5 w-2.5" /></button>
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="flex gap-1">
+                          <Input placeholder="Nova label..." value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => e.key === "Enter" && addTag()} className="h-7 text-[11px] border-slate-200" />
+                          <Button size="sm" variant="outline" className="h-7 w-7 p-0 flex-shrink-0" onClick={addTag}><Plus className="h-3 w-3" /></Button>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Separator />
+
+                  {/* ── Ações da Conversa ── */}
                   <Collapsible open={openSections.convActions} onOpenChange={() => toggleSection("convActions")}>
-                    <CollapsibleTrigger className="w-full flex items-center justify-between py-2 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-1.5 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
                       <span>Ações da Conversa</span>
                       <ChevronRight className={`h-3.5 w-3.5 transition-transform ${openSections.convActions ? "rotate-90" : ""}`} />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="space-y-2 pb-3">
+                      <div className="space-y-2 pb-2">
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] text-slate-500">Status</span>
                           <span className={`text-[11px] font-medium ${statusCfg.color}`}>{statusCfg.label}</span>
@@ -984,109 +1248,103 @@ export default function ConversationsTab() {
                     </CollapsibleContent>
                   </Collapsible>
 
-                  <Separator className="mb-1" />
+                  <Separator />
 
-                  {/* Labels */}
+                  {/* ── Campanhas / Histórico de Origem ── */}
                   <Collapsible defaultOpen>
-                    <CollapsibleTrigger className="w-full flex items-center justify-between py-2 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
-                      <span>Labels</span>
-                      <Plus className="h-3.5 w-3.5" />
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-1.5 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
+                      <span className="flex items-center gap-1.5"><Megaphone className="h-3.5 w-3.5" /> Campanhas</span>
+                      <ChevronRight className="h-3.5 w-3.5 rotate-90" />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="space-y-2 pb-3">
-                        <div className="flex flex-wrap gap-1">
-                          {(selected.tags || []).map(tag => (
-                            <Badge key={tag} className={`text-[10px] gap-1 pr-1 h-5 border-0 text-white ${getLabelColor(tag)}`}>
-                              {tag}
-                              <button onClick={() => removeTag(tag)} className="hover:text-red-200 ml-0.5">
-                                <X className="h-2.5 w-2.5" />
-                              </button>
+                      <div className="pb-2 space-y-1.5">
+                        {contactCampaigns.length === 0 ? (
+                          <p className="text-[11px] text-slate-400">Nenhuma campanha registrada</p>
+                        ) : contactCampaigns.map((c, i) => (
+                          <div key={i} className="flex items-start gap-2 py-1 px-1.5 rounded bg-slate-50 dark:bg-slate-900">
+                            <Megaphone className="h-3 w-3 text-slate-400 mt-0.5 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300 truncate">{c.broadcast_name}</p>
+                              <p className="text-[10px] text-slate-400">{format(new Date(c.scheduled_at), "dd/MM/yy HH:mm")}</p>
+                            </div>
+                            <Badge variant="outline" className={`text-[9px] h-4 flex-shrink-0 ${c.status === "sent" ? "border-green-300 text-green-600" : c.status === "error" ? "border-red-300 text-red-600" : "border-slate-300 text-slate-500"}`}>
+                              {c.status}
                             </Badge>
-                          ))}
-                        </div>
-                        <div className="flex gap-1">
-                          <Input
-                            placeholder="Adicionar label..."
-                            value={newTag}
-                            onChange={(e) => setNewTag(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && addTag()}
-                            className="h-7 text-[11px] border-slate-200"
-                          />
-                          <Button size="sm" variant="outline" className="h-7 w-7 p-0 flex-shrink-0" onClick={addTag}>
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
+                          </div>
+                        ))}
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
 
-                  <Separator className="mb-1" />
+                  <Separator />
 
-                  {/* Conversation Information */}
+                  {/* ── Informações ── */}
                   <Collapsible open={openSections.convInfo} onOpenChange={() => toggleSection("convInfo")}>
-                    <CollapsibleTrigger className="w-full flex items-center justify-between py-2 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-1.5 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
                       <span>Informações</span>
                       <ChevronRight className={`h-3.5 w-3.5 transition-transform ${openSections.convInfo ? "rotate-90" : ""}`} />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="space-y-2 pb-3 text-[12px]">
+                      <div className="space-y-1.5 pb-2 text-[12px]">
                         <div className="flex justify-between">
                           <span className="text-slate-500">Criada em</span>
                           <span className="text-slate-700 dark:text-slate-300 font-medium">{format(new Date(selected.created_at), "dd/MM/yy HH:mm")}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-500">Última mensagem</span>
-                          <span className="text-slate-700 dark:text-slate-300 font-medium">
-                            {formatDistanceToNow(new Date(selected.last_message_at), { addSuffix: true, locale: ptBR })}
-                          </span>
+                          <span className="text-slate-500">Última msg</span>
+                          <span className="text-slate-700 dark:text-slate-300 font-medium">{formatDistanceToNow(new Date(selected.last_message_at), { addSuffix: true, locale: ptBR })}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-500">Total de msgs</span>
+                          <span className="text-slate-500">Total msgs</span>
                           <span className="text-slate-700 dark:text-slate-300 font-medium">{messages.length}</span>
                         </div>
+                        {contactProfile && (
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Origem</span>
+                            <span className="text-slate-700 dark:text-slate-300 font-medium capitalize">{contactProfile.source}</span>
+                          </div>
+                        )}
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
 
-                  <Separator className="mb-1" />
+                  <Separator />
 
-                  {/* Internal Notes */}
-                  <Collapsible defaultOpen>
-                    <CollapsibleTrigger className="w-full flex items-center justify-between py-2 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
-                      <span>Notas Internas</span>
-                      <StickyNote className="h-3.5 w-3.5" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="pb-3">
-                        <Textarea
-                          value={contactNote}
-                          onChange={(e) => setContactNote(e.target.value)}
-                          placeholder="Adicionar nota sobre este contato..."
-                          className="min-h-[60px] text-[12px] resize-none border-slate-200"
-                          rows={3}
-                        />
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  <Separator className="mb-1" />
-
-                  {/* Previous Conversations */}
+                  {/* ── Conversas Anteriores ── */}
                   <Collapsible open={openSections.prevConvs} onOpenChange={() => toggleSection("prevConvs")}>
-                    <CollapsibleTrigger className="w-full flex items-center justify-between py-2 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
-                      <span>Conversas Anteriores</span>
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-1.5 text-[12px] font-semibold text-slate-700 dark:text-slate-300 hover:text-[#1F93FF] transition-colors">
+                      <span>Conversas Anteriores {prevConversations.length > 0 && `(${prevConversations.length})`}</span>
                       <ChevronRight className={`h-3.5 w-3.5 transition-transform ${openSections.prevConvs ? "rotate-90" : ""}`} />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="pb-3">
-                        <p className="text-[11px] text-slate-400">Nenhuma conversa anterior</p>
+                      <div className="pb-2 space-y-1.5">
+                        {prevConversations.length === 0 ? (
+                          <p className="text-[11px] text-slate-400">Nenhuma conversa anterior</p>
+                        ) : prevConversations.map(c => {
+                          const inst = instances.find(i => i.id === c.instance_id);
+                          return (
+                            <button key={c.id} onClick={() => setSelected(c)}
+                              className="w-full text-left flex items-start gap-2 py-1.5 px-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[11px] text-slate-700 dark:text-slate-300 truncate">{c.last_message || "Sem mensagens"}</p>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <span className="text-[10px] text-slate-400">{relativeTime(c.last_message_at)}</span>
+                                  {inst && <span className="text-[10px] text-slate-400">· {inst.name}</span>}
+                                  <Badge variant="outline" className={`text-[9px] h-3.5 ml-auto ${STATUS_CONFIG[c.status]?.color}`}>{STATUS_CONFIG[c.status]?.label || c.status}</Badge>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
+
                 </div>
               </ScrollArea>
             ) : (
-              /* Copilot tab */
               <div className="flex-1 flex items-center justify-center text-slate-400">
                 <div className="text-center px-6">
                   <Bot className="h-10 w-10 mx-auto mb-3 opacity-30" />
