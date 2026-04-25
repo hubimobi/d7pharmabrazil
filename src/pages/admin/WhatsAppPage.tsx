@@ -2029,7 +2029,7 @@ function BroadcastTab() {
         stepId = firstStep.id; templateId = firstStep.template_id || null; firstStepFunnelId = targetId;
       } else {
         // Resolve first message node of the Flow so the queue has real content to send
-        const { data: flowNodes } = await supabase
+        const { data: flowNodes } = await (supabase as any)
           .from("whatsapp_flow_nodes")
           .select("*")
           .eq("flow_id", targetId)

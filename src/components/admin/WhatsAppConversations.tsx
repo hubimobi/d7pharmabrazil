@@ -343,7 +343,7 @@ export default function ConversationsTab() {
 
   async function loadContactCampaigns(phone: string) {
     const cleanPhone = phone.replace(/\D/g, "");
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("whatsapp_message_queue")
       .select("broadcast_name, campaign_id, status, scheduled_at")
       .eq("contact_phone", cleanPhone)
@@ -357,7 +357,7 @@ export default function ConversationsTab() {
       seen.add(key);
       return true;
     });
-    setContactCampaigns(unique as CampaignRecord[]);
+    setContactCampaigns(unique as unknown as CampaignRecord[]);
   }
 
   async function addToFunnel() {
