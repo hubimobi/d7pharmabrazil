@@ -53,17 +53,22 @@ async function fetchTenantResolution(): Promise<TenantResolution | null> {
     return cached.data;
   }
 
-  // Call resolve-tenant with 3s timeout
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3000);
+  // Call resolve-tenant with a client-side timeout guard
+  let timeout: ReturnType<typeof setTimeout> | undefined;
 
   try {
-    const { data, error } = await supabase.functions.invoke("resolve-tenant", {
+    const invokePromise = supabase.functions.invoke("resolve-tenant", {
       method: "GET",
-      headers: {},
+      headers: { "x-forwarded-host": hostname },
     });
 
-    clearTimeout(timeout);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeout = setTimeout(() => reject(new Error("Tenant resolution timed out")), 3000);
+    });
+
+    const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
+
+    if (timeout) clearTimeout(timeout);
 
     if (error || !data?.tenant_id) {
       return null;
@@ -79,7 +84,7 @@ async function fetchTenantResolution(): Promise<TenantResolution | null> {
 
     return resolution;
   } catch {
-    clearTimeout(timeout);
+    if (timeout) clearTimeout(timeout);
     return null; // fallback to DEFAULT
   }
 }

@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, event, ignored: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("[whatsapp-evolution-webhook] error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,

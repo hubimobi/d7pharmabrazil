@@ -3211,8 +3211,12 @@ export type Database = {
       }
       whatsapp_contacts: {
         Row: {
+          ad_source: string | null
+          converted: boolean
+          converted_at: string | null
           created_at: string
           email: string | null
+          first_campaign_id: string | null
           id: string
           name: string
           notes: string | null
@@ -3223,8 +3227,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ad_source?: string | null
+          converted?: boolean
+          converted_at?: string | null
           created_at?: string
           email?: string | null
+          first_campaign_id?: string | null
           id?: string
           name?: string
           notes?: string | null
@@ -3235,8 +3243,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ad_source?: string | null
+          converted?: boolean
+          converted_at?: string | null
           created_at?: string
           email?: string | null
+          first_campaign_id?: string | null
           id?: string
           name?: string
           notes?: string | null
@@ -3247,6 +3259,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "whatsapp_contacts_first_campaign_id_fkey"
+            columns: ["first_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "whatsapp_contacts_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -3321,6 +3340,7 @@ export type Database = {
       }
       whatsapp_flow_sessions: {
         Row: {
+          campaign_id: string | null
           contact_name: string | null
           contact_phone: string
           created_at: string
@@ -3334,11 +3354,13 @@ export type Database = {
           last_user_input: string | null
           status: string
           tenant_id: string
+          timeout_node_id: string | null
           updated_at: string
           variables: Json
           waiting_for: string | null
         }
         Insert: {
+          campaign_id?: string | null
           contact_name?: string | null
           contact_phone: string
           created_at?: string
@@ -3352,11 +3374,13 @@ export type Database = {
           last_user_input?: string | null
           status?: string
           tenant_id: string
+          timeout_node_id?: string | null
           updated_at?: string
           variables?: Json
           waiting_for?: string | null
         }
         Update: {
+          campaign_id?: string | null
           contact_name?: string | null
           contact_phone?: string
           created_at?: string
@@ -3370,11 +3394,19 @@ export type Database = {
           last_user_input?: string | null
           status?: string
           tenant_id?: string
+          timeout_node_id?: string | null
           updated_at?: string
           variables?: Json
           waiting_for?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "whatsapp_flow_sessions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "whatsapp_flow_sessions_flow_id_fkey"
             columns: ["flow_id"]
@@ -3429,6 +3461,44 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_flow_versions: {
+        Row: {
+          created_at: string
+          edges: Json
+          flow_id: string
+          id: string
+          nodes: Json
+          saved_by: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          edges?: Json
+          flow_id: string
+          id?: string
+          nodes?: Json
+          saved_by?: string | null
+          version: number
+        }
+        Update: {
+          created_at?: string
+          edges?: Json
+          flow_id?: string
+          id?: string
+          nodes?: Json
+          saved_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_flow_versions_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_flows: {
         Row: {
           active: boolean
@@ -3438,6 +3508,7 @@ export type Database = {
           id: string
           name: string
           nodes: Json
+          reentry_policy: string
           tenant_id: string | null
           trigger_event: string
           trigger_value: string | null
@@ -3451,6 +3522,7 @@ export type Database = {
           id?: string
           name: string
           nodes?: Json
+          reentry_policy?: string
           tenant_id?: string | null
           trigger_event?: string
           trigger_value?: string | null
@@ -3464,6 +3536,7 @@ export type Database = {
           id?: string
           name?: string
           nodes?: Json
+          reentry_policy?: string
           tenant_id?: string | null
           trigger_event?: string
           trigger_value?: string | null
@@ -3651,6 +3724,7 @@ export type Database = {
           instance_name: string
           last_message_at: string | null
           last_reset_at: string | null
+          last_state_at: string | null
           messages_sent_today: number
           name: string
           phone_number: string | null
@@ -3670,6 +3744,7 @@ export type Database = {
           instance_name: string
           last_message_at?: string | null
           last_reset_at?: string | null
+          last_state_at?: string | null
           messages_sent_today?: number
           name?: string
           phone_number?: string | null
@@ -3689,6 +3764,7 @@ export type Database = {
           instance_name?: string
           last_message_at?: string | null
           last_reset_at?: string | null
+          last_state_at?: string | null
           messages_sent_today?: number
           name?: string
           phone_number?: string | null
@@ -5215,17 +5291,27 @@ export type Database = {
       }
     }
     Functions: {
-      advance_flow_session_with_input: {
-        Args: {
-          _contact_phone: string
-          _instance_id: string
-          _user_input: string
-        }
-        Returns: string
-      }
+      advance_flow_session_with_input:
+        | {
+            Args: {
+              _contact_phone: string
+              _tenant_id: string
+              _user_input: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _contact_phone: string
+              _instance_id: string
+              _user_input: string
+            }
+            Returns: string
+          }
       claim_flow_sessions: {
         Args: { _batch_size?: number; _worker_id: string }
         Returns: {
+          campaign_id: string | null
           contact_name: string | null
           contact_phone: string
           created_at: string
@@ -5239,6 +5325,7 @@ export type Database = {
           last_user_input: string | null
           status: string
           tenant_id: string
+          timeout_node_id: string | null
           updated_at: string
           variables: Json
           waiting_for: string | null
@@ -5311,6 +5398,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_instance_sent_today: {
+        Args: { _instance_id: string }
+        Returns: undefined
       }
       increment_link_clicks: { Args: { link_id: string }; Returns: undefined }
       increment_link_conversions: {
