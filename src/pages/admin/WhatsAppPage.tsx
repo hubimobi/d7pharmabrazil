@@ -2586,7 +2586,7 @@ function ContactsTab() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // WhatsApp API extraction
-  const [instances, setInstances] = useState<{ id: string; name: string; status: string }[]>([]);
+  const [instances, setInstances] = useState<{ id: string; name: string; status: string; api_url: string; api_key: string; instance_name: string; tenant_id: string }[]>([]);
   const [selectedInstanceForExtract, setSelectedInstanceForExtract] = useState("");
   const [groups, setGroups] = useState<{ id: string; subject: string; size: number }[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
@@ -2612,7 +2612,7 @@ function ContactsTab() {
   }
 
   async function loadInstances() {
-    const { data } = await supabase.from("whatsapp_instances").select("id, name, status").eq("active", true).order("name");
+    const { data } = await supabase.from("whatsapp_instances").select("id, name, status, api_url, api_key, instance_name, tenant_id").eq("active", true).order("name");
     setInstances((data || []) as any);
     if (data && data.length === 1) setSelectedInstanceForExtract(data[0].id);
   }
@@ -2693,18 +2693,37 @@ function ContactsTab() {
     loadAll();
   }
 
-  // ── WhatsApp API extraction ──
+  // ── WhatsApp API extraction (direct — no Edge Function needed) ──
+  function getInstanceDetails() {
+    return instances.find(i => i.id === selectedInstanceForExtract) || null;
+  }
+
+  async function upsertContacts(rows: { phone: string; name: string; source: string; tenant_id: string; notes?: string }[]) {
+    let imported = 0;
+    for (let i = 0; i < rows.length; i += 100) {
+      const batch = rows.slice(i, i + 100);
+      const { error } = await supabase.from("whatsapp_contacts").upsert(batch, { onConflict: "tenant_id,phone", ignoreDuplicates: false });
+      if (!error) imported += batch.length;
+    }
+    return imported;
+  }
+
   async function fetchGroupsList() {
     if (!selectedInstanceForExtract) { toast.error("Selecione uma instância"); return; }
+    const inst = getInstanceDetails();
+    if (!inst) { toast.error("Instância não encontrada"); return; }
     setExtracting(true);
     setGroups([]);
     try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-extract-contacts", {
-        body: { instance_id: selectedInstanceForExtract, source: "groups" },
-      });
-      if (error || data?.error) throw new Error(error?.message || data?.error);
-      setGroups(data.groups || []);
-      if (!data.groups?.length) toast.info("Nenhum grupo encontrado nesta instância");
+      const res = await fetch(
+        `${inst.api_url}/group/fetchAllGroups/${inst.instance_name}?getParticipants=false`,
+        { headers: { apikey: inst.api_key } }
+      );
+      if (!res.ok) throw new Error(`Evolution API ${res.status}`);
+      const data: any[] = await res.json();
+      const list = data.map(g => ({ id: g.id, subject: g.subject || g.id, size: g.size || 0 }));
+      setGroups(list);
+      if (!list.length) toast.info("Nenhum grupo encontrado nesta instância");
     } catch (e: any) {
       toast.error(`Erro ao buscar grupos: ${e.message}`);
     }
@@ -2714,15 +2733,70 @@ function ContactsTab() {
   async function extractWhatsApp(source: "groups" | "contacts" | "conversations") {
     if (!selectedInstanceForExtract) { toast.error("Selecione uma instância"); return; }
     if (source === "groups" && selectedGroupIds.length === 0) { toast.error("Selecione pelo menos um grupo"); return; }
+    const inst = getInstanceDetails();
+    if (!inst) { toast.error("Instância não encontrada"); return; }
     setExtracting(true);
     setExtractResult(null);
     try {
-      const body: any = { instance_id: selectedInstanceForExtract, source };
-      if (source === "groups") body.group_ids = selectedGroupIds;
-      const { data, error } = await supabase.functions.invoke("whatsapp-extract-contacts", { body });
-      if (error || data?.error) throw new Error(error?.message || data?.error);
-      setExtractResult({ imported: data.imported, total: data.total });
-      toast.success(`${data.imported} contato(s) importado(s)!`);
+      const rawContacts: { phone: string; name: string }[] = [];
+
+      if (source === "groups") {
+        const res = await fetch(
+          `${inst.api_url}/group/fetchAllGroups/${inst.instance_name}?getParticipants=true`,
+          { headers: { apikey: inst.api_key } }
+        );
+        if (!res.ok) throw new Error(`Evolution API ${res.status}`);
+        const data: any[] = await res.json();
+        for (const g of data) {
+          if (!selectedGroupIds.includes(g.id)) continue;
+          for (const p of g.participants || []) {
+            const phone = String(p.id || "").split("@")[0].replace(/\D/g, "");
+            if (phone.length >= 10) rawContacts.push({ phone, name: p.pushName || "" });
+          }
+        }
+      } else if (source === "contacts") {
+        const res = await fetch(
+          `${inst.api_url}/contact/fetchContacts/${inst.instance_name}`,
+          { headers: { apikey: inst.api_key } }
+        );
+        if (!res.ok) throw new Error(`Evolution API ${res.status}`);
+        const data: any[] = await res.json();
+        for (const c of data) {
+          const phone = String(c.id || c.remoteJid || "").split("@")[0].replace(/\D/g, "");
+          if (phone.length < 10 || String(c.id || "").includes("@g.us")) continue;
+          rawContacts.push({ phone, name: c.pushName || c.verifiedName || c.name || "" });
+        }
+      } else if (source === "conversations") {
+        const { data: rows } = await supabase
+          .from("whatsapp_message_log")
+          .select("contact_phone, contact_name")
+          .eq("tenant_id", inst.tenant_id)
+          .eq("instance_id", selectedInstanceForExtract)
+          .order("created_at", { ascending: false })
+          .limit(5000);
+        const seen = new Set<string>();
+        for (const r of (rows || [])) {
+          const phone = String(r.contact_phone || "").replace(/\D/g, "");
+          if (!phone || seen.has(phone)) continue;
+          seen.add(phone);
+          rawContacts.push({ phone, name: r.contact_name || "" });
+        }
+      }
+
+      // Deduplicate
+      const phoneMap = new Map<string, string>();
+      for (const c of rawContacts) {
+        if (!phoneMap.has(c.phone) || c.name) phoneMap.set(c.phone, c.name);
+      }
+
+      const srcLabel = source === "groups" ? "whatsapp_group" : source === "contacts" ? "whatsapp_device" : "whatsapp_conversations";
+      const toInsert = Array.from(phoneMap.entries()).map(([phone, name]) => ({
+        phone, name: name || phone, source: srcLabel, tenant_id: inst.tenant_id,
+      }));
+
+      const imported = await upsertContacts(toInsert);
+      setExtractResult({ imported, total: toInsert.length });
+      toast.success(`${imported} contato(s) importado(s)!`);
       loadAll();
     } catch (e: any) {
       toast.error(`Erro na extração: ${e.message}`);
@@ -2730,18 +2804,19 @@ function ContactsTab() {
     setExtracting(false);
   }
 
-  // ── Instagram extraction ──
+  // ── Instagram extraction (direct Graph API call) ──
   async function fetchInstagramPosts() {
     if (!igAccessToken || !igUserId) { toast.error("Informe o Token e o ID de usuário"); return; }
     setLoadingIgPosts(true);
     setIgPosts([]);
     try {
-      const { data, error } = await supabase.functions.invoke("instagram-extract-contacts", {
-        body: { source: "list_posts", access_token: igAccessToken, ig_user_id: igUserId },
-      });
-      if (error || data?.error) throw new Error(error?.message || data?.error);
-      setIgPosts(data.posts || []);
-      if (!data.posts?.length) toast.info("Nenhuma publicação encontrada");
+      const res = await fetch(
+        `https://graph.instagram.com/v19.0/${igUserId}/media?fields=id,caption,media_type,timestamp,thumbnail_url,media_url&limit=20&access_token=${igAccessToken}`
+      );
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      setIgPosts(data.data || []);
+      if (!data.data?.length) toast.info("Nenhuma publicação encontrada");
     } catch (e: any) {
       toast.error(`Erro Instagram: ${e.message}`);
     }
@@ -2753,13 +2828,39 @@ function ContactsTab() {
     setExtracting(true);
     setExtractResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("instagram-extract-contacts", {
-        body: { source: "comments", access_token: igAccessToken, media_id: selectedPostId },
-      });
-      if (error || data?.error) throw new Error(error?.message || data?.error);
-      setExtractResult({ imported: data.imported, total: data.extracted });
-      toast.success(`${data.imported} comentadores importados!`);
-      loadAll();
+      // Get tenant_id from first instance
+      const tenantId = instances[0]?.tenant_id || "";
+
+      const usernames: { username: string; ig_id: string }[] = [];
+      let nextUrl: string | null =
+        `https://graph.instagram.com/v19.0/${selectedPostId}/comments?fields=id,username,from,timestamp&limit=100&access_token=${igAccessToken}`;
+
+      while (nextUrl) {
+        const res = await fetch(nextUrl);
+        const page = await res.json();
+        if (page.error) throw new Error(page.error.message);
+        for (const c of page.data || []) {
+          const un = c.username || c.from?.username || "";
+          const id = c.from?.id || c.id || "";
+          if (un && !usernames.find(u => u.username === un)) usernames.push({ username: un, ig_id: id });
+        }
+        nextUrl = page.paging?.next || null;
+        if (usernames.length >= 2000) break;
+      }
+
+      if (tenantId) {
+        const rows = usernames.map(u => ({
+          phone: `ig_${u.ig_id || u.username}`,
+          name: `@${u.username}`,
+          source: "instagram_comments",
+          tenant_id: tenantId,
+          notes: `Instagram: @${u.username}`,
+        }));
+        const imported = await upsertContacts(rows);
+        setExtractResult({ imported, total: usernames.length });
+        toast.success(`${imported} comentadores importados!`);
+        loadAll();
+      }
     } catch (e: any) {
       toast.error(`Erro: ${e.message}`);
     }
@@ -2774,12 +2875,26 @@ function ContactsTab() {
       const csv_data = ev.target?.result as string || "";
       setExtracting(true);
       try {
-        const { data, error } = await supabase.functions.invoke("instagram-extract-contacts", {
-          body: { source: "followers_csv", csv_data },
-        });
-        if (error || data?.error) throw new Error(error?.message || data?.error);
-        toast.success(`${data.imported} seguidores importados!`);
-        loadAll();
+        const tenantId = instances[0]?.tenant_id || "";
+        const lines = csv_data.trim().split("\n").filter(Boolean);
+        if (lines.length < 2) throw new Error("CSV precisa ter cabeçalho e pelo menos uma linha");
+        const header = lines[0].toLowerCase().split(/[,;\t]/).map(s => s.trim().replace(/^["']|["']$/g, ""));
+        const idx = header.findIndex(h => h.includes("username") || h.includes("handle") || h.includes("account") || h.includes("user"));
+        if (idx < 0) throw new Error("Coluna 'Username' não encontrada no CSV");
+        const extracted = lines.slice(1).map(line => {
+          const cols = line.split(/[,;\t]/).map(s => s.trim().replace(/^["']|["']$/g, ""));
+          return cols[idx]?.replace(/^@/, "");
+        }).filter(Boolean) as string[];
+        if (tenantId && extracted.length > 0) {
+          const rows = extracted.map(un => ({
+            phone: `ig_${un}`, name: `@${un}`,
+            source: "instagram_followers", tenant_id: tenantId,
+            notes: `Instagram follower: @${un}`,
+          }));
+          const imported = await upsertContacts(rows);
+          toast.success(`${imported} seguidores importados!`);
+          loadAll();
+        }
       } catch (err: any) {
         toast.error(`Erro: ${err.message}`);
       }
