@@ -12,10 +12,21 @@ export const handler: NodeHandler = {
     const idemKey = `flow:${session.id}:${node.id}:${Date.now()}`;
 
     if (content && content.trim().length > 0) {
+      // FIX: resolve instance_id if null so process-queue can route to correct WhatsApp
+      let instanceId = session.instance_id;
+      if (!instanceId && session.tenant_id) {
+        try {
+          const { data: instId } = await supabase.rpc("resolve_flow_session_instance", {
+            _session_id: session.id,
+          });
+          if (instId) instanceId = instId;
+        } catch (_) { /* non-critical */ }
+      }
+
       await supabase.from("whatsapp_message_queue").insert({
         contact_phone: session.contact_phone,
         contact_name: session.contact_name || "",
-        instance_id: session.instance_id,
+        instance_id: instanceId,
         flow_id: session.flow_id,
         message_content: content,
         variables: session.variables,
@@ -32,3 +43,4 @@ export const handler: NodeHandler = {
     return { kind: "next", nextNodeId: next };
   },
 };
+

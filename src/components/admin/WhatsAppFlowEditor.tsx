@@ -162,17 +162,57 @@ const BEHAVIOR_PROFILES = [
 ];
 
 /* ───── Flow List ───── */
+type FlowDateFilter = "all" | "today" | "7d" | "30d" | "90d";
+
+const FLOW_DATE_OPTS: { value: FlowDateFilter; label: string }[] = [
+  { value: "all", label: "Todos" },
+  { value: "today", label: "Hoje" },
+  { value: "7d", label: "7 dias" },
+  { value: "30d", label: "30 dias" },
+  { value: "90d", label: "90 dias" },
+];
+
+const FLOW_DATE_DAYS: Record<Exclude<FlowDateFilter, "all">, number> = {
+  today: 1, "7d": 7, "30d": 30, "90d": 90,
+};
+
 function FlowList({ onEdit }: { onEdit: (flow: Flow | null) => void }) {
   const [flows, setFlows] = useState<Flow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateFilter, setDateFilter] = useState<FlowDateFilter>("30d");
+  const [stats, setStats] = useState<Record<string, { total: number; active: number; completed: number }>>({});
 
   useEffect(() => { loadFlows(); }, []);
+  useEffect(() => { if (!loading) loadStats(); }, [flows, dateFilter]);
 
   async function loadFlows() {
     setLoading(true);
     const { data } = await supabase.from("whatsapp_flows").select("*").order("created_at", { ascending: false });
     setFlows((data || []) as unknown as Flow[]);
     setLoading(false);
+  }
+
+  async function loadStats() {
+    const flowIds = flows.map(f => f.id);
+    if (!flowIds.length) { setStats({}); return; }
+    let query = supabase
+      .from("whatsapp_flow_sessions")
+      .select("flow_id, status")
+      .in("flow_id", flowIds);
+    if (dateFilter !== "all") {
+      const since = new Date(Date.now() - FLOW_DATE_DAYS[dateFilter] * 86_400_000).toISOString();
+      query = query.gte("created_at", since);
+    }
+    const { data: sessions } = await query;
+    const map: Record<string, { total: number; active: number; completed: number }> = {};
+    for (const s of sessions || []) {
+      if (!s.flow_id) continue;
+      if (!map[s.flow_id]) map[s.flow_id] = { total: 0, active: 0, completed: 0 };
+      map[s.flow_id].total++;
+      if (s.status === "active" || s.status === "waiting_input") map[s.flow_id].active++;
+      if (s.status === "completed") map[s.flow_id].completed++;
+    }
+    setStats(map);
   }
 
   async function toggleActive(flow: Flow) {
@@ -201,9 +241,33 @@ function FlowList({ onEdit }: { onEdit: (flow: Flow | null) => void }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Fluxos Automatizados</h3>
+        <div>
+          <h3 className="text-lg font-semibold">Fluxos Automatizados</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Automações de conversa ativas por evento e condição</p>
+        </div>
         <Button onClick={() => onEdit(null)} size="sm"><Plus className="h-4 w-4 mr-1" /> Novo Fluxo</Button>
       </div>
+
+      {/* Period filter */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">Período:</span>
+        <div className="flex gap-0.5 p-0.5 rounded-lg bg-muted">
+          {FLOW_DATE_OPTS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setDateFilter(opt.value)}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                dateFilter === opt.value
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
       ) : flows.length === 0 ? (
@@ -215,36 +279,106 @@ function FlowList({ onEdit }: { onEdit: (flow: Flow | null) => void }) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {flows.map(flow => (
-            <Card key={flow.id} className={`cursor-pointer hover:shadow-md transition-shadow ${!flow.active ? "opacity-60" : ""}`}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1 min-w-0" onClick={() => onEdit(flow)}>
-                    <h4 className="font-semibold truncate">{flow.name}</h4>
-                    {flow.description && <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{flow.description}</p>}
+        <Card className="overflow-hidden">
+          {/* Table header */}
+          <div
+            className="grid items-center px-4 py-2.5 bg-muted/40 border-b text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+            style={{ gridTemplateColumns: "1fr 140px 80px 80px 90px 110px 148px" }}
+          >
+            <div>Nome</div>
+            <div className="text-center">Gatilho</div>
+            <div className="text-center">Total</div>
+            <div className="text-center">Ativos</div>
+            <div className="text-center">Concluídos</div>
+            <div className="text-center">Conversão</div>
+            <div className="text-center">Ações</div>
+          </div>
+
+          {flows.map((flow) => {
+            const s = stats[flow.id] ?? { total: 0, active: 0, completed: 0 };
+            const conv = s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0;
+            return (
+              <div
+                key={flow.id}
+                className={`grid items-center px-4 py-3 border-b last:border-0 hover:bg-muted/20 transition-colors group ${!flow.active ? "opacity-60" : ""}`}
+                style={{ gridTemplateColumns: "1fr 140px 80px 80px 90px 110px 148px" }}
+              >
+                {/* Nome */}
+                <div className="min-w-0 cursor-pointer" onClick={() => onEdit(flow)}>
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 shrink-0 text-violet-500" />
+                    <span className="font-medium text-sm truncate">{flow.name}</span>
+                    {flow.active
+                      ? <Badge className="text-[10px] bg-green-100 text-green-700 border-green-200 shrink-0">Ativo</Badge>
+                      : <Badge variant="outline" className="text-[10px] shrink-0">Inativo</Badge>
+                    }
                   </div>
-                  <Switch checked={flow.active} onCheckedChange={() => toggleActive(flow)} />
+                  {flow.description && (
+                    <p className="text-[11px] text-muted-foreground truncate pl-6 mt-0.5">{flow.description}</p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground/70 pl-6 mt-0.5">{(flow.nodes as any[])?.length || 0} nós</p>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-                  <Badge variant="outline" className="text-[10px]">{(flow.nodes as any[])?.length || 0} nós</Badge>
-                  <Badge variant="outline" className="text-[10px]">{flow.trigger_event}</Badge>
+
+                {/* Gatilho */}
+                <div className="text-center">
+                  <Badge variant="outline" className="text-[10px] max-w-[130px] truncate">{flow.trigger_event || "—"}</Badge>
                 </div>
-                <div className="flex gap-1.5">
-                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onEdit(flow)}>
-                    <Edit className="h-3 w-3 mr-1" /> Editar
+
+                {/* Total */}
+                <div className="text-center">
+                  <span className="text-base font-bold tabular-nums">{s.total.toLocaleString("pt-BR")}</span>
+                </div>
+
+                {/* Ativos */}
+                <div className="text-center">
+                  <span className={`text-sm font-semibold tabular-nums ${s.active > 0 ? "text-blue-600" : "text-muted-foreground"}`}>
+                    {s.active.toLocaleString("pt-BR")}
+                  </span>
+                </div>
+
+                {/* Concluídos */}
+                <div className="text-center">
+                  <span className={`text-sm font-semibold tabular-nums ${s.completed > 0 ? "text-green-600" : "text-muted-foreground"}`}>
+                    {s.completed.toLocaleString("pt-BR")}
+                  </span>
+                </div>
+
+                {/* Conversão */}
+                <div className="flex flex-col items-center gap-1">
+                  <span className={`text-sm font-bold tabular-nums ${conv >= 50 ? "text-green-600" : conv >= 20 ? "text-amber-500" : "text-muted-foreground"}`}>
+                    {conv}%
+                  </span>
+                  {s.total > 0 && (
+                    <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${conv >= 50 ? "bg-green-500" : conv >= 20 ? "bg-amber-400" : "bg-muted-foreground/30"}`}
+                        style={{ width: `${conv}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Ações */}
+                <div className="flex items-center justify-center gap-0.5">
+                  <Switch
+                    checked={flow.active}
+                    onCheckedChange={() => toggleActive(flow)}
+                    className="scale-75 data-[state=checked]:bg-green-500"
+                  />
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Editar" onClick={() => onEdit(flow)}>
+                    <Edit className="h-3.5 w-3.5" />
                   </Button>
-                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => duplicateFlow(flow)}>
-                    <Copy className="h-3 w-3" />
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicar" onClick={() => duplicateFlow(flow)}>
+                    <Copy className="h-3.5 w-3.5" />
                   </Button>
-                  <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={() => deleteFlow(flow.id)}>
-                    <Trash2 className="h-3 w-3" />
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive" title="Excluir" onClick={() => deleteFlow(flow.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </div>
+            );
+          })}
+        </Card>
       )}
     </div>
   );

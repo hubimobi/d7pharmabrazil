@@ -80,6 +80,12 @@ interface QueueItem {
   id: string; contact_phone: string; contact_name: string; message_content: string;
   status: string; scheduled_at: string; retry_count: number; error_message: string | null;
 }
+interface Campaign {
+  id: string; name: string; status: string;
+  flow_id: string | null; funnel_id: string | null;
+  total_contacts: number; sent_count: number; failed_count: number;
+  scheduled_at: string | null; created_at: string;
+}
 
 type FunnelRole = "all" | "recuperacao" | "recompra" | "upsell" | "novidades";
 type DelayUnit = "s" | "m" | "h" | "d";
@@ -1861,8 +1867,13 @@ function BroadcastTab() {
   const testPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [skipRecent, setSkipRecent] = useState(true);
   const [skipDays, setSkipDays] = useState(30);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campDateFilter, setCampDateFilter] = useState("30d");
+  const [campSearch, setCampSearch] = useState("");
+  const [campLoading, setCampLoading] = useState(false);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); loadCampaigns("30d"); }, []);
+  useEffect(() => { loadCampaigns(campDateFilter); }, [campDateFilter]);
   useEffect(() => { estimateAudience(); }, [filterType, filterValue]);
 
   // Auto-refresh status of instances every 10s so the user sees Connected/Disconnected live
@@ -1911,6 +1922,22 @@ function BroadcastTab() {
     if (sc?.batch_interval_seconds) {
       setBroadcastInterval(sc.batch_interval_seconds * 1000);
     }
+  }
+
+  async function loadCampaigns(dateFilter: string) {
+    setCampLoading(true);
+    const daysMap: Record<string, number> = { today: 1, "7d": 7, "30d": 30, "90d": 90 };
+    let query = (supabase.from("whatsapp_campaigns") as any)
+      .select("id, name, status, flow_id, funnel_id, total_contacts, sent_count, failed_count, scheduled_at, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (dateFilter !== "all" && daysMap[dateFilter]) {
+      const since = new Date(Date.now() - daysMap[dateFilter] * 86_400_000).toISOString();
+      query = query.gte("created_at", since);
+    }
+    const { data } = await query;
+    setCampaigns((data || []) as Campaign[]);
+    setCampLoading(false);
   }
 
   async function estimateAudience() {
@@ -2221,6 +2248,119 @@ function BroadcastTab() {
           <h3 className="text-lg font-semibold flex items-center gap-2"><Megaphone className="h-5 w-5" /> Transmissão em Massa</h3>
           <p className="text-xs text-muted-foreground">Dispare um Funil clássico ou um Flow visual para uma audiência filtrada</p>
         </div>
+      </div>
+
+      {/* ── Histórico de Disparos ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h4 className="font-semibold flex items-center gap-2 text-base">
+            <TrendingUp className="h-4 w-4 text-muted-foreground" /> Histórico de Disparos
+          </h4>
+          <div className="flex items-center gap-2">
+            <div className="flex gap-0.5 p-0.5 rounded-lg bg-muted">
+              {(["all","today","7d","30d","90d"] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setCampDateFilter(v)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                    campDateFilter === v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {v === "all" ? "Todos" : v === "today" ? "Hoje" : v}
+                </button>
+              ))}
+            </div>
+            <Input
+              placeholder="Buscar..."
+              value={campSearch}
+              onChange={e => setCampSearch(e.target.value)}
+              className="h-8 w-36 text-xs"
+            />
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => loadCampaigns(campDateFilter)}>
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        {campLoading ? (
+          <div className="flex items-center justify-center py-6 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
+        ) : campaigns.length === 0 ? (
+          <div className="text-center py-5 text-sm text-muted-foreground border rounded-lg bg-muted/20">
+            Nenhum disparo encontrado neste período
+          </div>
+        ) : (
+          <Card className="overflow-hidden">
+            <div
+              className="grid items-center px-4 py-2 bg-muted/40 border-b text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+              style={{ gridTemplateColumns: "1fr 70px 90px 80px 80px 90px 100px" }}
+            >
+              <div>Nome</div>
+              <div className="text-center">Tipo</div>
+              <div className="text-center">Status</div>
+              <div className="text-center">Total</div>
+              <div className="text-center">Enviados</div>
+              <div className="text-center">Taxa</div>
+              <div className="text-center">Data</div>
+            </div>
+            <ScrollArea className="max-h-72">
+              {campaigns
+                .filter(c => !campSearch || c.name.toLowerCase().includes(campSearch.toLowerCase()))
+                .map(camp => {
+                  const rate = camp.total_contacts > 0 ? Math.round((camp.sent_count / camp.total_contacts) * 100) : 0;
+                  const statusMeta: Record<string, { label: string; cls: string }> = {
+                    running:   { label: "Enviando",  cls: "bg-blue-100 text-blue-700 border-blue-200" },
+                    completed: { label: "Concluído", cls: "bg-green-100 text-green-700 border-green-200" },
+                    paused:    { label: "Pausado",   cls: "bg-amber-100 text-amber-700 border-amber-200" },
+                    cancelled: { label: "Cancelado", cls: "bg-red-100 text-red-700 border-red-200" },
+                    scheduled: { label: "Agendado",  cls: "bg-purple-100 text-purple-700 border-purple-200" },
+                    draft:     { label: "Rascunho",  cls: "bg-muted text-muted-foreground border-border" },
+                  };
+                  const sm = statusMeta[camp.status] || statusMeta.draft;
+                  return (
+                    <div
+                      key={camp.id}
+                      className="grid items-center px-4 py-2.5 border-b last:border-0 hover:bg-muted/20 transition-colors text-sm"
+                      style={{ gridTemplateColumns: "1fr 70px 90px 80px 80px 90px 100px" }}
+                    >
+                      <div className="min-w-0 flex items-center gap-2">
+                        {camp.flow_id
+                          ? <Zap className="h-3.5 w-3.5 shrink-0 text-violet-500" />
+                          : <GitBranch className="h-3.5 w-3.5 shrink-0 text-blue-500" />}
+                        <span className="font-medium truncate">{camp.name}</span>
+                      </div>
+                      <div className="text-center">
+                        <Badge variant="outline" className="text-[10px]">{camp.flow_id ? "Flow" : "Funil"}</Badge>
+                      </div>
+                      <div className="text-center">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${sm.cls}`}>
+                          {sm.label}
+                        </span>
+                      </div>
+                      <div className="text-center font-semibold tabular-nums">{camp.total_contacts.toLocaleString("pt-BR")}</div>
+                      <div className="text-center font-semibold tabular-nums text-green-600">{camp.sent_count.toLocaleString("pt-BR")}</div>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className={`text-xs font-bold tabular-nums ${rate >= 80 ? "text-green-600" : rate >= 50 ? "text-amber-500" : "text-muted-foreground"}`}>
+                          {rate}%
+                        </span>
+                        <div className="w-14 h-1 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${rate >= 80 ? "bg-green-500" : rate >= 50 ? "bg-amber-400" : "bg-red-400/60"}`}
+                            style={{ width: `${rate}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="text-center text-[11px] text-muted-foreground">
+                        {new Date(camp.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
+                      </div>
+                    </div>
+                  );
+                })
+              }
+            </ScrollArea>
+          </Card>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">

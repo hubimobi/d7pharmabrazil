@@ -26,7 +26,6 @@ Deno.serve(async (req) => {
     }
 
     const payload = await req.json();
-
     console.log(`[webhook] FULL PAYLOAD: ${JSON.stringify(payload).substring(0, 2000)}`);
 
     // Normalize event name (Evolution v1 vs v2 formats)
@@ -43,7 +42,7 @@ Deno.serve(async (req) => {
     if (instanceName) {
       const { data } = await supabase
         .from("whatsapp_instances")
-        .select("id, tenant_id, instance_name")
+        .select("id, tenant_id, instance_name, api_url, api_key")
         .eq("instance_name", instanceName)
         .maybeSingle();
       instanceRecord = data;
@@ -51,7 +50,7 @@ Deno.serve(async (req) => {
     if (!instanceRecord && apiInstanceId) {
       const { data } = await supabase
         .from("whatsapp_instances")
-        .select("id, tenant_id, instance_name")
+        .select("id, tenant_id, instance_name, api_url, api_key")
         .eq("instance_name", apiInstanceId)
         .maybeSingle();
       instanceRecord = data;
@@ -60,7 +59,7 @@ Deno.serve(async (req) => {
     if (!instanceRecord && instanceName) {
       const { data } = await supabase
         .from("whatsapp_instances")
-        .select("id, tenant_id, instance_name")
+        .select("id, tenant_id, instance_name, api_url, api_key")
         .ilike("instance_name", `%${instanceName}%`)
         .limit(1)
         .maybeSingle();
@@ -76,8 +75,23 @@ Deno.serve(async (req) => {
     const tenantId = instanceRecord?.tenant_id || null;
     const instanceId = instanceRecord?.id || null;
 
-    // ── CONNECTION_UPDATE ──
-    if (event === "connection.update") {
+    // ── QRCODE_UPDATED ─────────────────────────────────────────────────────────
+    if (event === "qrcode.updated" || rawEvent === "QRCODE_UPDATED") {
+      const qrCode = payload.data?.qrcode?.base64 || payload.data?.base64 || payload.qrcode || null;
+      if (qrCode && instanceId) {
+        await supabase
+          .from("whatsapp_instances")
+          .update({ qr_code: qrCode, status: "qr_ready" })
+          .eq("id", instanceId);
+        console.log(`[webhook] QRCODE_UPDATED for instance ${instanceId}`);
+      }
+      return new Response(JSON.stringify({ ok: true, event: "qrcode_updated" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── CONNECTION_UPDATE ──────────────────────────────────────────────────────
+    if (event === "connection.update" || rawEvent === "CONNECTION_UPDATE") {
       const state = payload.data?.state || payload.state || "";
 
       let mappedStatus: string | null = null;
@@ -101,9 +115,40 @@ Deno.serve(async (req) => {
           (mappedStatus === "connecting" && current?.status !== "connected");
 
         if (shouldUpdate) {
+          const updatePayload: Record<string, any> = {
+            status: mappedStatus,
+            last_state_at: new Date().toISOString(),
+          };
+
+          // When connected, try to fetch profile info (owner name/phone)
+          if (mappedStatus === "connected" && instanceRecord.api_url && instanceRecord.api_key) {
+            try {
+              const profileRes = await fetch(
+                `${instanceRecord.api_url}/instance/fetchInstances/${instanceRecord.instance_name}`,
+                { headers: { apikey: instanceRecord.api_key } }
+              );
+              if (profileRes.ok) {
+                const profileData = await profileRes.json();
+                const profile = Array.isArray(profileData) ? profileData[0] : profileData;
+                const ownerJid = profile?.instance?.ownerJid || profile?.ownerJid || null;
+                const profileName = profile?.instance?.profileName || profile?.profileName || null;
+                if (ownerJid) {
+                  updatePayload.owner_jid = ownerJid;
+                  updatePayload.owner_name = profileName || null;
+                  // Extract phone from JID (format: 5547XXXXXXXX@s.whatsapp.net)
+                  const phoneFromJid = ownerJid.replace("@s.whatsapp.net", "").replace("@c.us", "");
+                  if (phoneFromJid) updatePayload.phone_number = phoneFromJid;
+                  console.log(`[webhook] profile fetched: ownerJid=${ownerJid} name=${profileName}`);
+                }
+              }
+            } catch (e) {
+              console.warn("[webhook] profile fetch failed:", e);
+            }
+          }
+
           await supabase
             .from("whatsapp_instances")
-            .update({ status: mappedStatus, last_state_at: new Date().toISOString() })
+            .update(updatePayload)
             .eq("id", instanceRecord.id);
         }
       }
@@ -113,8 +158,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── MESSAGES_UPSERT ──
-    // FIX: removed duplicate condition (was `event === "messages.upsert" || event === "messages.upsert"`)
+    // ── MESSAGES_UPSERT ────────────────────────────────────────────────────────
     if (event === "messages.upsert" || rawEvent === "MESSAGES_UPSERT") {
       let messages: any[] = [];
       if (Array.isArray(payload.data?.messages)) {
@@ -156,6 +200,9 @@ Deno.serve(async (req) => {
           msgBody.buttonsResponseMessage?.selectedDisplayText ||
           msgBody.listResponseMessage?.title ||
           msgBody.templateButtonReplyMessage?.selectedDisplayText ||
+          // FIX: also extract interactive response messages (WhatsApp Business interactive lists/buttons)
+          msgBody.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
+          msgBody.reactionMessage?.text ||
           msgBody.contactMessage?.displayName ||
           (msgBody.audioMessage ? "[áudio]" : null) ||
           (msgBody.stickerMessage ? "[figurinha]" : null) ||
@@ -202,10 +249,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        // FIX: outbound messages are already logged by process-queue with api_id.
-        // Logging them again here would create duplicate entries in the message log.
-        // We skip outbound logging here — status updates come via messages.update.
-        // Only log inbound messages from the webhook.
+        // FIX: only log inbound messages here — outbound are logged by process-queue to avoid duplicates
         if (direction === "inbound") {
           await supabase.from("whatsapp_message_log").insert({
             contact_phone: phone,
@@ -219,14 +263,30 @@ Deno.serve(async (req) => {
           });
 
           // Advance Flow Session if one is waiting for input from this contact
-          if (phone && tenantId) {
+          if (phone) {
             try {
               const userText = typeof content === "string" ? content : "";
-              const { data: sessionId } = await supabase.rpc("advance_flow_session_with_input", {
-                _contact_phone: phone,
-                _tenant_id: tenantId,
-                _user_input: userText,
-              });
+
+              // FIX: handle null tenantId — fall back to instance-based lookup
+              let sessionId: string | null = null;
+
+              if (tenantId) {
+                const { data } = await supabase.rpc("advance_flow_session_with_input", {
+                  _contact_phone: phone,
+                  _tenant_id: tenantId,
+                  _user_input: userText,
+                });
+                sessionId = data;
+              } else {
+                // No tenantId available — use old instance-based signature if it exists
+                const { data } = await supabase.rpc("advance_flow_session_with_input", {
+                  _instance_id: instanceId,
+                  _contact_phone: phone,
+                  _user_input: userText,
+                });
+                sessionId = data;
+              }
+
               if (sessionId) {
                 console.log(`[webhook] flow session ${sessionId} reactivated by inbound input`);
               }
@@ -245,7 +305,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── MESSAGES_UPDATE (delivery / read receipts) ──
+    // ── MESSAGES_UPDATE (delivery / read receipts) ─────────────────────────────
     if (event === "messages.update" || rawEvent === "MESSAGES_UPDATE") {
       const updates = payload.data || [];
       const updateList = Array.isArray(updates) ? updates : [updates];
@@ -253,11 +313,11 @@ Deno.serve(async (req) => {
       let updatedCount = 0;
       for (const upd of updateList) {
         const messageId = upd.key?.id;
-        const status = upd.status;
+        const status = upd.update?.status ?? upd.status;
 
-        if (!messageId || !status) continue;
+        if (!messageId || status === undefined || status === null) continue;
 
-        // Evolution status codes: 3=delivered, 4=read, 5=played
+        // Evolution status codes: 3=delivered, 4=read, 5=played (audio)
         let mappedStatus = null;
         if (status === 3) mappedStatus = "delivered";
         else if (status === 4 || status === 5) mappedStatus = "read";
@@ -278,6 +338,28 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── CONTACTS_UPSERT — sync contact names ─────────────────────────────────
+    if (event === "contacts.upsert" || rawEvent === "CONTACTS_UPSERT") {
+      const contacts = Array.isArray(payload.data) ? payload.data : [];
+      let synced = 0;
+      for (const contact of contacts) {
+        const jid = contact.id || "";
+        const phone = jid.replace("@s.whatsapp.net", "").replace("@c.us", "");
+        const name = contact.pushName || contact.verifiedBizName || contact.name || null;
+        if (!phone || !name) continue;
+        await supabase
+          .from("whatsapp_conversations")
+          .update({ contact_name: name })
+          .eq("contact_phone", phone)
+          .eq("instance_id", instanceId);
+        synced++;
+      }
+      console.log(`[webhook] contacts.upsert: synced ${synced} names`);
+      return new Response(JSON.stringify({ ok: true, synced }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Other events — acknowledge silently
     console.log(`[webhook] ignored event: ${event} (raw: ${rawEvent})`);
     return new Response(JSON.stringify({ ok: true, event, ignored: true }), {
@@ -285,7 +367,7 @@ Deno.serve(async (req) => {
     });
   } catch (err: any) {
     console.error("[whatsapp-evolution-webhook] error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

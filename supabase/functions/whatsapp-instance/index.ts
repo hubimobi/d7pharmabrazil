@@ -44,33 +44,44 @@ async function configureWebhook(apiUrl: string, apiKey: string, instanceName: st
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-evolution-webhook`;
 
+  const WEBHOOK_EVENTS = [
+    "MESSAGES_UPSERT",
+    "MESSAGES_UPDATE",
+    "MESSAGES_REACTION",
+    "CONNECTION_UPDATE",
+    "QRCODE_UPDATED",
+    "CONTACTS_UPSERT",
+    "SEND_MESSAGE",
+  ];
+
   try {
-    // Try v2 format first, fallback to v1
+    // Evolution API v2.x (2.3+) uses flat body format
     let res = await fetch(`${apiUrl}/webhook/set/${instanceName}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: apiKey },
       body: JSON.stringify({
-        webhook: {
-          url: webhookUrl,
-          webhookByEvents: false,
-          webhookBase64: false,
-          events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "MESSAGES_UPDATE"],
-          enabled: true,
-        },
+        url: webhookUrl,
+        webhook_by_events: false,
+        webhook_base64: false,
+        events: WEBHOOK_EVENTS,
+        enabled: true,
       }),
     });
 
-    // If v2 format fails, try v1 flat format
+    // Fallback: Evolution API v1.x uses nested webhook object
     if (!res.ok) {
-      console.log(`[webhook-config] v2 format failed for ${instanceName}, trying v1...`);
+      console.log(`[webhook-config] flat format failed for ${instanceName} (status ${res.status}), trying nested format...`);
       res = await fetch(`${apiUrl}/webhook/set/${instanceName}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: apiKey },
         body: JSON.stringify({
-          url: webhookUrl,
-          webhook_by_events: false,
-          webhook_base64: false,
-          events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "MESSAGES_UPDATE"],
+          webhook: {
+            url: webhookUrl,
+            webhookByEvents: false,
+            webhookBase64: false,
+            events: WEBHOOK_EVENTS,
+            enabled: true,
+          },
         }),
       });
     }
@@ -130,6 +141,12 @@ Deno.serve(async (req) => {
           instanceName,
           qrcode: true,
           integration: "WHATSAPP-BAILEYS",
+          reject_call: true, // Scaling: Impede que ligações travem a instância
+          groupsIgnore: true, // Scaling: Evita flood de mensagens de grupos no webhook
+          alwaysOnline: true,
+          readMessages: true,
+          readStatus: false, // Scaling: Não envia webhook quando o status (stories) é visualizado
+          syncFullHistory: false, // CRITICAL: Impede que a Evolution baixe 3 meses de mensagens e derrube a Supabase com webhooks
         }),
       });
 

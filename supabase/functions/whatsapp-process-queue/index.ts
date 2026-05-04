@@ -761,8 +761,51 @@ Deno.serve(async (req) => {
         }
         continue;
       }
+      // ── Handle Visual Flow Triggers from Campaigns ──
+      if (msg.flow_id && msg.message_content?.startsWith("[FLOW]")) {
+        try {
+          const { data: flow } = await supabase.from("whatsapp_flows").select("nodes").eq("id", msg.flow_id).single();
+          if (flow && Array.isArray(flow.nodes) && flow.nodes.length > 0) {
+            const firstNodeId = flow.nodes[0].id;
+            
+            // Check if there's already an active session to prevent duplicates
+            const { data: existingSession } = await supabase
+              .from("whatsapp_flow_sessions")
+              .select("id")
+              .eq("contact_phone", msg.contact_phone)
+              .eq("flow_id", msg.flow_id)
+              .in("status", ["active", "waiting_input"])
+              .maybeSingle();
 
-      // Standard text message send
+            if (!existingSession) {
+              await supabase.from("whatsapp_flow_sessions").insert({
+                tenant_id: msg.tenant_id || instance.tenant_id,
+                instance_id: instance.id,
+                contact_phone: msg.contact_phone,
+                contact_name: msg.contact_name,
+                flow_id: msg.flow_id,
+                current_node_id: firstNodeId,
+                variables: msg.variables || {},
+                status: "active",
+                campaign_id: msg.campaign_id,
+              });
+            }
+          }
+          await supabase.from("whatsapp_message_queue").update({
+            status: "sent", sent_at: new Date().toISOString(), message_content: `[Flow Started] ${msg.flow_id}`
+          }).eq("id", msg.id);
+          processed++;
+        } catch (e) {
+          console.error("Error starting flow from queue:", e);
+          await supabase.from("whatsapp_message_queue").update({
+            status: "failed", error_message: "Erro ao iniciar o fluxo: " + (e as Error).message
+          }).eq("id", msg.id);
+          errors++;
+        }
+        continue;
+      }
+
+      // ── Standard text message send ──
       // FIX: send finalContent (spintax resolved + watermark injected), not raw msg.message_content
       try {
         // Anti-ban: Simulate human typing delay

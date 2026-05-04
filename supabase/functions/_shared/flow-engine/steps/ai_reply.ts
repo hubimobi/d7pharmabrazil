@@ -174,12 +174,26 @@ export const handler: NodeHandler = {
       return { kind: "abort" };
     }
 
+    // FIX: resolve instance_id if null — without it the process-queue can't pick
+    // the right WhatsApp instance for sending, and message stays stuck.
+    let resolvedInstanceId = session.instance_id;
+    if (!resolvedInstanceId && session.tenant_id) {
+      try {
+        const { data: instId } = await supabase.rpc("resolve_flow_session_instance", {
+          _session_id: session.id,
+        });
+        if (instId) resolvedInstanceId = instId;
+      } catch (e) {
+        console.warn("[ai_reply] resolve_flow_session_instance failed:", e);
+      }
+    }
+
     // FIX: only enqueue if reply is non-empty to avoid sending blank WhatsApp messages
     if (reply.trim()) {
       await supabase.from("whatsapp_message_queue").insert({
         contact_phone: session.contact_phone,
         contact_name: session.contact_name || "",
-        instance_id: session.instance_id,
+        instance_id: resolvedInstanceId,
         flow_id: session.flow_id,
         message_content: reply,
         variables: session.variables,
