@@ -77,24 +77,29 @@ serve(async (req) => {
     // If ASAAS_WEBHOOK_TOKEN is set, require it to match. This prevents attackers
     // from forging PAYMENT_CONFIRMED events.
     const expectedToken = Deno.env.get("ASAAS_WEBHOOK_TOKEN");
-    if (expectedToken) {
-      const receivedToken =
-        req.headers.get("asaas-access-token") ||
-        req.headers.get("x-webhook-token") ||
-        "";
-      if (receivedToken !== expectedToken) {
-        console.error("Asaas webhook UNAUTHORIZED: invalid token");
-        await supabaseAdmin.from("integration_logs").insert({
-          integration: "asaas",
-          action: "webhook_unauthorized",
-          status: "error",
-          details: `Invalid or missing asaas-access-token header`,
-        });
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if (!expectedToken) {
+      console.error("ASAAS_WEBHOOK_TOKEN not configured");
+      return new Response(JSON.stringify({ error: "Webhook token not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const receivedToken =
+      req.headers.get("asaas-access-token") ||
+      req.headers.get("x-webhook-token") ||
+      "";
+    if (receivedToken !== expectedToken) {
+      console.error("Asaas webhook UNAUTHORIZED: invalid token");
+      await supabaseAdmin.from("integration_logs").insert({
+        integration: "asaas",
+        action: "webhook_unauthorized",
+        status: "error",
+        details: `Invalid or missing asaas-access-token header`,
+      });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Defense in depth: for status-changing events, re-verify the payment
