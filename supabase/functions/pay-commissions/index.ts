@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
       integration: "asaas",
       action: `Transferência comissões ${paymentType} ${representative_name}`,
       status: "success",
-      details: `Total: R$ ${total.toFixed(2)} | ${commission_ids.length} comissões | Asaas ID: ${paymentId}`,
+      details: `Total: R$ ${verifiedTotal.toFixed(2)} | ${commission_ids.length} comissões | Asaas ID: ${paymentId}`,
     });
 
     return new Response(JSON.stringify({ ok: true, payment_id: paymentId }), {
