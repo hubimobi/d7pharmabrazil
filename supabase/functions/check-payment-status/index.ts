@@ -62,6 +62,27 @@ serve(async (req) => {
 
     // If confirmed/received, update order status in DB and sync with Bling
     if (order_id && (status === "CONFIRMED" || status === "RECEIVED")) {
+      // SECURITY: verify the supplied payment_id actually belongs to the supplied order
+      // Otherwise an attacker could reuse their own confirmed payment to mark any order as paid.
+      const { data: orderRow } = await supabase
+        .from("orders")
+        .select("asaas_payment_id")
+        .eq("id", order_id)
+        .maybeSingle();
+
+      if (!orderRow || orderRow.asaas_payment_id !== payment_id) {
+        await supabase.from("integration_logs").insert({
+          integration: "asaas",
+          action: "check_payment_mismatch",
+          status: "error",
+          details: `Mismatch payment_id=${payment_id} order_id=${order_id} order.asaas_payment_id=${orderRow?.asaas_payment_id ?? "null"}`,
+        });
+        return new Response(JSON.stringify({ error: "payment/order mismatch" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { data: updatedOrder } = await supabase
         .from("orders")
         .update({ status: "paid" })
