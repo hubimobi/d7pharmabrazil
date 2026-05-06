@@ -2861,7 +2861,11 @@ function ContactsTab() {
       );
       if (!res.ok) throw new Error(`Evolution API ${res.status}`);
       const data: any[] = await res.json();
-      const list = data.map(g => ({ id: g.id, subject: g.subject || g.id, size: g.size || 0 }));
+      const list = data.map(g => ({ 
+        id: g.id, 
+        subject: g.subject || g.name || g.id, 
+        size: g.size || (g.participants ? g.participants.length : 0) 
+      }));
       setGroups(list);
       if (!list.length) toast.info("Nenhum grupo encontrado nesta instância");
     } catch (e: any) {
@@ -2878,7 +2882,7 @@ function ContactsTab() {
     setExtracting(true);
     setExtractResult(null);
     try {
-      const rawContacts: { phone: string; name: string }[] = [];
+      const rawContacts: { phone: string; name: string; groupName?: string }[] = [];
 
       if (source === "groups") {
         const res = await fetch(
@@ -2890,8 +2894,8 @@ function ContactsTab() {
         for (const g of data) {
           if (!selectedGroupIds.includes(g.id)) continue;
           for (const p of g.participants || []) {
-            const phone = String(p.id || "").split("@")[0].replace(/\D/g, "");
-            if (phone.length >= 10) rawContacts.push({ phone, name: p.pushName || "" });
+            const phone = String(p.id || p.jid || "").split("@")[0].replace(/\D/g, "");
+            if (phone.length >= 10) rawContacts.push({ phone, name: p.pushName || p.name || "", groupName: g.subject || g.name || g.id });
           }
         }
       } else if (source === "contacts") {
@@ -2923,16 +2927,30 @@ function ContactsTab() {
         }
       }
 
-      // Deduplicate
-      const phoneMap = new Map<string, string>();
+      // Deduplicate and aggregate group names
+      const phoneMap = new Map<string, { name: string; groups: Set<string> }>();
       for (const c of rawContacts) {
-        if (!phoneMap.has(c.phone) || c.name) phoneMap.set(c.phone, c.name);
+        if (!phoneMap.has(c.phone)) {
+           phoneMap.set(c.phone, { name: c.name, groups: new Set() });
+        } else if (c.name && !phoneMap.get(c.phone)!.name) {
+           phoneMap.get(c.phone)!.name = c.name;
+        }
+        if (c.groupName) {
+           phoneMap.get(c.phone)!.groups.add(c.groupName);
+        }
       }
 
       const srcLabel = source === "groups" ? "whatsapp_group" : source === "contacts" ? "whatsapp_device" : "whatsapp_conversations";
-      const toInsert = Array.from(phoneMap.entries()).map(([phone, name]) => ({
-        phone, name: name || phone, source: srcLabel, tenant_id: inst.tenant_id,
-      }));
+      const toInsert = Array.from(phoneMap.entries()).map(([phone, data]) => {
+        const groupNotes = data.groups.size > 0 ? `Grupos: ${Array.from(data.groups).join(" | ")}` : undefined;
+        return {
+          phone, 
+          name: data.name || phone, 
+          source: srcLabel, 
+          tenant_id: inst.tenant_id,
+          notes: groupNotes
+        };
+      });
 
       const imported = await upsertContacts(toInsert);
       setExtractResult({ imported, total: toInsert.length });
