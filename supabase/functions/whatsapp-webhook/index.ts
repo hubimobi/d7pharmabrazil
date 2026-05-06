@@ -63,18 +63,23 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Security: require WHATSAPP_WEBHOOK_SECRET when set.
+    // Security: WHATSAPP_WEBHOOK_SECRET is REQUIRED.
     // Callers must pass it as Bearer token OR as x-webhook-secret header.
     const webhookSecret = Deno.env.get("WHATSAPP_WEBHOOK_SECRET");
-    if (webhookSecret) {
-      const authHeader = req.headers.get("authorization") || "";
-      const secretHeader = req.headers.get("x-webhook-secret") || "";
-      const token = authHeader.replace("Bearer ", "").trim();
-      if (token !== webhookSecret && secretHeader !== webhookSecret) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if (!webhookSecret) {
+      console.error("[whatsapp-webhook] WHATSAPP_WEBHOOK_SECRET is not configured");
+      return new Response(
+        JSON.stringify({ error: "Webhook secret not configured on server" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const authHeader = req.headers.get("authorization") || "";
+    const secretHeader = req.headers.get("x-webhook-secret") || "";
+    const token = authHeader.replace("Bearer ", "").trim();
+    if (token !== webhookSecret && secretHeader !== webhookSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const body = await req.json();

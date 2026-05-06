@@ -72,6 +72,89 @@ serve(async (req) => {
     // Each tenant configures their own webhook URL pointing to this same function;
     // the order lookup below scopes the update correctly via asaas_payment_id uniqueness.
 
+    // ── Webhook authentication ──
+    // Asaas sends a configured access token in the `asaas-access-token` header.
+    // If ASAAS_WEBHOOK_TOKEN is set, require it to match. This prevents attackers
+    // from forging PAYMENT_CONFIRMED events.
+    const expectedToken = Deno.env.get("ASAAS_WEBHOOK_TOKEN");
+    if (expectedToken) {
+      const receivedToken =
+        req.headers.get("asaas-access-token") ||
+        req.headers.get("x-webhook-token") ||
+        "";
+      if (receivedToken !== expectedToken) {
+        console.error("Asaas webhook UNAUTHORIZED: invalid token");
+        await supabaseAdmin.from("integration_logs").insert({
+          integration: "asaas",
+          action: "webhook_unauthorized",
+          status: "error",
+          details: `Invalid or missing asaas-access-token header`,
+        });
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Defense in depth: for status-changing events, re-verify the payment
+    // status directly with Asaas API before mutating the order.
+    const isStatusChanging =
+      event === "PAYMENT_CONFIRMED" ||
+      event === "PAYMENT_RECEIVED" ||
+      event === "PAYMENT_OVERDUE" ||
+      event === "PAYMENT_REFUNDED";
+
+    if (isStatusChanging) {
+      try {
+        // Find the order to identify its tenant for API key resolution
+        const { data: orderRow } = await supabaseAdmin
+          .from("orders")
+          .select("tenant_id")
+          .eq("asaas_payment_id", asaasPaymentId)
+          .maybeSingle();
+
+        if (orderRow?.tenant_id) {
+          const { getAsaasApiKey } = await import("../_shared/asaas-key.ts");
+          const apiKey = await getAsaasApiKey(supabaseAdmin, orderRow.tenant_id);
+          const verifyRes = await fetch(
+            `https://www.asaas.com/api/v3/payments/${asaasPaymentId}`,
+            { headers: { access_token: apiKey } },
+          );
+          if (verifyRes.ok) {
+            const verified = await verifyRes.json();
+            const realStatus = verified?.status;
+            const eventMatches =
+              ((event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") &&
+                (realStatus === "CONFIRMED" || realStatus === "RECEIVED")) ||
+              (event === "PAYMENT_OVERDUE" && realStatus === "OVERDUE") ||
+              (event === "PAYMENT_REFUNDED" && (realStatus === "REFUNDED" || realStatus === "REFUND_REQUESTED"));
+
+            if (!eventMatches) {
+              console.error(
+                `Asaas webhook event mismatch: event=${event} realStatus=${realStatus} payment=${asaasPaymentId}`,
+              );
+              await supabaseAdmin.from("integration_logs").insert({
+                integration: "asaas",
+                action: "webhook_event_mismatch",
+                status: "error",
+                details: `Event ${event} does not match real status ${realStatus} for payment ${asaasPaymentId}. Possible forged webhook.`,
+              });
+              return new Response(
+                JSON.stringify({ error: "Event does not match payment status" }),
+                { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+              );
+            }
+          } else {
+            console.warn(`Asaas verify lookup failed (${verifyRes.status}); proceeding cautiously`);
+          }
+        }
+      } catch (verifyErr) {
+        console.error("Asaas verification error (non-blocking):", verifyErr);
+      }
+    }
+
+
     // Handle payment confirmed/received → mark as paid
     if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
       const { data, error } = await supabaseAdmin

@@ -14,11 +14,17 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Webhook secret validation
+    // Webhook secret validation — REQUIRED
     const authHeader = req.headers.get("apikey");
     const webhookSecret = Deno.env.get("WHATSAPP_WEBHOOK_SECRET");
 
-    if (webhookSecret && authHeader !== webhookSecret) {
+    if (!webhookSecret) {
+      console.error("[webhook] WHATSAPP_WEBHOOK_SECRET is not configured");
+      return new Response(JSON.stringify({ error: "Webhook secret not configured on server" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+    if (authHeader !== webhookSecret) {
       console.error("[webhook] UNAUTHORIZED: invalid apikey header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }

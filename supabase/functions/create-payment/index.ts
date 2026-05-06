@@ -48,6 +48,85 @@ serve(async (req) => {
       );
     }
 
+    // ── Server-side price validation: prevent client price manipulation ──
+    // Recompute the products subtotal from authoritative DB prices and ensure
+    // the client-supplied `value` covers at least (subtotal - coupon discount).
+    // Shipping/interest may legitimately make the total higher; we only reject
+    // amounts that fall below the verified minimum.
+    try {
+      const itemsArr: any[] = Array.isArray(items) ? items : [];
+      const productIds = Array.from(
+        new Set(
+          itemsArr
+            .map((it) => it?.product_id || it?.id)
+            .filter((id) => typeof id === "string" && id.length > 0),
+        ),
+      );
+
+      if (productIds.length > 0) {
+        const { data: dbProducts } = await supabaseAdmin
+          .from("products")
+          .select("id, price")
+          .in("id", productIds)
+          .eq("tenant_id", tenantId);
+
+        const priceMap = new Map<string, number>(
+          (dbProducts || []).map((p: any) => [p.id, Number(p.price) || 0]),
+        );
+
+        let productsSubtotal = 0;
+        for (const it of itemsArr) {
+          const pid = it?.product_id || it?.id;
+          const qty = Math.max(1, Number(it?.quantity) || 1);
+          const realPrice = priceMap.get(pid);
+          if (realPrice === undefined) continue; // unknown product → skip (don't credit)
+          productsSubtotal += realPrice * qty;
+        }
+
+        // Apply coupon discount server-side (best-effort)
+        let discount = 0;
+        if (coupon_code && productsSubtotal > 0) {
+          const { data: coupon } = await supabaseAdmin
+            .from("coupons")
+            .select("discount_type, discount_value, active, expires_at, min_order_value")
+            .eq("code", coupon_code)
+            .eq("tenant_id", tenantId)
+            .maybeSingle();
+
+          if (
+            coupon?.active &&
+            (!coupon.expires_at || new Date(coupon.expires_at) > new Date()) &&
+            (!coupon.min_order_value || productsSubtotal >= Number(coupon.min_order_value))
+          ) {
+            const dv = Number(coupon.discount_value) || 0;
+            discount = coupon.discount_type === "percent"
+              ? productsSubtotal * (dv / 100)
+              : dv;
+          }
+        }
+
+        const minRequired = Math.max(0, productsSubtotal - discount);
+        // Allow R$0.50 tolerance for rounding
+        if (Number(value) + 0.5 < minRequired) {
+          console.error(
+            `[create-payment] Price tampering blocked: client=${value} min=${minRequired} subtotal=${productsSubtotal} discount=${discount}`,
+          );
+          await supabaseAdmin.from("integration_logs").insert({
+            integration: "asaas",
+            action: "payment_price_tampering_blocked",
+            status: "error",
+            details: `Client value R$${Number(value).toFixed(2)} below verified minimum R$${minRequired.toFixed(2)} (subtotal R$${productsSubtotal.toFixed(2)}, discount R$${discount.toFixed(2)})`,
+          });
+          return new Response(
+            JSON.stringify({ error: "Valor do pedido inválido. Recarregue o carrinho e tente novamente." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      }
+    } catch (validationErr) {
+      console.error("[create-payment] price validation error (non-blocking):", validationErr);
+    }
+
     // 1. Create or find customer in Asaas
     const customerRes = await fetch(`${ASAAS_API}/customers`, {
       method: "POST",
