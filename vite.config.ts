@@ -30,14 +30,14 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("node_modules/@tanstack/react-query")) {
             return "vendor-query";
           }
-          // Heavy libs used ONLY in lazy-loaded admin pages — let them stay in their own dynamic chunk
-          // (recharts ~400KB, framer-motion ~110KB — do NOT force into preloaded critical chunks)
-          if (id.includes("node_modules/recharts") || id.includes("node_modules/d3-")) {
-            return "vendor-charts";
-          }
+          // framer-motion: used in HeroSection (eagerly imported), keep in its own chunk
           if (id.includes("node_modules/framer-motion")) {
             return "vendor-motion";
           }
+          // recharts + d3: MUST NOT be in manualChunks — assigning them to a named chunk
+          // causes Rollup to put the CJS interop helper (oe/_interopRequireDefault) inside
+          // that chunk, then vendor-react imports it, making vendor-charts a required preload
+          // on every page. Let Rollup auto-split them into lazy chunks per admin page.
           // Radix UI primitives — split to avoid one giant vendor bundle
           if (id.includes("node_modules/@radix-ui/")) {
             return "vendor-radix";
