@@ -42,6 +42,18 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    const isCallerSuperAdmin = callerRoles?.some((r: any) => r.role === "super_admin");
+    const ALLOWED_ROLES = ["super_admin", "admin", "administrador", "suporte", "gestor", "financeiro", "representative", "prescriber", "user"];
+    const SUPER_ADMIN_ONLY_ROLES = ["super_admin"];
+    const validateRole = (role: string | undefined) => {
+      if (!role) return { ok: false, status: 400, error: "Role obrigatória" };
+      if (!ALLOWED_ROLES.includes(role)) return { ok: false, status: 400, error: "Role inválida" };
+      if (SUPER_ADMIN_ONLY_ROLES.includes(role) && !isCallerSuperAdmin) {
+        return { ok: false, status: 403, error: "Apenas super_admin pode atribuir esta role" };
+      }
+      return { ok: true as const };
+    };
+
     // LIST USERS with emails (admin only)
     if (action === "list_users") {
       const { data: { users: authUsers }, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
