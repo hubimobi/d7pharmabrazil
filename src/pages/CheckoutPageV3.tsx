@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { isValidCPF } from "@/lib/validateCPF";
 
 const formatCPF = (v: string) => {
   const d = v.replace(/\D/g, "").slice(0, 11);
@@ -206,7 +207,7 @@ const CheckoutPageV3 = () => {
     if (paymentTotal < 5) { toast.error("O valor mínimo para pagamento é R$ 5,00."); return; }
     if (!form.name.trim()) { toast.error("Preencha seu nome."); return; }
     if (!form.email.trim() || !form.email.includes("@")) { toast.error("Preencha um e-mail válido."); return; }
-    if (form.cpf.replace(/\D/g, "").length !== 11) { toast.error("CPF inválido. Deve ter 11 dígitos."); return; }
+    if (!isValidCPF(form.cpf)) { toast.error("CPF inválido. Verifique os dígitos."); return; }
     if (!form.phone.trim()) { toast.error("Preencha seu telefone."); return; }
     const prescriberRequired = (storeSettings as any)?.checkout_prescriber_required !== false;
     if (prescriberRequired && !form.doctor && !selectedDoctorId) {

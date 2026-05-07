@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { isValidCPF } from "@/lib/validateCPF";
 
 const formatCPF = (v: string) => {
   const d = v.replace(/\D/g, "").slice(0, 11);
@@ -292,7 +293,7 @@ const CheckoutPage = () => {
     if (!form.name.trim()) { toast.error("Preencha seu nome."); return; }
     if (!form.email.trim() || !form.email.includes("@")) { toast.error("Preencha um e-mail válido."); return; }
     if (!form.phone.trim()) { toast.error("Preencha seu telefone."); return; }
-    if (form.cpf.replace(/\D/g, "").length !== 11) { toast.error("CPF inválido. Deve ter 11 dígitos."); return; }
+    if (!isValidCPF(form.cpf)) { toast.error("CPF inválido. Verifique os dígitos."); return; }
     if (!form.cep || form.cep.replace(/\D/g, "").length !== 8) { toast.error("Preencha o CEP."); return; }
     if (!form.street.trim()) { toast.error("Preencha a rua."); return; }
     if (!form.number.trim()) { toast.error("Preencha o número do endereço."); return; }

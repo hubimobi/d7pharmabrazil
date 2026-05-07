@@ -74,12 +74,29 @@ export default function DashboardPage() {
   const { data: stats } = useQuery({
     queryKey: ["admin-dashboard-stats"],
     queryFn: async () => {
-      const [reps, docs, ordersRes, commissionsRes] = await Promise.all([
+      // Limit orders to last 6 months to avoid downloading the entire history
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const cutoff = sixMonthsAgo.toISOString();
+
+      // Use allSettled so one failing query doesn't crash the entire dashboard
+      const results = await Promise.allSettled([
         isAdmin ? supabase.from("representatives").select("id", { count: "exact" }) : Promise.resolve({ count: 0 }),
         supabase.from("doctors").select("id", { count: "exact" }),
-        supabase.from("orders").select("id, total, created_at, items, status, doctor_id, shipping_address"),
-        supabase.from("commissions").select("id, commission_value, status, representative_id, doctor_id, created_at, order_total"),
+        supabase.from("orders")
+          .select("id, total, created_at, items, status, doctor_id, shipping_address")
+          .gte("created_at", cutoff)
+          .order("created_at", { ascending: false })
+          .limit(500),
+        supabase.from("commissions")
+          .select("id, commission_value, status, representative_id, doctor_id, created_at, order_total")
+          .gte("created_at", cutoff),
       ]);
+
+      const reps = results[0].status === "fulfilled" ? results[0].value : { count: 0 };
+      const docs = results[1].status === "fulfilled" ? results[1].value : { count: 0 };
+      const ordersRes = results[2].status === "fulfilled" ? results[2].value : { data: [] };
+      const commissionsRes = results[3].status === "fulfilled" ? results[3].value : { data: [] };
 
       const ordersData = ordersRes.data ?? [];
       const commissionsData = commissionsRes.data ?? [];

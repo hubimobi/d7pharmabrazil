@@ -19,7 +19,7 @@ import { toast } from "sonner";
 const ROLE_OPTIONS = [
   { value: "super_admin", label: "Super Admin" },
   { value: "suporte", label: "Suporte" },
-  { value: "administrador", label: "Super Admin" },
+  { value: "administrador", label: "Administrador (Master)" },
   { value: "admin", label: "Administrador" },
   { value: "gestor", label: "Gestor" },
   { value: "financeiro", label: "Financeiro" },
