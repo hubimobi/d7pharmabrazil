@@ -93,6 +93,17 @@ Deno.serve(async (req) => {
       if (!user_id || !role) {
         return new Response(JSON.stringify({ error: "user_id e role são obrigatórios" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      const vUpd = validateRole(role);
+      if (!vUpd.ok) {
+        return new Response(JSON.stringify({ error: vUpd.error }), { status: vUpd.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      // Prevent demoting other super_admins unless caller is super_admin
+      if (!isCallerSuperAdmin) {
+        const { data: targetRoles } = await supabase.from("user_roles").select("role").eq("user_id", user_id);
+        if (targetRoles?.some((r: any) => r.role === "super_admin")) {
+          return new Response(JSON.stringify({ error: "Não é possível modificar um super_admin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
 
       // Update profile name and phone
       const profileUpdate: Record<string, string> = {};
