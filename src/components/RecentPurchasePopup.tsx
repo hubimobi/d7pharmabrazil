@@ -6,6 +6,7 @@ import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCartSafe } from "@/hooks/useCart";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { useTenant } from "@/hooks/useTenant";
 import { Product } from "@/hooks/useProducts";
 
 interface RecentOrder {
@@ -44,6 +45,7 @@ export default function RecentPurchasePopup() {
   const cart = useCartSafe();
   const addItem = cart?.addItem;
   const { data: popupSettings } = useStoreSettings();
+  const { tenantId } = useTenant();
 
   // Settings with defaults
   const popupEnabled = popupSettings?.sales_popup_enabled ?? true;
@@ -67,17 +69,20 @@ export default function RecentPurchasePopup() {
   });
 
   const { data: products } = useQuery({
-    queryKey: ["products-popup"],
+    queryKey: ["products-popup", tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("products")
+        // Use products_public view (safe, RLS-scoped) instead of raw products table.
+        // Always filter by tenantId to prevent cross-tenant data exposure.
+        .from("products_public" as any)
         .select("id, name, slug, image_url, price, original_price, short_description, description, rating, reviews_count, stock, weight, height, width, length, unit, benefits, extra_images, badge")
-        .eq("active", true);
+        .eq("active", true)
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       return data;
     },
     staleTime: 5 * 60 * 1000,
-    enabled: popupEnabled,
+    enabled: popupEnabled && !!tenantId,
   });
 
   // Build display orders from real + custom + fallback

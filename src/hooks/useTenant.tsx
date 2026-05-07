@@ -93,7 +93,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [tenantId, setTenantId] = useState<string>(DEFAULT_TENANT_ID);
-  const [isResolved, setIsResolved] = useState(false);
+  // Start as resolved for anonymous users so the app renders immediately.
+  // For logged-in users it will briefly be false until we confirm the tenant.
+  const [isResolved, setIsResolved] = useState(!user);
   const [isSuperboss, setIsSuperboss] = useState(false);
 
   useEffect(() => {
@@ -160,7 +162,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     queryClient.invalidateQueries();
   };
 
-  if (!isResolved) return null;
+  // Never block the render tree — the app shows with DEFAULT_TENANT_ID instantly
+  // and React Query refetches automatically when tenantId updates.
 
   return (
     <TenantContext.Provider value={{ tenantId, isResolved, isSuperboss, switchTenant }}>

@@ -13,7 +13,8 @@ const defaultResponse = {
   plan: "pro",
   status: "active",
   allowed_modules: {},
-  store_settings: null,
+  // store_settings intentionally omitted — fetched separately by the frontend
+  // via useStoreSettings() → store_settings_public view (no API credentials).
 };
 
 const cacheHeaders = {
@@ -107,14 +108,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Fetch store_settings for this tenant ──
-    const { data: storeSettings } = await supabase
-      .from("store_settings")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .limit(1)
-      .maybeSingle();
-
+    // NOTE: store_settings is NOT fetched here.
+    // Fetching SELECT * would expose sensitive credentials (evolution_api_key,
+    // evolution_api_url, etc.) in a publicly-cached HTTP response.
+    // The frontend loads store settings separately via useStoreSettings()
+    // which reads from store_settings_public — a view that projects only safe columns.
     return new Response(
       JSON.stringify({
         tenant_id: tenant.id,
@@ -122,7 +120,6 @@ Deno.serve(async (req) => {
         plan: tenant.plan ?? "free",
         status: tenant.status,
         allowed_modules: tenant.allowed_modules ?? {},
-        store_settings: storeSettings ?? null,
       }),
       { status: 200, headers: cacheHeaders },
     );

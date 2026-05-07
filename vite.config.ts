@@ -38,13 +38,13 @@ export default defineConfig(({ mode }) => ({
           // causes Rollup to put the CJS interop helper (oe/_interopRequireDefault) inside
           // that chunk, then vendor-react imports it, making vendor-charts a required preload
           // on every page. Let Rollup auto-split them into lazy chunks per admin page.
-          // Radix UI primitives — split to avoid one giant vendor bundle
-          if (id.includes("node_modules/@radix-ui/")) {
-            return "vendor-radix";
-          }
-          if (id.includes("node_modules/lucide-react")) {
-            return "vendor-icons";
-          }
+          //
+          // @radix-ui + lucide-react: ALSO must NOT be in manualChunks for the same reason.
+          // Radix calls React.forwardRef / React.createContext at module init time.
+          // When placed in a separate named chunk, Rollup does not guarantee that vendor-react
+          // is evaluated first, causing: "Cannot read properties of undefined (reading 'forwardRef')"
+          // → the entire app crashes on load. Let Rollup co-locate them with the components
+          // that import them (lazy admin/storefront pages) via automatic code-splitting.
         },
       },
     },
