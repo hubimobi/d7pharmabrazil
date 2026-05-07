@@ -42,6 +42,18 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    const isCallerSuperAdmin = callerRoles?.some((r: any) => r.role === "super_admin");
+    const ALLOWED_ROLES = ["super_admin", "admin", "administrador", "suporte", "gestor", "financeiro", "representative", "prescriber", "user"];
+    const SUPER_ADMIN_ONLY_ROLES = ["super_admin"];
+    const validateRole = (role: string | undefined) => {
+      if (!role) return { ok: false, status: 400, error: "Role obrigatória" };
+      if (!ALLOWED_ROLES.includes(role)) return { ok: false, status: 400, error: "Role inválida" };
+      if (SUPER_ADMIN_ONLY_ROLES.includes(role) && !isCallerSuperAdmin) {
+        return { ok: false, status: 403, error: "Apenas super_admin pode atribuir esta role" };
+      }
+      return { ok: true as const };
+    };
+
     // LIST USERS with emails (admin only)
     if (action === "list_users") {
       const { data: { users: authUsers }, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
@@ -80,6 +92,17 @@ Deno.serve(async (req) => {
       const { user_id, full_name, role, representative_id, phone, email } = body;
       if (!user_id || !role) {
         return new Response(JSON.stringify({ error: "user_id e role são obrigatórios" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const vUpd = validateRole(role);
+      if (!vUpd.ok) {
+        return new Response(JSON.stringify({ error: vUpd.error }), { status: vUpd.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      // Prevent demoting other super_admins unless caller is super_admin
+      if (!isCallerSuperAdmin) {
+        const { data: targetRoles } = await supabase.from("user_roles").select("role").eq("user_id", user_id);
+        if (targetRoles?.some((r: any) => r.role === "super_admin")) {
+          return new Response(JSON.stringify({ error: "Não é possível modificar um super_admin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
       }
 
       // Update profile name and phone
@@ -126,6 +149,10 @@ Deno.serve(async (req) => {
 
     if (!email || !password || !role) {
       return new Response(JSON.stringify({ error: "Email, senha e role são obrigatórios" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const vCreate = validateRole(role);
+    if (!vCreate.ok) {
+      return new Response(JSON.stringify({ error: vCreate.error }), { status: vCreate.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Create auth user
