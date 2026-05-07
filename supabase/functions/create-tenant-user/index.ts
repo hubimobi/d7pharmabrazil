@@ -150,6 +150,10 @@ Deno.serve(async (req) => {
     if (!email || !password || !role) {
       return new Response(JSON.stringify({ error: "Email, senha e role são obrigatórios" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    const vCreate = validateRole(role);
+    if (!vCreate.ok) {
+      return new Response(JSON.stringify({ error: vCreate.error }), { status: vCreate.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Create auth user
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
