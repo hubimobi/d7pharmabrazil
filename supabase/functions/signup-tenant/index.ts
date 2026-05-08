@@ -45,7 +45,8 @@ Deno.serve(async (req) => {
   const ownerName = String(body.owner_name ?? "").trim();
   const ownerEmail = String(body.owner_email ?? "").trim().toLowerCase();
   const ownerPassword = String(body.owner_password ?? "");
-  const plan = body.plan ?? "trial";
+  // SECURITY: Always force "trial" for self-service signup. Paid plans must be assigned by super_admin via a privileged endpoint.
+  const plan = "trial";
 
   if (storeName.length < 2 || storeName.length > 60) errors.store_name = "Nome entre 2 e 60 caracteres";
   if (!SLUG_RE.test(storeSlug)) errors.store_slug = "Use letras minúsculas, números e hífen (3-40 chars)";
