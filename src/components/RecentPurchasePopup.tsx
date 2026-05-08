@@ -79,7 +79,7 @@ export default function RecentPurchasePopup() {
         .eq("active", true)
         .eq("tenant_id", tenantId);
       if (error) throw error;
-      return data;
+      return (data || []) as any[];
     },
     staleTime: 5 * 60 * 1000,
     enabled: popupEnabled && !!tenantId,
