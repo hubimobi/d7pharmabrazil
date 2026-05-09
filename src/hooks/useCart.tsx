@@ -59,7 +59,17 @@ function loadCartFromStorage(): CartItem[] {
     const stored = localStorage.getItem(CART_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
+      // Legacy format (just an array)
       if (Array.isArray(parsed)) return parsed;
+      // New format with TTL
+      if (parsed && Array.isArray(parsed.items)) {
+        // Expire after 24 hours (86400000 ms)
+        if (parsed.savedAt && Date.now() - parsed.savedAt > 86400000) {
+          localStorage.removeItem(CART_STORAGE_KEY);
+          return [];
+        }
+        return parsed.items;
+      }
     }
   } catch {}
   return [];
@@ -67,7 +77,8 @@ function loadCartFromStorage(): CartItem[] {
 
 function saveCartToStorage(items: CartItem[]) {
   try {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+    const data = { items, savedAt: Date.now() };
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(data));
   } catch {}
 }
 

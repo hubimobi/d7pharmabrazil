@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useDeferredValue } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ShoppingCart, Menu, X, Phone, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,12 @@ const Header = () => {
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
 
-  const filtered = searchQuery.trim().length >= 2
+  const deferredQuery = useDeferredValue(searchQuery);
+
+  const filtered = deferredQuery.trim().length >= 2
     ? (allProducts || []).filter((p) =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.shortDescription.toLowerCase().includes(searchQuery.toLowerCase())
+        p.name.toLowerCase().includes(deferredQuery.toLowerCase()) ||
+        p.shortDescription.toLowerCase().includes(deferredQuery.toLowerCase())
       ).slice(0, 6)
     : [];
 

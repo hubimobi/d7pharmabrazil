@@ -16,13 +16,7 @@ const CheckoutRouter = () => {
     ? `v${ckParam}`
     : (settings as any)?.checkout_version || "v1";
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
+  // Render immediately. If settings change the version later, it will smoothly swap.
 
   const wrapperClass = forceMobile ? "force-mobile-layout" : "";
 
