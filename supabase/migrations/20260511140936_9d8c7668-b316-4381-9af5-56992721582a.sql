@@ -1,0 +1,1 @@
+CREATE POLICY "tenant_iso_delete" ON public.whatsapp_campaigns FOR DELETE TO authenticated USING (tenant_id IN (SELECT tenant_id FROM public.tenant_users WHERE user_id = auth.uid()));
