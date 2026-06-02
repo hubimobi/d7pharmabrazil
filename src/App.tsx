@@ -72,6 +72,7 @@ const CombosPage = lazy(() => import("./pages/admin/CombosPage"));
 const ToolsPage = lazy(() => import("./pages/admin/ToolsPage"));
 const RepurchasePage = lazy(() => import("./pages/admin/RepurchasePage"));
 const WhatsAppPage = lazy(() => import("./pages/admin/WhatsAppPage"));
+const InstagramPage = lazy(() => import("./pages/admin/InstagramPage"));
 const FeedbackApprovalPage = lazy(() => import("./pages/admin/FeedbackApprovalPage"));
 const DomainsPage = lazy(() => import("./pages/admin/DomainsPage"));
 const AuditLogPage = lazy(() => import("./pages/admin/AuditLogPage"));
@@ -189,6 +190,7 @@ const App = () => (
                 <Route path="/admin/ferramentas" element={<AdminRoute><ToolsPage /></AdminRoute>} />
                 <Route path="/admin/recompra" element={<AdminRoute><RepurchasePage /></AdminRoute>} />
                 <Route path="/admin/whatsapp" element={<AdminRoute><WhatsAppPage /></AdminRoute>} />
+                <Route path="/admin/instagram" element={<AdminRoute><InstagramPage /></AdminRoute>} />
                 <Route path="/admin/feedbacks" element={<AdminRoute><FeedbackApprovalPage /></AdminRoute>} />
                 <Route path="/admin/dominios" element={<AdminRoute><DomainsPage /></AdminRoute>} />
                 <Route path="/admin/auditoria" element={<AdminRoute><AuditLogPage /></AdminRoute>} />

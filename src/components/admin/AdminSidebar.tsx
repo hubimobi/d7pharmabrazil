@@ -4,7 +4,7 @@ import {
   DollarSign, Store, Plug, ShoppingCart, Tag, ImageIcon, Megaphone,
   ShoppingBag, Contact, Mail, FileText, Palette, Settings2, Sparkles,
   UserCog, Link2, ChevronDown, ChevronRight, Wrench, RefreshCw, MessageSquare,
-  Star, Crown, Globe, History,
+  Star, Crown, Globe, History, Instagram,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, Link } from "react-router-dom";
@@ -107,6 +107,7 @@ const adminSections: MenuSection[] = [
     label: "SISTEMA",
     items: [
       { title: "WhatsApp", url: "/admin/whatsapp", icon: MessageSquare },
+      { title: "Instagram", url: "/admin/instagram", icon: Instagram },
       { title: "Ferramentas", url: "/admin/ferramentas", icon: Wrench },
       { title: "Agentes de IA", url: "/admin/agentes-ia", icon: Sparkles },
       { title: "Usuários", url: "/admin/usuarios", icon: UserCog },
