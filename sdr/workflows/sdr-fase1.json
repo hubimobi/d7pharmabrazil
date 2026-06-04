@@ -1,0 +1,791 @@
+{
+  "name": "SDR Autônomo — Fase 1 (Coleta + Enriquecimento + Score)",
+  "meta": {
+    "instanceId": "sdr-autonomo-fase1"
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "nodes": [
+
+    {
+      "id": "node-01-form",
+      "name": "Formulário SDR",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [0, 300],
+      "webhookId": "sdr-coleta-form",
+      "parameters": {
+        "formTitle": "SDR Autônomo — Nova Coleta de Leads",
+        "formDescription": "Informe o nicho e a localização para iniciar a coleta e análise.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Nicho do negócio",
+              "placeholder": "Ex: Clínica de Estética, Academia, Restaurante",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Cidade",
+              "placeholder": "Ex: Campinas",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Estado (UF)",
+              "placeholder": "Ex: SP",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Máximo de leads",
+              "fieldType": "number",
+              "placeholder": "50",
+              "requiredField": false
+            }
+          ]
+        },
+        "responseMode": "onReceived",
+        "path": "sdr-coleta"
+      }
+    },
+
+    {
+      "id": "node-02-config",
+      "name": "Preparar Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [240, 300],
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-niche",
+              "name": "niche",
+              "value": "={{ $json['Nicho do negócio'] }}",
+              "type": "string"
+            },
+            {
+              "id": "cfg-city",
+              "name": "city",
+              "value": "={{ $json['Cidade'] }}",
+              "type": "string"
+            },
+            {
+              "id": "cfg-state",
+              "name": "state",
+              "value": "={{ $json['Estado (UF)'].toUpperCase().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "cfg-max",
+              "name": "maxLeads",
+              "value": "={{ parseInt($json['Máximo de leads']) || 50 }}",
+              "type": "number"
+            },
+            {
+              "id": "cfg-query",
+              "name": "searchQuery",
+              "value": "={{ $json['Nicho do negócio'] + ' em ' + $json['Cidade'] + ' ' + $json['Estado (UF)'] }}",
+              "type": "string"
+            },
+            {
+              "id": "cfg-project-name",
+              "name": "projectName",
+              "value": "={{ $json['Nicho do negócio'] + ' — ' + $json['Cidade'] + '/' + $json['Estado (UF)'].toUpperCase() + ' — ' + new Date().toLocaleDateString('pt-BR') }}",
+              "type": "string"
+            },
+            {
+              "id": "cfg-ts",
+              "name": "runTimestamp",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            },
+            {
+              "id": "cfg-supabase-url",
+              "name": "supabaseUrl",
+              "value": "={{ $env.SUPABASE_URL }}",
+              "type": "string"
+            },
+            {
+              "id": "cfg-supabase-key",
+              "name": "supabaseKey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "node-03-create-project",
+      "name": "Criar Projeto Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.supabaseUrl }}/rest/v1/sdr_projects",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $json.supabaseKey }}" },
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "Prefer",        "value": "resolution=merge-duplicates,return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ name: $json.projectName, niche: $json.niche, region_city: $json.city, region_state: $json.state, status: 'ACTIVE', config: { max_leads: $json.maxLeads, search_query: $json.searchQuery } }) }}"
+      }
+    },
+
+    {
+      "id": "node-04-extract-project",
+      "name": "Extrair Project ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [720, 300],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "proj-id",
+              "name": "projectId",
+              "value": "={{ $json[0]?.id || $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "proj-niche",
+              "name": "niche",
+              "value": "={{ $('Preparar Config').item.json.niche }}",
+              "type": "string"
+            },
+            {
+              "id": "proj-city",
+              "name": "city",
+              "value": "={{ $('Preparar Config').item.json.city }}",
+              "type": "string"
+            },
+            {
+              "id": "proj-state",
+              "name": "state",
+              "value": "={{ $('Preparar Config').item.json.state }}",
+              "type": "string"
+            },
+            {
+              "id": "proj-max",
+              "name": "maxLeads",
+              "value": "={{ $('Preparar Config').item.json.maxLeads }}",
+              "type": "number"
+            },
+            {
+              "id": "proj-query",
+              "name": "searchQuery",
+              "value": "={{ $('Preparar Config').item.json.searchQuery }}",
+              "type": "string"
+            },
+            {
+              "id": "proj-supabase-url",
+              "name": "supabaseUrl",
+              "value": "={{ $('Preparar Config').item.json.supabaseUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "proj-supabase-key",
+              "name": "supabaseKey",
+              "value": "={{ $('Preparar Config').item.json.supabaseKey }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "node-05-start-apify",
+      "name": "Iniciar Coleta Apify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/compass~crawler-google-places/runs?token={{ $env.APIFY_TOKEN }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ searchStringsArray: [$json.searchQuery], maxCrawledPlaces: $json.maxLeads, language: 'pt', countryCode: 'br', maxImages: 0, includeHistogram: false, includeOpeningHours: false, includePeopleAlsoSearch: false, reviewsSort: 'newest', exportPlaceUrls: true, additionalInfo: false }) }}"
+      }
+    },
+
+    {
+      "id": "node-06-save-run-id",
+      "name": "Salvar Run ID Apify",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1200, 300],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "run-id",
+              "name": "apifyRunId",
+              "value": "={{ $json.data.id }}",
+              "type": "string"
+            },
+            {
+              "id": "run-dataset-id",
+              "name": "apifyDatasetId",
+              "value": "={{ $json.data.defaultDatasetId }}",
+              "type": "string"
+            },
+            {
+              "id": "run-proj-id",
+              "name": "projectId",
+              "value": "={{ $('Extrair Project ID').item.json.projectId }}",
+              "type": "string"
+            },
+            {
+              "id": "run-supabase-url",
+              "name": "supabaseUrl",
+              "value": "={{ $('Extrair Project ID').item.json.supabaseUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "run-supabase-key",
+              "name": "supabaseKey",
+              "value": "={{ $('Extrair Project ID').item.json.supabaseKey }}",
+              "type": "string"
+            },
+            {
+              "id": "run-poll-count",
+              "name": "pollCount",
+              "value": "=0",
+              "type": "number"
+            }
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "node-07-wait-apify",
+      "name": "Aguardar 45s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1440, 300],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 45,
+        "unit": "seconds"
+      }
+    },
+
+    {
+      "id": "node-08-check-apify-status",
+      "name": "Verificar Status Apify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1680, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.apify.com/v2/actor-runs/{{ $json.apifyRunId }}?token={{ $env.APIFY_TOKEN }}",
+        "authentication": "none"
+      }
+    },
+
+    {
+      "id": "node-09-if-done",
+      "name": "Coleta Concluída?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1920, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "cond-done",
+              "leftValue": "={{ $json.data.status }}",
+              "rightValue": "SUCCEEDED",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+
+    {
+      "id": "node-10-get-dataset",
+      "name": "Obter Dataset Apify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2160, 160],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.apify.com/v2/datasets/{{ $('Salvar Run ID Apify').item.json.apifyDatasetId }}/items?token={{ $env.APIFY_TOKEN }}&format=json&clean=true&limit=200",
+        "authentication": "none"
+      }
+    },
+
+    {
+      "id": "node-11-split-batches",
+      "name": "Processar em Lote",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [2400, 160],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+
+    {
+      "id": "node-12-delay-throttle",
+      "name": "Throttle 1s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2640, 0],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 1,
+        "unit": "seconds"
+      }
+    },
+
+    {
+      "id": "node-13-check-duplicate",
+      "name": "Verificar Duplicata",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2880, 0],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Salvar Run ID Apify').item.json.supabaseUrl }}/rest/v1/sdr_leads",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $('Salvar Run ID Apify').item.json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $('Salvar Run ID Apify').item.json.supabaseKey }}" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "select",        "value": "id,cnpj,status" },
+            { "name": "business_name", "value": "=eq.{{ $json.title }}" },
+            { "name": "address_city",  "value": "=eq.{{ $json.city }}" },
+            { "name": "limit",         "value": "1" }
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "node-14-if-new",
+      "name": "É Lead Novo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3120, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "cond-new",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": "0",
+              "operator": { "type": "number", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+
+    {
+      "id": "node-15-build-lead",
+      "name": "Montar Dados Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3360, -200],
+      "parameters": {
+        "jsCode": "// Extrai e normaliza campos do item Apify Google Maps\nconst apify = $input.item.json;\n\n// Telefone limpo (remove formatação)\nconst phone = (apify.phone || apify.phoneUnformatted || '').replace(/\\D/g, '');\n\n// Website\nconst website = apify.website || null;\n\n// Detecta presença em redes (via URL do website ou dados Apify)\nconst hasWebsite = !!(website && website.trim() !== '');\nconst hasInstagram = !!(apify.website && apify.website.includes('instagram.com'));\nconst hasFacebook = !!(apify.website && apify.website.includes('facebook.com'));\n\n// Nome normalizado para busca CNPJ (remove sufixos jurídicos comuns)\nconst cleanName = (apify.title || '')\n  .replace(/\\s*(LTDA|ME|EPP|SA|S\\.A\\.|EIRELI|MEI|SS)\\s*\\.?$/i, '')\n  .replace(/[^a-zA-ZÀ-ÿ0-9\\s]/g, ' ')\n  .trim()\n  .substring(0, 60);\n\nreturn [{\n  json: {\n    // Dados originais do Apify\n    apifyData: apify,\n    // Campos normalizados para Supabase\n    business_name: apify.title || 'Sem nome',\n    phone: phone || null,\n    website: hasWebsite ? website : null,\n    address_full: apify.address || null,\n    address_city: apify.city || null,\n    address_state: apify.state || $('Preparar Config').item.json.state,\n    address_postal_code: apify.postalCode || null,\n    google_maps_url: apify.url || null,\n    google_rating: parseFloat(apify.totalScore) || null,\n    google_reviews_count: parseInt(apify.reviewsCount) || null,\n    google_category: apify.categoryName || null,\n    has_website: hasWebsite,\n    has_instagram: hasInstagram,\n    has_facebook: hasFacebook,\n    has_google_mybusiness: true,  // está no Google Maps = tem GMB\n    // Para busca de CNPJ\n    cnpjSearchName: cleanName,\n    cnpjSearchCity: apify.city || $('Preparar Config').item.json.city,\n    cnpjSearchState: apify.state || $('Preparar Config').item.json.state,\n    // Contexto do workflow\n    projectId: $('Salvar Run ID Apify').item.json.projectId,\n    apifyRunId: $('Salvar Run ID Apify').item.json.apifyRunId,\n    supabaseUrl: $('Salvar Run ID Apify').item.json.supabaseUrl,\n    supabaseKey: $('Salvar Run ID Apify').item.json.supabaseKey\n  }\n}];"
+      }
+    },
+
+    {
+      "id": "node-16-search-cnpj",
+      "name": "Buscar CNPJ (Casa dos Dados)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3600, -200],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.casadosdados.com.br/v2/public/cnpj/pesquisa",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ query: { razao_social: $json.cnpjSearchName, municipio: [$json.cnpjSearchCity.toUpperCase()], uf: [$json.cnpjSearchState.toUpperCase()], situacao_cadastral: 'ATIVA' }, extras: { somente_mei: false, excluir_mei: false, com_email: false, incluir_atividade_secundaria: false }, page: 1 }) }}"
+      }
+    },
+
+    {
+      "id": "node-17-if-cnpj",
+      "name": "CNPJ Encontrado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3840, -200],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "cond-cnpj",
+              "leftValue": "={{ $json.count || ($json.data && $json.data.length) || 0 }}",
+              "rightValue": "0",
+              "operator": { "type": "number", "operation": "notEquals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+
+    {
+      "id": "node-18-delay-cnpj",
+      "name": "Delay CNPJ 1s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [4080, -400],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 1,
+        "unit": "seconds"
+      }
+    },
+
+    {
+      "id": "node-19-enrich-cnpj",
+      "name": "Enriquecer via Brasil API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4320, -400],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "GET",
+        "url": "=https://brasilapi.com.br/api/cnpj/v1/{{ ($json.data[0].cnpj || '').replace(/\\.|\\/|\\-/g,'') }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/json" }
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "node-20-set-cnpj-data",
+      "name": "Formatar Dados CNPJ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4560, -400],
+      "parameters": {
+        "jsCode": "// Normaliza resposta da Brasil API para os campos do Supabase\nconst cnpjData = $input.item.json;\nconst leadBase = $('Montar Dados Lead').item.json;\n\nconst cnpjClean = (cnpjData.cnpj || '').replace(/\\.|\\/|\\-/g, '');\n\nreturn [{\n  json: {\n    ...leadBase,\n    // CNPJ enriquecido\n    cnpj: cnpjClean || null,\n    cnpj_razao_social: cnpjData.razao_social || null,\n    cnpj_nome_fantasia: cnpjData.nome_fantasia || null,\n    cnpj_situacao: cnpjData.descricao_situacao_cadastral || cnpjData.situacao_cadastral || null,\n    cnpj_data_abertura: cnpjData.data_inicio_atividade || null,\n    cnpj_capital_social: parseFloat(cnpjData.capital_social) || null,\n    cnpj_porte: cnpjData.descricao_porte || cnpjData.porte || null,\n    cnpj_atividade_principal: cnpjData.cnae_fiscal_descricao || (cnpjData.atividade_principal && cnpjData.atividade_principal[0] && cnpjData.atividade_principal[0].text) || null,\n    cnpj_municipio: cnpjData.municipio || null,\n    cnpj_uf: cnpjData.uf || null,\n    cnpj_email: cnpjData.email || null,\n    cnpj_telefone: cnpjData.ddd_telefone_1 || null,\n    cnpj_raw: cnpjData,\n    // Atualiza email/telefone se veio do CNPJ e não tinha do Google\n    email: leadBase.email || cnpjData.email || null,\n    phone: leadBase.phone || (cnpjData.ddd_telefone_1 || '').replace(/\\D/g,'') || null,\n    status: 'ENRIQUECIDO',\n    enriched_at: new Date().toISOString()\n  }\n}];"
+      }
+    },
+
+    {
+      "id": "node-21-no-cnpj",
+      "name": "Dados sem CNPJ",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [4080, 0],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "no-cnpj-status",
+              "name": "status",
+              "value": "COLETADO",
+              "type": "string"
+            },
+            {
+              "id": "no-cnpj-note",
+              "name": "cnpj_not_found",
+              "value": "=true",
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": true
+      }
+    },
+
+    {
+      "id": "node-22-build-prompt",
+      "name": "Preparar Prompt IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4800, -200],
+      "parameters": {
+        "jsCode": "// Monta o bloco de dados da empresa para o prompt do Analista SDR\n// Funciona tanto com CNPJ quanto sem ele\nconst d = $input.item.json;\n\nconst linhas = [];\n\n// Google Maps\nlinhas.push(`Nome: ${d.business_name || 'N/A'}`);\nif (d.google_category) linhas.push(`Categoria: ${d.google_category}`);\nif (d.address_city) linhas.push(`Cidade: ${d.address_city}${d.address_state ? ' / ' + d.address_state : ''}`);\nif (d.google_rating) linhas.push(`Avaliação Google: ${d.google_rating} ⭐ (${d.google_reviews_count || 0} avaliações)`);\nif (d.website) linhas.push(`Website: ${d.website}`);\nelse linhas.push('Website: Não encontrado no Google Maps');\nlinhas.push(`Instagram detectado: ${d.has_instagram ? 'Sim (link no perfil)' : 'Não detectado'}`);\nlinhas.push(`Facebook detectado: ${d.has_facebook ? 'Sim' : 'Não detectado'}`);\nlinhas.push(`Google My Business: ${d.has_google_mybusiness ? 'Sim (listado no Maps)' : 'Não'}`);\n\n// CNPJ (se disponível)\nif (d.cnpj) {\n  linhas.push('');\n  linhas.push('--- Dados Receita Federal ---');\n  linhas.push(`CNPJ: ${d.cnpj}`);\n  if (d.cnpj_situacao) linhas.push(`Situação CNPJ: ${d.cnpj_situacao}`);\n  if (d.cnpj_data_abertura) linhas.push(`Data de abertura: ${d.cnpj_data_abertura}`);\n  if (d.cnpj_porte) linhas.push(`Porte: ${d.cnpj_porte}`);\n  if (d.cnpj_capital_social) linhas.push(`Capital social: R$ ${Number(d.cnpj_capital_social).toLocaleString('pt-BR', {minimumFractionDigits:2})}`);\n  if (d.cnpj_atividade_principal) linhas.push(`Atividade principal: ${d.cnpj_atividade_principal}`);\n  if (d.cnpj_email) linhas.push(`E-mail CNPJ: ${d.cnpj_email}`);\n  if (d.cnpj_telefone) linhas.push(`Telefone CNPJ: ${d.cnpj_telefone}`);\n} else {\n  linhas.push('');\n  linhas.push('--- Dados Receita Federal ---');\n  linhas.push('CNPJ: Não encontrado na busca automatizada');\n}\n\nconst dadosEmpresa = linhas.join('\\n');\n\nconst systemPrompt = `Você é um Analista de Inteligência Comercial especializado em identificar oportunidades de marketing digital para pequenas e médias empresas no Brasil.\\n\\nSua única função nesta chamada é: receber dados públicos de uma empresa, analisar sua presença digital e potencial de compra de serviços de marketing, e devolver um JSON estruturado com score e dores identificadas.\\n\\nVocê NÃO deve conversar. Você NÃO deve perguntar nada. Responda SOMENTE com JSON válido.`;\n\nconst userPrompt = `Analise a empresa abaixo e classifique a oportunidade de venda de serviços de marketing digital.\\n\\n## DADOS DA EMPRESA\\n\\n${dadosEmpresa}\\n\\n---\\n\\n## CRITÉRIOS DE CLASSIFICAÇÃO\\n\\n### SCORE A — Alta Oportunidade (prioridade máxima)\\n- CNPJ ATIVO há mais de 2 anos\\n- Avaliação Google entre 3,0 e 4,3\\n- Mais de 15 avaliações Google\\n- Website ausente ou com sinais de abandono\\n- Instagram/Facebook ausente ou com pouco engajamento\\n- Porte ME ou EPP\\n- Nicho: estética, saúde, alimentação, fitness, educação, automotivo, pet, varejo local\\n\\n### SCORE B — Oportunidade Média\\n- Empresa ativa com presença digital básica mas inconsistente\\n- Porte ME/EPP com sinais de investimento leve em marketing\\n- Dados insuficientes para classificar como A com confiança\\n\\n### SCORE C — Baixa Oportunidade (não prospectar)\\n- CNPJ baixado, suspenso ou com irregularidade\\n- Grande porte ou capital social > R$ 500.000\\n- Presença digital muito forte\\n- Nicho sem fit: indústria, atacado B2B, imóveis de alto padrão\\n- Empresa claramente fechada ou endereço inválido\\n\\n## SAÍDA ESPERADA (JSON puro, sem markdown)\\n\\n{\\n  \"score\": \"A\",\\n  \"score_rationale\": \"Máximo 2 frases explicando o score.\",\\n  \"digital_gap_score\": 85,\\n  \"identified_pains\": [\"dor 1\", \"dor 2\", \"dor 3\"],\\n  \"improvement_opportunities\": [\"oportunidade 1\", \"oportunidade 2\"],\\n  \"first_message_angle\": \"Gancho concreto para o 1º contato frio.\",\\n  \"discard_reason\": null\\n}`;\n\nreturn [{\n  json: {\n    ...d,\n    aiSystemPrompt: systemPrompt,\n    aiUserPrompt: userPrompt\n  }\n}];"
+      }
+    },
+
+    {
+      "id": "node-23-delay-ai",
+      "name": "Delay IA 500ms",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [5040, -200],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 1,
+        "unit": "seconds"
+      }
+    },
+
+    {
+      "id": "node-24-call-haiku",
+      "name": "Analisar com Claude Haiku",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [5280, -200],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key",          "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version",   "value": "2023-06-01" },
+            { "name": "Content-Type",        "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 1024, temperature: 0, system: $json.aiSystemPrompt, messages: [{ role: 'user', content: $json.aiUserPrompt }] }) }}"
+      }
+    },
+
+    {
+      "id": "node-25-parse-score",
+      "name": "Parsear Score IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5520, -200],
+      "parameters": {
+        "jsCode": "// Extrai JSON da resposta do Claude e mescla com dados do lead\nconst apiResponse = $input.item.json;\nconst leadData = $('Preparar Prompt IA').item.json;\n\nlet aiResult = {};\ntry {\n  // Extrai o texto da resposta\n  const rawText = apiResponse.content?.[0]?.text || apiResponse.error?.message || '';\n  // Tenta parsear como JSON (o modelo deve retornar só JSON)\n  const jsonMatch = rawText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    aiResult = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('Resposta não contém JSON válido: ' + rawText.substring(0, 100));\n  }\n} catch (e) {\n  // Fallback: score B com erro registrado\n  aiResult = {\n    score: 'B',\n    score_rationale: 'Erro ao parsear resposta da IA: ' + e.message,\n    digital_gap_score: 50,\n    identified_pains: ['Análise automática falhou — revisar manualmente'],\n    improvement_opportunities: ['Executar análise manual'],\n    first_message_angle: 'Verificar manualmente',\n    discard_reason: null\n  };\n}\n\n// Tokens e custo estimado (Haiku: $0.80/M input, $4/M output)\nconst promptTokens = apiResponse.usage?.input_tokens || 0;\nconst completionTokens = apiResponse.usage?.output_tokens || 0;\nconst costUsd = (promptTokens * 0.0000008) + (completionTokens * 0.000004);\n\nreturn [{\n  json: {\n    // Todos os dados do lead\n    ...leadData,\n    // Score e análise IA\n    score: aiResult.score || 'B',\n    score_rationale: aiResult.score_rationale || null,\n    digital_gap_score: parseInt(aiResult.digital_gap_score) || null,\n    identified_pains: JSON.stringify(aiResult.identified_pains || []),\n    improvement_opportunities: JSON.stringify(aiResult.improvement_opportunities || []),\n    first_message_angle: aiResult.first_message_angle || null,\n    discard_reason: aiResult.discard_reason || null,\n    ai_analysis_raw: JSON.stringify(aiResult),\n    // Metadados IA\n    aiPromptTokens: promptTokens,\n    aiCompletionTokens: completionTokens,\n    aiCostUsd: costUsd,\n    aiModelUsed: 'claude-haiku-4-5',\n    // Status final\n    status: 'ANALISADO',\n    analyzed_at: new Date().toISOString()\n  }\n}];"
+      }
+    },
+
+    {
+      "id": "node-26-save-ai-conv",
+      "name": "Registrar Conversa IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [5760, -400],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.supabaseUrl }}/rest/v1/sdr_ai_conversations",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $json.supabaseKey }}" },
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "Prefer",        "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ project_id: $json.projectId, conversation_type: 'SCORING', model_used: $json.aiModelUsed, prompt_tokens: $json.aiPromptTokens, completion_tokens: $json.aiCompletionTokens, total_tokens: $json.aiPromptTokens + $json.aiCompletionTokens, cost_usd: $json.aiCostUsd, messages: [{ role: 'user', content: $json.aiUserPrompt }], response_raw: JSON.parse($json.ai_analysis_raw || '{}') }) }}"
+      }
+    },
+
+    {
+      "id": "node-27-upsert-lead",
+      "name": "Gravar Lead Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [5760, 0],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.supabaseUrl }}/rest/v1/sdr_leads?on_conflict=cnpj",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $json.supabaseKey }}" },
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "Prefer",        "value": "resolution=merge-duplicates,return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ project_id: $json.projectId, business_name: $json.business_name, phone: $json.phone, email: $json.email, website: $json.website, address_full: $json.address_full, address_city: $json.address_city, address_state: $json.address_state, address_postal_code: $json.address_postal_code, google_maps_url: $json.google_maps_url, google_rating: $json.google_rating, google_reviews_count: $json.google_reviews_count, google_category: $json.google_category, cnpj: $json.cnpj || null, cnpj_razao_social: $json.cnpj_razao_social || null, cnpj_nome_fantasia: $json.cnpj_nome_fantasia || null, cnpj_situacao: $json.cnpj_situacao || null, cnpj_data_abertura: $json.cnpj_data_abertura || null, cnpj_capital_social: $json.cnpj_capital_social || null, cnpj_porte: $json.cnpj_porte || null, cnpj_atividade_principal: $json.cnpj_atividade_principal || null, cnpj_municipio: $json.cnpj_municipio || null, cnpj_uf: $json.cnpj_uf || null, cnpj_email: $json.cnpj_email || null, cnpj_telefone: $json.cnpj_telefone || null, has_website: $json.has_website, has_instagram: $json.has_instagram, has_facebook: $json.has_facebook, has_google_mybusiness: $json.has_google_mybusiness, score: $json.score, score_rationale: $json.score_rationale, digital_gap_score: $json.digital_gap_score, identified_pains: $json.identified_pains, improvement_opportunities: $json.improvement_opportunities, first_message_angle: $json.first_message_angle, discard_reason: $json.discard_reason, ai_analysis_raw: $json.ai_analysis_raw, status: 'ANALISADO', source: 'google_maps_apify', apify_run_id: $json.apifyRunId, analyzed_at: $json.analyzed_at }) }}"
+      }
+    },
+
+    {
+      "id": "node-28-lead-duplicado",
+      "name": "Lead Ignorado (duplicata)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [3360, 200]
+    },
+
+    {
+      "id": "node-29-resumo",
+      "name": "Resumo Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, 400],
+      "parameters": {
+        "jsCode": "// Resumo do run para exibição na tela do n8n\nconst allItems = $input.all();\n\nconst summary = {\n  mensagem: '✅ Coleta e análise da Fase 1 concluída!',\n  timestamp: new Date().toISOString(),\n  total_processados: allItems.length,\n  dica: 'Acesse a view sdr_validation_panel no Supabase para validar os scores manualmente.',\n  proximos_passos: [\n    '1. Abra o Supabase → SQL Editor → SELECT * FROM sdr_validation_panel LIMIT 20',\n    '2. Valide 20 leads score A manualmente (veja sdr/prompts/analista-sdr.md)',\n    '3. Atualize manual_score_ok = true/false em cada lead revisado',\n    '4. Se taxa de acerto < 80%, ajuste os critérios no prompt e reanalise'\n  ]\n};\n\nconsole.log(JSON.stringify(summary, null, 2));\nreturn [{ json: summary }];"
+      }
+    }
+
+  ],
+
+  "connections": {
+    "Formulário SDR": {
+      "main": [[{ "node": "Preparar Config", "type": "main", "index": 0 }]]
+    },
+    "Preparar Config": {
+      "main": [[{ "node": "Criar Projeto Supabase", "type": "main", "index": 0 }]]
+    },
+    "Criar Projeto Supabase": {
+      "main": [[{ "node": "Extrair Project ID", "type": "main", "index": 0 }]]
+    },
+    "Extrair Project ID": {
+      "main": [[{ "node": "Iniciar Coleta Apify", "type": "main", "index": 0 }]]
+    },
+    "Iniciar Coleta Apify": {
+      "main": [[{ "node": "Salvar Run ID Apify", "type": "main", "index": 0 }]]
+    },
+    "Salvar Run ID Apify": {
+      "main": [[{ "node": "Aguardar 45s", "type": "main", "index": 0 }]]
+    },
+    "Aguardar 45s": {
+      "main": [[{ "node": "Verificar Status Apify", "type": "main", "index": 0 }]]
+    },
+    "Verificar Status Apify": {
+      "main": [[{ "node": "Coleta Concluída?", "type": "main", "index": 0 }]]
+    },
+    "Coleta Concluída?": {
+      "main": [
+        [{ "node": "Obter Dataset Apify", "type": "main", "index": 0 }],
+        [{ "node": "Aguardar 45s",        "type": "main", "index": 0 }]
+      ]
+    },
+    "Obter Dataset Apify": {
+      "main": [[{ "node": "Processar em Lote", "type": "main", "index": 0 }]]
+    },
+    "Processar em Lote": {
+      "main": [
+        [{ "node": "Throttle 1s", "type": "main", "index": 0 }],
+        [{ "node": "Resumo Final", "type": "main", "index": 0 }]
+      ]
+    },
+    "Throttle 1s": {
+      "main": [[{ "node": "Verificar Duplicata", "type": "main", "index": 0 }]]
+    },
+    "Verificar Duplicata": {
+      "main": [[{ "node": "É Lead Novo?", "type": "main", "index": 0 }]]
+    },
+    "É Lead Novo?": {
+      "main": [
+        [{ "node": "Montar Dados Lead",         "type": "main", "index": 0 }],
+        [{ "node": "Lead Ignorado (duplicata)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Montar Dados Lead": {
+      "main": [[{ "node": "Buscar CNPJ (Casa dos Dados)", "type": "main", "index": 0 }]]
+    },
+    "Buscar CNPJ (Casa dos Dados)": {
+      "main": [[{ "node": "CNPJ Encontrado?", "type": "main", "index": 0 }]]
+    },
+    "CNPJ Encontrado?": {
+      "main": [
+        [{ "node": "Delay CNPJ 1s",   "type": "main", "index": 0 }],
+        [{ "node": "Dados sem CNPJ",  "type": "main", "index": 0 }]
+      ]
+    },
+    "Delay CNPJ 1s": {
+      "main": [[{ "node": "Enriquecer via Brasil API", "type": "main", "index": 0 }]]
+    },
+    "Enriquecer via Brasil API": {
+      "main": [[{ "node": "Formatar Dados CNPJ", "type": "main", "index": 0 }]]
+    },
+    "Formatar Dados CNPJ": {
+      "main": [[{ "node": "Preparar Prompt IA", "type": "main", "index": 0 }]]
+    },
+    "Dados sem CNPJ": {
+      "main": [[{ "node": "Preparar Prompt IA", "type": "main", "index": 0 }]]
+    },
+    "Preparar Prompt IA": {
+      "main": [[{ "node": "Delay IA 500ms", "type": "main", "index": 0 }]]
+    },
+    "Delay IA 500ms": {
+      "main": [[{ "node": "Analisar com Claude Haiku", "type": "main", "index": 0 }]]
+    },
+    "Analisar com Claude Haiku": {
+      "main": [[{ "node": "Parsear Score IA", "type": "main", "index": 0 }]]
+    },
+    "Parsear Score IA": {
+      "main": [[{ "node": "Gravar Lead Supabase", "type": "main", "index": 0 }]]
+    },
+    "Gravar Lead Supabase": {
+      "main": [[{ "node": "Registrar Conversa IA", "type": "main", "index": 0 }]]
+    },
+    "Registrar Conversa IA": {
+      "main": [[{ "node": "Processar em Lote", "type": "main", "index": 0 }]]
+    },
+    "Lead Ignorado (duplicata)": {
+      "main": [[{ "node": "Processar em Lote", "type": "main", "index": 0 }]]
+    }
+  }
+}
