@@ -4,7 +4,8 @@
       "Bash(supabase db *)",
       "Bash(supabase projects *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "mcp__b83a408e-4c18-4050-945d-831de1c520ed__list_projects"
     ]
   }
 }
