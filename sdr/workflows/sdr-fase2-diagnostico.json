@@ -1,0 +1,396 @@
+{
+  "name": "SDR Autônomo — Fase 2 (Diagnóstico Digital + PDF)",
+  "meta": { "instanceId": "sdr-autonomo-fase2" },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "nodes": [
+
+    {
+      "id": "f2-01-trigger",
+      "name": "Iniciar Fase 2",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 300],
+      "parameters": {}
+    },
+
+    {
+      "id": "f2-02-buscar-leads-a",
+      "name": "Buscar Leads A (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/sdr_leads",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "select", "value": "*" },
+            { "name": "score",  "value": "eq.A" },
+            { "name": "status", "value": "eq.ANALISADO" },
+            { "name": "order",  "value": "score_final.desc" },
+            { "name": "limit",  "value": "200" }
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "f2-03-if-has-leads",
+      "name": "Há Leads A?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [480, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "cond-has-leads",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": "0",
+              "operator": { "type": "number", "operation": "notEquals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+
+    {
+      "id": "f2-04-sem-leads",
+      "name": "Nenhum Lead A para processar",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [720, 480]
+    },
+
+    {
+      "id": "f2-05-split",
+      "name": "Processar em Lote",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [720, 160],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+
+    {
+      "id": "f2-06-throttle",
+      "name": "Throttle 2s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [960, 0],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 2,
+        "unit": "seconds"
+      }
+    },
+
+    {
+      "id": "f2-07-check-diagnosed",
+      "name": "Já Diagnosticado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1200, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "cond-diagnosed",
+              "leftValue": "={{ $json.diagnostico_pdf_url }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+
+    {
+      "id": "f2-08-skip",
+      "name": "Lead Já Diagnosticado",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1440, -200]
+    },
+
+    {
+      "id": "f2-09-build-prompt",
+      "name": "Montar Prompt Diagnóstico",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 160],
+      "parameters": {
+        "jsCode": "// Monta o payload para o Gerador de Diagnóstico (Sonnet)\n// Usa os dados já coletados e scorados na Fase 1\nconst lead = $input.item.json;\n\n// Estrutura que o prompt do Gerador espera\nconst analistaOutput = {\n  empresa: lead.business_name,\n  score_capacidade: lead.score_capacidade,\n  score_dor: lead.score_dor,\n  score_encaixe: lead.score_encaixe,\n  score_final: lead.score_final,\n  grade: lead.score,\n  rebaixado_por_capacidade: lead.rebaixado_por_capacidade,\n  dores: (typeof lead.dores_estruturadas === 'string'\n    ? JSON.parse(lead.dores_estruturadas || '[]')\n    : lead.dores_estruturadas || []),\n  gancho_de_abordagem: lead.gancho_de_abordagem,\n  justificativa_encaixe: lead.justificativa_encaixe,\n  dados_contexto: {\n    cidade: lead.address_city,\n    estado: lead.address_state,\n    categoria: lead.google_category,\n    nota_google: lead.google_rating,\n    num_avaliacoes: lead.google_reviews_count,\n    site: lead.website || 'não encontrado',\n    cnpj_porte: lead.cnpj_porte,\n    cnpj_situacao: lead.cnpj_situacao,\n    anos_atividade: lead.cnpj_data_abertura\n      ? Math.floor((Date.now() - new Date(lead.cnpj_data_abertura).getTime()) / (365.25 * 24 * 3600 * 1000))\n      : null\n  }\n};\n\nconst systemPrompt = `Você é Consultor de Diagnóstico Digital da Hubimobi. Você analisou uma empresa e vai escrever um relatório de 1 página para o DONO dela ler.\\n\\nSeu tom: consultor que estudou o negócio dele, não vendedor. Você aponta problemas com evidência e mostra o que está em jogo — mas NÃO oferece serviço, NÃO cita preço, NÃO faz pitch. O objetivo é a pessoa pensar \"esse cara entendeu meu negócio melhor que eu\" e querer conversar.`;\n\nconst userPrompt = `DADOS (vindos da análise da Fase 1):\\n${JSON.stringify(analistaOutput, null, 2)}\\n\\nOFERTA QUE A HUBIMOBI VENDE (use só para direcionar o \"caminho\", sem citar): ${lead.oferta_campanha || 'Presença Digital Completa'}\\n\\nREGRAS:\\n- Português do Brasil, claro, sem jargão técnico que o dono não entenda.\\n- Toda afirmação de problema precisa vir com a EVIDÊNCIA (o dado real).\\n- O impacto financeiro é uma ESTIMATIVA com faixa, sempre rotulada como estimativa. Nunca invente número preciso.\\n- Máximo 3 problemas — os mais fortes. Não liste tudo.\\n- Termine apontando um CAMINHO, não um produto.\\n\\nRESPONDA APENAS COM ESTE JSON (sem markdown):\\n{\\n  \"titulo\": \"Diagnóstico Digital — <nome da empresa>\",\\n  \"resumo_executivo\": \"2-3 frases: o que a empresa faz bem e o principal ponto cego\",\\n  \"ponto_forte\": \"1 coisa que eles JÁ fazem bem (gera confiança, mostra que você olhou de verdade)\",\\n  \"problemas\": [\\n    {\\n      \"titulo\": \"frase curta\",\\n      \"descricao\": \"o que está acontecendo, em linguagem do dono\",\\n      \"evidencia\": \"o dado concreto que comprova\",\\n      \"consequencia\": \"o que isso custa no dia a dia\",\\n      \"impacto\": \"alto|medio|baixo\"\\n    }\\n  ],\\n  \"impacto_estimado\": {\\n    \"cenario_sem_acao\": \"o que continua acontecendo se nada mudar (faixa estimada)\",\\n    \"cenario_com_acao\": \"o ganho plausível se resolver (faixa estimada, rotulada como estimativa)\"\\n  },\\n  \"caminho_sugerido\": \"a direção da solução em 2-3 frases, SEM citar produto ou preço\",\\n  \"frase_de_fechamento\": \"1 frase que convida à conversa sem pressionar\"\\n}`;\n\nreturn [{\n  json: {\n    ...lead,\n    aiSystemPrompt: systemPrompt,\n    aiUserPrompt: userPrompt\n  }\n}];"
+      }
+    },
+
+    {
+      "id": "f2-10-delay-ai",
+      "name": "Delay IA 1s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1680, 160],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 1,
+        "unit": "seconds"
+      }
+    },
+
+    {
+      "id": "f2-11-call-sonnet",
+      "name": "Gerar Diagnóstico (Sonnet)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1920, 160],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key",         "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version",  "value": "2023-06-01" },
+            { "name": "Content-Type",       "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2048, temperature: 0.3, system: $json.aiSystemPrompt, messages: [{ role: 'user', content: $json.aiUserPrompt }] }) }}"
+      }
+    },
+
+    {
+      "id": "f2-12-parse-diag",
+      "name": "Parsear Diagnóstico",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2160, 160],
+      "parameters": {
+        "jsCode": "// Extrai JSON do diagnóstico da resposta do Sonnet\nconst apiResponse = $input.item.json;\nconst lead = $('Montar Prompt Diagnóstico').item.json;\n\nlet diag = {};\ntry {\n  const rawText = apiResponse.content?.[0]?.text || '';\n  const jsonMatch = rawText.match(/\\{[\\s\\S]*\\}/);\n  if (!jsonMatch) throw new Error('Sem JSON na resposta: ' + rawText.substring(0,100));\n  diag = JSON.parse(jsonMatch[0]);\n} catch (e) {\n  diag = {\n    titulo: `Diagnóstico Digital — ${lead.business_name}`,\n    resumo_executivo: 'Erro ao gerar diagnóstico. Revisar manualmente.',\n    ponto_forte: 'Dados insuficientes para avaliação.',\n    problemas: [{ titulo: 'Erro de processamento', descricao: e.message, evidencia: 'N/A', consequencia: 'N/A', impacto: 'baixo' }],\n    impacto_estimado: { cenario_sem_acao: 'N/A', cenario_com_acao: 'N/A' },\n    caminho_sugerido: 'Revisar manualmente.',\n    frase_de_fechamento: 'Entre em contato para discutir os resultados.'\n  };\n}\n\n// Tokens e custo Sonnet (sonnet-4-6: $3/M input, $15/M output)\nconst promptTokens = apiResponse.usage?.input_tokens || 0;\nconst completionTokens = apiResponse.usage?.output_tokens || 0;\nconst costUsd = (promptTokens * 0.000003) + (completionTokens * 0.000015);\n\nreturn [{\n  json: {\n    ...lead,\n    diagnostico: diag,\n    diagnostico_json: JSON.stringify(diag),\n    aiPromptTokens: promptTokens,\n    aiCompletionTokens: completionTokens,\n    aiCostUsd: costUsd\n  }\n}];"
+      }
+    },
+
+    {
+      "id": "f2-13-render-html",
+      "name": "Renderizar HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2400, 160],
+      "parameters": {
+        "jsCode": "// Preenche o template HTML com os dados do diagnóstico\n// O template está inline para ser auto-contido\nconst lead = $input.item.json;\nconst d = lead.diagnostico;\n\n// Data em PT-BR\nconst dataBR = new Date().toLocaleDateString('pt-BR', {\n  day: '2-digit', month: 'long', year: 'numeric'\n});\n\n// Monta o bloco de problemas\nconst escapeHtml = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');\n\nconst problemsHtml = (d.problemas || []).map(p => `\n  <div class=\"problem-item impacto-${(p.impacto||'alto').toLowerCase()}\">\n    <div class=\"problem-title\">${escapeHtml(p.titulo)}</div>\n    <div class=\"problem-desc\">${escapeHtml(p.descricao)}</div>\n    <div class=\"problem-meta\">\n      <span class=\"meta-pill\"><strong>Evidência:</strong> ${escapeHtml(p.evidencia)}</span>\n      <span class=\"meta-pill\"><strong>Consequência:</strong> ${escapeHtml(p.consequencia)}</span>\n    </div>\n  </div>\n`).join('');\n\n// Template HTML completo (baseado em sdr/templates/diagnostico.html)\nlet html = `<!DOCTYPE html><html lang=\"pt-BR\"><head><meta charset=\"UTF-8\"><title>${escapeHtml(d.titulo)}</title><style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;font-size:11pt;color:#1a1a2e;background:#fff;line-height:1.55;width:210mm;min-height:297mm;padding:18mm 20mm 16mm 20mm}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0056d2;padding-bottom:10px;margin-bottom:14px}.brand-name{font-size:20pt;font-weight:800;color:#0056d2;letter-spacing:2px;line-height:1}.brand-tagline{font-size:7.5pt;color:#6b7280;text-transform:uppercase;letter-spacing:1.5px;margin-top:2px}.doc-meta{text-align:right;font-size:8.5pt;color:#6b7280}.doc-meta .company-name{font-size:10.5pt;font-weight:700;color:#1a1a2e;margin-bottom:2px}.doc-title-bar{background:linear-gradient(135deg,#0056d2,#0ea5e9);color:white;padding:8px 14px;border-radius:6px;margin-bottom:14px}.doc-title-bar h1{font-size:12pt;font-weight:700}section{margin-bottom:12px}h2{font-size:9.5pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0056d2;border-left:3px solid #0056d2;padding-left:7px;margin-bottom:7px}.executive-box{background:#f0f7ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 12px}.strong-point{display:flex;gap:6px;margin-bottom:6px;font-size:10pt}.check-icon{color:#16a34a;font-weight:800;flex-shrink:0}.resumo-text{font-size:10pt;color:#374151}.problem-item{border:1px solid #e5e7eb;border-left:4px solid #dc2626;border-radius:0 6px 6px 0;padding:8px 10px;margin-bottom:7px;page-break-inside:avoid}.problem-item.impacto-medio{border-left-color:#d97706}.problem-item.impacto-baixo{border-left-color:#6b7280}.problem-title{font-size:10.5pt;font-weight:700;color:#1a1a2e;margin-bottom:3px}.problem-desc{font-size:9.5pt;color:#374151;margin-bottom:4px}.problem-meta{display:flex;gap:14px;flex-wrap:wrap}.meta-pill{font-size:8.5pt;background:#f3f4f6;border-radius:4px;padding:2px 7px;color:#4b5563}.impact-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.impact-box{border-radius:6px;padding:8px 10px}.impact-box.bad{background:#fff1f2;border:1px solid #fecdd3}.impact-box.good{background:#f0fdf4;border:1px solid #bbf7d0}.impact-box h3{font-size:8.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.impact-box.bad h3{color:#dc2626}.impact-box.good h3{color:#16a34a}.impact-box p{font-size:9.5pt;color:#374151}.path-box{background:#fafafa;border:1px solid #e5e7eb;border-radius:6px;padding:9px 12px}.path-text{font-size:10pt;color:#374151;margin-bottom:8px}.closing-quote{border-top:1px dashed #d1d5db;padding-top:7px;font-size:10.5pt;font-style:italic;color:#0056d2;font-weight:600;text-align:center}.footer{border-top:1px solid #e5e7eb;padding-top:8px;margin-top:14px;display:flex;justify-content:space-between;align-items:flex-end;font-size:7.5pt;color:#9ca3af}.footer-brand{font-weight:700;color:#6b7280}.disclaimer{max-width:320px;text-align:right;font-size:7pt;line-height:1.4}</style></head><body>\n<div class=\"header\">\n  <div class=\"brand\"><div class=\"brand-name\">HUBIMOBI</div><div class=\"brand-tagline\">Marketing &amp; Automação Digital</div></div>\n  <div class=\"doc-meta\"><div class=\"company-name\">${escapeHtml(lead.business_name)}</div><div>${escapeHtml(lead.address_city||'')}${lead.address_state?'/'+lead.address_state:''}</div><div>${dataBR}</div></div>\n</div>\n<div class=\"doc-title-bar\"><h1>${escapeHtml(d.titulo)}</h1></div>\n<section><h2>Visão Geral</h2><div class=\"executive-box\"><div class=\"strong-point\"><span class=\"check-icon\">✓</span><span><strong>O que está funcionando:</strong> ${escapeHtml(d.ponto_forte)}</span></div><p class=\"resumo-text\">${escapeHtml(d.resumo_executivo)}</p></div></section>\n<section><h2>Pontos Críticos Identificados</h2>${problemsHtml}</section>\n<section><h2>O que está em jogo</h2><div class=\"impact-grid\"><div class=\"impact-box bad\"><h3>⚠ Sem ação</h3><p>${escapeHtml(d.impacto_estimado?.cenario_sem_acao||'')}</p></div><div class=\"impact-box good\"><h3>✓ Com melhorias</h3><p>${escapeHtml(d.impacto_estimado?.cenario_com_acao||'')}</p></div></div></section>\n<section><h2>Caminho Sugerido</h2><div class=\"path-box\"><p class=\"path-text\">${escapeHtml(d.caminho_sugerido)}</p><p class=\"closing-quote\">${escapeHtml(d.frase_de_fechamento)}</p></div></section>\n<div class=\"footer\"><div><div class=\"footer-brand\">HUBIMOBI</div><div>Diagnóstico confidencial · ${dataBR}</div></div><div class=\"disclaimer\">As estimativas de impacto são projeções baseadas em dados de mercado e benchmarks do setor. Devem ser validadas com análise detalhada do negócio.</div></div>\n</body></html>`;\n\n// Converte HTML para binário para envio ao Gotenberg\nconst htmlBuf = Buffer.from(html, 'utf-8');\n\nreturn [{\n  json: { ...lead },\n  binary: {\n    htmlFile: {\n      data: htmlBuf.toString('base64'),\n      mimeType: 'text/html',\n      fileName: 'index.html',\n      fileExtension: 'html'\n    }\n  }\n}];"
+      }
+    },
+
+    {
+      "id": "f2-14-gotenberg-pdf",
+      "name": "Gerar PDF (Gotenberg)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2640, 160],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GOTENBERG_URL || 'http://localhost:3000' }}/forms/chromium/convert/html",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "files",
+              "inputDataFieldName": "htmlFile"
+            },
+            { "name": "marginTop",    "value": "18mm" },
+            { "name": "marginBottom", "value": "16mm" },
+            { "name": "marginLeft",   "value": "20mm" },
+            { "name": "marginRight",  "value": "20mm" },
+            { "name": "paperWidth",   "value": "21cm" },
+            { "name": "paperHeight",  "value": "29.7cm" },
+            { "name": "scale",        "value": "1" }
+          ]
+        },
+        "options": {
+          "response": { "response": { "responseFormat": "file", "outputPropertyName": "pdfBinary" } }
+        }
+      }
+    },
+
+    {
+      "id": "f2-15-upload-pdf",
+      "name": "Upload PDF (Supabase Storage)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2880, 160],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/storage/v1/object/sdr-diagnosticos/{{ $('Parsear Diagnóstico').item.json.id }}.pdf",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type",  "value": "application/pdf" },
+            { "name": "x-upsert",     "value": "true" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "pdfBinary"
+      }
+    },
+
+    {
+      "id": "f2-16-update-lead",
+      "name": "Atualizar Lead (status + PDF URL)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3120, 160],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/sdr_leads?id=eq.{{ $('Parsear Diagnóstico').item.json.id }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "Prefer",        "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ diagnostico_json: $('Parsear Diagnóstico').item.json.diagnostico_json, diagnostico_pdf_url: $env.SUPABASE_URL + '/storage/v1/object/public/sdr-diagnosticos/' + $('Parsear Diagnóstico').item.json.id + '.pdf', diagnosticado_at: new Date().toISOString(), status: 'DIAGNOSTICADO' }) }}"
+      }
+    },
+
+    {
+      "id": "f2-17-log-ai-conv",
+      "name": "Registrar Custo IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3360, 160],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/sdr_ai_conversations",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "Prefer",        "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ lead_id: $('Parsear Diagnóstico').item.json.id, project_id: $('Parsear Diagnóstico').item.json.project_id, conversation_type: 'OUTREACH_DRAFT', model_used: 'claude-sonnet-4-6', prompt_tokens: $('Parsear Diagnóstico').item.json.aiPromptTokens, completion_tokens: $('Parsear Diagnóstico').item.json.aiCompletionTokens, total_tokens: ($('Parsear Diagnóstico').item.json.aiPromptTokens || 0) + ($('Parsear Diagnóstico').item.json.aiCompletionTokens || 0), cost_usd: $('Parsear Diagnóstico').item.json.aiCostUsd, messages: [{ role: 'user', content: 'Gerador de Diagnóstico — ver diagnostico_json no lead' }] }) }}"
+      }
+    },
+
+    {
+      "id": "f2-18-resumo",
+      "name": "Resumo Final Fase 2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 480],
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst summary = {\n  mensagem: '✅ Fase 2 concluída — diagnósticos gerados e PDFs salvos!',\n  timestamp: new Date().toISOString(),\n  total_processados: items.length,\n  proximos_passos: [\n    '1. Execute no Supabase SQL Editor: SELECT * FROM sdr_diagnostico_review LIMIT 10',\n    '2. Abra cada PDF pelo link diagnostico_pdf_url e revise o conteúdo',\n    '3. Marque diagnostico_aprovado = true/false para cada lead revisado',\n    '4. Meta: 8/10 aprovados sem ajuste antes de seguir para a Fase 3',\n    '5. Consulte sdr/prompts/gerador-diagnostico.md para o gate de revisão completo'\n  ],\n  setup_gotenberg: 'Certifique-se que o Gotenberg está rodando: docker run --rm -p 3000:3000 gotenberg/gotenberg:8'\n};\nconsole.log(JSON.stringify(summary, null, 2));\nreturn [{ json: summary }];"
+      }
+    }
+
+  ],
+
+  "connections": {
+    "Iniciar Fase 2": {
+      "main": [[{ "node": "Buscar Leads A (Supabase)", "type": "main", "index": 0 }]]
+    },
+    "Buscar Leads A (Supabase)": {
+      "main": [[{ "node": "Há Leads A?", "type": "main", "index": 0 }]]
+    },
+    "Há Leads A?": {
+      "main": [
+        [{ "node": "Processar em Lote",              "type": "main", "index": 0 }],
+        [{ "node": "Nenhum Lead A para processar",   "type": "main", "index": 0 }]
+      ]
+    },
+    "Processar em Lote": {
+      "main": [
+        [{ "node": "Throttle 2s",        "type": "main", "index": 0 }],
+        [{ "node": "Resumo Final Fase 2", "type": "main", "index": 0 }]
+      ]
+    },
+    "Throttle 2s": {
+      "main": [[{ "node": "Já Diagnosticado?", "type": "main", "index": 0 }]]
+    },
+    "Já Diagnosticado?": {
+      "main": [
+        [{ "node": "Lead Já Diagnosticado",    "type": "main", "index": 0 }],
+        [{ "node": "Montar Prompt Diagnóstico", "type": "main", "index": 0 }]
+      ]
+    },
+    "Lead Já Diagnosticado": {
+      "main": [[{ "node": "Processar em Lote", "type": "main", "index": 0 }]]
+    },
+    "Montar Prompt Diagnóstico": {
+      "main": [[{ "node": "Delay IA 1s", "type": "main", "index": 0 }]]
+    },
+    "Delay IA 1s": {
+      "main": [[{ "node": "Gerar Diagnóstico (Sonnet)", "type": "main", "index": 0 }]]
+    },
+    "Gerar Diagnóstico (Sonnet)": {
+      "main": [[{ "node": "Parsear Diagnóstico", "type": "main", "index": 0 }]]
+    },
+    "Parsear Diagnóstico": {
+      "main": [[{ "node": "Renderizar HTML", "type": "main", "index": 0 }]]
+    },
+    "Renderizar HTML": {
+      "main": [[{ "node": "Gerar PDF (Gotenberg)", "type": "main", "index": 0 }]]
+    },
+    "Gerar PDF (Gotenberg)": {
+      "main": [[{ "node": "Upload PDF (Supabase Storage)", "type": "main", "index": 0 }]]
+    },
+    "Upload PDF (Supabase Storage)": {
+      "main": [[{ "node": "Atualizar Lead (status + PDF URL)", "type": "main", "index": 0 }]]
+    },
+    "Atualizar Lead (status + PDF URL)": {
+      "main": [[{ "node": "Registrar Custo IA", "type": "main", "index": 0 }]]
+    },
+    "Registrar Custo IA": {
+      "main": [[{ "node": "Processar em Lote", "type": "main", "index": 0 }]]
+    }
+  }
+}

@@ -1,22 +1,18 @@
-# Prompt: Analista SDR — Score de Oportunidade
+# Prompt: Analista de Qualificação SDR — Score Auditável por Bloco
 
-> **Uso:** Cole este prompt na interface de teste da Anthropic (console.anthropic.com),
-> no Playground do Claude ou num bloco HTTP do n8n apontando para `claude-haiku-4-5`.
-> Substitua `{{DADOS_DA_EMPRESA}}` pelos dados reais antes de enviar.
+> **Modelo:** `claude-haiku-4-5` (volume; temperatura 0)
+> **Uso:** Substitua as três variáveis `{{...}}` antes de enviar.
+> **Saída:** JSON puro — sem markdown, sem texto fora do objeto.
 
 ---
 
 ## SYSTEM PROMPT
 
 ```
-Você é um Analista de Inteligência Comercial especializado em identificar oportunidades
-de marketing digital para pequenas e médias empresas no Brasil.
-
-Sua única função nesta chamada é: receber dados públicos de uma empresa, analisar sua
-presença digital e potencial de compra de serviços de marketing, e devolver um JSON
-estruturado com score e dores identificadas.
-
-Você NÃO deve conversar. Você NÃO deve perguntar nada. Responda SOMENTE com JSON válido.
+Você é o Analista de Qualificação da Hubimobi. Sua função é avaliar UMA
+empresa por vez a partir de dados públicos e devolver um score auditável.
+Você NÃO vende, NÃO escreve mensagem, NÃO inventa dados. Se um dado faltar,
+registre como ausente — nunca presuma.
 ```
 
 ---
@@ -24,136 +20,144 @@ Você NÃO deve conversar. Você NÃO deve perguntar nada. Responda SOMENTE com 
 ## USER PROMPT (template)
 
 ```
-Analise a empresa abaixo e classifique a oportunidade de venda de serviços de marketing digital.
+NICHO DA CAMPANHA: {{nicho}}
+OFERTA QUE VAMOS VENDER: {{oferta}}
 
-## DADOS DA EMPRESA
+DADOS DA EMPRESA (alguns campos podem vir vazios):
+{{dados_do_lead_em_json}}
+# Inclui: nome, cnpj, cidade, site_conteudo (texto extraído do site),
+# tem_whatsapp, velocidade_site_segundos, nota_google, num_avaliacoes,
+# instagram_posts_ultimos_30d, instagram_ultimo_post_dias, bio_instagram,
+# faturamento_estimado_cnpj, anos_de_atividade
 
-{{DADOS_DA_EMPRESA}}
+============================================================
+RÉGUA DE SCORE (total 0–100). Pontue CADA bloco de forma independente.
+============================================================
 
----
+BLOCO 1 — CAPACIDADE FINANCEIRA (0–30 pts) — "tem como pagar?"
+- Anos de atividade: 5+ anos = 10 | 2–5 = 6 | <2 = 2 | ausente = 4
+- Faturamento estimado: alto p/ o nicho = 12 | médio = 8 | baixo = 3 | ausente = 5
+- Porte aparente (nº avaliações como proxy de movimento):
+  100+ = 8 | 30–100 = 5 | <30 = 2
 
-## CRITÉRIOS DE CLASSIFICAÇÃO
+BLOCO 2 — DOR DIGITAL (0–40 pts) — "precisa do que eu vendo?"
+Aqui mora a oportunidade. Quanto MAIS dor, MAIS pontos (a dor é o gancho).
+- Site: ausente = 12 | existe mas lento (>3s) = 8 | bom = 2
+- WhatsApp de atendimento: ausente = 10 | presente sem automação aparente = 5 | presente = 1
+- Instagram (frequência): parado 30+ dias = 10 | <2 posts/sem = 6 | ativo = 1
+- Reputação: nota boa (4.3+) mas <40 avaliações = 8 (ótima dor: tem qualidade,
+  falta volume) | nota baixa = 5 | já tem muitas e boas = 1
 
-### SCORE A — Alta Oportunidade (prioridade máxima de prospecção)
-A empresa deve atender a MAIORIA dos critérios:
-- CNPJ ATIVO há mais de 2 anos (negócio estabelecido, tem budget)
-- Avaliação Google entre 3,0 e 4,3 (imperfeita = espaço de melhoria de reputação)
-- Mais de 15 avaliações (volume = negócio real com fluxo de clientes)
-- Website AUSENTE ou com sinais de abandono (sem SSL, URL quebrada, domínio genérico)
-- Instagram/Facebook AUSENTE ou com menos de 300 seguidores ou última postagem > 60 dias
-- Sem indícios de anúncios pagos ativos
-- Porte ME ou EPP (pequeno o suficiente para precisar de ajuda, grande o suficiente para pagar)
-- Nicho com alta competição digital: estética, saúde/clínicas, alimentação, fitness,
-  educação, automotivo, pet, moda, varejo local
+BLOCO 3 — ENCAIXE COM A OFERTA (0–30 pts) — "minha oferta resolve a dor dele?"
+Avalie se "{{oferta}}" ataca diretamente as dores que você encontrou nos
+blocos acima. Conexão direta e óbvia = 30 | parcial = 15 | fraca = 5.
+Explique em 1 frase POR QUE deu essa nota.
 
-### SCORE B — Oportunidade Média
-- Empresa ativa com presença digital básica mas inconsistente
-- Site simples sem SEO ou redes sociais com atividade irregular
-- Porte ME/EPP mas com sinais de já investir levemente em marketing
-- Nicho moderadamente competitivo
-- OU: dados insuficientes para classificar como A com confiança
+============================================================
+REGRAS DE CLASSIFICAÇÃO
+============================================================
+- A = 70+   (prospectar)
+- B = 45–69 (nutrir depois)
+- C = <45   (descartar nesta campanha)
+- TRAVA DE SEGURANÇA: se CAPACIDADE FINANCEIRA < 10, rebaixe para no
+  máximo "B", mesmo que a dor seja enorme. Empresa que não paga não é lead A.
 
-### SCORE C — Baixa Oportunidade (não prospectar agora)
-- CNPJ BAIXADO, SUSPENSO, INAPTA ou com irregularidade
-- Empresa de grande porte (capital social > R$ 500.000 ou porte DEMAIS/GRANDE)
-- Presença digital muito forte: site profissional, +500 avaliações Google, anúncios ativos
-- Nicho com baixo fit para marketing digital: indústria pesada, atacado B2B, imóveis de luxo,
-  clínicas de alto padrão com agenda lotada
-- Empresa claramente fechada, sem atividade ou endereço inválido
-
----
-
-## REGRAS OBRIGATÓRIAS DE SAÍDA
-
-1. Responda SOMENTE com JSON puro — sem markdown, sem ```json, sem texto antes ou depois.
-2. Todos os campos listados abaixo devem estar presentes.
-3. Arrays devem ter no mínimo 1 item e no máximo 4 itens.
-4. Strings devem estar em português brasileiro.
-5. Se o score for A ou B, o campo "discard_reason" deve ser null.
-6. Se o score for C, o campo "discard_reason" deve explicar o motivo em 1 frase.
-7. "digital_gap_score": 0 = presença digital excelente, 100 = presença digital zero.
-8. "first_message_angle": escreva na perspectiva de QUEM vai enviar a mensagem fria,
-   não na perspectiva da empresa. Foco no benefício concreto, não no problema.
-
-## JSON DE SAÍDA ESPERADO
-
+============================================================
+RESPONDA APENAS COM ESTE JSON. Sem markdown, sem texto fora dele.
+============================================================
 {
-  "score": "A",
-  "score_rationale": "Empresa ativa há 5 anos, 47 avaliações Google com nota 3.8, sem site próprio e Instagram abandonado há 4 meses. Perfil ideal para pacote completo de presença digital.",
-  "digital_gap_score": 85,
-  "identified_pains": [
-    "Sem site profissional: clientes não encontram informações básicas online",
-    "Instagram desatualizado perde clientes que pesquisam antes de ligar",
-    "Nota Google 3.8 não reflete qualidade real do serviço — reputação recuperável"
+  "empresa": "nome",
+  "score_capacidade": <0-30>,
+  "score_dor": <0-40>,
+  "score_encaixe": <0-30>,
+  "score_final": <soma>,
+  "grade": "A|B|C",
+  "rebaixado_por_capacidade": <true|false>,
+  "dores": [
+    {"dor": "frase curta e concreta", "evidencia": "o dado que comprova", "impacto": "alto|medio|baixo"}
   ],
-  "improvement_opportunities": [
-    "Criar site de 1 página com agendamento online para capturar leads orgânicos",
-    "Campanha de resgate de avaliações Google para subir de 3.8 para 4.5+",
-    "Conteúdo semanal no Instagram mostrando resultados e depoimentos"
-  ],
-  "first_message_angle": "Vimos que vocês têm ótimas avaliações mas ainda não têm site — isso faz com que clientes que pesquisam no Google não consigam achar o contato de vocês. Posso mostrar em 10 minutos como resolver isso.",
-  "discard_reason": null
+  "gancho_de_abordagem": "a UMA dor mais forte pra usar no primeiro contato",
+  "justificativa_encaixe": "1 frase: por que a oferta resolve (ou não)",
+  "dados_ausentes": ["liste o que faltou pra você confiar mais no score"]
 }
 ```
 
 ---
 
-## EXEMPLO DE DADOS DE ENTRADA (para teste isolado)
+## ESTRUTURA DE `{{dados_do_lead_em_json}}`
 
-Substitua `{{DADOS_DA_EMPRESA}}` por algo como:
+O workflow n8n injeta este JSON montado pelo nó **"Preparar Prompt IA"**:
 
+```json
+{
+  "nome": "Estética Bella Forma",
+  "cnpj": "12.345.678/0001-90",
+  "cidade": "Campinas / SP",
+  "site_conteudo": "Bem-vindo à Estética Bella Forma. Serviços: limpeza de pele...",
+  "tem_whatsapp": true,
+  "velocidade_site_segundos": 4.2,
+  "nota_google": 4.1,
+  "num_avaliacoes": 62,
+  "instagram_posts_ultimos_30d": 2,
+  "instagram_ultimo_post_dias": 18,
+  "bio_instagram": "Estética e beleza em Campinas 💆‍♀️ | Agende pelo link!",
+  "faturamento_estimado_cnpj": "Médio (capital R$ 10.000, ME, 5 anos de atividade)",
+  "anos_de_atividade": 5
+}
 ```
-Nome: Estética Bella Forma
-Categoria: Clínica de Estética
-Cidade: Campinas / SP
-Avaliação Google: 4.1 ⭐ (62 avaliações)
-Website: Não encontrado
-Instagram: @bellafforma_sp — 187 seguidores, última postagem há 3 meses
-Facebook: Página encontrada, sem atividade desde 2022
-CNPJ: 12.345.678/0001-90
-Situação CNPJ: ATIVA
-Data de abertura: 15/03/2019
-Porte: ME
-Capital social: R$ 10.000
-Atividade principal: Atividades de estética e outros serviços de cuidados com a beleza
-Telefone CNPJ: (19) 99999-0001
-E-mail CNPJ: bella.forma@exemplo.com.br
-```
+
+Campos ausentes (null / não coletados) devem ser listados em `dados_ausentes`.
 
 ---
 
-## COMO TESTAR NO CONSOLE ANTHROPIC
+## COMO TESTAR ISOLADAMENTE
 
-1. Acesse console.anthropic.com → Workbench
-2. Modelo: `claude-haiku-4-5`
-3. Temperature: `0` (respostas determinísticas para validação)
-4. Max tokens: `1024`
-5. Cole o system prompt no campo "System"
-6. Cole o user prompt (com dados reais substituídos) no campo "Human"
-7. Compare o JSON retornado com a realidade do lead
+1. Abra **console.anthropic.com → Workbench**
+2. Modelo: `claude-haiku-4-5` | Temperature: `0` | Max tokens: `1024`
+3. Cole o **System Prompt** no campo "System"
+4. Cole o **User Prompt** com os três `{{...}}` substituídos no campo "Human"
+5. Verifique:
+   - `score_capacidade + score_dor + score_encaixe == score_final`
+   - `grade` condiz com o `score_final` e as regras de classificação
+   - `rebaixado_por_capacidade = true` quando `score_capacidade < 10`
+   - `dados_ausentes` lista campos que não vieram preenchidos
 
-## COMO VALIDAR O SCORE MANUALMENTE (20 leads de teste)
+---
 
-Para cada lead score A, verifique:
+## PAINEL DE VALIDAÇÃO MANUAL (20 leads de teste)
 
-| Critério | Verificação manual |
-|---|---|
-| CNPJ ativo | Consulte cnpj.ws ou receita.fazenda.gov.br |
-| Avaliação realista | Abra o Google Maps e confira |
-| Sem site funcional | Tente acessar o site listado |
-| Instagram fraco | Abra o perfil e conte posts e seguidores |
-| Porte adequado | Confirme no CNPJ se é ME/EPP |
-| `score_rationale` condiz | O texto do modelo explica o que você vê? |
+Execute no **Supabase SQL Editor**:
 
-Preencha o campo `manual_score_ok = true/false` na tabela `sdr_leads` via:
+```sql
+SELECT
+  business_name,
+  address_city || '/' || address_state AS cidade,
+  score_capacidade, score_dor, score_encaixe, score_final,
+  score AS grade,
+  rebaixado_por_capacidade,
+  gancho_de_abordagem,
+  justificativa_encaixe,
+  dores_estruturadas,
+  dados_ausentes_ia,
+  google_rating, google_reviews_count,
+  has_website, tem_whatsapp, has_instagram,
+  cnpj_porte, cnpj_situacao,
+  manual_score_ok, manual_notes
+FROM sdr_validation_panel
+WHERE grade = 'A'
+LIMIT 20;
+```
+
+Para cada lead, verifique manualmente no Google Maps + site + CNPJ e preencha:
 
 ```sql
 UPDATE sdr_leads
-SET manual_score_ok = true,
-    manual_notes    = 'Conferi: empresa ativa, sem site, Instagram abandonado. Score A correto.',
-    manual_validated_at = NOW()
-WHERE id = 'UUID_DO_LEAD_AQUI';
+SET
+  manual_score_ok = true,   -- ou false
+  manual_notes    = 'Confirmado: score_capacidade correto, dor de site validada',
+  manual_validated_at = NOW()
+WHERE id = 'UUID_DO_LEAD';
 ```
 
-Meta de qualidade: ≥ 80% dos leads A devem ter `manual_score_ok = true`.
-Se a taxa cair abaixo de 60%, ajuste os critérios no system prompt e reanalise o lote.
+**Meta de qualidade:** ≥ 80% dos leads A com `manual_score_ok = true`.
+Se cair abaixo de 60%, ajuste a régua do Bloco 2 (dor digital) e reanalise.

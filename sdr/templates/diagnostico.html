@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{titulo}}</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 11pt;
+      color: #1a1a2e;
+      background: #fff;
+      line-height: 1.55;
+      /* Força A4 no Gotenberg */
+      width: 210mm;
+      min-height: 297mm;
+      padding: 18mm 20mm 16mm 20mm;
+    }
+
+    /* ===== Cabeçalho ===== */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 3px solid #0056d2;
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-size: 20pt;
+      font-weight: 800;
+      color: #0056d2;
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+
+    .brand-tagline {
+      font-size: 7.5pt;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-top: 2px;
+    }
+
+    .doc-meta {
+      text-align: right;
+      font-size: 8.5pt;
+      color: #6b7280;
+    }
+
+    .doc-meta .company-name {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 2px;
+    }
+
+    .doc-title-bar {
+      background: linear-gradient(135deg, #0056d2, #0ea5e9);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 6px;
+      margin-bottom: 14px;
+    }
+
+    .doc-title-bar h1 {
+      font-size: 12pt;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    /* ===== Seções ===== */
+    section {
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 9.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #0056d2;
+      border-left: 3px solid #0056d2;
+      padding-left: 7px;
+      margin-bottom: 7px;
+    }
+
+    /* ===== Resumo executivo ===== */
+    .executive-box {
+      background: #f0f7ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .strong-point {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 6px;
+      font-size: 10pt;
+    }
+
+    .check-icon {
+      color: #16a34a;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .strong-point-text {
+      color: #1a1a2e;
+    }
+
+    .resumo-text {
+      font-size: 10pt;
+      color: #374151;
+    }
+
+    /* ===== Problemas ===== */
+    .problem-item {
+      border: 1px solid #e5e7eb;
+      border-left: 4px solid #dc2626;
+      border-radius: 0 6px 6px 0;
+      padding: 8px 10px;
+      margin-bottom: 7px;
+      page-break-inside: avoid;
+    }
+
+    .problem-item.impacto-medio {
+      border-left-color: #d97706;
+    }
+
+    .problem-item.impacto-baixo {
+      border-left-color: #6b7280;
+    }
+
+    .problem-title {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 3px;
+    }
+
+    .problem-desc {
+      font-size: 9.5pt;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+
+    .problem-meta {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .meta-pill {
+      font-size: 8.5pt;
+      background: #f3f4f6;
+      border-radius: 4px;
+      padding: 2px 7px;
+      color: #4b5563;
+    }
+
+    .meta-pill strong {
+      color: #1a1a2e;
+    }
+
+    /* ===== Impacto ===== */
+    .impact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .impact-box {
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+
+    .impact-box.bad {
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+    }
+
+    .impact-box.good {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+    }
+
+    .impact-box h3 {
+      font-size: 8.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .impact-box.bad h3 { color: #dc2626; }
+    .impact-box.good h3 { color: #16a34a; }
+
+    .impact-box p {
+      font-size: 9.5pt;
+      color: #374151;
+    }
+
+    /* ===== Caminho sugerido ===== */
+    .path-box {
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 9px 12px;
+    }
+
+    .path-text {
+      font-size: 10pt;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    .closing-quote {
+      border-top: 1px dashed #d1d5db;
+      padding-top: 7px;
+      font-size: 10.5pt;
+      font-style: italic;
+      color: #0056d2;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    /* ===== Rodapé ===== */
+    .footer {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 8px;
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-size: 7.5pt;
+      color: #9ca3af;
+    }
+
+    .footer-brand {
+      font-weight: 700;
+      color: #6b7280;
+    }
+
+    .disclaimer {
+      max-width: 320px;
+      text-align: right;
+      font-size: 7pt;
+      line-height: 1.4;
+    }
+
+    /* ===== Print ===== */
+    @media print {
+      body { padding: 0; }
+      .problem-item { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CABEÇALHO -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-name">HUBIMOBI</div>
+      <div class="brand-tagline">Marketing &amp; Automação Digital</div>
+    </div>
+    <div class="doc-meta">
+      <div class="company-name">{{empresa_nome}}</div>
+      <div>{{empresa_localidade}}</div>
+      <div>{{data_geracao}}</div>
+    </div>
+  </div>
+
+  <!-- TÍTULO -->
+  <div class="doc-title-bar">
+    <h1>{{titulo}}</h1>
+  </div>
+
+  <!-- SEÇÃO 1: RESUMO EXECUTIVO -->
+  <section>
+    <h2>Visão Geral</h2>
+    <div class="executive-box">
+      <div class="strong-point">
+        <span class="check-icon">✓</span>
+        <span class="strong-point-text"><strong>O que está funcionando:</strong> {{ponto_forte}}</span>
+      </div>
+      <p class="resumo-text">{{resumo_executivo}}</p>
+    </div>
+  </section>
+
+  <!-- SEÇÃO 2: PROBLEMAS -->
+  <section>
+    <h2>Pontos Críticos Identificados</h2>
+    {{problems_block}}
+  </section>
+
+  <!-- SEÇÃO 3: IMPACTO -->
+  <section>
+    <h2>O que está em jogo</h2>
+    <div class="impact-grid">
+      <div class="impact-box bad">
+        <h3>⚠ Sem ação</h3>
+        <p>{{cenario_sem_acao}}</p>
+      </div>
+      <div class="impact-box good">
+        <h3>✓ Com melhorias</h3>
+        <p>{{cenario_com_acao}}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEÇÃO 4: CAMINHO -->
+  <section>
+    <h2>Caminho Sugerido</h2>
+    <div class="path-box">
+      <p class="path-text">{{caminho_sugerido}}</p>
+      <p class="closing-quote">{{frase_de_fechamento}}</p>
+    </div>
+  </section>
+
+  <!-- RODAPÉ -->
+  <div class="footer">
+    <div>
+      <div class="footer-brand">HUBIMOBI</div>
+      <div>Diagnóstico confidencial · {{data_geracao}}</div>
+    </div>
+    <div class="disclaimer">
+      As estimativas de impacto são projeções baseadas em dados de mercado e benchmarks do setor.
+      Devem ser validadas com análise detalhada do negócio.
+    </div>
+  </div>
+
+</body>
+</html>
