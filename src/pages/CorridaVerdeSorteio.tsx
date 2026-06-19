@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Trophy, Medal, Award, Users, Upload, ChevronDown, ChevronUp, RotateCcw, Star } from "lucide-react";
+import { Trophy, Medal, Award, Users, Upload, ChevronDown, ChevronUp, RotateCcw, Star, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 // ─── Brand constants ───────────────────────────────────────────────
 const PINK = "#EC1B82";
@@ -280,6 +281,9 @@ function PrizeCard({ prize, displayName, winner, spinning, active }: PrizeCardPr
   );
 }
 
+// ─── GHL fetch ─────────────────────────────────────────────────────
+type GhlStatus = "idle" | "loading" | "success" | "error" | "unauth";
+
 // ─── Main page ─────────────────────────────────────────────────────
 export default function CorridaVerdeSorteio() {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -292,6 +296,10 @@ export default function CorridaVerdeSorteio() {
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
   const [showConfetti, setShowConfetti] = useState(false);
+  const [ghlStatus, setGhlStatus] = useState<GhlStatus>("idle");
+  const [ghlError, setGhlError] = useState("");
+  const [ghlTag, setGhlTag] = useState("corrida-verde");
+  const [ghlTotal, setGhlTotal] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const drawnIds = winners.filter(Boolean).map((w) => w!.id);
@@ -324,6 +332,65 @@ export default function CorridaVerdeSorteio() {
     setDisplayNames(["", "", ""]);
     setShowConfetti(false);
   }, [importText]);
+
+  const handleGhlFetch = useCallback(async () => {
+    setGhlStatus("loading");
+    setGhlError("");
+    try {
+      const { data, error } = await supabase.functions.invoke("corrida-verde-contacts", {
+        method: "POST",
+        body: { tag: ghlTag || "corrida-verde" },
+      });
+
+      if (error) {
+        const msg: string = error.message || String(error);
+        if (msg.includes("401") || msg.toLowerCase().includes("autorizado") || msg.toLowerCase().includes("unauthorized")) {
+          setGhlStatus("unauth");
+          setGhlError("Faça login como admin para buscar participantes do GHL.");
+        } else {
+          setGhlStatus("error");
+          setGhlError(msg);
+        }
+        return;
+      }
+
+      if (data?.error) {
+        const msg: string = data.error;
+        if (msg.toLowerCase().includes("autorizado") || msg.toLowerCase().includes("unauthorized") || msg.includes("401")) {
+          setGhlStatus("unauth");
+          setGhlError("Faça login como admin para buscar participantes do GHL.");
+        } else {
+          setGhlStatus("error");
+          setGhlError(msg);
+        }
+        return;
+      }
+
+      const list: Participant[] = (data?.participants ?? []).map((p: { id: string; name: string; phone?: string; email?: string }) => ({
+        id: p.id,
+        name: p.name,
+        phone: p.phone || p.email || "",
+      }));
+
+      if (list.length === 0) {
+        setGhlStatus("error");
+        setGhlError(`Nenhum contato encontrado com a tag "${ghlTag || "corrida-verde"}". Verifique a tag no GHL.`);
+        return;
+      }
+
+      setParticipants(list);
+      setGhlTotal(data.total);
+      setGhlStatus("success");
+      setWinners([null, null, null]);
+      setCurrentPrize(0);
+      setDisplayNames(["", "", ""]);
+      setShowConfetti(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setGhlStatus("error");
+      setGhlError(msg);
+    }
+  }, [ghlTag]);
 
   const runDraw = useCallback(() => {
     if (isDrawing || available.length === 0 || currentPrize >= 3) return;
@@ -430,6 +497,9 @@ export default function CorridaVerdeSorteio() {
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(24px); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
         .draw-btn {
           animation: pulsePink 2s infinite;
@@ -675,6 +745,137 @@ export default function CorridaVerdeSorteio() {
             </button>
           </div>
         )}
+
+        {/* ── GHL integration card ── */}
+        <div
+          style={{
+            background: CARD_BG,
+            border: `1px solid ${ghlStatus === "success" ? "#22c55e55" : ghlStatus === "error" || ghlStatus === "unauth" ? "#ef444455" : CARD_BORDER}`,
+            borderRadius: 16,
+            padding: "20px",
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <div
+              style={{
+                background: ghlStatus === "success" ? "#22c55e22" : "#ffffff0a",
+                border: `1px solid ${ghlStatus === "success" ? "#22c55e" : "#333"}`,
+                borderRadius: 8,
+                padding: "4px 10px",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              {ghlStatus === "success" ? (
+                <Wifi size={13} style={{ color: "#22c55e" }} />
+              ) : (
+                <WifiOff size={13} style={{ color: "#666" }} />
+              )}
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: ghlStatus === "success" ? "#22c55e" : "#666" }}>
+                GO HIGH LEVEL
+              </span>
+            </div>
+            {ghlStatus === "success" && ghlTotal !== null && (
+              <span style={{ fontSize: 12, color: "#22c55e" }}>
+                {ghlTotal.toLocaleString("pt-BR")} participantes carregados
+              </span>
+            )}
+          </div>
+
+          <p style={{ fontSize: 13, color: "#666", margin: "0 0 14px", lineHeight: 1.5 }}>
+            Busca automaticamente os cadastrados no evento com a tag GHL.
+            Verifique que os contatos no GHL possuem a tag abaixo.
+          </p>
+
+          {/* Tag + button row */}
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 200 }}>
+              <span style={{ fontSize: 12, color: "#555", whiteSpace: "nowrap" }}>Tag GHL:</span>
+              <input
+                value={ghlTag}
+                onChange={(e) => setGhlTag(e.target.value)}
+                placeholder="corrida-verde"
+                style={{
+                  flex: 1,
+                  background: "#0a0a0a",
+                  border: "1px solid #2a2a2a",
+                  borderRadius: 6,
+                  color: "#fff",
+                  padding: "6px 10px",
+                  fontSize: 13,
+                  fontFamily: "monospace",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <button
+              onClick={handleGhlFetch}
+              disabled={ghlStatus === "loading"}
+              style={{
+                background: ghlStatus === "loading" ? "#222" : PINK,
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                padding: "8px 20px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: ghlStatus === "loading" ? "not-allowed" : "pointer",
+                letterSpacing: "0.06em",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                whiteSpace: "nowrap",
+                transition: "background 0.2s",
+              }}
+            >
+              <RefreshCw
+                size={14}
+                style={{
+                  animation: ghlStatus === "loading" ? "spin 0.8s linear infinite" : "none",
+                }}
+              />
+              {ghlStatus === "loading" ? "BUSCANDO..." : "BUSCAR DO GHL"}
+            </button>
+          </div>
+
+          {/* Error / unauth message */}
+          {(ghlStatus === "error" || ghlStatus === "unauth") && (
+            <div
+              style={{
+                marginTop: 12,
+                background: "#ef444411",
+                border: "1px solid #ef444433",
+                borderRadius: 8,
+                padding: "10px 14px",
+                fontSize: 13,
+                color: "#fca5a5",
+                lineHeight: 1.5,
+              }}
+            >
+              {ghlStatus === "unauth" ? (
+                <>
+                  Acesso negado.{" "}
+                  <a href="/login" style={{ color: PINK, textDecoration: "underline" }}>
+                    Faça login como admin
+                  </a>{" "}
+                  para buscar do GHL.
+                </>
+              ) : (
+                ghlError
+              )}
+            </div>
+          )}
+
+          {/* Success refresh note */}
+          {ghlStatus === "success" && (
+            <p style={{ fontSize: 11, color: "#22c55e99", margin: "10px 0 0", lineHeight: 1.4 }}>
+              Lista sincronizada. Clique novamente em "Buscar do GHL" para atualizar antes do sorteio.
+            </p>
+          )}
+        </div>
 
         {/* ── Import participants section ── */}
         <div
