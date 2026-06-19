@@ -84,7 +84,6 @@ const SuperbossLojas = lazy(() => import("./pages/superboss/SuperbossLojas"));
 const SuperbossModulos = lazy(() => import("./pages/superboss/SuperbossModulos"));
 const SuperbossClonar = lazy(() => import("./pages/superboss/SuperbossClonar"));
 const SuperbossBackups = lazy(() => import("./pages/superboss/SuperbossBackups"));
-const CorridaVerdeSorteio = lazy(() => import("./pages/CorridaVerdeSorteio"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -194,7 +193,6 @@ const App = () => (
                 <Route path="/admin/dominios" element={<AdminRoute><DomainsPage /></AdminRoute>} />
                 <Route path="/admin/auditoria" element={<AdminRoute><AuditLogPage /></AdminRoute>} />
                 <Route path="/l/:code" element={<LinkRedirectPage />} />
-                <Route path="/corrida-verde/sorteio" element={<CorridaVerdeSorteio />} />
                 <Route path="/superboss" element={
                   <Suspense fallback={<PageLoader />}>
                     <RequireSuperboss>
