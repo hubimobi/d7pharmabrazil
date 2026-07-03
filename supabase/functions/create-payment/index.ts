@@ -23,6 +23,20 @@ serve(async (req) => {
 
     const body = await req.json();
     const tenantId = await resolveTenantId(req, body);
+
+    // SECURITY: validate that the resolved tenant exists and is active before
+    // touching credentials. Prevents cross-tenant abuse via body-supplied tenant_id.
+    const { data: tenantOk, error: tenantErr } = await supabaseAdmin.rpc(
+      "is_valid_active_tenant",
+      { _tenant_id: tenantId }
+    );
+    if (tenantErr || !tenantOk) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or inactive tenant" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const ASAAS_API_KEY = await getAsaasApiKey(supabaseAdmin, tenantId);
     const {
       customer_name,
