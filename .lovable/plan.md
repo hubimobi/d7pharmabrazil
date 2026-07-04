@@ -1,54 +1,54 @@
+## Diagnóstico
 
+O erro `DNS_PROBE_FINISHED_NXDOMAIN` em `d7pharmabrazil.com.br` **não é um erro de publicação nem de código**. É um problema de DNS: o navegador não conseguiu resolver o domínio para nenhum IP.
 
-## Problema
+A publicação em si funcionou — o site está no ar em:
+- https://d7pharmabrazil.lovable.app (URL Lovable)
+- https://id-preview--e7f9d910-27bc-4ff1-ad19-9df48deec852.lovable.app (preview)
 
-Na aba **WhatsApp → Disparos em Massa** (Broadcasts), a coluna/campo "Número" da lista de instâncias mostra o `instance_name` técnico (ex: `d7pharma_1776107871039`) em vez do nome do dono e do telefone real conectado (ex: `Luciano Leal — 55 47 8482-6726`).
+O que falha é apenas o domínio customizado `d7pharmabrazil.com.br`.
 
-A informação correta já existe no banco — a tabela `whatsapp_instances` tem as colunas `owner_name` (ou `profile_name`) e `owner_jid`/`phone_number` que são preenchidas pelo webhook da Evolution quando a conexão é estabelecida (vimos esses dados na lista principal: "Luciano Leal / 554784826726").
+## Causas possíveis
 
-## Solução
+1. **Registros DNS removidos/expirados** no registrador (Registro.br ou outro) — o mais comum. Os registros A precisam apontar para `185.158.133.1`.
+2. **Domínio expirado** — verificar validade no registrador.
+3. **Nameservers alterados** para outro provedor (Cloudflare, etc.) sem replicar os registros.
+4. **Propagação DNS** — se você acabou de configurar, pode levar até 72h (mas normalmente < 1h).
 
-Trocar a renderização do seletor/lista de instâncias do módulo de Broadcasts para mostrar:
+## Como verificar e corrigir
+
+### Passo 1 — Confirmar via DNS público
+Abrir https://dnschecker.org e consultar `d7pharmabrazil.com.br` (tipo A). Se vier vazio em todos os servidores → registros ausentes no registrador.
+
+### Passo 2 — Reconfigurar DNS no registrador
+No painel do registrador do domínio, garantir:
 
 ```text
-┌──────────────────────────────────────────┐
-│ ☑  Luciano Leal                          │
-│    +55 47 8482-6726                      │
-│    🟢 Conectado                           │
-└──────────────────────────────────────────┘
+Tipo   Nome      Valor
+A      @         185.158.133.1
+A      www       185.158.133.1
+TXT    _lovable  <token exibido em Project Settings → Domains>
 ```
 
-em vez do atual:
+Remover registros A antigos que apontem para outros IPs.
 
-```text
-┌──────────────────────────────────────────┐
-│ ☑  d7pharma_1776107871039                │
-└──────────────────────────────────────────┘
-```
+### Passo 3 — Reverificar no Lovable
+Em **Project Settings → Project → Domains**, clicar em **Verificar** no domínio `d7pharmabrazil.com.br`. Aguardar status ficar **Active**.
 
-### Detalhes de implementação
+### Passo 4 — Se comprou o domínio pela Lovable
+Se o domínio foi comprado dentro da Lovable, gerenciar DNS em: **Domains → ⋯ → Configure → Manage DNS records** e conferir se os registros A ainda existem.
 
-1. **Localizar o componente de seleção de instâncias do Broadcast**  
-   Provavelmente em `src/components/admin/` (ex: `BroadcastDialog.tsx` / dentro de `WhatsAppPage.tsx` aba broadcasts). Vou inspecionar para confirmar antes de editar.
+## O que NÃO vou fazer
 
-2. **Atualizar a query** que carrega as instâncias para também trazer:
-   - `owner_name` (ou `profile_name` — o que estiver populado)
-   - `phone_number` (ou derivar de `owner_jid` removendo `@s.whatsapp.net`)
-   - `connection_state` / `status`
+- Nenhuma alteração de código — o problema é infraestrutura DNS externa à aplicação.
+- Não vou republicar — a última publicação está saudável no domínio `.lovable.app`.
 
-3. **Helper de formatação** — criar uma função pequena `formatInstanceLabel(inst)`:
-   - Nome: `inst.owner_name || inst.profile_name || "Sem nome"`
-   - Telefone: formatado como `+55 (47) 8482-6726` a partir de `phone_number` ou `owner_jid.split("@")[0]`
-   - Fallback: se nenhum dos dois estiver preenchido, mostra o `instance_name` em cinza com aviso "Aguardando dados do WhatsApp"
+## Próximo passo
 
-4. **Aplicar nos três pontos onde a instância aparece no Broadcast:**
-   - Lista de seleção de "Números participantes" (checkboxes/multi-select).
-   - Resumo "X instâncias selecionadas" (tooltip ou chips).
-   - Coluna de origem nos logs/relatórios da campanha (se aparecer o ID).
+Você quer que eu:
+- (a) apenas te oriente a corrigir o DNS no seu registrador (recomendado), ou
+- (b) investigue algo específico no código/publicação que você suspeita estar quebrado?
 
-5. **Sem mudança de schema nem migration.** Apenas leitura de colunas já existentes.
-
-## Resultado esperado
-
-Ao abrir a tela de Broadcasts, o usuário vê os WhatsApps disponíveis identificados pelo nome do dono + número de telefone real conectado, igual aparece no celular, em vez do ID interno. Se algum número ainda não tiver os metadados sincronizados, o nome técnico aparece com aviso visual para o usuário saber que precisa reconectar/aguardar.
-
+<presentation-actions>
+<presentation-link url="https://docs.lovable.dev/features/custom-domain">Docs: Custom Domain</presentation-link>
+</presentation-actions>
