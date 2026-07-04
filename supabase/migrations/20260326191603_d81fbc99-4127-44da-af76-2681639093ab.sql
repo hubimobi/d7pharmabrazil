@@ -1,1 +1,0 @@
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS bling_order_id text DEFAULT NULL;

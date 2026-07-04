@@ -1,1 +1,0 @@
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS show_countdown boolean NOT NULL DEFAULT true;

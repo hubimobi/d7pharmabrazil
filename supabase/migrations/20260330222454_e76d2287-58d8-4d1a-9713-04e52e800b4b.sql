@@ -1,1 +1,0 @@
-ALTER TABLE public.products ADD COLUMN upsell_product_ids jsonb NOT NULL DEFAULT '[]'::jsonb;

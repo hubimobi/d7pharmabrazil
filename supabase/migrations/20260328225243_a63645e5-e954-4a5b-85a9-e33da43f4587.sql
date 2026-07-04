@@ -1,1 +1,0 @@
-ALTER TABLE public.store_settings ADD COLUMN IF NOT EXISTS checkout_version text NOT NULL DEFAULT 'v1';

@@ -1,1 +1,0 @@
-ALTER TABLE public.popup_leads ADD COLUMN IF NOT EXISTS phone text DEFAULT NULL;

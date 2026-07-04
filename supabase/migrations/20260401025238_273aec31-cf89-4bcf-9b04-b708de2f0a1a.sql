@@ -1,1 +1,0 @@
-ALTER VIEW public.store_settings_public SET (security_invoker = on);

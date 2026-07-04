@@ -1,1 +1,0 @@
-ALTER TABLE public.store_settings ADD COLUMN IF NOT EXISTS whatsapp_support text;

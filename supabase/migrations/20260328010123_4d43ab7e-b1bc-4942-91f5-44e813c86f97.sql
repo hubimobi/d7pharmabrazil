@@ -1,1 +1,0 @@
-ALTER TABLE public.store_settings ADD COLUMN IF NOT EXISTS max_total_installments integer NOT NULL DEFAULT 12;

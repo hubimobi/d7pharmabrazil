@@ -1,1 +1,0 @@
-ALTER TABLE public.store_settings ADD COLUMN IF NOT EXISTS hide_chat_on_checkout boolean DEFAULT false;

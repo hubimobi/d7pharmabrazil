@@ -1,1 +1,0 @@
-CREATE POLICY "Anyone can update popup leads by email" ON public.popup_leads FOR UPDATE USING (true) WITH CHECK (true);
