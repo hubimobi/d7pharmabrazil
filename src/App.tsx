@@ -37,6 +37,7 @@ const PrescriberSignupPage = lazy(() => import("./pages/PrescriberSignupPage"));
 const CreateStorePage = lazy(() => import("./pages/CreateStorePage"));
 const StaticPage = lazy(() => import("./pages/StaticPage"));
 const LinkRedirectPage = lazy(() => import("./pages/LinkRedirectPage"));
+const FarmaciasPage = lazy(() => import("./pages/lp/FarmaciasPage"));
 
 // Lazy-loaded global widgets (non-critical, load after main content)
 const RecentPurchasePopup = lazy(() => import("./components/RecentPurchasePopup"));
@@ -193,6 +194,7 @@ const App = () => (
                 <Route path="/admin/feedbacks" element={<AdminRoute><FeedbackApprovalPage /></AdminRoute>} />
                 <Route path="/admin/dominios" element={<AdminRoute><DomainsPage /></AdminRoute>} />
                 <Route path="/admin/auditoria" element={<AdminRoute><AuditLogPage /></AdminRoute>} />
+                <Route path="/lp/farmacias" element={<FarmaciasPage />} />
                 <Route path="/l/:code" element={<LinkRedirectPage />} />
                 <Route path="/corrida-verde/sorteio" element={<CorridaVerdeSorteio />} />
                 <Route path="/superboss" element={
