@@ -4323,14 +4323,12 @@ export type Database = {
           extra_images: Json | null
           featured: boolean | null
           group_name: string | null
-          gtin: string | null
           height: number | null
           id: string | null
           image_url: string | null
           length: number | null
           manufacturer: string | null
           name: string | null
-          ncm: string | null
           original_price: number | null
           price: number | null
           rating: number | null
@@ -4340,7 +4338,6 @@ export type Database = {
           seo_title: string | null
           short_description: string | null
           show_countdown: boolean | null
-          sku: string | null
           slug: string | null
           stock: number | null
           tenant_id: string | null
@@ -4363,14 +4360,12 @@ export type Database = {
           extra_images?: Json | null
           featured?: boolean | null
           group_name?: string | null
-          gtin?: string | null
           height?: number | null
           id?: string | null
           image_url?: string | null
           length?: number | null
           manufacturer?: string | null
           name?: string | null
-          ncm?: string | null
           original_price?: number | null
           price?: number | null
           rating?: number | null
@@ -4380,7 +4375,6 @@ export type Database = {
           seo_title?: string | null
           short_description?: string | null
           show_countdown?: boolean | null
-          sku?: string | null
           slug?: string | null
           stock?: number | null
           tenant_id?: string | null
@@ -4403,14 +4397,12 @@ export type Database = {
           extra_images?: Json | null
           featured?: boolean | null
           group_name?: string | null
-          gtin?: string | null
           height?: number | null
           id?: string | null
           image_url?: string | null
           length?: number | null
           manufacturer?: string | null
           name?: string | null
-          ncm?: string | null
           original_price?: number | null
           price?: number | null
           rating?: number | null
@@ -4420,7 +4412,6 @@ export type Database = {
           seo_title?: string | null
           short_description?: string | null
           show_countdown?: boolean | null
-          sku?: string | null
           slug?: string | null
           stock?: number | null
           tenant_id?: string | null
