@@ -382,6 +382,38 @@ const LP_CSS = `
     text-align:center;font-size:.72rem;color:var(--muted);
     margin-top:1rem;line-height:1.5;
   }
+
+  /* VSL GRID */
+  .lp .vsl-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:32px;align-items:start}
+  @media(max-width:820px){.lp .vsl-grid{grid-template-columns:1fr}}
+  .lp .vsl-grid .video-frame{max-width:none}
+
+  /* CTA BLINK */
+  @keyframes lpBlink{
+    0%,100%{box-shadow:0 10px 28px rgba(34,197,94,.32);background:var(--green);transform:scale(1)}
+    50%{box-shadow:0 18px 48px rgba(34,197,94,.75);background:var(--green-dark);transform:scale(1.06)}
+  }
+  .lp .btn-blink{animation:lpBlink 1.1s ease-in-out infinite}
+
+  /* MOBILE STICKY CTA */
+  .lp .mobile-cta{
+    position:fixed;bottom:0;left:0;right:0;z-index:100;
+    background:var(--navy);padding:14px 20px;
+    box-shadow:0 -4px 20px rgba(15,41,71,.4);
+    border-top:2px solid var(--blue);
+    display:flex;align-items:center;justify-content:center;gap:12px;
+  }
+  @media(min-width:761px){.lp .mobile-cta{display:none}}
+  .lp .mobile-cta p{font-size:.75rem;color:#B8CAE0;line-height:1.4;flex:1;min-width:0;margin:0}
+  .lp .mobile-cta .btn-mc{
+    flex:0 0 auto;
+    background:#25D366;color:#fff;
+    padding:.7rem 1.3rem;border-radius:var(--radius-btn);
+    font-family:'Manrope',sans-serif;font-size:.88rem;font-weight:700;
+    border:none;cursor:pointer;white-space:nowrap;
+    display:flex;align-items:center;gap:.5rem;
+    box-shadow:0 6px 18px rgba(37,211,102,.4);
+  }
 `;
 
 const FAQ_ITEMS = [
@@ -466,6 +498,8 @@ export default function FarmaciasPage() {
     nome: "", sobrenome: "", email: "",
     whatsapp: "", perfil: "", cidade: "", estado: "",
   });
+  const [ctaBlink, setCtaBlink] = useState(false);
+  const [mobileCtaVisible, setMobileCtaVisible] = useState(false);
 
   function openModal() { setModalOpen(true); }
   function closeModal() { setModalOpen(false); }
@@ -512,6 +546,16 @@ export default function FarmaciasPage() {
   }, []);
 
   useEffect(() => {
+    const t = setTimeout(() => setCtaBlink(true), 4 * 60 * 1000);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => setMobileCtaVisible(true), 2 * 60 * 1000);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
     function toggle(this: HTMLButtonElement) {
       const item = this.closest<HTMLElement>(".faq-item")!;
       const ans = item.querySelector<HTMLElement>(".faq-a")!;
@@ -555,33 +599,21 @@ export default function FarmaciasPage() {
 
       {/* HERO */}
       <header className="hero">
-        <div className="wrap hero-grid">
-          <div>
-            <div className="eyebrow">Protocolo de manutenção pós-GLP-1 · Marca própria</div>
-            <h1>
-              O tratamento com as canetas termina.<br />
-              <span className="hl">Quem vai atender o paciente depois: a sua farmácia — ou a concorrente?</span>
-            </h1>
-            <p className="lead">
-              O <strong>TCF-4</strong> é o protocolo nutricional de suporte à fase de manutenção dos resultados após o
-              tratamento com agonistas de GLP-1 — licenciado com a <strong>sua marca</strong> e com{" "}
-              <strong>exclusividade territorial: apenas 1 farmácia de manipulação por cidade</strong>.
-            </p>
-            <div className="hero-tags">
-              <span>✓ Private Label</span>
-              <span>✓ Exclusividade por município</span>
-              <span>✓ Material técnico + comercial</span>
-            </div>
-          </div>
-          <div className="excl-card">
-            <span className="label">Exclusividade Territorial</span>
-            <div className="num">01</div>
-            <div className="num-caption">farmácia de manipulação credenciada por município</div>
-            <div className="divider" />
-            <p className="foot">
-              Enquanto o contrato estiver vigente,{" "}
-              <strong>nenhuma outra farmácia da sua cidade</strong> poderá comercializar o protocolo TCF-4.
-            </p>
+        <div className="wrap">
+          <div className="eyebrow">Protocolo de manutenção pós-GLP-1 · Marca própria</div>
+          <h1>
+            O tratamento com as canetas termina.<br />
+            <span className="hl">Quem vai atender o paciente depois: a sua farmácia — ou a concorrente?</span>
+          </h1>
+          <p className="lead">
+            O <strong>TCF-4</strong> é o protocolo nutricional de suporte à fase de manutenção dos resultados após o
+            tratamento com agonistas de GLP-1 — licenciado com a <strong>sua marca</strong> e com{" "}
+            <strong>exclusividade territorial: apenas 1 farmácia de manipulação por cidade</strong>.
+          </p>
+          <div className="hero-tags">
+            <span>✓ Private Label</span>
+            <span>✓ Exclusividade por município</span>
+            <span>✓ Material técnico + comercial</span>
           </div>
         </div>
       </header>
@@ -589,18 +621,37 @@ export default function FarmaciasPage() {
       {/* VSL */}
       <section className="vsl" id="video">
         <div className="wrap">
-          <div className="video-frame">
-            <iframe
-              src="https://www.youtube.com/embed/wh3Xvl72bw8"
-              title="TCF-4 · Protocolo de manutenção pós-GLP-1"
-              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
-          </div>
-          <div className="cta-block">
-            <a className="btn btn-green" href="#contato">QUERO SABER MAIS</a>
-            <p className="cta-note">Resposta em horário comercial · verificação de disponibilidade da sua cidade</p>
+          <div className="vsl-grid">
+            <div>
+              <div className="video-frame">
+                <iframe
+                  src="https://www.youtube.com/embed/wh3Xvl72bw8?autoplay=1&mute=1&rel=0"
+                  title="TCF-4 · Protocolo de manutenção pós-GLP-1"
+                  style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+              <div className="cta-block">
+                <button
+                  className={`btn btn-green${ctaBlink ? " btn-blink" : ""}`}
+                  onClick={openModal}
+                >
+                  QUERO SABER MAIS
+                </button>
+                <p className="cta-note">Resposta em horário comercial · verificação de disponibilidade da sua cidade</p>
+              </div>
+            </div>
+            <div className="excl-card">
+              <span className="label">Exclusividade Territorial</span>
+              <div className="num">01</div>
+              <div className="num-caption">farmácia de manipulação credenciada por município</div>
+              <div className="divider" />
+              <p className="foot">
+                Enquanto o contrato estiver vigente,{" "}
+                <strong>nenhuma outra farmácia da sua cidade</strong> poderá comercializar o protocolo TCF-4.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -994,6 +1045,19 @@ export default function FarmaciasPage() {
               </p>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* MOBILE STICKY CTA */}
+      {mobileCtaVisible && (
+        <div className="mobile-cta">
+          <p>Exclusividade TCF-4<br />Apenas 1 farmácia por cidade</p>
+          <button className="btn-mc" onClick={openModal}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 .5C5.7.5.7 5.5.7 11.8c0 2 .5 3.9 1.5 5.6L.6 23.5l6.3-1.6c1.6.9 3.4 1.4 5.2 1.4 6.3 0 11.3-5 11.3-11.3S18.3.5 12 .5zm0 20.6c-1.6 0-3.2-.4-4.6-1.3l-.3-.2-3.7 1 1-3.6-.2-.3a9.2 9.2 0 0 1-1.4-4.9c0-5.1 4.1-9.2 9.2-9.2s9.2 4.1 9.2 9.2-4.1 9.3-9.2 9.3zm5-6.9c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.2.2-.3.2-.6.1a7.5 7.5 0 0 1-3.7-3.2c-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5l-.8-2c-.2-.5-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s1 2.6 1.1 2.7c.1.2 1.9 2.9 4.6 4.1 1.7.7 2.4.8 3.2.7.5-.1 1.6-.6 1.8-1.2.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3z" />
+            </svg>
+            QUERO SABER MAIS
+          </button>
         </div>
       )}
 
