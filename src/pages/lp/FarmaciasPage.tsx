@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 
 const LP_CSS = `
   :root{
@@ -493,6 +495,7 @@ type FormData = {
 };
 
 export default function FarmaciasPage() {
+  const { tenantId } = useTenant();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<FormData>({
     nome: "", sobrenome: "", email: "",
@@ -510,6 +513,17 @@ export default function FarmaciasPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Salva lead no Supabase (não bloqueia o fluxo)
+    supabase.from("popup_leads").insert({
+      name: `${form.nome} ${form.sobrenome}`.trim(),
+      email: form.email,
+      phone: form.whatsapp,
+      city: form.cidade,
+      state: form.estado,
+      source: `lp-farmacias | ${form.perfil}`,
+      tags: [],
+      tenant_id: tenantId,
+    });
     const msg = encodeURIComponent(
       `Olá! Quero verificar a disponibilidade do TCF-4 na minha cidade.\n\n` +
       `👤 Nome: ${form.nome} ${form.sobrenome}\n` +

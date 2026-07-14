@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 
 const LP_CSS = `
   .lpv2{
@@ -351,6 +353,7 @@ const WaSvg = ({ size = 22 }: { size?: number }) => (
 );
 
 export default function FarmaciasV2Page() {
+  const { tenantId } = useTenant();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<FormData>({ nome:"", sobrenome:"", email:"", whatsapp:"", perfil:"", cidade:"", estado:"" });
   const [ctaBlink, setCtaBlink] = useState(false);
@@ -365,6 +368,17 @@ export default function FarmaciasV2Page() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Salva lead no Supabase (não bloqueia o fluxo)
+    supabase.from("popup_leads").insert({
+      name: `${form.nome} ${form.sobrenome}`.trim(),
+      email: form.email,
+      phone: form.whatsapp,
+      city: form.cidade,
+      state: form.estado,
+      source: `lp-farmacias-v2 | ${form.perfil}`,
+      tags: [],
+      tenant_id: tenantId,
+    });
     const msg = encodeURIComponent(
       `Olá! Tenho uma farmácia de manipulação e quero verificar a disponibilidade do TCF-4 na minha cidade.\n\n` +
       `👤 Nome: ${form.nome} ${form.sobrenome}\n📧 E-mail: ${form.email}\n📱 WhatsApp: ${form.whatsapp}\n🏷️ Perfil: ${form.perfil}\n📍 Cidade/UF: ${form.cidade}/${form.estado}`
