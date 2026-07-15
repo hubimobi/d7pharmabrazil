@@ -1,0 +1,1 @@
+import{j as r,k as o}from"./vendor-react-S44IyOkZ.js";import{b as i}from"./index-CocVPakQ.js";import"./vendor-query-uNrepy2-.js";import"./vendor-motion-DTuUg3eu.js";function m({children:e}){const{isSuperboss:t,isResolved:s}=i();return s?t?r.jsx(r.Fragment,{children:e}):r.jsx(o,{to:"/",replace:!0}):null}export{m as default};
