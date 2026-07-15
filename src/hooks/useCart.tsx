@@ -246,7 +246,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         .select("*")
         .eq("code", upper)
         .eq("active", true)
-        .eq("tenant_id", tenantId)
         .single() as { data: any; error: any };
 
       if (error || !data) {
