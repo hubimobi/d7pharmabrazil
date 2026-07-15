@@ -119,13 +119,13 @@ const CheckoutPage = () => {
   }, [savedCustomer, isOneClick]);
 
   // Auto-apply coupon from URL param (?cupom=XXX)
+  // Lock ref only after success so it retries if tenantId resolves after first render
   const couponAppliedRef = useRef(false);
   useEffect(() => {
     const cupomParam = searchParams.get("cupom") || searchParams.get("Cupom") || searchParams.get("CUPOM");
     if (cupomParam && items.length > 0 && !coupon && !couponAppliedRef.current) {
-      couponAppliedRef.current = true;
       setCouponInput(cupomParam.toUpperCase());
-      applyCoupon(cupomParam);
+      applyCoupon(cupomParam).then((ok) => { if (ok) couponAppliedRef.current = true; });
     }
   }, [searchParams, items, coupon, applyCoupon]);
 

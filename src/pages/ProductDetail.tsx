@@ -44,6 +44,11 @@ const ProductDetail = () => {
   const { data: settings } = useStoreSettings();
   const directCheckoutDone = useRef(false);
 
+  // Preserve cupom param across all checkout navigations
+  const cupomRaw = searchParams.get("cupom") || searchParams.get("Cupom") || searchParams.get("CUPOM");
+  const cupomQs = cupomRaw ? `cupom=${encodeURIComponent(cupomRaw)}` : "";
+  const toCheckout = (base: string) => base + (cupomQs ? (base.includes("?") ? "&" : "?") + cupomQs : "");
+
   // Direct checkout: ?ck=1&m or ?ck=2 etc. — auto-add to cart and redirect
   const ckParam = searchParams.get("ck");
   useEffect(() => {
@@ -522,7 +527,7 @@ const ProductDetail = () => {
               {hasSavedData && (
                 <Button size="lg" className="h-14 text-base gap-2 w-full bg-amber-500 hover:bg-amber-600 text-white font-bold animate-pulse-soft" onClick={() => {
                   addItem(product, qty);
-                  navigate("/checkout?oneclick=1");
+                  navigate(toCheckout("/checkout?oneclick=1"));
                 }}>
                   <Zap className="h-5 w-5" /> Comprar com 1 Clique
                 </Button>
@@ -535,7 +540,7 @@ const ProductDetail = () => {
               </Button>
               <Button size="lg" className="h-14 text-base gap-2 w-full bg-success hover:bg-success/90 text-success-foreground" onClick={() => {
                 addItem(product, qty);
-                navigate("/checkout");
+                navigate(toCheckout("/checkout"));
               }}>
                 <Zap className="h-5 w-5" /> Compra Rápida
               </Button>
@@ -678,7 +683,7 @@ const ProductDetail = () => {
           className="flex-1 gap-2 bg-success hover:bg-success/90 text-success-foreground text-sm h-12"
           onClick={() => {
             addItem(product, qty);
-            navigate("/checkout");
+            navigate(toCheckout("/checkout"));
           }}
         >
           💰 Comprar via PIX
@@ -733,7 +738,7 @@ const ProductDetail = () => {
                 className="h-12 gap-2 rounded-xl px-6 bg-success hover:bg-success/90 text-success-foreground"
                 onClick={() => {
                   addItem(product, qty);
-                  navigate("/checkout");
+                  navigate(toCheckout("/checkout"));
                 }}
               >
                 Comprar Agora
