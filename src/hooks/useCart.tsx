@@ -241,44 +241,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("coupons_public" as any)
-        .select("*")
-        .eq("code", upper)
-        .eq("active", true)
-        .single() as { data: any; error: any };
+      const productIds = items.map((i) => i.product.id);
+      const { data, error } = await supabase.functions.invoke("validate-coupon", {
+        body: { code: upper, tenant_id: tenantId, subtotal, product_ids: productIds },
+      });
 
-      if (error || !data) {
-        toast.error("Cupom inválido");
+      if (error || !data || data.error) {
+        const errCode = data?.error;
+        if (errCode === "expired") toast.error("Este cupom expirou");
+        else if (errCode === "not_yet_valid") toast.error("Este cupom ainda não está válido");
+        else if (errCode === "max_uses_reached") toast.error("Este cupom atingiu o limite de usos");
+        else if (errCode === "min_order") toast.error(`Valor mínimo de R$ ${Number(data.min_order_value).toFixed(2).replace(".", ",")} para usar este cupom`);
+        else if (errCode === "wrong_product") toast.error("Este cupom é válido apenas para um produto específico que não está no carrinho");
+        else toast.error("Cupom inválido");
         return false;
-      }
-
-      if (data.expires_at && new Date(data.expires_at) < new Date()) {
-        toast.error("Este cupom expirou");
-        return false;
-      }
-
-      if (data.starts_at && new Date(data.starts_at) > new Date()) {
-        toast.error("Este cupom ainda não está válido");
-        return false;
-      }
-
-      if (data.max_uses && data.used_count >= data.max_uses) {
-        toast.error("Este cupom atingiu o limite de usos");
-        return false;
-      }
-
-      if (data.min_order_value && subtotal < Number(data.min_order_value)) {
-        toast.error(`Valor mínimo de R$ ${Number(data.min_order_value).toFixed(2).replace(".", ",")} para usar este cupom`);
-        return false;
-      }
-
-      if (data.product_id) {
-        const hasProduct = items.some((i) => i.product.id === data.product_id);
-        if (!hasProduct) {
-          toast.error("Este cupom é válido apenas para um produto específico que não está no carrinho");
-          return false;
-        }
       }
 
       setAppliedCoupon({
