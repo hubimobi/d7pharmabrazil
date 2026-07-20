@@ -31,7 +31,7 @@ serve(async (req) => {
 
     const { data, error } = await supabaseAdmin
       .from("coupons")
-      .select("id, code, discount_type, discount_value, free_shipping, product_id, active, expires_at, starts_at, max_uses, used_count, min_order_value, tenant_id")
+      .select("id, code, discount_type, discount_value, free_shipping, product_id, doctor_id, active, expires_at, starts_at, max_uses, used_count, min_order_value, tenant_id")
       .eq("code", upper)
       .eq("active", true)
       .maybeSingle();
