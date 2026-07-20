@@ -16,6 +16,7 @@ interface AppliedCoupon {
   discount_value: number;
   free_shipping: boolean;
   product_id: string | null;
+  doctor_id: string | null;
   coupon_id?: string;
 }
 
@@ -263,6 +264,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         discount_value: Number(data.discount_value),
         free_shipping: data.free_shipping,
         product_id: data.product_id,
+        doctor_id: data.doctor_id,
         coupon_id: data.id,
       });
 

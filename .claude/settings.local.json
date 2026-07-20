@@ -4,7 +4,11 @@
       "Bash(supabase db *)",
       "Bash(supabase projects *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(curl -s 'https://xufiemrhlmirkrdrcxox.supabase.co/rest/v1/coupons?code=eq.MGA1R7&select=*' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1ZmllbXJobG1pcmtyZHJjeG94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTIyODEsImV4cCI6MjA5MDAyODI4MX0.B7SxDJbXUFpDpN7wrzp-KYqoybquzeSimpnAIGJ8-qg' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1ZmllbXJobG1pcmtyZHJjeG94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTIyODEsImV4cCI6MjA5MDAyODI4MX0.B7SxDJbXUFpDpN7wrzp-KYqoybquzeSimpnAIGJ8-qg')",
+      "Bash(curl -s 'https://xufiemrhlmirkrdrcxox.supabase.co/rest/v1/coupons_public?code=eq.MGA1R7&select=*' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1ZmllbXJobG1pcmtyZHJjeG94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTIyODEsImV4cCI6MjA5MDAyODI4MX0.B7SxDJbXUFpDpN7wrzp-KYqoybquzeSimpnAIGJ8-qg' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1ZmllbXJobG1pcmtyZHJjeG94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTIyODEsImV4cCI6MjA5MDAyODI4MX0.B7SxDJbXUFpDpN7wrzp-KYqoybquzeSimpnAIGJ8-qg')",
+      "Bash(rm -rf /Library/Caches/pip ~/.npm supabase/.temp/cli-* 2>/dev/null; df -h / | head -2)",
+      "Bash(git commit -m 'Fix: enable MGA1R7 coupon validation *)"
     ]
   }
 }

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save, Loader2, ShoppingCart, MessageSquareQuote, Flame, Gift, Truck, Sparkles, BarChart3, CreditCard, Layout, UserCheck } from "lucide-react";
+import { Save, Loader2, ShoppingCart, MessageSquareQuote, Flame, Gift, Truck, Sparkles, CreditCard, Layout, UserCheck } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function CheckoutSettingsPage() {
@@ -27,9 +27,6 @@ export default function CheckoutSettingsPage() {
   const [showMotivation, setShowMotivation] = useState(true);
   const [showFreeShippingBar, setShowFreeShippingBar] = useState(true);
   const [boletoEnabled, setBoletoEnabled] = useState(false);
-  const [metaPixelId, setMetaPixelId] = useState("");
-  const [gtmId, setGtmId] = useState("");
-  const [hotjarId, setHotjarId] = useState("");
   const [maxInstallments, setMaxInstallments] = useState(3);
   const [maxTotalInstallments, setMaxTotalInstallments] = useState(12);
   const [checkoutVersion, setCheckoutVersion] = useState("v1");
@@ -57,9 +54,6 @@ export default function CheckoutSettingsPage() {
     setShowMotivation(s.checkout_show_motivation ?? true);
     setShowFreeShippingBar(s.checkout_show_free_shipping_bar ?? true);
     setBoletoEnabled(s.checkout_boleto_enabled ?? false);
-    setMetaPixelId(s.meta_pixel_id || "");
-    setGtmId(s.gtm_id || "");
-    setHotjarId(s.hotjar_id || "");
     setMaxInstallments(s.max_installments ?? 3);
     setMaxTotalInstallments(s.max_total_installments ?? 12);
     setCheckoutVersion(s.checkout_version || "v1");
@@ -88,9 +82,6 @@ export default function CheckoutSettingsPage() {
           checkout_show_motivation: showMotivation,
           checkout_show_free_shipping_bar: showFreeShippingBar,
           checkout_boleto_enabled: boletoEnabled,
-          meta_pixel_id: metaPixelId,
-          gtm_id: gtmId,
-          hotjar_id: hotjarId,
           max_installments: maxInstallments,
           max_total_installments: maxTotalInstallments,
           free_shipping_enabled: freeShippingEnabled,
@@ -356,42 +347,6 @@ export default function CheckoutSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Rastreamento */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <BarChart3 className="h-5 w-5" /> Rastreamento e Analytics
-          </CardTitle>
-          <CardDescription>Configure os pixels de rastreamento para medir conversões.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Meta Pixel ID (Facebook/Instagram)</Label>
-            <Input value={metaPixelId} onChange={(e) => setMetaPixelId(e.target.value)} placeholder="Ex: 123456789012345" className="mt-1 font-mono text-sm" />
-            <p className="text-xs text-muted-foreground mt-1">
-              Encontre seu Pixel ID em{" "}
-              <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="text-primary underline">Meta Events Manager</a>
-            </p>
-          </div>
-          <div>
-            <Label>Google Tag Manager ID</Label>
-            <Input value={gtmId} onChange={(e) => setGtmId(e.target.value)} placeholder="Ex: GTM-XXXXXXX" className="mt-1 font-mono text-sm" />
-            <p className="text-xs text-muted-foreground mt-1">
-              Encontre seu GTM ID em{" "}
-              <a href="https://tagmanager.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary underline">Google Tag Manager</a>
-            </p>
-          </div>
-          <div>
-            <Label>Hotjar Site ID</Label>
-            <Input value={hotjarId} onChange={(e) => setHotjarId(e.target.value)} placeholder="Ex: 1234567" className="mt-1 font-mono text-sm" />
-            <p className="text-xs text-muted-foreground mt-1">
-              Encontre seu Site ID em{" "}
-              <a href="https://insights.hotjar.com/settings/sites" target="_blank" rel="noopener noreferrer" className="text-primary underline">Hotjar → Settings → Sites</a>
-              {" "}— mapa de calor, gravações e insights de comportamento.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       <Button onClick={() => mutation.mutate()} size="lg" className="gap-2" disabled={mutation.isPending}>
         {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

@@ -89,6 +89,9 @@ serve(async (req) => {
       }
     }
 
+    // Cupom vinculado a prescritor específico é sempre válido (sem restrições)
+    // O checkout valida a seleção de prescritor separadamente
+
     return new Response(
       JSON.stringify({
         id: data.id,
@@ -97,6 +100,7 @@ serve(async (req) => {
         discount_value: data.discount_value,
         free_shipping: data.free_shipping,
         product_id: data.product_id,
+        doctor_id: data.doctor_id,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

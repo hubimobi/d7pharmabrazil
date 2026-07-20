@@ -24,6 +24,10 @@ export interface StoreSettings {
   instagram: string;
   facebook: string;
   tiktok: string;
+  meta_pixel_id?: string;
+  gtm_id?: string;
+  hotjar_id?: string;
+  tiktok_pixel_id?: string;
   youtube: string;
   webchat_enabled: boolean;
   webchat_script: string;

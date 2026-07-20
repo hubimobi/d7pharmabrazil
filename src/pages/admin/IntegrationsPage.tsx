@@ -400,6 +400,12 @@ export default function IntegrationsPage() {
         {/* Meta / Instagram Shopping */}
         <MetaFeedCard />
 
+        {/* TikTok Ads */}
+        <TikTokAdsCard />
+
+        {/* Google Tag Manager */}
+        <GoogleTagManagerCard />
+
         {/* TikTok Shop */}
         <TikTokShopCard />
 
@@ -785,7 +791,34 @@ function WebchatWhatsAppSettings() {
 }
 
 function MetaFeedCard() {
+  const { data: settings } = useStoreSettings();
+  const qc = useQueryClient();
+  const [metaPixelId, setMetaPixelId] = useState("");
+  const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (settings) {
+      setMetaPixelId((settings as any)?.meta_pixel_id || "");
+    }
+  }, [settings]);
+
+  const handleSavePixel = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("store_settings").update({
+        meta_pixel_id: metaPixelId || null,
+      } as any).eq("id", (settings as any)?.id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["store-settings"] });
+      toast.success("Meta Pixel ID salvo com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const feedBaseUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/meta-product-feed`;
   const xmlUrl = feedBaseUrl;
   const csvUrl = `${feedBaseUrl}?format=csv`;
@@ -797,20 +830,45 @@ function MetaFeedCard() {
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const isPixelConfigured = !!metaPixelId;
+
   return (
-    <Card>
+    <Card className={!isPixelConfigured ? "opacity-95" : ""}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ShoppingBag className="h-5 w-5" />
-          Meta / Instagram Shopping
-          <Badge variant="default">Ativo</Badge>
+          Meta (Facebook & Instagram)
+          {isPixelConfigured ? (
+            <Badge variant="default">Configurado</Badge>
+          ) : (
+            <Badge variant="outline">Não configurado</Badge>
+          )}
         </CardTitle>
         <CardDescription>
-          Feed automático de produtos para Facebook Shop e Instagram Shopping via Meta Commerce Manager.
+          Integração com o Meta Pixel e Feed automático de produtos para Instagram Shopping.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center gap-2 text-sm text-primary">
+        {/* Meta Pixel Configuration */}
+        <div className="space-y-2 pb-4 border-b border-border">
+          <Label className="text-sm font-semibold">Meta Pixel ID</Label>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Ex: 123456789012345"
+              value={metaPixelId}
+              onChange={(e) => setMetaPixelId(e.target.value.replace(/\D/g, ""))}
+              className="font-mono text-sm"
+            />
+            <Button onClick={handleSavePixel} disabled={saving} size="sm">
+              {saving ? "Salvando..." : "Salvar"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Meça conversões, otimize anúncios e crie públicos personalizados para o Facebook/Instagram.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 text-sm text-primary pt-2">
           <CheckCircle className="h-4 w-4" />
           Feed gerado automaticamente com todos os produtos ativos
         </div>
@@ -843,8 +901,7 @@ function MetaFeedCard() {
             <li>Crie ou selecione um <strong>Catálogo</strong></li>
             <li>Vá em <strong>Fontes de Dados → Data Feed</strong></li>
             <li>Cole a <strong>URL do Feed XML</strong> acima</li>
-            <li>Configure a atualização automática (recomendado: <strong>diária</strong>)</li>
-            <li>Conecte o catálogo ao <strong>Instagram Shopping</strong> nas configurações</li>
+            <li>Configure a atualização automática (diária)</li>
           </ol>
         </div>
 
@@ -857,6 +914,186 @@ function MetaFeedCard() {
             <ExternalLink className="h-4 w-4 mr-2" />
             Baixar CSV
           </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TikTokAdsCard() {
+  const { data: settings } = useStoreSettings();
+  const qc = useQueryClient();
+  const [tiktokPixelId, setTiktokPixelId] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setTiktokPixelId((settings as any)?.tiktok_pixel_id || "");
+    }
+  }, [settings]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("store_settings").update({
+        tiktok_pixel_id: tiktokPixelId || null,
+      } as any).eq("id", (settings as any)?.id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["store-settings"] });
+      toast.success("TikTok Ads Pixel salvo com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isConfigured = !!tiktokPixelId;
+
+  return (
+    <Card className={!isConfigured ? "opacity-75" : ""}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-primary" />
+          🎵 TikTok Ads
+          {isConfigured ? (
+            <Badge variant="default">Configurado</Badge>
+          ) : (
+            <Badge variant="outline">Não configurado</Badge>
+          )}
+        </CardTitle>
+        <CardDescription>
+          Rastreie visualizações de páginas, checkouts e compras para otimizar suas campanhas no TikTok.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>TikTok Ads Pixel ID</Label>
+          <Input
+            placeholder="Ex: C1234567890"
+            value={tiktokPixelId}
+            onChange={(e) => setTiktokPixelId(e.target.value.trim())}
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Encontre seu Pixel ID no Gerenciador de Eventos do TikTok Ads Manager.
+          </p>
+        </div>
+
+        <div className="rounded-md bg-muted p-3">
+          <p className="text-xs text-muted-foreground">
+            O script do TikTok Pixel é carregado de forma inteligente após a interação do usuário para preservar a pontuação de velocidade da página.
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <Button onClick={handleSave} disabled={saving} size="sm">
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+          {isConfigured && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setTiktokPixelId("");
+                handleSave();
+              }}
+              className="text-destructive hover:text-destructive"
+            >
+              <PowerOff className="h-4 w-4 mr-2" />
+              Remover
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GoogleTagManagerCard() {
+  const { data: settings } = useStoreSettings();
+  const qc = useQueryClient();
+  const [gtmId, setGtmId] = useState((settings as any)?.gtm_id || "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setGtmId((settings as any)?.gtm_id || "");
+    }
+  }, [settings]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("store_settings").update({
+        gtm_id: gtmId || null,
+      } as any).eq("id", (settings as any)?.id);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["store-settings"] });
+      toast.success("Google Tag Manager salvo com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isConfigured = !!gtmId;
+
+  return (
+    <Card className={!isConfigured ? "opacity-75" : ""}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-primary" />
+          📊 Google Tag Manager
+          {isConfigured ? (
+            <Badge variant="default">Configurado</Badge>
+          ) : (
+            <Badge variant="outline">Não configurado</Badge>
+          )}
+        </CardTitle>
+        <CardDescription>
+          Gerencie e implante scripts e tags de marketing sem precisar alterar o código do site.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>GTM Container ID</Label>
+          <Input
+            placeholder="Ex: GTM-XXXXXXX"
+            value={gtmId}
+            onChange={(e) => setGtmId(e.target.value.trim())}
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Cole seu ID do contêiner do GTM encontrado no painel do Google Tag Manager.
+          </p>
+        </div>
+
+        <div className="rounded-md bg-muted p-3">
+          <p className="text-xs text-muted-foreground">
+            O Google Tag Manager permite integrar facilmente o Google Analytics (GA4), Google Ads e dezenas de outros serviços de terceiros.
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <Button onClick={handleSave} disabled={saving} size="sm">
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+          {isConfigured && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setGtmId("");
+                handleSave();
+              }}
+              className="text-destructive hover:text-destructive"
+            >
+              <PowerOff className="h-4 w-4 mr-2" />
+              Remover
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

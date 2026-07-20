@@ -2337,6 +2337,7 @@ export type Database = {
           max_installments: number
           max_total_installments: number
           meta_pixel_id: string | null
+          tiktok_pixel_id: string | null
           notification_bar_bg_color: string | null
           notification_bar_enabled: boolean | null
           notification_bar_text: string | null
@@ -2485,6 +2486,7 @@ export type Database = {
           max_installments?: number
           max_total_installments?: number
           meta_pixel_id?: string | null
+          tiktok_pixel_id?: string | null
           notification_bar_bg_color?: string | null
           notification_bar_enabled?: boolean | null
           notification_bar_text?: string | null
@@ -2633,6 +2635,7 @@ export type Database = {
           max_installments?: number
           max_total_installments?: number
           meta_pixel_id?: string | null
+          tiktok_pixel_id?: string | null
           notification_bar_bg_color?: string | null
           notification_bar_enabled?: boolean | null
           notification_bar_text?: string | null
@@ -4545,6 +4548,7 @@ export type Database = {
           max_installments: number | null
           max_total_installments: number | null
           meta_pixel_id: string | null
+          tiktok_pixel_id: string | null
           notification_bar_bg_color: string | null
           notification_bar_enabled: boolean | null
           notification_bar_text: string | null
@@ -4670,6 +4674,7 @@ export type Database = {
           max_installments?: number | null
           max_total_installments?: number | null
           meta_pixel_id?: string | null
+          tiktok_pixel_id?: string | null
           notification_bar_bg_color?: string | null
           notification_bar_enabled?: boolean | null
           notification_bar_text?: string | null
@@ -4795,6 +4800,7 @@ export type Database = {
           max_installments?: number | null
           max_total_installments?: number | null
           meta_pixel_id?: string | null
+          tiktok_pixel_id?: string | null
           notification_bar_bg_color?: string | null
           notification_bar_enabled?: boolean | null
           notification_bar_text?: string | null
