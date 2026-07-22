@@ -109,7 +109,7 @@ const BlingRedirect = () => {
   const code = params.get("code");
   const state = params.get("state");
   if (code && state) {
-    const edgeUrl = `https://xufiemrhlmirkrdrcxox.supabase.co/functions/v1/bling-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
+    const edgeUrl = `https://ecvmnfiewsovcpvviklz.supabase.co/functions/v1/bling-callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
     window.location.href = edgeUrl;
     return <PageLoader />;
   }
