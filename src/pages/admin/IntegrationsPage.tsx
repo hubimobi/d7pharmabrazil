@@ -14,6 +14,7 @@ import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug, Power, PowerOff,
 import { toast } from "sonner";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { useTenant } from "@/hooks/useTenant";
+import { ViewTokenButton } from "@/components/admin/ViewTokenButton";
 
 interface IntegrationState {
   asaas: boolean;
@@ -244,6 +245,7 @@ export default function IntegrationsPage() {
                   Cancelar
                 </Button>
               )}
+              <ViewTokenButton label="Bling ERP" secretNames={["BLING_CLIENT_ID", "BLING_CLIENT_SECRET"]} />
             </div>
 
             <div className="rounded-md bg-muted p-3 space-y-1">
@@ -301,6 +303,7 @@ export default function IntegrationsPage() {
                   Conectar
                 </Button>
               )}
+              <ViewTokenButton label="Asaas" secretNames={["ASAAS_API_KEY", "ASAAS_WEBHOOK_TOKEN"]} />
             </div>
           </CardContent>
         </Card>
@@ -342,6 +345,7 @@ export default function IntegrationsPage() {
                   Conectar
                 </Button>
               )}
+              <ViewTokenButton label="Melhor Envio" secretNames={["MELHOR_ENVIO_TOKEN"]} />
             </div>
           </CardContent>
         </Card>
@@ -393,6 +397,7 @@ export default function IntegrationsPage() {
                   Conectar
                 </Button>
               )}
+              <ViewTokenButton label="GoHighLevel" secretNames={["GHL_API_KEY", "GHL_LOCATION_ID"]} />
             </div>
           </CardContent>
         </Card>
