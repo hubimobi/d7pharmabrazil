@@ -1655,6 +1655,7 @@ function EvolutionApiCard() {
               Desconectar
             </Button>
           )}
+          <ViewTokenButton label="Evolution API" secretNames={["EVOLUTION_API_URL", "EVOLUTION_API_KEY", "WHATSAPP_WEBHOOK_SECRET"]} />
         </div>
 
         <div className="rounded-md bg-muted p-3 space-y-1">
