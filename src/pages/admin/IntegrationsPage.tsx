@@ -14,6 +14,7 @@ import { CheckCircle, XCircle, ExternalLink, RefreshCw, Unplug, Power, PowerOff,
 import { toast } from "sonner";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { useTenant } from "@/hooks/useTenant";
+import { ViewTokenButton } from "@/components/admin/ViewTokenButton";
 
 interface IntegrationState {
   asaas: boolean;
@@ -244,6 +245,7 @@ export default function IntegrationsPage() {
                   Cancelar
                 </Button>
               )}
+              <ViewTokenButton label="Bling ERP" secretNames={["BLING_CLIENT_ID", "BLING_CLIENT_SECRET"]} />
             </div>
 
             <div className="rounded-md bg-muted p-3 space-y-1">
@@ -301,6 +303,7 @@ export default function IntegrationsPage() {
                   Conectar
                 </Button>
               )}
+              <ViewTokenButton label="Asaas" secretNames={["ASAAS_API_KEY", "ASAAS_WEBHOOK_TOKEN"]} />
             </div>
           </CardContent>
         </Card>
@@ -342,6 +345,7 @@ export default function IntegrationsPage() {
                   Conectar
                 </Button>
               )}
+              <ViewTokenButton label="Melhor Envio" secretNames={["MELHOR_ENVIO_TOKEN"]} />
             </div>
           </CardContent>
         </Card>
@@ -393,6 +397,7 @@ export default function IntegrationsPage() {
                   Conectar
                 </Button>
               )}
+              <ViewTokenButton label="GoHighLevel" secretNames={["GHL_API_KEY", "GHL_LOCATION_ID"]} />
             </div>
           </CardContent>
         </Card>
@@ -1517,10 +1522,13 @@ function CloudflareCacheCard() {
           </p>
         </div>
 
-        <Button onClick={handlePurge} disabled={purging} variant={mode === "all" ? "destructive" : "default"}>
-          {purging ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          {purging ? "Limpando..." : mode === "all" ? "Limpar Todo o Cache" : "Limpar URLs"}
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={handlePurge} disabled={purging} variant={mode === "all" ? "destructive" : "default"}>
+            {purging ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            {purging ? "Limpando..." : mode === "all" ? "Limpar Todo o Cache" : "Limpar URLs"}
+          </Button>
+          <ViewTokenButton label="Cloudflare" secretNames={["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID"]} />
+        </div>
       </CardContent>
     </Card>
   );
@@ -1647,6 +1655,7 @@ function EvolutionApiCard() {
               Desconectar
             </Button>
           )}
+          <ViewTokenButton label="Evolution API" secretNames={["EVOLUTION_API_URL", "EVOLUTION_API_KEY", "WHATSAPP_WEBHOOK_SECRET"]} />
         </div>
 
         <div className="rounded-md bg-muted p-3 space-y-1">
