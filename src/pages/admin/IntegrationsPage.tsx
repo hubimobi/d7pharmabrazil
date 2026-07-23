@@ -1522,10 +1522,13 @@ function CloudflareCacheCard() {
           </p>
         </div>
 
-        <Button onClick={handlePurge} disabled={purging} variant={mode === "all" ? "destructive" : "default"}>
-          {purging ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          {purging ? "Limpando..." : mode === "all" ? "Limpar Todo o Cache" : "Limpar URLs"}
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={handlePurge} disabled={purging} variant={mode === "all" ? "destructive" : "default"}>
+            {purging ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            {purging ? "Limpando..." : mode === "all" ? "Limpar Todo o Cache" : "Limpar URLs"}
+          </Button>
+          <ViewTokenButton label="Cloudflare" secretNames={["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID"]} />
+        </div>
       </CardContent>
     </Card>
   );
