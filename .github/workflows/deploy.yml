@@ -27,9 +27,17 @@ jobs:
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ftp.d7pharmabrazil.com.br
-          username: d7pharmabrazil
+          # IMPORTANTE: nao use o hostname proxied pela Cloudflare (ex.:
+          # ftp.d7pharmabrazil.com.br), pois a Cloudflare nao faz proxy de FTP
+          # (porta 21) e a conexao expira (ETIMEDOUT). Aponte FTP_SERVER para o
+          # host/IP direto do Kinghost OU crie um registro DNS "ftp" como
+          # "DNS only" (nuvem cinza) na Cloudflare apontando para o IP de origem.
+          server: ${{ secrets.FTP_SERVER || 'ftp.d7pharmabrazil.com.br' }}
+          username: ${{ secrets.FTP_USERNAME || 'd7pharmabrazil' }}
           password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          timeout: 60000
           server-dir: /www/
           local-dir: ./dist/
           exclude: |
