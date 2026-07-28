@@ -38,7 +38,11 @@ jobs:
           protocol: ftp
           port: 21
           timeout: 60000
-          server-dir: /www/
+          # Document root do dominio no Kinghost. Se o site nao aparecer apos o
+          # deploy, o diretorio provavelmente e outro (ex.: /public_html/ ou
+          # /www/d7pharmabrazil.com.br/). Defina o secret FTP_SERVER_DIR para
+          # ajustar sem editar este arquivo.
+          server-dir: ${{ secrets.FTP_SERVER_DIR || '/www/' }}
           local-dir: ./dist/
           exclude: |
             **/.git*
