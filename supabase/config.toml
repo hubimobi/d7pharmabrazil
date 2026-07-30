@@ -1,4 +1,4 @@
-project_id = "xufiemrhlmirkrdrcxox"
+project_id = "ecvmnfiewsovcpvviklz"
 
 [functions.asaas-webhook]
 verify_jwt = false
@@ -10,4 +10,19 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.signup-tenant]
+verify_jwt = false
+
+# OAuth redirect callbacks — chamados pelo navegador/terceiro sem JWT do Supabase.
+[functions.bling-callback]
+verify_jwt = false
+
+[functions.tiktok-shop-callback]
+verify_jwt = false
+
+# Feed público consumido pelo Meta Commerce Manager (sem JWT).
+[functions.meta-product-feed]
+verify_jwt = false
+
+# Sitemap público para SEO (sem JWT).
+[functions.sitemap-xml]
 verify_jwt = false

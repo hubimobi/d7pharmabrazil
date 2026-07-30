@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const baseUrl = "https://d7pharmabrazil.lovable.app";
+    const baseUrl = "https://d7pharmabrazil.com.br";
 
     // Fetch active products
     const { data: products } = await supabase

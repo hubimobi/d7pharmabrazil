@@ -47,6 +47,28 @@ export default function IntegrationsPage() {
     setDisconnectTarget(null);
   };
 
+  // Real configuration check: are the required secrets actually set on the
+  // server? Avoids showing "Conectado" for integrations whose keys are missing.
+  // Restricted to super admin (the endpoint returns 403 otherwise) — in that
+  // case `configured` stays undefined and the UI shows a neutral state.
+  const { data: secretStatus } = useQuery({
+    queryKey: ["integration-secrets-status"],
+    queryFn: async () => {
+      const names = ["ASAAS_API_KEY", "MELHOR_ENVIO_TOKEN", "GHL_API_KEY", "GHL_LOCATION_ID"];
+      const { data, error } = await supabase.functions.invoke("get-integration-secret", {
+        body: { names },
+      });
+      if (error || data?.error) return null;
+      const secrets = (data?.secrets || {}) as Record<string, string | null>;
+      return {
+        asaas: !!secrets.ASAAS_API_KEY,
+        melhor_envio: !!secrets.MELHOR_ENVIO_TOKEN,
+        ghl: !!secrets.GHL_API_KEY,
+      } as Record<keyof IntegrationState, boolean>;
+    },
+    staleTime: 60_000,
+  });
+
   const { data: blingStatus, refetch, isLoading } = useQuery({
     queryKey: ["bling-status", tenantId],
     queryFn: async () => {
@@ -267,20 +289,29 @@ export default function IntegrationsPage() {
         </Card>
 
         {/* Asaas */}
-        <Card className={!integrations.asaas ? "opacity-60" : ""}>
+        <Card className={!integrations.asaas || secretStatus?.asaas === false ? "opacity-60" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Asaas Pagamentos
-              <Badge variant={integrations.asaas ? "default" : "outline"}>
-                {integrations.asaas ? "Conectado" : "Desconectado"}
-              </Badge>
+              {secretStatus?.asaas === false ? (
+                <Badge variant="destructive">Chave ausente</Badge>
+              ) : (
+                <Badge variant={integrations.asaas ? "default" : "outline"}>
+                  {integrations.asaas ? "Conectado" : "Desconectado"}
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription>
               Pagamentos via Pix e Cartão de Crédito integrados ao checkout.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {integrations.asaas ? (
+            {secretStatus?.asaas === false ? (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                Secret <code className="bg-muted px-1 rounded">ASAAS_API_KEY</code> não configurado no servidor.
+              </div>
+            ) : integrations.asaas ? (
               <div className="flex items-center gap-2 text-sm text-primary">
                 <CheckCircle className="h-4 w-4" />
                 API configurada (Produção)
@@ -309,20 +340,29 @@ export default function IntegrationsPage() {
         </Card>
 
         {/* Melhor Envio */}
-        <Card className={!integrations.melhor_envio ? "opacity-60" : ""}>
+        <Card className={!integrations.melhor_envio || secretStatus?.melhor_envio === false ? "opacity-60" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Melhor Envio
-              <Badge variant={integrations.melhor_envio ? "default" : "outline"}>
-                {integrations.melhor_envio ? "Conectado" : "Desconectado"}
-              </Badge>
+              {secretStatus?.melhor_envio === false ? (
+                <Badge variant="destructive">Chave ausente</Badge>
+              ) : (
+                <Badge variant={integrations.melhor_envio ? "default" : "outline"}>
+                  {integrations.melhor_envio ? "Conectado" : "Desconectado"}
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription>
               Cálculo de frete automático por CEP com peso e dimensões dos produtos.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {integrations.melhor_envio ? (
+            {secretStatus?.melhor_envio === false ? (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                Secret <code className="bg-muted px-1 rounded">MELHOR_ENVIO_TOKEN</code> não configurado no servidor.
+              </div>
+            ) : integrations.melhor_envio ? (
               <div className="flex items-center gap-2 text-sm text-primary">
                 <CheckCircle className="h-4 w-4" />
                 API configurada
@@ -351,20 +391,29 @@ export default function IntegrationsPage() {
         </Card>
 
         {/* GoHighLevel */}
-        <Card className={!integrations.ghl ? "opacity-60" : ""}>
+        <Card className={!integrations.ghl || secretStatus?.ghl === false ? "opacity-60" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               GoHighLevel (GHL)
-              <Badge variant={integrations.ghl ? "default" : "outline"}>
-                {integrations.ghl ? "Conectado" : "Desconectado"}
-              </Badge>
+              {secretStatus?.ghl === false ? (
+                <Badge variant="destructive">Chave ausente</Badge>
+              ) : (
+                <Badge variant={integrations.ghl ? "default" : "outline"}>
+                  {integrations.ghl ? "Conectado" : "Desconectado"}
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription>
               Sincronização automática de contatos, oportunidades e tags após cada compra.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {integrations.ghl ? (
+            {secretStatus?.ghl === false ? (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                Secret <code className="bg-muted px-1 rounded">GHL_API_KEY</code> não configurado no servidor.
+              </div>
+            ) : integrations.ghl ? (
               <>
                 <div className="flex items-center gap-2 text-sm text-primary">
                   <CheckCircle className="h-4 w-4" />

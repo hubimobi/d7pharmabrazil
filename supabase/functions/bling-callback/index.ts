@@ -113,7 +113,7 @@ serve(async (req) => {
     });
 
     // Redirect back to admin integrations page
-    const siteUrl = "https://d7pharmabrazil.lovable.app/admin/integracoes";
+    const siteUrl = "https://d7pharmabrazil.com.br/admin/integracoes";
     return new Response(null, {
       status: 302,
       headers: { Location: siteUrl },

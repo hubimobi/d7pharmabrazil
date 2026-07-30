@@ -9,8 +9,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const SITE_URL = "https://d7pharmabrazil.com.br";
+
 function isUuid(v: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+}
+
+// Turn a possibly-relative redirect into an absolute URL on the store domain.
+// A 302 with a relative Location would otherwise resolve against the Supabase
+// functions host and 404.
+function absoluteRedirect(target: string): string {
+  if (/^https?:\/\//i.test(target)) return target;
+  return `${SITE_URL}${target.startsWith("/") ? "" : "/"}${target}`;
 }
 
 Deno.serve(async (req) => {
@@ -124,18 +134,18 @@ Deno.serve(async (req) => {
       expires_at: expiresAt,
     });
 
-    // Redirect back to admin
+    // Redirect back to admin (absolute URL on the store domain)
     return new Response(null, {
       status: 302,
       headers: {
-        Location: redirectUrl,
+        Location: absoluteRedirect(redirectUrl),
         ...corsHeaders,
       },
     });
   } catch (err: any) {
     console.error("TikTok callback error:", err);
     return new Response(
-      `<html><body><h2>Erro na autenticação TikTok Shop</h2><p>${err.message}</p><a href="/admin/integracoes">Voltar</a></body></html>`,
+      `<html><body><h2>Erro na autenticação TikTok Shop</h2><p>${err.message}</p><a href="${SITE_URL}/admin/integracoes">Voltar</a></body></html>`,
       {
         status: 500,
         headers: { "Content-Type": "text/html", ...corsHeaders },

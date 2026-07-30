@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
       .single();
 
     const storeName = settings?.store_name || "D7 Pharma Brazil";
-    const baseUrl = req.headers.get("origin") || "https://d7pharmabrazil.lovable.app";
+    const baseUrl = req.headers.get("origin") || "https://d7pharmabrazil.com.br";
 
     // Check format param: xml (default) or csv
     const url = new URL(req.url);
